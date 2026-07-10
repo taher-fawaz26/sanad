@@ -58,43 +58,45 @@ class _LoginPageState extends State<LoginPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   AppSection(
-                    title: 'login_title'.tr(),
-                    caption: 'login_caption'.tr(),
+                    title: 'auth.login_title'.tr(),
+                    caption: 'auth.login_caption'.tr(),
+                  ),
+                  AppSegmentedControl(
+                    segments: ['auth.phone', 'auth.email'],
+                    selectedIndex: 0,
+                    onChanged: (index) {
+                      _identifierController.text = '';
+                      _passwordController.text = '';
+                    },
                   ),
                   const SizedBox(height: 32),
                   AppTextField(
                     controller: _identifierController,
-                    label: 'phone_or_email'.tr(),
-                    hint: 'phone_or_email_hint'.tr(),
+                    label: 'auth.phone_or_email'.tr(),
+                    hint: 'auth.phone_or_email_hint'.tr(),
                     keyboardType: TextInputType.emailAddress,
                     validator: (value) => value?.trim().isEmpty ?? true
-                        ? 'field_required'.tr()
+                        ? 'auth.field_required'.tr()
                         : null,
                   ),
                   const SizedBox(height: 16),
                   AppTextField(
                     controller: _passwordController,
-                    label: 'password'.tr(),
-                    hint: 'password_hint'.tr(),
+                    label: 'auth.password'.tr(),
+                    hint: 'auth.password_hint'.tr(),
                     obscureText: true,
                     validator: (value) => value?.trim().isEmpty ?? true
-                        ? 'field_required'.tr()
+                        ? 'auth.field_required'.tr()
                         : null,
                   ),
                   const SizedBox(height: 32),
                   BlocBuilder<AuthBloc, AuthState>(
                     builder: (context, state) {
                       final isLoading = state is AuthLoginLoadingState;
-                      return FilledButton(
+                      return AppButton(
                         onPressed: isLoading ? null : () => _submit(context),
-                        child: isLoading
-                            ? const SizedBox.square(
-                                dimension: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : Text('login'.tr()),
+                        label: 'auth.login'.tr(),
+                        isLoading: isLoading,
                       );
                     },
                   ),

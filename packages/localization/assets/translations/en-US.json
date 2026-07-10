@@ -8,5 +8,15 @@
     "dark": "Dark",
     "english": "English",
     "arabic": "Arabic"
+  },
+  "auth": {
+    "login_title": "Welcome Back",
+    "login_caption": "Sign in to continue",
+    "phone_or_email": "Phone or Email",
+    "phone_or_email_hint": "Enter your phone number or email",
+    "password": "Password",
+    "password_hint": "Enter your password",
+    "field_required": "This field is required",
+    "login": "Login"
   }
 }

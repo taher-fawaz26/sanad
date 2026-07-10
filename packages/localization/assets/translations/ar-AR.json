@@ -8,5 +8,15 @@
     "dark": "داكن",
     "english": "English",
     "arabic": "العربية"
+  },
+  "auth": {
+    "login_title": "مرحباً بعودتك",
+    "login_caption": "سجّل دخولك للمتابعة",
+    "phone_or_email": "رقم الهاتف أو البريد الإلكتروني",
+    "phone_or_email_hint": "أدخل رقم هاتفك أو بريدك الإلكتروني",
+    "password": "كلمة المرور",
+    "password_hint": "أدخل كلمة المرور",
+    "field_required": "هذا الحقل مطلوب",
+    "login": "تسجيل الدخول"
   }
 }
