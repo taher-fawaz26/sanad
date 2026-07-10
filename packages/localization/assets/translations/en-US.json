@@ -12,11 +12,18 @@
   "auth": {
     "login_title": "Welcome Back",
     "login_caption": "Sign in to continue",
-    "phone_or_email": "Phone or Email",
-    "phone_or_email_hint": "Enter your phone number or email",
+    "phone": "Phone",
+    "email": "Email",
+    "phone_hint": "Enter your phone number",
+    "email_hint": "Enter your email address",
     "password": "Password",
     "password_hint": "Enter your password",
     "field_required": "This field is required",
-    "login": "Login"
+    "invalid_email": "Please enter a valid email",
+    "password_too_short": "Password must be at least 6 characters",
+    "forgot_password": "Forgot Password?",
+    "login": "Login",
+    "no_account": "Don't have an account?",
+    "register": "Register"
   }
 }

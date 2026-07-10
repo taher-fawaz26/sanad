@@ -6,7 +6,6 @@ packages:
   - packages/analytics
   - packages/api
   - packages/app_logger
-  - packages/assets
   - packages/auth
   - packages/config
   - packages/core
