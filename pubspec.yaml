@@ -1,0 +1,33 @@
+﻿name: sanad
+description: Sanad monorepo workspace root — not a publishable package.
+publish_to: none
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+
+workspace:
+  - apps/sanad_client
+  - apps/sanad_provider
+  - packages/analytics
+  - packages/api
+  - packages/app_logger
+  - packages/assets
+  - packages/auth
+  - packages/config
+  - packages/core
+  - packages/dependencies
+  - packages/design_system
+  - packages/domain
+  - packages/flavors
+  - packages/localization
+  - packages/network
+  - packages/notifications
+  - packages/storage
+  - packages/testing
+  - packages/utilities
+
+dev_dependencies:
+  melos: ^7.0.0
+
+# This is the workspace root. All real packages live under apps/ and packages/.
+# Do not add dependencies here — add them to the individual package pubspecs.

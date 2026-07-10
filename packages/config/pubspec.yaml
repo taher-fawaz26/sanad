@@ -1,0 +1,17 @@
+﻿name: config
+description: >
+  Application configuration — environment constants, feature flags, API URLs,
+  timeouts, and build metadata. No business logic, no Flutter dependency.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+
+dependencies:
+  meta: ^1.16.0
+
+dev_dependencies:
+  test: ^1.25.0
+  very_good_analysis: ^9.0.0

@@ -1,0 +1,29 @@
+﻿name: shared_blocs
+description: Backwards-compatibility re-export facade. Prefer importing from sand_core, sand_design_system, or sand_auth directly.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Kept for legacy src/ files that still compile inside this package
+  equatable: ^2.1.0
+  flutter_bloc: ^9.1.1
+  hydrated_bloc: ^11.0.0
+  localization:
+    path: ../localization
+  # Canonical home packages — re-exported from the barrel
+  auth:
+    path: ../auth
+  core:
+    path: ../core
+  design_system:
+    path: ../design_system
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: ^9.0.0

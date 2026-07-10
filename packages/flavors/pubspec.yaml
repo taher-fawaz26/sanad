@@ -1,0 +1,19 @@
+﻿name: flavors
+description: >
+  Flavor definitions for Development, QA, Staging, and Production environments.
+  Configures API endpoints, Firebase projects, logging verbosity, and debug flags.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+
+dependencies:
+  config:
+    path: ../config
+  meta: ^1.16.0
+
+dev_dependencies:
+  test: ^1.25.0
+  very_good_analysis: ^9.0.0

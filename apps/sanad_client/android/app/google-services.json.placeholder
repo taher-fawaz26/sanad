@@ -1,0 +1,10 @@
+{
+  "_comment": "TODO: Replace this file with the real google-services.json from Firebase Console.",
+  "_steps": [
+    "1. Go to https://console.firebase.google.com",
+    "2. Create or select a Firebase project for Sand Client",
+    "3. Add an Android app with package name: com.sand.client",
+    "4. Download google-services.json and place it here (rename to google-services.json)",
+    "5. Add the Firebase Gradle plugin to android/build.gradle.kts and android/app/build.gradle.kts"
+  ]
+}

@@ -1,0 +1,21 @@
+name: app_logger
+description: Application-level logger — wraps the logger package with Sand-specific formatting and BLoC observer.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+
+dependencies:
+  core:
+    path: ../core
+  flutter:
+    sdk: flutter
+  flutter_bloc: ^9.1.1
+  logger: ^2.6.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: ^9.0.0

@@ -1,0 +1,25 @@
+﻿name: shared_widgets
+description: Reusable widgets — CachedImage, LoadingView, ErrorView, EmptyView, Pagination, Avatar, Rating.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cached_network_image: ^3.4.1
+  equatable: ^2.1.0
+  flutter_bloc: ^9.1.1
+  core:
+    path: ../core
+  design_system:
+    path: ../design_system
+  shared_models:
+    path: ../shared_models
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: ^9.0.0

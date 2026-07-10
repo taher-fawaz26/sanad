@@ -1,0 +1,12 @@
+{
+  "app": {
+    "title": "Sanad",
+    "core_ready": "Core is running. Add features incrementally from here.",
+    "theme": "Theme: {}",
+    "language": "Language: {}",
+    "light": "Light",
+    "dark": "Dark",
+    "english": "English",
+    "arabic": "Arabic"
+  }
+}

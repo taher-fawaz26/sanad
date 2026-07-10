@@ -1,0 +1,11 @@
+# Android Release Signing — Sand Provider
+# Copy this file to key.properties and fill in your keystore details.
+# NEVER commit key.properties to source control.
+#
+# To generate a keystore:
+#   keytool -genkey -v -keystore sand-provider-release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias sand-provider
+#
+storePassword=YOUR_STORE_PASSWORD
+keyPassword=YOUR_KEY_PASSWORD
+keyAlias=sand-provider
+storeFile=../sand-provider-release.jks

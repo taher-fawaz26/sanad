@@ -1,0 +1,624 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+    
+        {
+            "name": "sand",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_client",
+            "cwd": "apps\\sand_client",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_client (profile mode)",
+            "cwd": "apps\\sand_client",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "sand_client (release mode)",
+            "cwd": "apps\\sand_client",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "sand_provider",
+            "cwd": "apps\\sand_provider",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_provider (profile mode)",
+            "cwd": "apps\\sand_provider",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "sand_provider (release mode)",
+            "cwd": "apps\\sand_provider",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "sand_analytics",
+            "cwd": "packages\\sand_analytics",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_analytics (profile mode)",
+            "cwd": "packages\\sand_analytics",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "sand_analytics (release mode)",
+            "cwd": "packages\\sand_analytics",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "sand_api",
+            "cwd": "packages\\sand_api",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_api (profile mode)",
+            "cwd": "packages\\sand_api",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "sand_api (release mode)",
+            "cwd": "packages\\sand_api",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "sand_app_logger",
+            "cwd": "packages\\sand_app_logger",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_app_logger (profile mode)",
+            "cwd": "packages\\sand_app_logger",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "sand_app_logger (release mode)",
+            "cwd": "packages\\sand_app_logger",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "sand_assets",
+            "cwd": "packages\\sand_assets",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_assets (profile mode)",
+            "cwd": "packages\\sand_assets",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "sand_assets (release mode)",
+            "cwd": "packages\\sand_assets",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "sand_auth",
+            "cwd": "packages\\sand_auth",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_auth (profile mode)",
+            "cwd": "packages\\sand_auth",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "sand_auth (release mode)",
+            "cwd": "packages\\sand_auth",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "sand_change_password",
+            "cwd": "packages\\sand_change_password",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_change_password (profile mode)",
+            "cwd": "packages\\sand_change_password",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "sand_change_password (release mode)",
+            "cwd": "packages\\sand_change_password",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "sand_config",
+            "cwd": "packages\\sand_config",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_core",
+            "cwd": "packages\\sand_core",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_dependencies",
+            "cwd": "packages\\sand_dependencies",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_dependencies (profile mode)",
+            "cwd": "packages\\sand_dependencies",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "sand_dependencies (release mode)",
+            "cwd": "packages\\sand_dependencies",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "sand_design_system",
+            "cwd": "packages\\sand_design_system",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_design_system (profile mode)",
+            "cwd": "packages\\sand_design_system",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "sand_design_system (release mode)",
+            "cwd": "packages\\sand_design_system",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "sand_domain",
+            "cwd": "packages\\sand_domain",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_flavors",
+            "cwd": "packages\\sand_flavors",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_forgot_password",
+            "cwd": "packages\\sand_forgot_password",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_forgot_password (profile mode)",
+            "cwd": "packages\\sand_forgot_password",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "sand_forgot_password (release mode)",
+            "cwd": "packages\\sand_forgot_password",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "sand_localization",
+            "cwd": "packages\\sand_localization",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_localization (profile mode)",
+            "cwd": "packages\\sand_localization",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "sand_localization (release mode)",
+            "cwd": "packages\\sand_localization",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "sand_network",
+            "cwd": "packages\\sand_network",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_network (profile mode)",
+            "cwd": "packages\\sand_network",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "sand_network (release mode)",
+            "cwd": "packages\\sand_network",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "sand_notifications",
+            "cwd": "packages\\sand_notifications",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_notifications (profile mode)",
+            "cwd": "packages\\sand_notifications",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "sand_notifications (release mode)",
+            "cwd": "packages\\sand_notifications",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "sand_otp",
+            "cwd": "packages\\sand_otp",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_otp (profile mode)",
+            "cwd": "packages\\sand_otp",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "sand_otp (release mode)",
+            "cwd": "packages\\sand_otp",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "sand_profile",
+            "cwd": "packages\\sand_profile",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_profile (profile mode)",
+            "cwd": "packages\\sand_profile",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "sand_profile (release mode)",
+            "cwd": "packages\\sand_profile",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "sand_settings",
+            "cwd": "packages\\sand_settings",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_settings (profile mode)",
+            "cwd": "packages\\sand_settings",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "sand_settings (release mode)",
+            "cwd": "packages\\sand_settings",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "sand_shared_blocs",
+            "cwd": "packages\\sand_shared_blocs",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_shared_blocs (profile mode)",
+            "cwd": "packages\\sand_shared_blocs",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "sand_shared_blocs (release mode)",
+            "cwd": "packages\\sand_shared_blocs",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "sand_shared_models",
+            "cwd": "packages\\sand_shared_models",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_shared_widgets",
+            "cwd": "packages\\sand_shared_widgets",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_shared_widgets (profile mode)",
+            "cwd": "packages\\sand_shared_widgets",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "sand_shared_widgets (release mode)",
+            "cwd": "packages\\sand_shared_widgets",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "sand_storage",
+            "cwd": "packages\\sand_storage",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_storage (profile mode)",
+            "cwd": "packages\\sand_storage",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "sand_storage (release mode)",
+            "cwd": "packages\\sand_storage",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "sand_testing",
+            "cwd": "packages\\sand_testing",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_testing (profile mode)",
+            "cwd": "packages\\sand_testing",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "sand_testing (release mode)",
+            "cwd": "packages\\sand_testing",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "sand_utilities",
+            "cwd": "packages\\sand_utilities",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sand_utilities (profile mode)",
+            "cwd": "packages\\sand_utilities",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "sand_utilities (release mode)",
+            "cwd": "packages\\sand_utilities",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "auth",
+            "cwd": "packages\\shared_features\\auth",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "auth (profile mode)",
+            "cwd": "packages\\shared_features\\auth",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "auth (release mode)",
+            "cwd": "packages\\shared_features\\auth",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "change_password",
+            "cwd": "packages\\shared_features\\change_password",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "change_password (profile mode)",
+            "cwd": "packages\\shared_features\\change_password",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "change_password (release mode)",
+            "cwd": "packages\\shared_features\\change_password",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "forgot_password",
+            "cwd": "packages\\shared_features\\forgot_password",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "forgot_password (profile mode)",
+            "cwd": "packages\\shared_features\\forgot_password",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "forgot_password (release mode)",
+            "cwd": "packages\\shared_features\\forgot_password",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "notifications",
+            "cwd": "packages\\shared_features\\notifications",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "notifications (profile mode)",
+            "cwd": "packages\\shared_features\\notifications",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "notifications (release mode)",
+            "cwd": "packages\\shared_features\\notifications",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "otp",
+            "cwd": "packages\\shared_features\\otp",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "otp (profile mode)",
+            "cwd": "packages\\shared_features\\otp",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "otp (release mode)",
+            "cwd": "packages\\shared_features\\otp",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "profile",
+            "cwd": "packages\\shared_features\\profile",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "profile (profile mode)",
+            "cwd": "packages\\shared_features\\profile",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "profile (release mode)",
+            "cwd": "packages\\shared_features\\profile",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "settings",
+            "cwd": "packages\\shared_features\\settings",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "settings (profile mode)",
+            "cwd": "packages\\shared_features\\settings",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "settings (release mode)",
+            "cwd": "packages\\shared_features\\settings",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        }
+    ]
+}
