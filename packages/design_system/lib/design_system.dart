@@ -23,6 +23,7 @@ export 'src/components/app_popover.dart';
 export 'src/components/app_progress_bar.dart';
 export 'src/components/app_radio.dart';
 export 'src/components/app_search_field.dart';
+export 'src/components/app_section.dart';
 export 'src/components/app_segmented_control.dart';
 export 'src/components/app_slider.dart';
 export 'src/components/app_snackbar.dart';

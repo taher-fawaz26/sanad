@@ -21,6 +21,7 @@ export 'app_popover.dart';
 export 'app_progress_bar.dart';
 export 'app_radio.dart';
 export 'app_search_field.dart';
+export 'app_section.dart';
 export 'app_segmented_control.dart';
 export 'app_slider.dart';
 export 'app_snackbar.dart';

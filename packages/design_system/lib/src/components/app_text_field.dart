@@ -1,5 +1,4 @@
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
-import 'package:design_system/src/spacing/responsive_spacing.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
 import 'package:design_system/src/theme/colors/field_tokens.dart';
 import 'package:design_system/src/theme/typography/app_typography.dart';
@@ -8,9 +7,10 @@ import 'package:flutter/services.dart';
 
 /// Figma `Controls / Text Fields with Label or Caption` (`6:257`).
 ///
-/// Wraps [TextFormField] with optional label, caption, and error message
-/// slots matching the design-system field component.
-class AppTextField extends StatelessWidget {
+/// Supports all 15 Figma variants across states:
+/// Default, Focused, Filled, Error, and Disabled — with or without
+/// label and caption.
+class AppTextField extends StatefulWidget {
   const AppTextField({
     super.key,
     this.controller,
@@ -33,6 +33,7 @@ class AppTextField extends StatelessWidget {
     this.inputFormatters,
     this.maxLines = 1,
     this.textCapitalization = TextCapitalization.none,
+    this.autovalidateMode,
   });
 
   final TextEditingController? controller;
@@ -55,145 +56,204 @@ class AppTextField extends StatelessWidget {
   final List<TextInputFormatter>? inputFormatters;
   final int maxLines;
   final TextCapitalization textCapitalization;
+  final AutovalidateMode? autovalidateMode;
+
+  @override
+  State<AppTextField> createState() => _AppTextFieldState();
+}
+
+class _AppTextFieldState extends State<AppTextField> {
+  // Cache computed values to avoid recalculating on every build
+  late final double _fieldHeight;
+  late final double _labelGap;
+  late final double _captionGap;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-calculate responsive dimensions once
+    _fieldHeight = responsiveDimension(FieldTokens.fieldHeight);
+    _labelGap = responsiveDimension(FieldTokens.labelGap);
+    _captionGap = responsiveDimension(FieldTokens.captionGap);
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Single theme lookups cached in local variables
     final colors = context.appColors;
     final typography = context.appTypography;
     final brightness = Theme.of(context).brightness;
-    final hasError = errorText != null && errorText!.isNotEmpty;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (label != null) ...[
-          Text(
-            label!,
-            style: FieldTokens.labelStyle(typography, colors),
-          ),
-          SizedBox(height: AppSpacing.md),
-        ],
-        TextFormField(
-          controller: controller,
-          focusNode: focusNode,
-          enabled: enabled,
-          readOnly: readOnly,
-          autofocus: autofocus,
-          obscureText: obscureText,
-          keyboardType: keyboardType,
-          textInputAction: textInputAction,
-          onChanged: onChanged,
-          onFieldSubmitted: onSubmitted,
-          validator: validator,
-          inputFormatters: inputFormatters,
-          maxLines: maxLines,
-          textCapitalization: textCapitalization,
-          style: FieldTokens.valueStyle(
-            typography,
-            colors,
-            brightness,
-            enabled: enabled,
-          ),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: FieldTokens.hintStyle(
-              typography,
-              colors,
-              brightness,
-              enabled: enabled,
+    return FormField<String>(
+      validator: (value) {
+        final resolved = value ?? widget.controller?.text ?? '';
+        return widget.validator?.call(resolved);
+      },
+      initialValue: widget.controller?.text ?? '',
+      autovalidateMode: widget.autovalidateMode,
+      enabled: widget.enabled,
+      builder: (field) {
+        final resolvedError = _resolveError(field);
+        final hasError = resolvedError != null && resolvedError.isNotEmpty;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (widget.label != null) ...[
+              Text(
+                widget.label!,
+                style: FieldTokens.labelStyle(typography, colors, brightness),
+              ),
+              SizedBox(height: _labelGap),
+            ],
+            SizedBox(
+              height: _fieldHeight,
+              child: TextField(
+                controller: widget.controller,
+                focusNode: widget.focusNode,
+                enabled: widget.enabled,
+                readOnly: widget.readOnly,
+                autofocus: widget.autofocus,
+                obscureText: widget.obscureText,
+                keyboardType: widget.keyboardType,
+                textInputAction: widget.textInputAction,
+                onChanged: (value) {
+                  field.didChange(value);
+                  widget.onChanged?.call(value);
+                },
+                onSubmitted: widget.onSubmitted,
+                inputFormatters: widget.inputFormatters,
+                maxLines: widget.maxLines,
+                textCapitalization: widget.textCapitalization,
+                style: FieldTokens.valueStyle(
+                  typography,
+                  colors,
+                  brightness,
+                  enabled: widget.enabled,
+                ),
+                decoration: _buildDecoration(
+                  colors: colors,
+                  typography: typography,
+                  brightness: brightness,
+                  hasError: hasError,
+                ),
+              ),
             ),
-            prefixIcon: prefixIcon,
-            suffixIcon: suffixIcon,
-            prefixIconConstraints: FieldTokens.prefixIconConstraints(),
-            suffixIconConstraints: FieldTokens.suffixIconConstraints(),
-            filled: true,
-            fillColor: FieldTokens.background(
-              colors,
-              brightness,
-              enabled: enabled,
-            ),
-            isDense: true,
-            contentPadding: FieldTokens.contentPadding(
-              hasPrefixIcon: prefixIcon != null,
-            ),
-            border: _border(
-              colors,
-              brightness,
-              enabled: enabled,
-              hasError: hasError,
-              focused: false,
-            ),
-            enabledBorder: _border(
-              colors,
-              brightness,
-              enabled: enabled,
-              hasError: hasError,
-              focused: false,
-            ),
-            focusedBorder: _border(
-              colors,
-              brightness,
-              enabled: enabled,
-              hasError: hasError,
-              focused: true,
-            ),
-            disabledBorder: _border(
-              colors,
-              brightness,
-              enabled: false,
-              hasError: false,
-              focused: false,
-            ),
-            errorBorder: _border(
-              colors,
-              brightness,
-              enabled: enabled,
-              hasError: true,
-              focused: false,
-            ),
-            focusedErrorBorder: _border(
-              colors,
-              brightness,
-              enabled: enabled,
-              hasError: true,
-              focused: true,
-            ),
-            errorText: hasError ? errorText : null,
-            helperText: hasError ? null : caption,
-            errorStyle: FieldTokens.errorStyle(typography, colors),
-            helperStyle: FieldTokens.captionStyle(
-              typography,
-              colors,
-              brightness,
-            ),
-          ),
-        ),
-      ],
+            if (hasError) ...[
+              SizedBox(height: _captionGap),
+              Text(
+                resolvedError,
+                style: FieldTokens.errorStyle(typography, colors, brightness),
+              ),
+            ] else if (widget.caption != null &&
+                widget.caption!.isNotEmpty) ...[
+              SizedBox(height: _captionGap),
+              Text(
+                widget.caption!,
+                style: FieldTokens.captionStyle(typography, colors, brightness),
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 
-  OutlineInputBorder _border(
+  String? _resolveError(FormFieldState<String> field) {
+    if (widget.errorText != null && widget.errorText!.isNotEmpty) {
+      return widget.errorText;
+    }
+    return field.errorText;
+  }
+
+  InputDecoration _buildDecoration({
+    required AppColors colors,
+    required AppTypography typography,
+    required Brightness brightness,
+    required bool hasError,
+  }) {
+    return InputDecoration(
+      hintText: widget.hint,
+      hintStyle: FieldTokens.hintStyle(
+        typography,
+        colors,
+        brightness,
+        enabled: widget.enabled,
+      ),
+      prefixIcon: widget.prefixIcon,
+      suffixIcon: widget.suffixIcon,
+      prefixIconConstraints: FieldTokens.prefixIconConstraints(),
+      suffixIconConstraints: FieldTokens.suffixIconConstraints(),
+      filled: true,
+      fillColor: FieldTokens.background(
+        colors,
+        brightness,
+        enabled: widget.enabled,
+      ),
+      isDense: true,
+      contentPadding: FieldTokens.contentPadding(
+        hasPrefixIcon: widget.prefixIcon != null,
+      ),
+      border: _buildBorder(
+        colors,
+        brightness,
+        hasError: hasError,
+        focused: false,
+      ),
+      enabledBorder: _buildBorder(
+        colors,
+        brightness,
+        hasError: hasError,
+        focused: false,
+      ),
+      focusedBorder: _buildBorder(
+        colors,
+        brightness,
+        hasError: hasError,
+        focused: true,
+      ),
+      disabledBorder: _buildBorder(
+        colors,
+        brightness,
+        hasError: false,
+        focused: false,
+        disabled: true,
+      ),
+      errorBorder: _buildBorder(
+        colors,
+        brightness,
+        hasError: true,
+        focused: false,
+      ),
+      focusedErrorBorder: _buildBorder(
+        colors,
+        brightness,
+        hasError: true,
+        focused: true,
+      ),
+    );
+  }
+
+  OutlineInputBorder _buildBorder(
     AppColors colors,
     Brightness brightness, {
-    required bool enabled,
     required bool hasError,
     required bool focused,
+    bool disabled = false,
   }) {
-    final color = !enabled
+    final color = disabled
         ? FieldTokens.disabledBorder(colors, brightness)
         : hasError
-            ? FieldTokens.errorBorder(colors)
-            : focused
-                ? FieldTokens.focusBorder(colors)
-                : FieldTokens.borderDefault(colors, brightness);
+        ? FieldTokens.errorBorder(colors, brightness)
+        : focused
+        ? FieldTokens.focusBorder(colors)
+        : FieldTokens.borderDefault(colors, brightness);
 
-    final hairline = AppDimension.borderHairline;
-    final width = focused || hasError ? hairline * 2 : hairline;
+    final width = focused || hasError
+        ? responsiveDimension(FieldTokens.borderWidthEmphasis)
+        : responsiveDimension(FieldTokens.borderWidthDefault);
 
-    return OutlineInputBorder(
-      borderRadius: FieldTokens.borderRadiusAll(),
-      borderSide: BorderSide(color: color, width: width),
-    );
+    return FieldTokens.outlineBorder(color, width);
   }
 }

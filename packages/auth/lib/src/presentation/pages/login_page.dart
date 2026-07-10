@@ -1,4 +1,5 @@
 ﻿import 'package:auth/src/presentation/bloc/auth/auth_bloc.dart';
+import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -27,11 +28,11 @@ class _LoginPageState extends State<LoginPage> {
   void _submit(BuildContext context) {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     context.read<AuthBloc>().add(
-          AuthLoginEvent(
-            _identifierController.text.trim(),
-            _passwordController.text,
-          ),
-        );
+      AuthLoginEvent(
+        _identifierController.text.trim(),
+        _passwordController.text,
+      ),
+    );
   }
 
   @override
@@ -56,32 +57,29 @@ class _LoginPageState extends State<LoginPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    'login_title'.tr(),
-                    style: Theme.of(context).textTheme.headlineMedium,
-                    textAlign: TextAlign.center,
+                  AppSection(
+                    title: 'login_title'.tr(),
+                    caption: 'login_caption'.tr(),
                   ),
                   const SizedBox(height: 32),
-                  TextFormField(
+                  AppTextField(
                     controller: _identifierController,
-                    decoration: InputDecoration(
-                      labelText: 'phone_or_email'.tr(),
-                    ),
-                    keyboardType: TextInputType.phone,
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty)
-                            ? 'field_required'.tr()
-                            : null,
+                    label: 'phone_or_email'.tr(),
+                    hint: 'phone_or_email_hint'.tr(),
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (value) => value?.trim().isEmpty ?? true
+                        ? 'field_required'.tr()
+                        : null,
                   ),
                   const SizedBox(height: 16),
-                  TextFormField(
+                  AppTextField(
                     controller: _passwordController,
-                    decoration: InputDecoration(
-                      labelText: 'password'.tr(),
-                    ),
+                    label: 'password'.tr(),
+                    hint: 'password_hint'.tr(),
                     obscureText: true,
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? 'field_required'.tr() : null,
+                    validator: (value) => value?.trim().isEmpty ?? true
+                        ? 'field_required'.tr()
+                        : null,
                   ),
                   const SizedBox(height: 32),
                   BlocBuilder<AuthBloc, AuthState>(

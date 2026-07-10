@@ -6,48 +6,49 @@
     "configurations": [
     
         {
-            "name": "sand",
-            "request": "launch",
-            "type": "dart"
-        },
-        {
-            "name": "sand_client",
-            "cwd": "apps\\sand_client",
-            "request": "launch",
-            "type": "dart"
-        },
-        {
-            "name": "sand_client (profile mode)",
-            "cwd": "apps\\sand_client",
+            "name": "sanad_client",
+            "cwd": "apps\\sanad_client",
             "request": "launch",
             "type": "dart",
+            "program": "lib/main.dart"
+        },
+        {
+            "name": "sanad_client (profile mode)",
+            "cwd": "apps\\sanad_client",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
             "flutterMode": "profile"
         },
         {
-            "name": "sand_client (release mode)",
-            "cwd": "apps\\sand_client",
+            "name": "sanad_client (release mode)",
+            "cwd": "apps\\sanad_client",
             "request": "launch",
             "type": "dart",
+            "program": "lib/main.dart",
             "flutterMode": "release"
         },
         {
-            "name": "sand_provider",
-            "cwd": "apps\\sand_provider",
-            "request": "launch",
-            "type": "dart"
-        },
-        {
-            "name": "sand_provider (profile mode)",
-            "cwd": "apps\\sand_provider",
+            "name": "sanad_provider",
+            "cwd": "apps\\sanad_provider",
             "request": "launch",
             "type": "dart",
+            "program": "lib/main.dart"
+        },
+        {
+            "name": "sanad_provider (profile mode)",
+            "cwd": "apps\\sanad_provider",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
             "flutterMode": "profile"
         },
         {
-            "name": "sand_provider (release mode)",
-            "cwd": "apps\\sand_provider",
+            "name": "sanad_provider (release mode)",
+            "cwd": "apps\\sanad_provider",
             "request": "launch",
             "type": "dart",
+            "program": "lib/main.dart",
             "flutterMode": "release"
         },
         {

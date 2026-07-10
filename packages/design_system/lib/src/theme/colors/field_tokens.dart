@@ -2,16 +2,34 @@ import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/spacing/responsive_spacing.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
 import 'package:design_system/src/theme/typography/app_typography.dart';
-import 'package:design_system/src/theme/typography/responsive_font_scale.dart';
 import 'package:flutter/material.dart';
 
 /// Figma `Controls / Text Fields` (`6:458`) + label/caption wrapper (`6:257`).
 abstract final class FieldTokens {
   FieldTokens._();
 
+  // ── Figma dimensions (`6:257`) ───────────────────────────────────────────
+  static const double fieldHeight = 48;
+  static const double labelGap = 12;
+  static const double captionGap = 12;
+  static const double horizontalPadding = 16;
+  static const double verticalPadding = 16;
+  static const double borderRadius = 8;
+  static const double borderWidthDefault = 1;
+  static const double borderWidthEmphasis = 2;
+
+  // ── Figma light-mode field colors ──────────────────────────────────────────
+  static const Color _lightBorderDefault = Color(0xFFE3E5E5);
+  static const Color _lightBackgroundDisabled = Color(0xFFF2F4F5);
+  static const Color _lightTextDisabled = Color(0xFFCDCFD0);
+  static const Color _lightBorderError = Color(0xFFFF5247);
+  static const Color _lightLabel = Color(0xFF090A0A);
+
   static Color focusBorder(AppColors colors) => colors.fieldFocus;
 
-  static Color errorBorder(AppColors colors) => colors.error;
+  static Color errorBorder(AppColors colors, Brightness brightness) {
+    return brightness == Brightness.dark ? colors.error : _lightBorderError;
+  }
 
   static Color background(
     AppColors colors,
@@ -21,20 +39,25 @@ abstract final class FieldTokens {
     if (!enabled) {
       return brightness == Brightness.dark
           ? colors.controlFill
-          : colors.disabled;
+          : _lightBackgroundDisabled;
     }
-    return brightness == Brightness.dark ? colors.background : colors.surface;
+    return brightness == Brightness.dark ? colors.surface : colors.surface;
   }
 
   static Color borderDefault(AppColors colors, Brightness brightness) {
-    return brightness == Brightness.dark ? colors.border : colors.border;
+    return brightness == Brightness.dark ? colors.border : _lightBorderDefault;
   }
 
-  static Color disabledBorder(AppColors colors, Brightness brightness) {
+  static Color disabledBorder(
+    AppColors colors,
+    Brightness brightness,
+  ) {
     return background(colors, brightness, enabled: false);
   }
 
-  static Color labelColor(AppColors colors) => colors.textPrimary;
+  static Color labelColor(AppColors colors, Brightness brightness) {
+    return brightness == Brightness.dark ? colors.textPrimary : _lightLabel;
+  }
 
   static Color hintColor(
     AppColors colors,
@@ -42,7 +65,9 @@ abstract final class FieldTokens {
     required bool enabled,
   }) {
     if (!enabled) {
-      return colors.textDisabled;
+      return brightness == Brightness.dark
+          ? colors.textDisabled
+          : _lightTextDisabled;
     }
     return colors.textMuted;
   }
@@ -53,22 +78,27 @@ abstract final class FieldTokens {
     required bool enabled,
   }) {
     if (!enabled) {
-      return colors.textDisabled;
+      return brightness == Brightness.dark
+          ? colors.textDisabled
+          : _lightTextDisabled;
     }
-    return colors.textPrimary;
+    return brightness == Brightness.dark ? colors.textPrimary : _lightLabel;
   }
 
   static Color captionColor(AppColors colors, Brightness brightness) {
     return colors.textMuted;
   }
 
-  static TextStyle labelStyle(AppTypography typography, AppColors colors) {
-    return typography.labelLarge.copyWith(
-      fontSize: 16.rfs,
-      height: 1,
+  static TextStyle labelStyle(
+    AppTypography typography,
+    AppColors colors,
+    Brightness brightness,
+  ) {
+    return typography.regularNormal.copyWith(
       fontWeight: FontWeight.w500,
+      height: 16 / 16,
       letterSpacing: 0,
-      color: labelColor(colors),
+      color: labelColor(colors, brightness),
     );
   }
 
@@ -78,9 +108,8 @@ abstract final class FieldTokens {
     Brightness brightness, {
     required bool enabled,
   }) {
-    return typography.bodyLarge.copyWith(
-      fontSize: 16.rfs,
-      height: 1,
+    return typography.regularNormal.copyWith(
+      height: 16 / 16,
       fontWeight: FontWeight.w400,
       letterSpacing: 0,
       color: valueColor(colors, brightness, enabled: enabled),
@@ -93,22 +122,24 @@ abstract final class FieldTokens {
     Brightness brightness, {
     required bool enabled,
   }) {
-    return typography.bodyLarge.copyWith(
-      fontSize: 16.rfs,
-      height: 1,
+    return typography.regularNormal.copyWith(
+      height: 16 / 16,
       fontWeight: FontWeight.w400,
       letterSpacing: 0,
       color: hintColor(colors, brightness, enabled: enabled),
     );
   }
 
-  static TextStyle errorStyle(AppTypography typography, AppColors colors) {
-    return typography.bodySmall.copyWith(
-      fontSize: 14.rfs,
+  static TextStyle errorStyle(
+    AppTypography typography,
+    AppColors colors,
+    Brightness brightness,
+  ) {
+    return typography.smallNormal.copyWith(
       height: 20 / 14,
       fontWeight: FontWeight.w400,
       letterSpacing: 0,
-      color: errorBorder(colors),
+      color: errorBorder(colors, brightness),
     );
   }
 
@@ -117,8 +148,7 @@ abstract final class FieldTokens {
     AppColors colors,
     Brightness brightness,
   ) {
-    return typography.bodySmall.copyWith(
-      fontSize: 14.rfs,
+    return typography.smallNormal.copyWith(
       height: 20 / 14,
       fontWeight: FontWeight.w400,
       letterSpacing: 0,
@@ -127,72 +157,73 @@ abstract final class FieldTokens {
   }
 
   static EdgeInsets contentPadding({bool hasPrefixIcon = false}) {
-    return EdgeInsets.symmetric(
-      horizontal: hasPrefixIcon
+    return EdgeInsets.fromLTRB(
+      hasPrefixIcon
           ? AppSpacing.sm + AppDimension.iconMenu + AppSpacing.sm
-          : AppSpacing.lg,
-      vertical: AppSpacing.sm,
+          : responsiveDimension(horizontalPadding),
+      responsiveDimension(verticalPadding),
+      responsiveDimension(horizontalPadding),
+      responsiveDimension(verticalPadding),
     );
   }
 
   static BoxConstraints prefixIconConstraints() => BoxConstraints(
-        minWidth: AppSpacing.sm + AppDimension.iconMenu + AppSpacing.sm,
-        minHeight: AppDimension.fieldHeightLg,
-      );
+    minWidth: AppSpacing.sm + AppDimension.iconMenu + AppSpacing.sm,
+    minHeight: responsiveDimension(fieldHeight),
+  );
 
   static BoxConstraints suffixIconConstraints() => BoxConstraints(
-        minWidth: AppSpacing.sm + AppDimension.iconMenu + AppSpacing.sm,
-        minHeight: AppDimension.fieldHeightLg,
-      );
+    minWidth: AppSpacing.sm + AppDimension.iconMenu + AppSpacing.sm,
+    minHeight: responsiveDimension(fieldHeight),
+  );
 
   static BorderRadius borderRadiusAll() =>
-      BorderRadius.circular(AppDimension.radiusSm);
+      BorderRadius.circular(responsiveDimension(borderRadius));
+
+  static OutlineInputBorder outlineBorder(
+    Color color,
+    double width,
+  ) {
+    return OutlineInputBorder(
+      borderRadius: borderRadiusAll(),
+      borderSide: BorderSide(color: color, width: width),
+    );
+  }
 
   static InputDecorationTheme inputDecorationTheme({
     required AppColors colors,
     required AppTypography typography,
     required Brightness brightness,
   }) {
-    final radius = borderRadiusAll();
-    final defaultBorderWidth = AppDimension.borderHairline;
-    final emphasisBorderWidth = AppDimension.borderHairline * 2;
-
-    OutlineInputBorder outlineBorder(Color color, double width) {
-      return OutlineInputBorder(
-        borderRadius: radius,
-        borderSide: BorderSide(color: color, width: width),
-      );
-    }
-
     final defaultBorder = borderDefault(colors, brightness);
     final disabledBorderColor = disabledBorder(colors, brightness);
+    final emphasisWidth = responsiveDimension(borderWidthEmphasis);
+    final defaultWidth = responsiveDimension(borderWidthDefault);
 
     return InputDecorationTheme(
       filled: true,
       fillColor: background(colors, brightness, enabled: true),
       isDense: true,
-      contentPadding: EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.sm,
+      contentPadding: contentPadding(),
+      constraints: BoxConstraints(
+        minHeight: responsiveDimension(fieldHeight),
+        maxHeight: responsiveDimension(fieldHeight),
       ),
-      labelStyle: labelStyle(typography, colors),
+      labelStyle: labelStyle(typography, colors, brightness),
       hintStyle: hintStyle(typography, colors, brightness, enabled: true),
-      errorStyle: errorStyle(typography, colors),
+      errorStyle: errorStyle(typography, colors, brightness),
       helperStyle: captionStyle(typography, colors, brightness),
-      border: outlineBorder(defaultBorder, defaultBorderWidth),
-      enabledBorder: outlineBorder(defaultBorder, defaultBorderWidth),
-      focusedBorder: outlineBorder(
-        focusBorder(colors),
-        emphasisBorderWidth,
+      border: outlineBorder(defaultBorder, defaultWidth),
+      enabledBorder: outlineBorder(defaultBorder, defaultWidth),
+      focusedBorder: outlineBorder(focusBorder(colors), emphasisWidth),
+      disabledBorder: outlineBorder(disabledBorderColor, defaultWidth),
+      errorBorder: outlineBorder(
+        errorBorder(colors, brightness),
+        emphasisWidth,
       ),
-      disabledBorder: outlineBorder(
-        disabledBorderColor,
-        defaultBorderWidth,
-      ),
-      errorBorder: outlineBorder(errorBorder(colors), emphasisBorderWidth),
       focusedErrorBorder: outlineBorder(
-        errorBorder(colors),
-        emphasisBorderWidth,
+        errorBorder(colors, brightness),
+        emphasisWidth,
       ),
     );
   }
