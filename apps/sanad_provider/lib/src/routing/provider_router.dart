@@ -1,10 +1,14 @@
-﻿import 'package:auth/auth.dart';
+import 'package:auth/auth.dart';
 import 'package:core/core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:forgot_password/forgot_password.dart';
 import 'package:go_router/go_router.dart';
 import 'package:otp/otp.dart';
 import 'package:sanad_provider/src/features/home/home_page.dart';
+import 'package:sanad_provider/src/features/orders/orders_page.dart';
+import 'package:sanad_provider/src/features/services/services_page.dart';
+import 'package:sanad_provider/src/features/settings/settings_page.dart';
+import 'package:sanad_provider/src/routing/shell/main_shell.dart';
 
 /// sanad_provider top-level router, independent from sanad_client.
 GoRouter buildProviderRouter() {
@@ -94,14 +98,51 @@ GoRouter buildProviderRouter() {
               );
             },
           ),
+          StatefulShellRoute.indexedStack(
+            builder: (context, state, navigationShell) =>
+                MainShell(navigationShell: navigationShell),
+            branches: [
+              StatefulShellBranch(
+                routes: [
+                  GoRoute(
+                    path: _providerHome,
+                    builder: (context, state) => const ProviderHomePage(),
+                  ),
+                ],
+              ),
+              StatefulShellBranch(
+                routes: [
+                  GoRoute(
+                    path: _providerServices,
+                    builder: (context, state) => const ProviderServicesPage(),
+                  ),
+                ],
+              ),
+              StatefulShellBranch(
+                routes: [
+                  GoRoute(
+                    path: _providerRequests,
+                    builder: (context, state) => const ProviderOrdersPage(),
+                  ),
+                ],
+              ),
+              StatefulShellBranch(
+                routes: [
+                  GoRoute(
+                    path: _providerSettings,
+                    builder: (context, state) => const ProviderSettingsPage(),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ],
-      ),
-      GoRoute(
-        path: _providerHome,
-        builder: (context, state) => const ProviderHomePage(),
       ),
     ],
   );
 }
 
 const _providerHome = '/home';
+const _providerServices = '/services';
+const _providerRequests = '/requests';
+const _providerSettings = '/settings';

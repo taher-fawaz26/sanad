@@ -9,6 +9,17 @@
     "english": "English",
     "arabic": "العربية"
   },
+  "nav": {
+    "home": "الرئيسية",
+    "services": "الخدمات",
+    "requests": "الطلبات",
+    "settings": "الإعدادات"
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "logout": "تسجيل الخروج",
+    "branches": "الفروع"
+  },
   "auth": {
     "login_title": "مرحباً بعودتك",
     "login_caption": "سجّل دخولك للمتابعة",

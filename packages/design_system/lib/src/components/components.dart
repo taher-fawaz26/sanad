@@ -13,6 +13,7 @@ export 'app_chip.dart';
 export 'app_color_palette_preview.dart';
 export 'app_date_picker.dart';
 export 'app_divider.dart';
+export 'app_feature_icon.dart';
 export 'app_large_nav_bar.dart';
 export 'app_nav_bar.dart';
 export 'app_notification_badge.dart';

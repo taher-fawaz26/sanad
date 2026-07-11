@@ -9,6 +9,17 @@
     "english": "English",
     "arabic": "Arabic"
   },
+  "nav": {
+    "home": "Home",
+    "services": "Services",
+    "requests": "Requests",
+    "settings": "Settings"
+  },
+  "settings": {
+    "title": "Settings",
+    "logout": "Logout",
+    "branches": "Branches"
+  },
   "auth": {
     "login_title": "Welcome Back",
     "login_caption": "Sign in to continue",

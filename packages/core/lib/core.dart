@@ -1,9 +1,12 @@
-/// Sand Core — pure-Dart abstractions with zero Flutter dependency.
+/// Sanad Core — shared abstractions, validators, and asset path constants.
 ///
 /// Exports: Failure hierarchy, Result/Either aliases, UseCase contracts,
-/// BaseRepository, DI helper, validators, extensions, and constants.
+/// DI helper, validators, extensions, constants, and [AppAssets] / [AppSvgs].
 library;
 
+// Assets
+export 'src/assets/app_assets.dart';
+export 'src/assets/app_svgs.dart';
 // Infrastructure BLoC utilities
 export 'src/blocs/base_request_bloc.dart';
 export 'src/blocs/base_request_state.dart';

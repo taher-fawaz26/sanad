@@ -73,6 +73,13 @@ export 'tokens/dialog_tokens.dart'
         DialogTokens;
 export 'tokens/divider_tokens.dart'
     show AppDividerThickness, DividerStyleSpec, DividerTokens;
+export 'tokens/feature_icon_tokens.dart'
+    show
+        AppFeatureIconColor,
+        AppFeatureIconSize,
+        AppFeatureIconTheme,
+        FeatureIconStyleSpec,
+        FeatureIconTokens;
 export 'tokens/nav_bar_tokens.dart'
     show
         AppNavBarTheme,
