@@ -20,7 +20,12 @@ class _SplashPageState extends State<SplashPage> {
   @override
   void initState() {
     super.initState();
-    context.read<AuthBloc>().add(AuthCheckSignInStatusEvent());
+    // Dispatch after the first frame so the BlocProvider is guaranteed
+    // reachable regardless of the widget tree mount order.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<AuthBloc>().add(AuthCheckSignInStatusEvent());
+    });
   }
 
   @override

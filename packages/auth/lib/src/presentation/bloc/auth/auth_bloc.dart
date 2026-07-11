@@ -83,10 +83,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _logout(AuthLogoutEvent event, Emitter<AuthState> emit) async {
     emit(const AuthLogoutLoadingState());
-    await _logoutUseCase.call(const NoParams()).run();
+    final result = await _logoutUseCase.call(const NoParams()).run();
+    // Local session is cleared regardless of server outcome — the user
+    // asked to log out and must be logged out on this device.
     await _sessionManager.logout();
-    emit(const AuthLogoutSuccessState('auth.logout_success'));
     _authStatusNotifier.update(AuthStatus.unauthenticated);
+    await result.match(
+      (failure) async => emit(AuthLogoutFailureState(failure.message)),
+      (_) async => emit(const AuthLogoutSuccessState('auth.logout_success')),
+    );
   }
 
   Future<void> _deleteAccount(
@@ -140,9 +145,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         )
         .run();
 
-    result.fold(
-      (l) => emit(AuthRegisterFailureState(l.message)),
-      (_) => emit(const AuthRegisterSuccessState('auth.register_success')),
+    await result.match(
+      (l) async => emit(AuthRegisterFailureState(l.message)),
+      (_) async =>
+          emit(const AuthRegisterSuccessState('auth.register_success')),
     );
   }
 
@@ -155,8 +161,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final result =
         await _checkSignInStatusUseCase.call(const NoParams()).run();
 
-    result.fold(
-      (l) {
+    await result.match(
+      (l) async {
         emit(
           const AuthCheckSignInStatusFailureState(
             'auth.session_unauthenticated',
@@ -164,7 +170,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         );
         _authStatusNotifier.update(AuthStatus.unauthenticated);
       },
-      (user) {
+      (user) async {
         if (user == null) {
           emit(
             const AuthCheckSignInStatusFailureState(
@@ -182,12 +188,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       },
     );
   }
-}
 
-UserEntity? _userFromState(AuthState state) => switch (state) {
-      AuthLoginSuccessState(:final user) => user,
-      AuthCheckSignInStatusSuccessState(:final user) => user,
-      AuthDeleteAccountLoadingState(:final user) => user,
-      AuthDeleteAccountFailureState(:final user) => user,
-      _ => null,
-    };
+  static UserEntity? _userFromState(AuthState state) => switch (state) {
+    AuthLoginSuccessState(:final user) => user,
+    AuthCheckSignInStatusSuccessState(:final user) => user,
+    AuthDeleteAccountLoadingState(:final user) => user,
+    AuthDeleteAccountFailureState(:final user) => user,
+    _ => null,
+  };
+}

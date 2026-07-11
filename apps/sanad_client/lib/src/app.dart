@@ -1,5 +1,4 @@
-﻿import 'package:auth/auth.dart';
-import 'package:core/core.dart';
+﻿import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -7,37 +6,42 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
-import 'package:provider/provider.dart';
 import 'package:sanad_client/src/routing/client_router.dart';
 
 /// The root widget of the sanad_client application.
-class SandClientApp extends StatefulWidget {
-  /// Creates a [SandClientApp].
-  const SandClientApp({super.key});
+class SanadClientApp extends StatefulWidget {
+  /// Creates a [SanadClientApp].
+  const SanadClientApp({super.key});
 
   @override
-  State<SandClientApp> createState() => _SandClientAppState();
+  State<SanadClientApp> createState() => _SanadClientAppState();
 }
 
-class _SandClientAppState extends State<SandClientApp> {
-  final GoRouter _router = buildClientRouter();
+class _SanadClientAppState extends State<SanadClientApp> {
+  late final GoRouter _router;
+
+  @override
+  void initState() {
+    super.initState();
+    _router = buildClientRouter();
+  }
+
+  @override
+  void dispose() {
+    _router.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => primaryFocus?.unfocus(),
-      child: MultiRepositoryProvider(
+      child: MultiBlocProvider(
         providers: [
-          ChangeNotifierProvider<AuthStatusNotifier>.value(
-            value: sl<AuthStatusNotifier>(),
-          ),
+          BlocProvider(create: (_) => sl<ThemeBloc>()),
+          BlocProvider(create: (_) => sl<TranslateBloc>()),
         ],
-        child: MultiBlocProvider(
-          providers: [
-            BlocProvider(create: (_) => sl<ThemeBloc>()),
-            BlocProvider(create: (_) => sl<TranslateBloc>()),
-          ],
-          child: BlocBuilder<ThemeBloc, ThemeState>(
+        child: BlocBuilder<ThemeBloc, ThemeState>(
             builder: (context, themeState) {
               return Builder(
                 builder: (context) {
@@ -74,8 +78,7 @@ class _SandClientAppState extends State<SandClientApp> {
             },
           ),
         ),
-      ),
-    );
+      );
   }
 
   ThemeMode _resolveThemeMode(ThemeState state) => switch (state.mode) {

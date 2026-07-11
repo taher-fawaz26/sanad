@@ -30,7 +30,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       );
 
   @override
-  TaskEither<Failure, void> logout() => TaskEither.right(null);
+  TaskEither<Failure, void> logout() => _apiClient.request<void>(
+    path: AuthApiPaths.logout,
+    method: RequestMethod.post,
+    parser: (_) {},
+  );
 
   @override
   TaskEither<Failure, void> register(RegisterModelRequest model) =>

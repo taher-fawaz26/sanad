@@ -31,7 +31,7 @@ class CreateNewPasswordPage extends HookWidget {
           current is ForgotPasswordResetFailureState,
       listener: (context, state) {
         if (state is ForgotPasswordResetFailureState) {
-          showAppSnackbar(context: context, title: state.message);
+          showAppSnackbar(context: context, title: state.message.tr());
         } else if (state is ForgotPasswordResetSuccessState) {
           showAppSnackbar(
             context: context,

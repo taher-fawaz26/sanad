@@ -36,7 +36,7 @@ Future<void> bootstrap() async {
       path: 'packages/localization/assets/translations',
       startLocale: const Locale('ar', 'AR'),
       fallbackLocale: const Locale('en', 'US'),
-      child: const SandClientApp(),
+      child: const SanadClientApp(),
     ),
   );
 }

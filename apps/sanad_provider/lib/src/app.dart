@@ -1,5 +1,4 @@
-﻿import 'package:auth/auth.dart';
-import 'package:core/core.dart';
+﻿import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -7,37 +6,42 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
-import 'package:provider/provider.dart';
 import 'package:sanad_provider/src/routing/provider_router.dart';
 
 /// The root widget of the sanad_provider application.
-class SandProviderApp extends StatefulWidget {
-  /// Creates a [SandProviderApp].
-  const SandProviderApp({super.key});
+class SanadProviderApp extends StatefulWidget {
+  /// Creates a [SanadProviderApp].
+  const SanadProviderApp({super.key});
 
   @override
-  State<SandProviderApp> createState() => _SandProviderAppState();
+  State<SanadProviderApp> createState() => _SanadProviderAppState();
 }
 
-class _SandProviderAppState extends State<SandProviderApp> {
-  final GoRouter _router = buildProviderRouter();
+class _SanadProviderAppState extends State<SanadProviderApp> {
+  late final GoRouter _router;
+
+  @override
+  void initState() {
+    super.initState();
+    _router = buildProviderRouter();
+  }
+
+  @override
+  void dispose() {
+    _router.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => primaryFocus?.unfocus(),
-      child: MultiRepositoryProvider(
+      child: MultiBlocProvider(
         providers: [
-          ChangeNotifierProvider<AuthStatusNotifier>.value(
-            value: sl<AuthStatusNotifier>(),
-          ),
+          BlocProvider(create: (_) => sl<ThemeBloc>()),
+          BlocProvider(create: (_) => sl<TranslateBloc>()),
         ],
-        child: MultiBlocProvider(
-          providers: [
-            BlocProvider(create: (_) => sl<ThemeBloc>()),
-            BlocProvider(create: (_) => sl<TranslateBloc>()),
-          ],
-          child: BlocBuilder<ThemeBloc, ThemeState>(
+        child: BlocBuilder<ThemeBloc, ThemeState>(
             builder: (context, themeState) {
               return Builder(
                 builder: (context) {
@@ -73,8 +77,7 @@ class _SandProviderAppState extends State<SandProviderApp> {
             },
           ),
         ),
-      ),
-    );
+      );
   }
 
   ThemeMode _resolveThemeMode(ThemeState state) => switch (state.mode) {

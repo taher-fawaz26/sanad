@@ -1,4 +1,5 @@
 import 'package:auth/auth.dart';
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -30,7 +31,7 @@ class ForgotPasswordPage extends HookWidget {
           current is ForgotPasswordRequestFailureState,
       listener: (context, state) {
         if (state is ForgotPasswordRequestFailureState) {
-          showAppSnackbar(context: context, title: state.message);
+          showAppSnackbar(context: context, title: state.message.tr());
         } else if (state is ForgotPasswordOtpSentState) {
           final identifier = emailController.text.trim();
           if (identifier.isEmpty) return;
@@ -81,7 +82,7 @@ class ForgotPasswordPage extends HookWidget {
                             if (value?.trim().isEmpty ?? true) {
                               return 'auth.field_required'.tr();
                             }
-                            if (!_isValidEmail(value!.trim())) {
+                            if (!EmailValidator.isValid(value!.trim())) {
                               return 'auth.invalid_email'.tr();
                             }
                             return null;
@@ -136,7 +137,4 @@ class ForgotPasswordPage extends HookWidget {
     );
   }
 
-  bool _isValidEmail(String email) {
-    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
-  }
 }

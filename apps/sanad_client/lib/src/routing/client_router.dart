@@ -6,10 +6,25 @@ import 'package:go_router/go_router.dart';
 import 'package:otp/otp.dart';
 import 'package:sanad_client/src/features/home/home_page.dart';
 
+/// Routes that require authentication. Any navigation into one of these
+/// while unauthenticated is redirected to the login screen.
+const _protectedRoutes = <String>{_clientHome};
+
 /// sanad_client top-level router, independent from sanad_provider.
 GoRouter buildClientRouter() {
+  final authStatus = sl<AuthStatusNotifier>();
   return GoRouter(
     initialLocation: AuthRoutes.splash,
+    refreshListenable: authStatus,
+    redirect: (context, state) {
+      if (state.matchedLocation == AuthRoutes.splash) return null;
+
+      final isProtected = _protectedRoutes.contains(state.matchedLocation);
+      if (isProtected && authStatus.status != AuthStatus.authenticated) {
+        return AuthRoutes.login;
+      }
+      return null;
+    },
     routes: [
       ShellRoute(
         builder: (context, state, child) => MultiBlocProvider(
@@ -40,6 +55,7 @@ GoRouter buildClientRouter() {
           GoRoute(
             path: AuthRoutes.register,
             builder: (context, state) => RegisterPage(
+              userType: UserType.client,
               onSignIn: () => context.go(AuthRoutes.login),
               onRegistered: (identifier, mode) {
                 context.push(
@@ -56,6 +72,8 @@ GoRouter buildClientRouter() {
           ),
           GoRoute(
             path: OtpRoutes.otp,
+            redirect: (context, state) =>
+                state.extra is OtpArgs ? null : AuthRoutes.login,
             builder: (context, state) {
               final args = state.extra! as OtpArgs;
               if (args.flow == OtpFlow.forgotPassword) {
@@ -86,6 +104,9 @@ GoRouter buildClientRouter() {
           ),
           GoRoute(
             path: ForgotPasswordRoutes.resetPassword,
+            redirect: (context, state) => state.extra is CreateNewPasswordArgs
+                ? null
+                : AuthRoutes.login,
             builder: (context, state) {
               final args = state.extra! as CreateNewPasswordArgs;
               return CreateNewPasswordPage(

@@ -9,13 +9,12 @@ import 'package:flutter/material.dart';
 @immutable
 class AppBottomNavItem {
   const AppBottomNavItem({
-    required this.icon,
+    required this.iconAsset,
     required this.label,
-    this.activeIcon,
   });
 
-  final Widget icon;
-  final Widget? activeIcon;
+  /// SVG asset path — prefer [AppSvgs.navHome] and siblings.
+  final String iconAsset;
   final String label;
 }
 

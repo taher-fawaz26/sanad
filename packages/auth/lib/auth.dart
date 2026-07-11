@@ -4,13 +4,14 @@ library;
 // Auth status
 export 'src/auth/auth_status.dart';
 export 'src/auth/auth_status_notifier.dart';
-// Data
-export 'src/data/datasources/auth_local_datasource.dart';
-export 'src/data/datasources/auth_remote_datasource.dart';
+// Data — only types crossing the package boundary.
+// `AuthLocalDataSource` is consumed by the OTP package.
+// `LoginResponseModel` is consumed by the OTP data layer.
+// `UserAdapter` is a Hive adapter registered by app bootstrap.
+export 'src/data/datasources/auth_local_datasource.dart'
+    show AuthLocalDataSource;
 export 'src/data/models/adapter/user_adapter.dart';
-export 'src/data/models/login_response_model.dart';
-export 'src/data/models/user_model.dart';
-export 'src/data/repositories/auth_repository_impl.dart';
+export 'src/data/models/login_response_model.dart' show LoginResponseModel;
 // DI
 export 'src/di/auth_di.dart';
 // Domain

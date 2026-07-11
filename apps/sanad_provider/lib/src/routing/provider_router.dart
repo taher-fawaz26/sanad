@@ -5,15 +5,36 @@ import 'package:forgot_password/forgot_password.dart';
 import 'package:go_router/go_router.dart';
 import 'package:otp/otp.dart';
 import 'package:sanad_provider/src/features/home/home_page.dart';
-import 'package:sanad_provider/src/features/orders/orders_page.dart';
-import 'package:sanad_provider/src/features/services/services_page.dart';
+import 'package:sanad_provider/src/features/messages/messages_page.dart';
+import 'package:sanad_provider/src/features/requests/requests_page.dart';
 import 'package:sanad_provider/src/features/settings/settings_page.dart';
 import 'package:sanad_provider/src/routing/shell/main_shell.dart';
 
+/// Routes that require authentication. Any navigation into one of these
+/// while unauthenticated is redirected to the login screen.
+const _protectedRoutes = <String>{
+  _providerHome,
+  _providerRequests,
+  _providerMessages,
+  _providerSettings,
+};
+
 /// sanad_provider top-level router, independent from sanad_client.
 GoRouter buildProviderRouter() {
+  final authStatus = sl<AuthStatusNotifier>();
   return GoRouter(
     initialLocation: AuthRoutes.splash,
+    refreshListenable: authStatus,
+    redirect: (context, state) {
+      // Splash screen decides its own destination; never redirect.
+      if (state.matchedLocation == AuthRoutes.splash) return null;
+
+      final isProtected = _protectedRoutes.contains(state.matchedLocation);
+      if (isProtected && authStatus.status != AuthStatus.authenticated) {
+        return AuthRoutes.login;
+      }
+      return null;
+    },
     routes: [
       ShellRoute(
         builder: (context, state, child) => MultiBlocProvider(
@@ -44,6 +65,7 @@ GoRouter buildProviderRouter() {
           GoRoute(
             path: AuthRoutes.register,
             builder: (context, state) => RegisterPage(
+              userType: UserType.provider,
               onSignIn: () => context.go(AuthRoutes.login),
               onRegistered: (identifier, mode) {
                 context.push(
@@ -60,6 +82,8 @@ GoRouter buildProviderRouter() {
           ),
           GoRoute(
             path: OtpRoutes.otp,
+            redirect: (context, state) =>
+                state.extra is OtpArgs ? null : AuthRoutes.login,
             builder: (context, state) {
               final args = state.extra! as OtpArgs;
               if (args.flow == OtpFlow.forgotPassword) {
@@ -90,6 +114,9 @@ GoRouter buildProviderRouter() {
           ),
           GoRoute(
             path: ForgotPasswordRoutes.resetPassword,
+            redirect: (context, state) => state.extra is CreateNewPasswordArgs
+                ? null
+                : AuthRoutes.login,
             builder: (context, state) {
               final args = state.extra! as CreateNewPasswordArgs;
               return CreateNewPasswordPage(
@@ -113,16 +140,16 @@ GoRouter buildProviderRouter() {
               StatefulShellBranch(
                 routes: [
                   GoRoute(
-                    path: _providerServices,
-                    builder: (context, state) => const ProviderServicesPage(),
+                    path: _providerRequests,
+                    builder: (context, state) => const ProviderRequestsPage(),
                   ),
                 ],
               ),
               StatefulShellBranch(
                 routes: [
                   GoRoute(
-                    path: _providerRequests,
-                    builder: (context, state) => const ProviderOrdersPage(),
+                    path: _providerMessages,
+                    builder: (context, state) => const ProviderMessagesPage(),
                   ),
                 ],
               ),
@@ -143,6 +170,6 @@ GoRouter buildProviderRouter() {
 }
 
 const _providerHome = '/home';
-const _providerServices = '/services';
 const _providerRequests = '/requests';
+const _providerMessages = '/messages';
 const _providerSettings = '/settings';

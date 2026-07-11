@@ -1,6 +1,9 @@
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:localization/localization.dart';
 
 /// Language selector dropdown for app header.
 class LanguageDropdown extends StatelessWidget {
@@ -75,8 +78,17 @@ class LanguageDropdown extends StatelessWidget {
           ),
         ),
       ],
-      onSelected: (locale) {
-        context.setLocale(locale);
+      onSelected: (locale) async {
+        // Three systems must stay in sync on a language change:
+        //   1. EasyLocalization — drives `.tr()` and RTL/LTR rebuilds.
+        //   2. TranslateBloc     — source of truth for `Accept-Language`.
+        //   3. AppLocaleRefreshBus — kicks BaseRequestBloc to auto-refetch.
+        await context.setLocale(locale);
+        if (!context.mounted) return;
+        context.read<TranslateBloc>().add(
+          locale.languageCode == 'ar' ? TrArabicEvent() : TrEnglishEvent(),
+        );
+        sl<AppLocaleRefreshBus>().notifyLocaleChanged();
       },
     );
   }

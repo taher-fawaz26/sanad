@@ -27,12 +27,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  # Core SVG assets (files live in packages/core/assets/svgs/).
-  assets:
-    - packages/core/assets/svgs/zap.svg
-    - packages/core/assets/svgs/alert_circle.svg
-    - packages/core/assets/svgs/alert_triangle.svg
-    - packages/core/assets/svgs/check_circle.svg
   # Fonts are declared here so every consumer gets them via package dependency.
   fonts:
     - family: Poppins

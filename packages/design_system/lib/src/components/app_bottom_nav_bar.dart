@@ -1,5 +1,6 @@
 ﻿import 'package:design_system/src/theme/tokens/bottom_nav_tokens.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 /// Figma `Bars / Tab Bars: Icon & Text` (`97:4367`).
 class AppBottomNavBar extends StatelessWidget {
@@ -74,29 +75,32 @@ class _BottomNavTab extends StatelessWidget {
     final labelStyle = selected
         ? itemSpec.selectedLabelStyle
         : itemSpec.unselectedLabelStyle;
-    final icon = selected && item.activeIcon != null
-        ? item.activeIcon!
-        : item.icon;
 
-    return Material(
-      color: itemSpec.itemBackgroundColor,
-      child: InkWell(
-        onTap: onTap,
-        splashFactory: NoSplash.splashFactory,
-        highlightColor: Colors.transparent,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            IconTheme(
-              data: IconThemeData(
-                color: iconColor,
-                size: spec.iconSize,
+    return Semantics(
+      label: item.label,
+      selected: selected,
+      button: true,
+      onTap: onTap,
+      excludeSemantics: true,
+      child: Material(
+        color: itemSpec.itemBackgroundColor,
+        child: InkWell(
+          onTap: onTap,
+          splashFactory: NoSplash.splashFactory,
+          highlightColor: Colors.transparent,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SvgPicture.asset(
+                item.iconAsset,
+                width: spec.iconSize,
+                height: spec.iconSize,
+                colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
               ),
-              child: icon,
-            ),
-            SizedBox(height: spec.iconLabelGap),
-            Text(item.label, style: labelStyle),
-          ],
+              SizedBox(height: spec.iconLabelGap),
+              Text(item.label, style: labelStyle),
+            ],
+          ),
         ),
       ),
     );

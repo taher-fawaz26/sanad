@@ -11,14 +11,15 @@
   },
   "nav": {
     "home": "الرئيسية",
-    "services": "الخدمات",
     "requests": "الطلبات",
+    "messages": "الرسائل",
     "settings": "الإعدادات"
   },
   "settings": {
     "title": "الإعدادات",
     "logout": "تسجيل الخروج",
-    "branches": "الفروع"
+    "branches": "الفروع",
+    "branches_coming_soon": "إدارة الفروع قادمة قريباً"
   },
   "auth": {
     "login_title": "مرحباً بعودتك",

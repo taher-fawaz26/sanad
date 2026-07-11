@@ -41,7 +41,7 @@ class VerificationCodePage extends HookWidget {
             );
             onVerified?.call();
           } else if (state is OtpValidateFailureState) {
-            showAppSnackbar(context: context, title: state.message);
+            showAppSnackbar(context: context, title: state.message.tr());
           } else if (state is OtpResendSuccessState) {
             context.read<OtpUiCubit>().startTimer();
             showAppSnackbar(
@@ -50,7 +50,7 @@ class VerificationCodePage extends HookWidget {
               color: AppSnackbarColor.primary,
             );
           } else if (state is OtpResendFailureState) {
-            showAppSnackbar(context: context, title: state.message);
+            showAppSnackbar(context: context, title: state.message.tr());
           }
         },
         child: Scaffold(
@@ -170,7 +170,11 @@ class VerificationCodePage extends HookWidget {
                                         context.read<OtpBloc>().add(
                                               OtpResendEvent(
                                                 identifier: args.identifier,
-                                                purpose: OtpPurpose.register,
+                                                purpose:
+                                                    args.flow ==
+                                                        OtpFlow.forgotPassword
+                                                    ? OtpPurpose.forgotPassword
+                                                    : OtpPurpose.register,
                                               ),
                                             );
                                       },

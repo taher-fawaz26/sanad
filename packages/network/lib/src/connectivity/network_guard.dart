@@ -1,6 +1,7 @@
 import 'package:core/core.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:network/src/connectivity/connectivity_service.dart';
+import 'package:network/src/messages/error_messages.dart';
 
 /// Gates any async action behind a connectivity check.
 class NetworkGuard {
@@ -12,7 +13,7 @@ class NetworkGuard {
     return TaskEither(() async {
       final connected = await _connectivity.isConnected();
       if (!connected) {
-        return const Left(NoInternetFailure(message: 'No internet connection'));
+        return const Left(NoInternetFailure(message: ErrorMessages.noInternet));
       }
       return action.run();
     });

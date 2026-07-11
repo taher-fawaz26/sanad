@@ -24,9 +24,12 @@ class ProviderSettingsPage extends StatelessWidget {
               leading: const Icon(Icons.store_outlined),
               title: Text('settings.branches'.tr()),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                // TODO: navigate to branches
-              },
+              onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('settings.branches_coming_soon'.tr()),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              ),
             ),
             const Divider(height: 1),
             const Spacer(),

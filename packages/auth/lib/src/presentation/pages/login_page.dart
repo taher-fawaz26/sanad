@@ -1,6 +1,7 @@
 ﻿import 'package:auth/src/presentation/bloc/auth/auth_bloc.dart';
 import 'package:auth/src/presentation/widgets/app_header.dart';
 import 'package:auth/src/routes/auth_routes.dart';
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -47,7 +48,7 @@ class LoginPage extends HookWidget {
         } else if (state is AuthLoginFailureState) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(state.message),
+              content: Text(state.message.tr()),
               backgroundColor: context.appColors.error,
             ),
           );
@@ -108,7 +109,7 @@ class LoginPage extends HookWidget {
                               return 'auth.field_required'.tr();
                             }
                             if (authMode.value == AuthMode.email &&
-                                !_isValidEmail(value!)) {
+                                !EmailValidator.isValid(value!.trim())) {
                               return 'auth.invalid_email'.tr();
                             }
                             return null;
@@ -123,9 +124,6 @@ class LoginPage extends HookWidget {
                           validator: (value) {
                             if (value?.trim().isEmpty ?? true) {
                               return 'auth.field_required'.tr();
-                            }
-                            if (value!.length < 6) {
-                              return 'auth.password_too_short'.tr();
                             }
                             return null;
                           },
@@ -194,9 +192,5 @@ class LoginPage extends HookWidget {
         ),
       ),
     );
-  }
-
-  bool _isValidEmail(String email) {
-    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
   }
 }

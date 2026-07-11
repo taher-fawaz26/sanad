@@ -15,10 +15,15 @@ enum RegisterIdentifierMode { phone, email }
 /// Registration screen — stays in the auth feature.
 class RegisterPage extends HookWidget {
   const RegisterPage({
+    required this.userType,
     super.key,
     this.onRegistered,
     this.onSignIn,
   });
+
+  /// The [UserType] this registration flow creates (client vs provider).
+  /// Each app passes its own value at the router call site.
+  final UserType userType;
 
   /// Called after successful register with identifier + mode for OTP routing.
   final void Function(String identifier, RegisterIdentifierMode mode)?
@@ -36,7 +41,7 @@ class RegisterPage extends HookWidget {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthRegisterFailureState) {
-          showAppSnackbar(context: context, title: state.message);
+          showAppSnackbar(context: context, title: state.message.tr());
         } else if (state is AuthRegisterSuccessState) {
           showAppSnackbar(
             context: context,
@@ -164,7 +169,7 @@ class RegisterPage extends HookWidget {
                                         AuthRegisterEvent(
                                           identifierController.text.trim(),
                                           passwordController.text,
-                                          UserType.provider,
+                                          userType,
                                         ),
                                       );
                                     },

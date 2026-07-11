@@ -7,6 +7,7 @@ packages:
   - packages/api
   - packages/app_logger
   - packages/auth
+  - packages/change_password
   - packages/config
   - packages/core
   - packages/dependencies
@@ -18,6 +19,8 @@ packages:
   - packages/network
   - packages/notifications
   - packages/otp
+  - packages/shared_blocs
+  - packages/shared_models
   - packages/shared_widgets
   - packages/storage
   - packages/testing
@@ -71,14 +74,6 @@ scripts:
       melos exec -c 1 --dir-exists=lib --
       dart run build_runner watch --delete-conflicting-outputs
     description: Watch mode build_runner (run per package).
-
-  # ─── Localization ───────────────────────────────────────────────────────────
-  l10n:
-    run: >
-      melos exec -c 1
-      --scope="localization" --
-      flutter gen-l10n
-    description: Generate localization ARB files for the localization package.
 
   # ─── Cleaning ───────────────────────────────────────────────────────────────
   clean:

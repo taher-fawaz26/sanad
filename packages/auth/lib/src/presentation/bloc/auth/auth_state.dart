@@ -1,137 +1,125 @@
 part of 'auth_bloc.dart';
 
 sealed class AuthState extends Equatable {
-  const AuthState({this.status = AuthStatus.unknown});
-
-  final AuthStatus status;
+  const AuthState();
 
   @override
-  List<Object?> get props => [status];
+  List<Object?> get props => const [];
 }
 
 class AuthInitialState extends AuthState {
-  const AuthInitialState() : super(status: AuthStatus.unknown);
+  const AuthInitialState();
 }
 
 class AuthRegisterLoadingState extends AuthState {
-  const AuthRegisterLoadingState() : super(status: AuthStatus.unknown);
+  const AuthRegisterLoadingState();
 }
 
 class AuthRegisterSuccessState extends AuthState {
-  const AuthRegisterSuccessState(this.message)
-      : super(status: AuthStatus.unknown);
+  const AuthRegisterSuccessState(this.message);
 
   final String message;
 
   @override
-  List<Object?> get props => [status, message];
+  List<Object?> get props => [message];
 }
 
 class AuthRegisterFailureState extends AuthState {
-  const AuthRegisterFailureState(this.message)
-      : super(status: AuthStatus.unknown);
+  const AuthRegisterFailureState(this.message);
 
   final String message;
 
   @override
-  List<Object?> get props => [status, message];
+  List<Object?> get props => [message];
 }
 
 class AuthLoginLoadingState extends AuthState {
-  const AuthLoginLoadingState() : super(status: AuthStatus.unknown);
+  const AuthLoginLoadingState();
 }
 
 class AuthLoginSuccessState extends AuthState {
-  const AuthLoginSuccessState(this.user)
-      : super(status: AuthStatus.authenticated);
+  const AuthLoginSuccessState(this.user);
 
   final UserEntity user;
 
   @override
-  List<Object?> get props => [status, user];
+  List<Object?> get props => [user];
 }
 
 class AuthLoginFailureState extends AuthState {
-  const AuthLoginFailureState(this.message, {this.code})
-      : super(status: AuthStatus.unknown);
+  const AuthLoginFailureState(this.message, {this.code});
 
   final String message;
   final String? code;
 
   @override
-  List<Object?> get props => [status, message, code];
+  List<Object?> get props => [message, code];
 }
 
 /// Login failed because the account is not verified — navigate to OTP.
 class AuthLoginUnverifiedState extends AuthState {
-  const AuthLoginUnverifiedState() : super(status: AuthStatus.unknown);
+  const AuthLoginUnverifiedState();
 }
 
 class AuthLogoutLoadingState extends AuthState {
-  const AuthLogoutLoadingState() : super(status: AuthStatus.unauthenticated);
+  const AuthLogoutLoadingState();
 }
 
 class AuthLogoutSuccessState extends AuthState {
-  const AuthLogoutSuccessState(this.message)
-      : super(status: AuthStatus.unauthenticated);
+  const AuthLogoutSuccessState(this.message);
 
   final String message;
 
   @override
-  List<Object?> get props => [status, message];
+  List<Object?> get props => [message];
 }
 
 class AuthLogoutFailureState extends AuthState {
-  const AuthLogoutFailureState(this.message)
-      : super(status: AuthStatus.unauthenticated);
+  const AuthLogoutFailureState(this.message);
 
   final String message;
 
   @override
-  List<Object?> get props => [status, message];
+  List<Object?> get props => [message];
 }
 
 class AuthDeleteAccountLoadingState extends AuthState {
-  const AuthDeleteAccountLoadingState(this.user)
-      : super(status: AuthStatus.authenticated);
+  const AuthDeleteAccountLoadingState(this.user);
 
   final UserEntity user;
 
   @override
-  List<Object?> get props => [status, user];
+  List<Object?> get props => [user];
 }
 
 class AuthDeleteAccountFailureState extends AuthState {
-  const AuthDeleteAccountFailureState(this.message, {required this.user})
-      : super(status: AuthStatus.authenticated);
+  const AuthDeleteAccountFailureState(this.message, {required this.user});
 
   final String message;
   final UserEntity? user;
 
   @override
-  List<Object?> get props => [status, message, user];
+  List<Object?> get props => [message, user];
 }
 
 class AuthCheckSignInStatusLoadingState extends AuthState {
-  const AuthCheckSignInStatusLoadingState() : super(status: AuthStatus.unknown);
+  const AuthCheckSignInStatusLoadingState();
 }
 
 class AuthCheckSignInStatusSuccessState extends AuthState {
-  const AuthCheckSignInStatusSuccessState(this.user)
-      : super(status: AuthStatus.authenticated);
+  const AuthCheckSignInStatusSuccessState(this.user);
 
   final UserEntity user;
 
   @override
-  List<Object?> get props => [status, user];
+  List<Object?> get props => [user];
 }
 
 class AuthCheckSignInStatusFailureState extends AuthState {
-  const AuthCheckSignInStatusFailureState(this.message)
-      : super(status: AuthStatus.unauthenticated);
+  const AuthCheckSignInStatusFailureState(this.message);
 
   final String message;
 
   @override
-  List<Object?> get props => [status, message];
+  List<Object?> get props => [message];
 }

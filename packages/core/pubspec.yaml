@@ -22,7 +22,4 @@ dev_dependencies:
 
 flutter:
   assets:
-    - assets/svgs/zap.svg
-    - assets/svgs/alert_circle.svg
-    - assets/svgs/alert_triangle.svg
-    - assets/svgs/check_circle.svg
+    - assets/svgs/

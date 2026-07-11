@@ -2,6 +2,7 @@
 description: Domain entities shared across both applications — User, Address, Service, Wallet, etc.
 version: 0.1.0
 publish_to: none
+resolution: workspace
 
 environment:
   sdk: ">=3.11.0 <4.0.0"

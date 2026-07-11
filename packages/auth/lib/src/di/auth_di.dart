@@ -40,7 +40,7 @@ class AuthDI {
       ..registerLazySingleton(
         () => AuthCheckSignInStatusUseCase(sl<AuthRepository>()),
       )
-      ..registerLazySingleton(
+      ..registerFactory(
         () => AuthBloc(
           loginUseCase: sl<AuthLoginUseCase>(),
           logoutUseCase: sl<AuthLogoutUseCase>(),

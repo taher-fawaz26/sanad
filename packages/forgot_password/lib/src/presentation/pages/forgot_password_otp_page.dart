@@ -48,7 +48,7 @@ class ForgotPasswordOtpPage extends HookWidget {
               );
             }
           } else if (state is ForgotPasswordOtpFailureState) {
-            showAppSnackbar(context: context, title: state.message);
+            showAppSnackbar(context: context, title: state.message.tr());
           } else if (state is ForgotPasswordOtpReadyState) {
             context.read<OtpUiCubit>().startTimer();
             showAppSnackbar(
