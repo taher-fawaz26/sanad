@@ -9,16 +9,5 @@ abstract class AuthRepository {
   TaskEither<Failure, void> logout();
   TaskEither<Failure, void> register(RegisterParams params);
   TaskEither<Failure, UserEntity?> checkSignInStatus();
-  TaskEither<Failure, LoginResponseEntity> validateOtp(
-    ValidateOtpParams params,
-  );
-  TaskEither<Failure, void> requestForgotPassword(
-    ForgotPasswordRequestParams params,
-  );
-  TaskEither<Failure, void> verifyForgotPasswordOtp(
-    VerifyForgotPasswordOtpParams params,
-  );
-  TaskEither<Failure, void> resetPassword(ResetPasswordParams params);
-  TaskEither<Failure, void> resendOtp(ResendOtpParams params);
   TaskEither<Failure, void> deleteAccount(DeleteAccountParams params);
 }

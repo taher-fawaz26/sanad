@@ -1,144 +1,211 @@
-import 'package:flutter/gestures.dart';
+import 'package:auth/src/domain/enums/user_type.dart';
+import 'package:auth/src/presentation/bloc/auth/auth_bloc.dart';
+import 'package:auth/src/presentation/widgets/app_header.dart';
+import 'package:auth/src/routes/auth_routes.dart';
+import 'package:core/core.dart';
+import 'package:design_system/design_system.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sanad_app/src/core/routes/app_route_path.dart';
-import 'package:sanad_app/src/core/ui/appbar/app_auth_app_bar.dart';
-import 'package:sanad_app/src/core/ui/buttons/buttons.dart';
-import 'package:sanad_app/src/core/ui/form/sanad_form.dart';
-import 'package:sanad_app/src/core/ui/layout/app_layout.dart';
-import 'package:sanad_app/src/core/ui/snackbar_widget.dart';
-import 'package:sanad_app/src/core/utils/otp_args.dart';
-import 'package:sanad_app/src/features/auth/presentation/bloc/auth/auth_bloc.dart';
-import 'package:sanad_app/src/features/auth/presentation/widgets/register_form_widget.dart';
 
-import '../../../../core/localization/localization_x.dart';
-import '../../../../core/themes/colors/app_colors.dart';
-import '../../../../core/themes/tokens.dart';
-import '../../../../core/themes/typography/app_typography.dart';
-import '../../domain/enums/user_type.dart';
-import '../widgets/auth_title_section.dart';
-import '../widgets/social_login_buttons.dart';
+enum RegisterIdentifierMode { phone, email }
 
-class RegisterPage extends StatefulWidget {
-  const RegisterPage({super.key});
+/// Registration screen — stays in the auth feature.
+class RegisterPage extends HookWidget {
+  const RegisterPage({
+    super.key,
+    this.onRegistered,
+    this.onSignIn,
+  });
 
-  @override
-  State<RegisterPage> createState() => _RegisterPageState();
-}
-
-class _RegisterPageState extends State<RegisterPage> {
-  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
+  /// Called after successful register with identifier + mode for OTP routing.
+  final void Function(String identifier, RegisterIdentifierMode mode)?
+  onRegistered;
+  final VoidCallback? onSignIn;
 
   @override
   Widget build(BuildContext context) {
+    final identifierController = useTextEditingController();
+    final passwordController = useTextEditingController();
+    final confirmController = useTextEditingController();
+    final formKey = useMemoized(GlobalKey<FormState>.new);
+    final mode = useState(RegisterIdentifierMode.phone);
+
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthRegisterFailureState) {
-          AppSnackBar.show(
-            context,
-            message: context.trOrRaw(state.message),
-            variant: SnackBarVariant.error,
-          );
+          showAppSnackbar(context: context, title: state.message);
         } else if (state is AuthRegisterSuccessState) {
-          AppSnackBar.show(
-            context,
-            message: context.trOrRaw(state.message),
-            variant: SnackBarVariant.success,
+          showAppSnackbar(
+            context: context,
+            title: state.message.tr(),
+            color: AppSnackbarColor.primary,
           );
-
-          // Determine identifier and its type from the form values.
-          final emailValue =
-              _formKey.currentState?.instantValue['email'] as String?;
-          final phoneValue =
-              _formKey.currentState?.instantValue['phone'] as String?;
-
-          final String identifier =
-              (emailValue?.isNotEmpty == true ? emailValue : phoneValue) ?? '';
-          final IdentifierType type = emailValue?.isNotEmpty == true
-              ? IdentifierType.email
-              : IdentifierType.phone;
-
-          context.pushNamed(
-            AppRoute.otp.name,
-            extra: OtpArgs(identifier: identifier, type: type),
+          onRegistered?.call(
+            identifierController.text.trim(),
+            mode.value,
           );
         }
       },
-      child: AppLayout(
-        appBar: const AppAuthAppBar(),
-        sliverLayout: true,
-        body: Column(
-          mainAxisSize: MainAxisSize.min,
-          spacing: AppSpacing.xl,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AuthTitleSection(
-              title: context.tr('auth_register.title'),
-              subtitle: context.tr('auth_register.subtitle'),
-            ),
-
-            // 3. Email / Mobile toggle
-            RegisterFormWidget(formKey: _formKey),
-
-            // 7. Sign In Button
-            BlocBuilder<AuthBloc, AuthState>(
-              buildWhen: (previous, current) =>
-                  current is AuthRegisterLoadingState ||
-                  previous is AuthRegisterLoadingState,
-              builder: (context, state) {
-                return AppButton.expand(
-                  label: context.tr('auth_register.create_account'),
-                  styleType: ButtonStyleType.primary,
-                  isLoading: state is AuthRegisterLoadingState,
-                  onPressed: () {
-                    if (_formKey.currentState?.validate() ?? false) {
-                      final email =
-                          _formKey.currentState?.instantValue['email'];
-                      context.read<AuthBloc>().add(
-                        AuthRegisterEvent(
-                          email ?? _formKey.currentState?.instantValue["phone"],
-                          _formKey.currentState?.instantValue['password'] ?? '',
-                          // This app serves providers. CLIENT support can be
-                          // added later when a type-selection UI is built.
-                          UserType.provider,
+      child: Scaffold(
+        body: SafeArea(
+          child: Column(
+            children: [
+              const AppHeader(),
+              const AppDivider(),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 48),
+                        AppSection(
+                          title: 'auth.register_title'.tr(),
+                          caption: 'auth.register_caption'.tr(),
+                          size: AppSectionSize.large,
+                          padding: EdgeInsets.zero,
                         ),
-                      );
-                    }
-                  },
-                );
-              },
-            ),
-
-            // 8. Social Login
-            SocialLoginButtons(
-              onAppleSignInPressed: () {},
-              onGoogleSignInPressed: () {},
-            ),
-            // 9. Footer Text
-            Center(
-              child: RichText(
-                text: TextSpan(
-                  text: context.tr('auth_register.already_have_account'),
-                  style: context.appTypography.bodyMedium.copyWith(
-                    color: context.appColors.textSecondary,
-                  ),
-                  children: [
-                    TextSpan(
-                      recognizer: TapGestureRecognizer()
-                        ..onTap = () {
-                          context.goNamed(AppRoute.login.name);
-                        },
-                      text: context.tr('auth_register.sign_in_link'),
-                      style: context.appTypography.labelMedium.copyWith(
-                        color: context.appColors.primary,
-                      ),
+                        const SizedBox(height: 32),
+                        AppSegmentedControl(
+                          segments: [
+                            'auth.phone'.tr(),
+                            'auth.email'.tr(),
+                          ],
+                          selectedIndex:
+                              mode.value == RegisterIdentifierMode.phone
+                              ? 0
+                              : 1,
+                          onChanged: (index) {
+                            mode.value = index == 0
+                                ? RegisterIdentifierMode.phone
+                                : RegisterIdentifierMode.email;
+                            identifierController.clear();
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        AppTextField(
+                          controller: identifierController,
+                          label: mode.value == RegisterIdentifierMode.phone
+                              ? 'auth.phone'.tr()
+                              : 'auth.email'.tr(),
+                          hint: mode.value == RegisterIdentifierMode.phone
+                              ? 'auth.phone_hint'.tr()
+                              : 'auth.email_hint'.tr(),
+                          keyboardType:
+                              mode.value == RegisterIdentifierMode.phone
+                              ? TextInputType.phone
+                              : TextInputType.emailAddress,
+                          validator: (value) {
+                            if (value?.trim().isEmpty ?? true) {
+                              return 'auth.field_required'.tr();
+                            }
+                            if (mode.value == RegisterIdentifierMode.email &&
+                                !EmailValidator.isValid(value!.trim())) {
+                              return 'auth.invalid_email'.tr();
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        AppTextField(
+                          controller: passwordController,
+                          label: 'auth.password'.tr(),
+                          hint: 'auth.password_hint'.tr(),
+                          obscureText: true,
+                          validator: (value) {
+                            if (value?.trim().isEmpty ?? true) {
+                              return 'auth.field_required'.tr();
+                            }
+                            if (value!.length < PasswordValidator.minLength) {
+                              return 'auth.password_too_short'.tr();
+                            }
+                            if (!PasswordValidator.isValid(value.trim())) {
+                              return 'auth.invalid_password'.tr();
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        AppTextField(
+                          controller: confirmController,
+                          label: 'auth.confirm_password'.tr(),
+                          hint: 'auth.confirm_password_hint'.tr(),
+                          obscureText: true,
+                          validator: (value) {
+                            if (value?.trim().isEmpty ?? true) {
+                              return 'auth.field_required'.tr();
+                            }
+                            if (value != passwordController.text) {
+                              return 'auth.password_mismatch'.tr();
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        BlocBuilder<AuthBloc, AuthState>(
+                          builder: (context, state) {
+                            final isLoading = state is AuthRegisterLoadingState;
+                            return AppButton(
+                              label: 'auth.create_account'.tr(),
+                              isLoading: isLoading,
+                              onPressed: isLoading
+                                  ? null
+                                  : () {
+                                      if (!(formKey.currentState?.validate() ??
+                                          false)) {
+                                        return;
+                                      }
+                                      context.read<AuthBloc>().add(
+                                        AuthRegisterEvent(
+                                          identifierController.text.trim(),
+                                          passwordController.text,
+                                          UserType.provider,
+                                        ),
+                                      );
+                                    },
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                'auth.already_have_account'.tr(),
+                                style: context.appTypography.regularNormal
+                                    .copyWith(
+                                      color: context.appColors.textSecondary,
+                                    ),
+                              ),
+                            ),
+                            AppButton(
+                              label: 'auth.login'.tr(),
+                              type: AppButtonType.transparent,
+                              size: AppButtonSize.small,
+                              onPressed: () {
+                                if (onSignIn != null) {
+                                  onSignIn!();
+                                } else {
+                                  context.go(AuthRoutes.login);
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 48),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

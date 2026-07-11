@@ -1,16 +1,16 @@
-import 'package:auth/src/data/models/auth_otp_purpose.dart';
 import 'package:equatable/equatable.dart';
+import 'package:otp/src/domain/enums/otp_purpose.dart';
 
 class ValidateOtpRequest extends Equatable {
   const ValidateOtpRequest({
     required this.identifier,
     required this.otp,
-    this.purpose = AuthOtpPurpose.register,
+    this.purpose = OtpPurpose.register,
   });
 
   final String identifier;
   final int otp;
-  final AuthOtpPurpose purpose;
+  final OtpPurpose purpose;
 
   Map<String, dynamic> toMap() => {
         'identifier': identifier,

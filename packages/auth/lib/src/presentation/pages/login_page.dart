@@ -1,17 +1,26 @@
 ﻿import 'package:auth/src/presentation/bloc/auth/auth_bloc.dart';
 import 'package:auth/src/presentation/widgets/app_header.dart';
+import 'package:auth/src/routes/auth_routes.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:go_router/go_router.dart';
 
 enum AuthMode { phone, email }
 
 class LoginPage extends HookWidget {
-  const LoginPage({super.key, this.onAuthenticated});
+  const LoginPage({
+    super.key,
+    this.onAuthenticated,
+    this.onForgotPassword,
+    this.onRegister,
+  });
 
   final VoidCallback? onAuthenticated;
+  final VoidCallback? onForgotPassword;
+  final VoidCallback? onRegister;
 
   @override
   Widget build(BuildContext context) {
@@ -125,11 +134,17 @@ class LoginPage extends HookWidget {
                         // Forgot password
                         Align(
                           alignment: AlignmentDirectional.centerEnd,
-                          child: TextButton(
+                          child: AppButton(
+                            label: 'auth.forgot_password'.tr(),
+                            type: AppButtonType.transparent,
+                            size: AppButtonSize.small,
                             onPressed: () {
-                              // TODO: Navigate to forgot password
+                              if (onForgotPassword != null) {
+                                onForgotPassword!();
+                              } else {
+                                context.push('/forgot-password');
+                              }
                             },
-                            child: Text('auth.forgot_password'.tr()),
                           ),
                         ),
                         const SizedBox(height: 24),
@@ -154,11 +169,17 @@ class LoginPage extends HookWidget {
                                 color: context.appColors.textSecondary,
                               ),
                             ),
-                            TextButton(
+                            AppButton(
+                              label: 'auth.register'.tr(),
+                              type: AppButtonType.transparent,
+                              size: AppButtonSize.small,
                               onPressed: () {
-                                // TODO: Navigate to register
+                                if (onRegister != null) {
+                                  onRegister!();
+                                } else {
+                                  context.push(AuthRoutes.register);
+                                }
                               },
-                              child: Text('auth.register'.tr()),
                             ),
                           ],
                         ),

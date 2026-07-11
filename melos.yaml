@@ -13,9 +13,12 @@ packages:
   - packages/design_system
   - packages/domain
   - packages/flavors
+  - packages/forgot_password
   - packages/localization
   - packages/network
   - packages/notifications
+  - packages/otp
+  - packages/shared_widgets
   - packages/storage
   - packages/testing
   - packages/utilities

@@ -4,13 +4,3 @@ analyzer:
   exclude:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
-    - "**/*.gen.dart"
-    - "**/generated/**"
-    - "**/gen/**"
-    - "build/**"
-
-linter:
-  rules:
-    public_member_api_docs: false
-    prefer_single_quotes: true
-    always_use_package_imports: true

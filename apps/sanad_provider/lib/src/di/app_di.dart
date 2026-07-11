@@ -4,8 +4,10 @@ import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:forgot_password/forgot_password.dart';
 import 'package:localization/localization.dart';
 import 'package:network/network.dart';
+import 'package:otp/otp.dart';
 import 'package:sanad_provider/src/config/app_config.dart';
 import 'package:storage/storage.dart';
 
@@ -96,6 +98,8 @@ Future<void> configureDependencies() async {
 
   // ── Feature DI ───────────────────────────────────────────────────────────
   AuthDI.init();
+  OtpDI.init();
+  ForgotPasswordDI.init();
 
   appLogger.i('[AppDI] Dependency injection configured for sanad_provider');
 }
