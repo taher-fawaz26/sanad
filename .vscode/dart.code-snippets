@@ -1,0 +1,220 @@
+{
+  "BLoC Skeleton": {
+    "prefix": "dsbloc",
+    "body": [
+      "import 'package:bloc/bloc.dart';",
+      "import 'package:equatable/equatable.dart';",
+      "",
+      "part '${1:feature}_event.dart';",
+      "part '${1:feature}_state.dart';",
+      "",
+      "class ${2:Feature}Bloc extends Bloc<${2:Feature}Event, ${2:Feature}State> {",
+      "  ${2:Feature}Bloc() : super(const ${2:Feature}InitialState()) {",
+      "    on<${3:Fetch}${2:Feature}Event>(_onFetch);",
+      "  }",
+      "",
+      "  Future<void> _onFetch(",
+      "    ${3:Fetch}${2:Feature}Event event,",
+      "    Emitter<${2:Feature}State> emit,",
+      "  ) async {",
+      "    emit(const ${2:Feature}LoadingState());",
+      "    $0",
+      "  }",
+      "}"
+    ],
+    "description": "BLoC skeleton with event/state parts"
+  },
+  "UseCase": {
+    "prefix": "dsusecase",
+    "body": [
+      "import 'package:core/core.dart';",
+      "import 'package:fpdart/fpdart.dart';",
+      "",
+      "class ${1:Action}${2:Feature}UseCase implements UseCase<${3:ReturnType}, ${4:Params}> {",
+      "  const ${1:Action}${2:Feature}UseCase(this._repository);",
+      "",
+      "  final ${2:Feature}Repository _repository;",
+      "",
+      "  @override",
+      "  TaskEither<Failure, ${3:ReturnType}> call(${4:Params} params) =>",
+      "      _repository.${5:method}(params);",
+      "}"
+    ]
+  },
+  "Repository Interface": {
+    "prefix": "dsrepo",
+    "body": [
+      "import 'package:core/core.dart';",
+      "import 'package:fpdart/fpdart.dart';",
+      "",
+      "abstract class ${1:Feature}Repository {",
+      "  TaskEither<Failure, ${2:Entity}> ${3:method}(${4:Params} params);",
+      "}"
+    ]
+  },
+  "Repository Impl": {
+    "prefix": "dsrepoimpl",
+    "body": [
+      "import 'package:core/core.dart';",
+      "import 'package:fpdart/fpdart.dart';",
+      "",
+      "class ${1:Feature}RepositoryImpl implements ${1:Feature}Repository {",
+      "  const ${1:Feature}RepositoryImpl(this._remote);",
+      "",
+      "  final ${1:Feature}RemoteDataSource _remote;",
+      "",
+      "  @override",
+      "  TaskEither<Failure, ${2:Entity}> ${3:method}(${4:Params} params) =>",
+      "      _remote.${3:method}(params).map((r) => r.toEntity());",
+      "}"
+    ]
+  },
+  "Remote DataSource": {
+    "prefix": "dsdsource",
+    "body": [
+      "import 'package:core/core.dart';",
+      "import 'package:fpdart/fpdart.dart';",
+      "import 'package:network/network.dart';",
+      "",
+      "abstract class ${1:Feature}RemoteDataSource {",
+      "  TaskEither<Failure, ${2:Response}> ${3:method}();",
+      "}",
+      "",
+      "class ${1:Feature}RemoteDataSourceImpl implements ${1:Feature}RemoteDataSource {",
+      "  const ${1:Feature}RemoteDataSourceImpl(this._apiClient);",
+      "",
+      "  final BaseApiClient _apiClient;",
+      "",
+      "  @override",
+      "  TaskEither<Failure, ${2:Response}> ${3:method}() =>",
+      "      _apiClient.request(",
+      "        path: ${1:Feature}ApiPaths.${4:path},",
+      "        method: RequestMethod.get,",
+      "        parser: (data) => ${2:Response}.fromJson(data as Map<String, dynamic>),",
+      "      );",
+      "}"
+    ]
+  },
+  "Feature Page": {
+    "prefix": "dspage",
+    "body": [
+      "import 'package:design_system/design_system.dart';",
+      "import 'package:flutter/material.dart';",
+      "import 'package:flutter_bloc/flutter_bloc.dart';",
+      "import 'package:flutter_hooks/flutter_hooks.dart';",
+      "",
+      "class ${1:Feature}Page extends HookWidget {",
+      "  const ${1:Feature}Page({super.key});",
+      "",
+      "  @override",
+      "  Widget build(BuildContext context) {",
+      "    return BlocConsumer<${1:Feature}Bloc, ${1:Feature}State>(",
+      "      listener: (context, state) {},",
+      "      builder: (context, state) {",
+      "        return Scaffold(",
+      "          appBar: AppNavBar(title: '${2:key}.title'.tr()),",
+      "          body: $0,",
+      "        );",
+      "      },",
+      "    );",
+      "  }",
+      "}"
+    ]
+  },
+  "Feature DI": {
+    "prefix": "dsdi",
+    "body": [
+      "import 'package:core/core.dart';",
+      "",
+      "class ${1:Feature}DI {",
+      "  ${1:Feature}DI._();",
+      "",
+      "  static void init() {",
+      "    sl$0;",
+      "  }",
+      "}"
+    ]
+  },
+  "Feature Module": {
+    "prefix": "dsmodule",
+    "body": [
+      "import 'package:core/core.dart';",
+      "import 'package:go_router/go_router.dart';",
+      "",
+      "class ${1:Feature}Module extends FeatureModule {",
+      "  @override",
+      "  String get name => '${2:snake}';",
+      "",
+      "  @override",
+      "  String get version => '0.1.0';",
+      "",
+      "  @override",
+      "  List<String> get dependencies => const [];",
+      "",
+      "  @override",
+      "  void registerDependencies() => ${1:Feature}DI.init();",
+      "",
+      "  @override",
+      "  List<RouteBase> routes(FeatureRouteContext context) => [];",
+      "}"
+    ]
+  },
+  "Test Stub": {
+    "prefix": "dstest",
+    "body": [
+      "import 'package:flutter_test/flutter_test.dart';",
+      "",
+      "void main() {",
+      "  group('${1:ClassUnderTest}', () {",
+      "    test('${2:behaviour description}', () {",
+      "      $0",
+      "    });",
+      "  });",
+      "}"
+    ]
+  },
+  "Entity": {
+    "prefix": "dsentity",
+    "body": [
+      "import 'package:equatable/equatable.dart';",
+      "",
+      "class ${1:Feature}Entity extends Equatable {",
+      "  const ${1:Feature}Entity({required this.id});",
+      "",
+      "  final String id;",
+      "",
+      "  @override",
+      "  List<Object?> get props => [id];",
+      "}"
+    ]
+  },
+  "Request Model": {
+    "prefix": "dsreqmodel",
+    "body": [
+      "class ${1:Action}${2:Feature}Request {",
+      "  const ${1:Action}${2:Feature}Request({required this.${3:field}});",
+      "",
+      "  final String ${3:field};",
+      "",
+      "  Map<String, dynamic> toJson() => {'${3:field}': ${3:field}};",
+      "}"
+    ]
+  },
+  "Response Model": {
+    "prefix": "dsrespmodel",
+    "body": [
+      "import 'package:${4:package}/src/domain/entities/${5:snake}_entity.dart';",
+      "",
+      "class ${1:Feature}ResponseModel {",
+      "  const ${1:Feature}ResponseModel({required this.id});",
+      "",
+      "  factory ${1:Feature}ResponseModel.fromJson(Map<String, dynamic> json) =>",
+      "      ${1:Feature}ResponseModel(id: json['id'] as String);",
+      "",
+      "  final String id;",
+      "",
+      "  ${2:Feature}Entity toEntity() => ${2:Feature}Entity(id: id);",
+      "}"
+    ]
+  }
+}

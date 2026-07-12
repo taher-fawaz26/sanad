@@ -27,8 +27,7 @@ dependencies:
     path: ../localization
   network:
     path: ../network
-  shared_widgets:
-    path: ../shared_widgets
+  pinput: ^6.0.2
 
 dev_dependencies:
   flutter_test:

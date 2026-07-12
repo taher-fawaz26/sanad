@@ -37,3 +37,9 @@ class FeatureFlags {
   /// Whether Sign in with Apple is enabled.
   final bool enableAppleSignIn;
 }
+
+/// Remote Config boolean flag keys — used by [ObservabilityService.isFeatureEnabled].
+abstract final class RemoteFeatureFlagKeys {
+  static const String newOrdersFlow = 'ff_new_orders_flow';
+  static const String multiLanguageSupport = 'ff_multi_language';
+}

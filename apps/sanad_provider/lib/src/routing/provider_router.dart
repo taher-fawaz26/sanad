@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:forgot_password/forgot_password.dart';
 import 'package:go_router/go_router.dart';
 import 'package:otp/otp.dart';
+import 'package:sanad_provider/src/di/app_di.dart';
 import 'package:sanad_provider/src/features/branches/add_branch_page.dart';
 import 'package:sanad_provider/src/features/branches/branches_page.dart';
 import 'package:sanad_provider/src/features/home/home_page.dart';
@@ -16,14 +17,20 @@ import 'package:sanad_provider/src/routing/shell/main_shell.dart';
 /// sanad_provider top-level router, independent from sanad_client.
 GoRouter buildProviderRouter() {
   final authStatus = sl<AuthStatusNotifier>();
+  final routeContext = FeatureRouteContext(
+    homeRoute: AppRoutes.home,
+    userType: FeatureUserType.provider,
+    protectedRoutes: AppRoutes.protected,
+  );
+
   return GoRouter(
     initialLocation: AuthRoutes.splash,
     refreshListenable: authStatus,
     redirect: (context, state) {
-      // Splash screen decides its own destination; never redirect.
       if (state.matchedLocation == AuthRoutes.splash) return null;
 
-      final isProtected = AppRoutes.protected.contains(state.matchedLocation);
+      final isProtected = routeContext.protectedRoutes
+          .contains(state.matchedLocation);
       if (isProtected && authStatus.status != AuthStatus.authenticated) {
         return AuthRoutes.login;
       }
@@ -40,40 +47,8 @@ GoRouter buildProviderRouter() {
           child: child,
         ),
         routes: [
-          GoRoute(
-            path: AuthRoutes.splash,
-            builder: (context, state) => SplashPage(
-              onAuthenticated: () => context.go(AppRoutes.home),
-              onUnauthenticated: () => context.go(AuthRoutes.login),
-            ),
-          ),
-          GoRoute(
-            path: AuthRoutes.login,
-            builder: (context, state) => LoginPage(
-              onAuthenticated: () => context.go(AppRoutes.home),
-              onForgotPassword: () =>
-                  context.push(ForgotPasswordRoutes.forgotPassword),
-              onRegister: () => context.push(AuthRoutes.register),
-            ),
-          ),
-          GoRoute(
-            path: AuthRoutes.register,
-            builder: (context, state) => RegisterPage(
-              userType: UserType.provider,
-              onSignIn: () => context.go(AuthRoutes.login),
-              onRegistered: (identifier, mode) {
-                context.push(
-                  OtpRoutes.otp,
-                  extra: OtpArgs(
-                    identifier: identifier,
-                    type: mode == RegisterIdentifierMode.email
-                        ? IdentifierType.email
-                        : IdentifierType.phone,
-                  ),
-                );
-              },
-            ),
-          ),
+          ...moduleRegistry.allRoutes(routeContext),
+          // Combined OTP route — shared by verification and forgot-password flows.
           GoRoute(
             path: OtpRoutes.otp,
             redirect: (context, state) =>
@@ -96,26 +71,6 @@ GoRouter buildProviderRouter() {
                 args: args,
                 onVerified: () => context.go(AuthRoutes.login),
                 onBackToLogin: () => context.go(AuthRoutes.login),
-              );
-            },
-          ),
-          GoRoute(
-            path: ForgotPasswordRoutes.forgotPassword,
-            builder: (context, state) => ForgotPasswordPage(
-              onBackToLogin: () => context.go(AuthRoutes.login),
-              onOtpSent: (args) => context.push(OtpRoutes.otp, extra: args),
-            ),
-          ),
-          GoRoute(
-            path: ForgotPasswordRoutes.resetPassword,
-            redirect: (context, state) => state.extra is CreateNewPasswordArgs
-                ? null
-                : AuthRoutes.login,
-            builder: (context, state) {
-              final args = state.extra! as CreateNewPasswordArgs;
-              return CreateNewPasswordPage(
-                args: args,
-                onSuccess: () => context.go(AuthRoutes.login),
               );
             },
           ),

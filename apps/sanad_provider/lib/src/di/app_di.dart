@@ -11,6 +11,8 @@ import 'package:otp/otp.dart';
 import 'package:sanad_provider/src/config/app_config.dart';
 import 'package:storage/storage.dart';
 
+late final ModuleRegistry moduleRegistry;
+
 /// Registers all application-level dependencies with the service locator.
 Future<void> configureDependencies() async {
   // ── Storage ──────────────────────────────────────────────────────────────
@@ -96,10 +98,13 @@ Future<void> configureDependencies() async {
       () => ApiClientImpl(sl<SecureDioClient>(), sl<NetworkGuard>()),
     );
 
-  // ── Feature DI ───────────────────────────────────────────────────────────
-  AuthDI.init();
-  OtpDI.init();
-  ForgotPasswordDI.init();
+  // ── Feature modules ────────────────────────────────────────────────────────
+  final moduleRegistry = ModuleRegistry([
+    AuthModule(),
+    OtpModule(),
+    ForgotPasswordModule(),
+  ]);
+  await moduleRegistry.initAll();
 
   appLogger.i('[AppDI] Dependency injection configured for sanad_provider');
 }

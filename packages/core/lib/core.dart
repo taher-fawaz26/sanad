@@ -1,12 +1,13 @@
-/// Sanad Core — shared abstractions, validators, and asset path constants.
+/// Sanad Core — shared abstractions, validators, and cross-cutting
+/// foundation utilities.
 ///
 /// Exports: Failure hierarchy, Result/Either aliases, UseCase contracts,
-/// DI helper, validators, extensions, constants, and [AppAssets] / [AppSvgs].
+/// DI helper, validators, extensions, and constants.
+///
+/// Asset path constants (`AppAssets`, `AppSvgs`, `AppImages`) live in the
+/// `app_assets` package — `core` owns zero UI/asset knowledge by design.
 library;
 
-// Assets
-export 'src/assets/app_assets.dart';
-export 'src/assets/app_svgs.dart';
 // Infrastructure BLoC utilities
 export 'src/blocs/base_request_bloc.dart';
 export 'src/blocs/base_request_state.dart';
@@ -17,6 +18,8 @@ export 'src/domain/entities/entity_converter.dart';
 export 'src/domain/failures/failure.dart';
 export 'src/domain/failures/failure_extensions.dart';
 export 'src/domain/usecases/usecase.dart';
+export 'src/module/feature_module.dart';
+export 'src/module/module_registry.dart';
 export 'src/extensions/date_extensions.dart';
 export 'src/extensions/string_extensions.dart';
 export 'src/utils/constants/app_durations.dart';

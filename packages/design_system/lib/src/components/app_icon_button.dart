@@ -1,4 +1,4 @@
-import 'package:core/core.dart';
+import 'package:app_assets/app_assets.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
 import 'package:design_system/src/theme/tokens/icon_button_tokens.dart';
 import 'package:flutter/material.dart';

@@ -1,0 +1,26 @@
+name: design_catalog
+description: Interactive design system catalog with Widgetbook — internal dev tool only.
+version: 0.1.0+1
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+
+dependencies:
+  app_assets:
+    path: ../../packages/app_assets
+  design_system:
+    path: ../../packages/design_system
+  flutter:
+    sdk: flutter
+  flutter_screenutil: ^5.9.3
+  widgetbook: ^3.14.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: ^9.0.0
+
+flutter:
+  uses-material-design: true

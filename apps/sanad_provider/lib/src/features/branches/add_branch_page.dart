@@ -2,7 +2,8 @@ import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_widgets/shared_widgets.dart';
+import 'package:sanad_provider/src/features/branches/widgets/app_location_field.dart';
+import 'package:sanad_provider/src/features/branches/widgets/app_person_select_field.dart';
 
 enum _ScheduleMode { company, custom }
 

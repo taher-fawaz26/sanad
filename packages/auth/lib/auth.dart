@@ -14,6 +14,8 @@ export 'src/data/models/adapter/user_adapter.dart';
 export 'src/data/models/login_response_model.dart' show LoginResponseModel;
 // DI
 export 'src/di/auth_di.dart';
+// Module
+export 'src/module/auth_module.dart';
 // Domain
 export 'src/domain/entities/login_response_entity.dart';
 export 'src/domain/entities/user_entity.dart';

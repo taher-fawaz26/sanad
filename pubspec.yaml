@@ -8,14 +8,15 @@ environment:
 workspace:
   - apps/sanad_client
   - apps/sanad_provider
+  - apps/design_catalog
   - packages/analytics
   - packages/api
+  - packages/app_assets
   - packages/app_logger
   - packages/auth
   - packages/change_password
   - packages/config
   - packages/core
-  - packages/dependencies
   - packages/design_system
   - packages/domain
   - packages/flavors
@@ -26,7 +27,6 @@ workspace:
   - packages/otp
   - packages/shared_blocs
   - packages/shared_models
-  - packages/shared_widgets
   - packages/storage
   - packages/testing
   - packages/utilities

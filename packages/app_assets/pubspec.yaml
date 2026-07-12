@@ -1,0 +1,30 @@
+name: app_assets
+description: >
+  Shared images, SVGs, icons, lottie/animation assets, and asset path
+  constants for the Sanad platform. Contains no fonts, UI widgets, themes,
+  or helpers — fonts remain owned by design_system.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: ^9.0.0
+
+flutter:
+  assets:
+    - assets/svgs/
+    - assets/images/illustrations/
+    - assets/images/empty_states/
+    - assets/images/onboarding/
+    - assets/icons/
+    - assets/lottie/
+    - assets/animations/

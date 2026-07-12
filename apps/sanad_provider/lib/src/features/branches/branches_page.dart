@@ -2,8 +2,8 @@ import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sanad_provider/src/features/branches/widgets/branch_empty_states.dart';
 import 'package:sanad_provider/src/routing/app_routes.dart';
-import 'package:shared_widgets/shared_widgets.dart';
 
 enum _BranchFilter { all, maintenance, active }
 
@@ -144,8 +144,8 @@ class _ProviderBranchesPageState extends State<ProviderBranchesPage> {
   Widget _buildBranchesTab(BuildContext context) {
     final branches = _filteredBranches;
 
-    return ListView(
-      padding: EdgeInsets.only(bottom: AppSpacing.lg),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AppSection(
           title: 'branches.count_label'.tr(),
@@ -222,42 +222,73 @@ class _ProviderBranchesPageState extends State<ProviderBranchesPage> {
           ),
         ),
         SizedBox(height: AppSpacing.sm),
-        ...branches.map(
-          (branch) => Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.sm,
-              AppSpacing.lg,
-              0,
-            ),
-            child: AppListCard(
-              title: branch.name,
-              caption: branch.subtitle,
-              leading: AppAvatar(
-                initials: branch.initial,
-                backgroundColor: branch.avatarColor,
-                showStatusDot: true,
-              ),
-              badge: AppStatusBadge(
-                label: branch.status == _BranchStatus.active
-                    ? 'branches.status_active'.tr()
-                    : 'branches.status_maintenance'.tr(),
-                type: branch.status == _BranchStatus.active
-                    ? AppStatusBadgeType.success
-                    : AppStatusBadgeType.warning,
-                size: AppStatusBadgeSize.compact,
-              ),
-              trailing: AppIconButton(
-                icon: Icons.more_vert,
-                size: AppIconButtonSize.small,
-                iconColor: context.appColors.textPrimary,
-                onTap: () {},
-              ),
-              onTap: () {},
-            ),
-          ),
+        Expanded(
+          child: branches.isEmpty
+              ? _buildBranchesEmptyState(context)
+              : ListView(
+                  padding: EdgeInsets.only(bottom: AppSpacing.lg),
+                  children: [
+                    ...branches.map(
+                      (branch) => Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          AppSpacing.lg,
+                          AppSpacing.sm,
+                          AppSpacing.lg,
+                          0,
+                        ),
+                        child: AppListCard(
+                          title: branch.name,
+                          caption: branch.subtitle,
+                          leading: AppAvatar(
+                            initials: branch.initial,
+                            backgroundColor: branch.avatarColor,
+                            showStatusDot: true,
+                          ),
+                          badge: AppStatusBadge(
+                            label: branch.status == _BranchStatus.active
+                                ? 'branches.status_active'.tr()
+                                : 'branches.status_maintenance'.tr(),
+                            type: branch.status == _BranchStatus.active
+                                ? AppStatusBadgeType.success
+                                : AppStatusBadgeType.warning,
+                            size: AppStatusBadgeSize.compact,
+                          ),
+                          trailing: AppIconButton(
+                            icon: Icons.more_vert,
+                            size: AppIconButtonSize.small,
+                            iconColor: context.appColors.textPrimary,
+                            onTap: () {},
+                          ),
+                          onTap: () {},
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
         ),
       ],
+    );
+  }
+
+  Widget _buildBranchesEmptyState(BuildContext context) {
+    if (_searchQuery.trim().isNotEmpty) {
+      return Center(
+        child: BranchesSearchEmptyState(
+          query: _searchQuery.trim(),
+          onClearSearch: () => setState(() => _searchQuery = ''),
+        ),
+      );
+    }
+
+    return Center(
+      child: AppGenericEmptyState(
+        title: 'branches.empty_first_branch_title'.tr(),
+        description: 'branches.empty_first_branch_description'.tr(),
+        actionLabel: 'branches.empty_first_branch_action'.tr(),
+        onAction: () => context.push(AppRoutes.addBranch),
+        actionIcon: const Icon(Icons.add_circle_outline),
+        actionIconPosition: AppButtonIconPosition.center,
+      ),
     );
   }
 }

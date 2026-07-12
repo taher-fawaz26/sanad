@@ -120,3 +120,94 @@ jobs:
         with:
           name: provider-ios-ipa
           path: apps/sanad_provider/build/ios/ipa/*.ipa
+
+  # ── Release notes ────────────────────────────────────────────────────────────
+  release-notes:
+    name: Generate Release Notes
+    needs: [build-provider-android, build-client-android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.32.0"
+          channel: stable
+      - name: Generate notes from CHANGELOG
+        run: |
+          cd tools && dart pub get
+          dart run bin/generate_release_notes.dart ../build/release_notes.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: build/release_notes.md
+
+  # ── Fastlane store upload (requires secrets) ───────────────────────────────
+  fastlane-android:
+    name: Fastlane Android Upload
+    needs: [build-provider-android, build-client-android]
+    runs-on: ubuntu-latest
+    if: github.repository_owner != ''
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+          bundler-cache: true
+      - name: Install Fastlane
+        run: gem install fastlane
+      - name: Upload Provider (supply)
+        run: fastlane provider_internal
+        working-directory: fastlane
+        env:
+          SUPPLY_JSON_KEY_DATA: ${{ secrets.PLAY_STORE_JSON_KEY }}
+        continue-on-error: true
+      - name: Upload Client (supply)
+        run: fastlane client_internal
+        working-directory: fastlane
+        env:
+          SUPPLY_JSON_KEY_DATA: ${{ secrets.PLAY_STORE_JSON_KEY }}
+        continue-on-error: true
+
+  fastlane-ios:
+    name: Fastlane iOS Upload
+    needs: [build-provider-ios, build-client-ios]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+      - name: Install Fastlane
+        run: gem install fastlane
+      - name: Sync signing (match)
+        run: fastlane sync_signing
+        working-directory: fastlane
+        env:
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          FASTLANE_USER: ${{ secrets.FASTLANE_USER }}
+        continue-on-error: true
+      - name: Upload Provider (deliver)
+        run: fastlane provider_deliver
+        working-directory: fastlane
+        continue-on-error: true
+      - name: Upload Client (deliver)
+        run: fastlane client_deliver
+        working-directory: fastlane
+        continue-on-error: true
+
+  # ── GitHub Release ───────────────────────────────────────────────────────────
+  github-release:
+    name: GitHub Release
+    needs: release-notes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+          path: build
+      - uses: softprops/action-gh-release@v2
+        with:
+          body_path: build/release_notes.md
+          generate_release_notes: false

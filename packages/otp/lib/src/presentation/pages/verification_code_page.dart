@@ -9,7 +9,7 @@ import 'package:otp/src/cubit/otp_ui_cubit.dart';
 import 'package:otp/src/domain/enums/otp_purpose.dart';
 import 'package:otp/src/models/otp_args.dart';
 import 'package:otp/src/presentation/bloc/otp_bloc.dart';
-import 'package:shared_widgets/shared_widgets.dart';
+import 'package:otp/src/presentation/widgets/app_otp_field.dart';
 
 /// Register-flow OTP verification screen.
 class VerificationCodePage extends HookWidget {

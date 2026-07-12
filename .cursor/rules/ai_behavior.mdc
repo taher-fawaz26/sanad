@@ -17,7 +17,7 @@ Before creating any Widget, Class, Repository, UseCase, Model, Entity, Extension
 
 ## Core Principles
 
-- **Search before creating** — check `packages/design_system`, `packages/shared_widgets`, `packages/core`, and existing feature packages
+- **Search before creating** — check `packages/design_system` (components/ and shared_ui/), `packages/app_assets`, `packages/core`, and existing feature packages
 - **Never generate placeholder code** — no `// TODO`, `throw UnimplementedError()`, or `return null` stubs; implement fully or ask
 - **Never remove working code** without explicit instruction
 - **Never simplify architecture** — keep clean arch layers even for simple features

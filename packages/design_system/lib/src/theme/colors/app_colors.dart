@@ -1,4 +1,3 @@
-import 'package:design_system/design_system.dart' show DarkColors, LightColors;
 import 'package:design_system/src/theme/colors/app_palettes.dart';
 import 'package:flutter/material.dart';
 
@@ -10,7 +9,8 @@ import 'package:flutter/material.dart';
 /// - **[AppPalettes]** — six Figma ramps (`main`, `accent`, `yellow`, `dark`,
 ///   `sky`, `red`) plus `white` / `black`.
 /// - **Semantic tokens** — UI roles (`primary`, `error`, `surface`, …) mapped
-///   from palette steps in [LightColors] / [DarkColors].
+///   from palette steps in `LightColors` / `DarkColors` (theme-internal;
+///   never imported outside this package).
 ///
 /// Prefer semantic tokens in feature UI. Reach for [palettes] only when a
 /// component spec names a specific ramp step.

@@ -13,6 +13,32 @@ feat branch → PR → review → merge to main → version bump → tag → bui
 - Changes tracked via conventional commits
 - CHANGELOG.md updated per release
 
+## Hybrid Pipeline (GitHub Actions + Fastlane)
+
+| Step | Tool | Purpose |
+|------|------|---------|
+| Quality gate | GitHub Actions | analyze + test |
+| Build APK/IPA | Flutter | `melos build:*` |
+| Release notes | `tools/generate_release_notes.dart` | CHANGELOG → GitHub Release |
+| Android upload | Fastlane `supply` | Play Store internal track |
+| iOS signing | Fastlane `match` | Certificate management |
+| iOS upload | Fastlane `deliver` | App Store Connect |
+
+Fastlane lanes live in `fastlane/Fastfile`. Required secrets:
+
+- `PLAY_STORE_JSON_KEY` — Google Play service account JSON
+- `MATCH_GIT_URL` / `MATCH_PASSWORD` — iOS certificate repo
+- `FASTLANE_USER` — Apple ID for deliver
+
+## Environment Mapping
+
+| Env | Branch | `ENV` dart-define | Store track |
+|-----|--------|-------------------|-------------|
+| Dev | `feat/*` | `dev` | — |
+| QA | `release/*` | `qa` | Internal |
+| Stage | `release/*` manual | `stage` | Alpha |
+| Production | `v*.*.*` tag | `prod` | Production |
+
 ## Pre-Release Checklist
 
 - [ ] `melos analyze` — zero errors

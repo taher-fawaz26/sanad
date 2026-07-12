@@ -18,9 +18,12 @@ flowchart TB
 
   subgraph ui [UI Packages]
     DS[design_system]
-    SW[shared_widgets]
     Loc[localization]
     SB[shared_blocs]
+  end
+
+  subgraph assets_pkg [Assets]
+    Assets[app_assets]
   end
 
   subgraph infra [Infrastructure]
@@ -37,16 +40,16 @@ flowchart TB
     Models[shared_models]
     Utils[utilities]
     Testing[testing]
-    Deps[dependencies]
   end
 
   Client --> Auth
   Client --> DS
   Client --> Loc
+  Client --> Assets
   Provider --> Auth
   Provider --> DS
   Provider --> Loc
-  Provider --> SW
+  Provider --> Assets
 
   Auth --> OTP
   Auth --> Network
@@ -54,12 +57,11 @@ flowchart TB
   Auth --> DS
   Auth --> Loc
   OTP --> Auth
-  OTP --> SW
   FP --> Auth
   FP --> OTP
 
   DS --> Core
-  SW --> DS
+  DS --> Assets
   Loc --> Core
   SB --> Auth
   SB --> DS
@@ -79,20 +81,31 @@ flowchart TB
   Testing --> Domain
 ```
 
+**Note:** `core` and `app_assets` are independent foundation-layer packages — there is **no edge between them in either direction**. `app_assets` contains zero UI/business knowledge (images, SVGs, icons, lottie/animations, and path constants only); `core` contains zero asset knowledge.
+
 ## Dependency Direction Rules
 
 ```
-apps → feature packages → UI/infra packages → core
+core, app_assets (parallel foundation layers, no edge between them)
+      ↓
+design_system
+      ↓
+feature packages (auth, otp, forgot_password, change_password)
+      ↓
+applications (sanad_client, sanad_provider)
 ```
 
 Allowed:
 - `sanad_provider` → `auth` → `network` → `core`
 - `auth` → `design_system` → `core`
+- `sanad_provider` → `app_assets` (apps may also depend on `app_assets` directly for app-shell usage, e.g. `main_shell.dart`)
 
 Forbidden:
 - `core` → `auth` (reverse)
 - `auth` → `sanad_provider` (package importing app)
 - `domain` → `data` (layer violation)
+- `core` ↔ `app_assets` (either direction — both are independent foundation packages)
+- **`design_system` → any feature package** (`auth`, `otp`, `forgot_password`, `change_password`) — verified zero violations by direct source inspection of `packages/design_system/pubspec.yaml` and `lib/`. Re-verify with a workspace-wide import grep before merging any future change to `design_system`.
 
 ## Layer Dependencies (Feature Packages)
 
@@ -106,5 +119,9 @@ routes/ → (path constants only)
 
 ## Known Issues
 
-- `settings` package exists on disk but is not in workspace — do not depend on it
 - `api`, `analytics`, `notifications`, `change_password` are stubs with minimal implementation
+- `shared_models` is an empty stub overlapping `domain` — see the Naming Recommendation in `docs/PACKAGE_GUIDE.md`. Not deleted, not renamed; do not add new code to it until that decision is made.
+
+## Removed Packages
+
+- `dependencies` and `settings` have been deleted (zero consumers verified for both). `shared_widgets` has been dissolved into `design_system`, `packages/otp`, and `sanad_provider`. Do not re-create these packages or depend on them.

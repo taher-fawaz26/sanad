@@ -8,8 +8,12 @@ The Sanad Design System (`packages/design_system`) provides theme, tokens, and r
 
 | Package | Contains |
 |---------|----------|
-| `design_system` | Primitive, domain-agnostic components and tokens |
-| `shared_widgets` | Composite, domain-aware widgets (OTP field, location field) |
+| `app_assets` | Shared images, SVGs, icons, lottie/animations, and their path constants only — no widgets, no fonts (fonts stay in `design_system`) |
+| `design_system` | Design tokens, primitive components (`lib/src/components/`), and higher-level domain-agnostic composed UI (`lib/src/shared_ui/`) |
+
+`shared_widgets` was dissolved: primitive widgets (`AppSvgPicture`, `AppListCard`, `AppCloseIcon`, `AppNotificationIcon`) moved into `design_system/components/`; the OTP field moved into `packages/otp`; feature-specific fields (`AppLocationField`, `AppPersonSelectField`) moved into `sanad_provider`'s branches feature. See the Component Ownership Policy and Architecture Decision Tree in `docs/ARCHITECTURE.md`.
+
+Dev-only preview/showcase widgets (`AppColorPalettePreview`, `AppTypographyPreview`) live in `design_system/lib/src/dev/` and are intentionally **not** exported from any barrel — internal use only.
 
 ## Token System
 
@@ -80,6 +84,22 @@ Key components exported from `design_system.dart`:
 - **Form:** `AppCheckbox`, `AppRadio`, `AppRadioTile`, `AppSwitch`, `AppSlider`
 - **Layout:** `AppDivider`, `AppWizardStepIndicator`, `AppStepper`
 - **Overlays:** `AppBottomSheet`, `AppActionSheet`, `AppBackdrop` — see [Overlays](#overlays) below
+- **Empty states:** `AppEmptyState`, `AppNetworkFailureState`, `AppGenericEmptyState` — see [Empty States](#empty-states) below
+
+## Empty States
+
+Figma `empty states` (`321:8333`). All four components live in `design_system/lib/src/shared_ui/app_empty_state.dart` (higher-level composed UI, not a primitive).
+
+| Component | Purpose | Illustration source |
+|---|---|---|
+| `AppEmptyState` | Generic centered illustration + title + description + optional action | Caller-provided |
+| `AppEmptyStateImage` | Package-aware raster loader for state illustrations | `app_assets` or app-owned assets |
+| `AppNetworkFailureState` | No internet connection preset (`321:8297`) | `AppImages.networkFailure` (`app_assets`) |
+| `AppGenericEmptyState` | Generic empty preset (`328:9898`) | `AppImages.emptyState` (`app_assets`) |
+
+Shared illustrations live in `packages/app_assets/assets/images/empty_states/` via `AppImages` (`package:app_assets/app_assets.dart`). App-specific illustrations (e.g. search, workers) stay in the host app's own `assets/` folder — see the Asset Ownership Policy in `docs/ARCHITECTURE.md`.
+
+`EmptyStateTokens` — Figma spacing: `pt 32`, `pb 24`, `px 24`, section gap `24`, text gap `8`, content width `279`.
 
 ## Overlays
 

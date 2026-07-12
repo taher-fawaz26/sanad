@@ -34,5 +34,9 @@ Never reverse. Circular deps are a build error.
 
 ## Known Issues
 
-- `settings` package is orphaned (not in workspace) — do not depend on it
-- `dependencies` package is the canonical third-party re-export hub
+- `shared_models` is an empty stub overlapping `domain` — see the naming recommendation in `docs/PACKAGE_GUIDE.md`; do not add new code to it until resolved
+
+## Removed Packages
+
+- `settings` and `dependencies` have been deleted (dead stub / zero consumers). `shared_widgets` has been dissolved into `design_system`, `packages/otp`, and `sanad_provider`. Do not re-create or depend on any of these.
+- Import third-party packages directly — there is no centralized re-export hub anymore.

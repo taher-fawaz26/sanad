@@ -1,4 +1,3 @@
-import 'package:design_system/design_system.dart' show LightColors;
 import 'package:design_system/src/theme/colors/app_colors.dart';
 import 'package:design_system/src/theme/colors/app_palettes.dart';
 import 'package:design_system/src/theme/colors/light_colors.dart' show LightColors;

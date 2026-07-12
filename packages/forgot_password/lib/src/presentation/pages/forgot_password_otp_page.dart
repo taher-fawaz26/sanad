@@ -9,7 +9,6 @@ import 'package:forgot_password/src/presentation/bloc/forgot_password_bloc.dart'
 import 'package:forgot_password/src/routes/forgot_password_routes.dart';
 import 'package:go_router/go_router.dart';
 import 'package:otp/otp.dart';
-import 'package:shared_widgets/shared_widgets.dart';
 
 /// Forgot-password OTP verification screen.
 class ForgotPasswordOtpPage extends HookWidget {

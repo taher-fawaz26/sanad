@@ -1,0 +1,27 @@
+---
+description: Reminds to create or update ADRs for architectural changes
+globs: "packages/**"
+alwaysApply: false
+---
+
+# Architecture Decision Records
+
+See `docs/adr/README.md`.
+
+## When to Create an ADR
+
+- New package or architectural layer
+- Technology choice over a realistic alternative
+- Reversal or revision of an existing decision
+- New cross-cutting convention (pagination, result pattern, naming)
+
+## Process
+
+1. Copy `docs/adr/0000-template.md` → `docs/adr/NNNN-title.md`
+2. Include ADR in the **same PR** as the change
+3. Update `docs/adr/README.md` index
+4. Never delete merged ADRs — supersede only
+
+## Do NOT Create ADRs For
+
+Routine features, UI tweaks, bug fixes, config changes.

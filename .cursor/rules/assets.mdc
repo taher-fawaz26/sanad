@@ -6,33 +6,43 @@ alwaysApply: false
 
 # Assets
 
+## Ownership Policy
+
+- Shared (used by 2+ apps or by `design_system`) → `packages/app_assets/`
+- Application-specific (used by exactly one app) → `apps/<app>/assets/`
+- Feature-specific (used by exactly one feature package) → `packages/<feature>/assets/`
+- Never duplicate the same asset in two locations — if a second consumer appears, promote it to `app_assets`
+- `core` owns zero asset knowledge — never add asset files or path constants to `core`
+
 ## SVG (Shared)
 
-- Location: `packages/core/assets/svgs/`
-- Constants: `AppSvgs` in `packages/core/lib/src/assets/app_svgs.dart`
-- Loading: `AppSvgPicture.asset(AppSvgs.iconName)` from `shared_widgets`
+- Location: `packages/app_assets/assets/svgs/`
+- Constants: `AppSvgs` in `packages/app_assets/lib/src/app_svgs.dart`
+- Loading: `AppSvgPicture.asset(AppSvgs.iconName)` from `design_system`
 - Never `SvgPicture.asset()` directly — breaks package asset loading
 
 ## Adding a New SVG
 
-1. Add file to `packages/core/assets/svgs/`
+1. Add file to `packages/app_assets/assets/svgs/`
 2. Add constant to `AppSvgs`
 3. Use `AppSvgPicture.asset(AppSvgs.newIcon)`
 
 ## Fonts
 
-- Declared in `packages/design_system/pubspec.yaml`
+- Declared in `packages/design_system/pubspec.yaml` — fonts are part of the Design Language/Typography System, not `app_assets`
 - Always via `AppFont` / `AppFontArabic` — never raw family name strings
 
 ## Images
 
-- App-specific: `apps/<app>/assets/images/`
-- Shared: `packages/core/assets/images/`
-- Loading: `Image.asset(path, package: AppAssets.package)`
+- App-specific: `apps/<app>/assets/images/<subfolder>/`
+- Shared: `packages/app_assets/assets/images/{illustrations,empty_states,onboarding}/`
+- Loading (shared): `Image.asset(path, package: AppAssets.package)` where `AppAssets.package == 'app_assets'`
+- Loading (app-owned): `Image.asset(path)` — no `package:` argument
 
-## Lottie
+## Lottie / Animations
 
-Store in `assets/animations/` — never in `assets/images/`
+- Shared: `packages/app_assets/assets/lottie/` and `packages/app_assets/assets/animations/`
+- Never store Lottie files in `assets/images/`
 
 ## Naming
 
@@ -42,4 +52,4 @@ Store in `assets/animations/` — never in `assets/images/`
 
 - Declare every asset folder in owning package's `pubspec.yaml` under `flutter.assets`
 - PNG assets ≤ 200 KB; provide `@2x` / `@3x` for non-SVG
-- Never bundle assets in feature packages — use `core` (shared) or app (app-specific)
+- Never bundle shared assets in feature packages or `core` — use `app_assets` (shared), the app (app-specific), or the feature package itself (feature-specific)

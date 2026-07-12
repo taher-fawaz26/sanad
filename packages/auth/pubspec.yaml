@@ -24,6 +24,8 @@ dependencies:
   hive_ce: ^2.19.3
   network:
     path: ../network
+  otp:
+    path: ../otp
   storage:
     path: ../storage
   design_system:

@@ -1,4 +1,4 @@
-import 'package:core/core.dart';
+import 'package:app_assets/app_assets.dart';
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/spacing/responsive_spacing.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';

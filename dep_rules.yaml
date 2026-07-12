@@ -1,0 +1,71 @@
+# Machine-readable architecture rules for melos validate:deps and validate:imports.
+# See docs/ARCHITECTURE.md and docs/adr/ for rationale.
+
+forbidden_edges:
+  - from: core
+    to: app_assets
+    reason: core must remain a pure foundation package with zero asset knowledge
+  - from: core
+    to: design_system
+    reason: core must not depend on UI packages
+  - from: app_assets
+    to: design_system
+    reason: app_assets is a leaf asset package
+  - from: design_system
+    to: [auth, otp, forgot_password, change_password]
+    reason: design_system must not depend on feature packages
+  - from: "*"
+    to: "apps/**"
+    reason: packages must never depend on apps
+
+deleted_packages:
+  - shared_widgets
+  - dependencies
+  - settings
+
+layer_order:
+  - tier: 0
+    packages: [core, app_assets, config, domain, utilities]
+  - tier: 1
+    packages: [design_system, app_logger, localization]
+  - tier: 2
+    packages:
+      - network
+      - storage
+      - analytics
+      - notifications
+      - api
+      - flavors
+      - shared_models
+      - testing
+  - tier: 3
+    packages: [auth, otp, forgot_password, change_password, shared_blocs]
+  - tier: 4
+    packages: [sanad_client, sanad_provider]
+
+# Within-package layer import rules (enforced by scan_imports.dart)
+layer_rules:
+  domain:
+    forbidden_import_patterns:
+      - "/data/"
+      - "/presentation/"
+      - "package:dio/"
+      - "package:flutter/"
+  data:
+    forbidden_import_patterns:
+      - "/presentation/"
+
+# Public API barrel rules
+disallow_barrel_export:
+  patterns:
+    - "**/*_impl.dart"
+    - "**/internal/**"
+  exceptions:
+    - "lib/src/di/**"
+    - "lib/src/data/models/adapter/**"
+
+# Packages allowed to import Dio directly
+dio_allowed_packages:
+  - network
+  - sanad_client
+  - sanad_provider

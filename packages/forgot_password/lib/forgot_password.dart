@@ -3,6 +3,7 @@
 export 'src/data/datasources/forgot_password_remote_datasource.dart';
 export 'src/data/repositories/forgot_password_repository_impl.dart';
 export 'src/di/forgot_password_di.dart';
+export 'src/module/forgot_password_module.dart';
 export 'src/domain/repositories/forgot_password_repository.dart';
 export 'src/domain/usecases/forgot_password_params.dart';
 export 'src/domain/usecases/request_forgot_password_usecase.dart';

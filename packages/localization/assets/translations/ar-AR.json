@@ -36,6 +36,15 @@
     "filter_active": "نشط",
     "status_active": "نشط",
     "status_maintenance": "صيانة",
+    "empty_first_branch_title": "أضف فرعك الأول",
+    "empty_first_branch_description": "أنشئ موقعاً لإدارة التغطية والخدمات والفريق.",
+    "empty_first_branch_action": "إضافة فرع",
+    "empty_search_title": "لم يتم العثور على فروع",
+    "empty_search_description": "لا توجد نتائج لـ \"{query}\". جرّب اسماً آخر أو امسح البحث.",
+    "empty_search_action": "مسح البحث",
+    "empty_workers_title": "لا يوجد عمال معيّنون",
+    "empty_workers_description": "عيّن عمالاً ليتم جدولتهم في المهام.",
+    "empty_workers_action": "تعيين عامل",
     "add_branch": {
       "title": "إضافة فرع",
       "subtitle": "إعداد الموقع والتغطية والفريق.",
@@ -117,5 +126,23 @@
     "create_subtitle": "يجب أن تكون كلمة المرور الجديدة مختلفة عن السابقة",
     "reset": "إعادة تعيين كلمة المرور",
     "reset_success": "تم إعادة تعيين كلمة المرور بنجاح"
+  },
+  "empty_states": {
+    "network_title": "لا يوجد اتصال بالإنترنت",
+    "network_description": "لا يوجد اتصال بالإنترنت. يرجى التحقق من الاتصال والمحاولة مرة أخرى.",
+    "retry": "إعادة المحاولة"
+  },
+  "errors": {
+    "no_internet": "لا يوجد اتصال بالإنترنت",
+    "timeout": "انتهت مهلة الطلب. يرجى المحاولة مرة أخرى.",
+    "server_error": "حدث خطأ ما. يرجى المحاولة لاحقاً.",
+    "unknown": "حدث خطأ غير متوقع.",
+    "unauthorized": "غير مصرح لك بتنفيذ هذا الإجراء.",
+    "not_found": "لم يتم العثور على المورد المطلوب.",
+    "bad_request": "طلب غير صالح. يرجى التحقق من المدخلات.",
+    "request_cancelled": "تم إلغاء الطلب.",
+    "secure_connection_failed": "فشل الاتصال الآمن. يرجى المحاولة مرة أخرى.",
+    "invalid_credentials": "بيانات اعتماد غير صالحة. يرجى المحاولة مرة أخرى.",
+    "cache_error": "فشل تحميل البيانات المخزنة مؤقتاً."
   }
 }

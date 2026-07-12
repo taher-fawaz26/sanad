@@ -1,4 +1,4 @@
-﻿import 'package:core/core.dart';
+﻿import 'package:app_assets/app_assets.dart';
 import 'package:design_system/src/theme/tokens/bottom_nav_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
