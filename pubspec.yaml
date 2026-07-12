@@ -22,6 +22,7 @@ workspace:
   - packages/features/change_password
   - packages/features/forgot_password
   - packages/features/otp
+  - packages/features/services
   - packages/flavors
   - packages/localization
   - packages/network

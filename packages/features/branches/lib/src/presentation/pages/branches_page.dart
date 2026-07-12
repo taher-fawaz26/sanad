@@ -134,9 +134,9 @@ class _BranchesTab extends StatelessWidget {
               child: AppSearchField(
                 hint: 'branches.search_hint'.tr(),
                 showMicIcon: false, // hide mic by default for branch search
-                onChanged: (value) => context
-                    .read<BranchesBloc>()
-                    .add(BranchesSearchChangedEvent(value)),
+                onChanged: (value) => context.read<BranchesBloc>().add(
+                  BranchesSearchChangedEvent(value),
+                ),
               ),
             ),
             Padding(
@@ -150,23 +150,23 @@ class _BranchesTab extends StatelessWidget {
             Expanded(
               child: state.hasError && state.branches.isEmpty
                   ? _ErrorState(
-                      onRetry: () => context
-                          .read<BranchesBloc>()
-                          .add(const BranchesRefreshEvent()),
+                      onRetry: () => context.read<BranchesBloc>().add(
+                        const BranchesRefreshEvent(),
+                      ),
                     )
                   : branches.isEmpty
-                      ? _EmptyState(
-                          searchQuery: state.searchQuery,
-                          onClearSearch: () => context
-                              .read<BranchesBloc>()
-                              .add(const BranchesSearchChangedEvent('')),
-                        )
-                      : ListView.builder(
-                          padding: EdgeInsets.only(bottom: AppSpacing.lg),
-                          itemCount: branches.length,
-                          itemBuilder: (context, index) =>
-                              _BranchListItem(branch: branches[index]),
-                        ),
+                  ? _EmptyState(
+                      searchQuery: state.searchQuery,
+                      onClearSearch: () => context.read<BranchesBloc>().add(
+                        const BranchesSearchChangedEvent(''),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: EdgeInsets.only(bottom: AppSpacing.lg),
+                      itemCount: branches.length,
+                      itemBuilder: (context, index) =>
+                          _BranchListItem(branch: branches[index]),
+                    ),
             ),
           ],
         );
@@ -191,9 +191,9 @@ class _FilterRow extends StatelessWidget {
             type: currentFilter == BranchFilter.all
                 ? AppButtonType.secondary
                 : AppButtonType.outline,
-            onPressed: () => context
-                .read<BranchesBloc>()
-                .add(const BranchesFilterChangedEvent(BranchFilter.all)),
+            onPressed: () => context.read<BranchesBloc>().add(
+              const BranchesFilterChangedEvent(BranchFilter.all),
+            ),
           ),
         ),
         SizedBox(width: AppSpacing.md),
@@ -204,11 +204,9 @@ class _FilterRow extends StatelessWidget {
             type: currentFilter == BranchFilter.maintenance
                 ? AppButtonType.secondary
                 : AppButtonType.outline,
-            onPressed: () => context
-                .read<BranchesBloc>()
-                .add(
-                  const BranchesFilterChangedEvent(BranchFilter.maintenance),
-                ),
+            onPressed: () => context.read<BranchesBloc>().add(
+              const BranchesFilterChangedEvent(BranchFilter.maintenance),
+            ),
           ),
         ),
         SizedBox(width: AppSpacing.md),
@@ -219,11 +217,9 @@ class _FilterRow extends StatelessWidget {
             type: currentFilter == BranchFilter.active
                 ? AppButtonType.secondary
                 : AppButtonType.outline,
-            onPressed: () => context
-                .read<BranchesBloc>()
-                .add(
-                  const BranchesFilterChangedEvent(BranchFilter.active),
-                ),
+            onPressed: () => context.read<BranchesBloc>().add(
+              const BranchesFilterChangedEvent(BranchFilter.active),
+            ),
           ),
         ),
       ],
@@ -238,8 +234,9 @@ class _BranchListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initial =
-        branch.branchName.isNotEmpty ? branch.branchName[0].toUpperCase() : '?';
+    final initial = branch.branchName.isNotEmpty
+        ? branch.branchName[0].toUpperCase()
+        : '?';
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -274,7 +271,7 @@ class _BranchListItem extends StatelessWidget {
             onTap: () {},
           ),
         ),
-        onTap: () {},
+        onTap: () => context.push(BranchRoutes.detailsFor(branch.id)),
       ),
     );
   }
@@ -301,9 +298,6 @@ class _EmptyState extends StatelessWidget {
         title: 'branches.empty_first_branch_title'.tr(),
         description: 'branches.empty_first_branch_description'.tr(),
         actionLabel: 'branches.empty_first_branch_action'.tr(),
-        onAction: () => context.push(BranchRoutes.add),
-        actionIcon: const Icon(Icons.add_circle_outline),
-        actionIconPosition: AppButtonIconPosition.center,
       ),
     );
   }

@@ -10,6 +10,7 @@ class AppChip extends StatelessWidget {
     required this.label, super.key,
     this.selected = false,
     this.style = AppChipStyle.solid,
+    this.tone = AppChipTone.normal,
     this.size = AppChipSize.compact,
     this.icon,
     this.iconPosition = AppChipIconPosition.none,
@@ -19,6 +20,7 @@ class AppChip extends StatelessWidget {
   final String label;
   final bool selected;
   final AppChipStyle style;
+  final AppChipTone tone;
   final AppChipSize size;
   final Widget? icon;
   final AppChipIconPosition iconPosition;
@@ -35,6 +37,7 @@ class AppChip extends StatelessWidget {
       selected: selected,
       colors: colors,
       brightness: brightness,
+      tone: tone,
     );
     final textStyle = ChipTokens.labelStyle(typography, surface);
     final minHeight = ChipTokens.minHeight(size);

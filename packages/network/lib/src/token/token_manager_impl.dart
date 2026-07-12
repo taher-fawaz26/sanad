@@ -30,8 +30,12 @@ class TokenManagerImpl implements TokenManager {
 
   @override
   Future<void> init() async {
-    _accessToken = await _tokenStorage.getToken();
-    _refreshToken = await _tokenStorage.getRefreshToken();
+    final results = await Future.wait([
+      _tokenStorage.getToken(),
+      _tokenStorage.getRefreshToken(),
+    ]);
+    _accessToken = results[0];
+    _refreshToken = results[1];
     if (kDebugMode) debugPrint('[TokenManager] initialized');
   }
 

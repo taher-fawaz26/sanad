@@ -10,6 +10,7 @@ import 'package:localization/localization.dart';
 import 'package:network/network.dart';
 import 'package:otp/otp.dart';
 import 'package:sanad_provider/src/config/app_config.dart';
+import 'package:services/services.dart';
 import 'package:storage/storage.dart';
 
 late final ModuleRegistry moduleRegistry;
@@ -105,6 +106,7 @@ Future<void> configureDependencies() async {
     OtpModule(),
     ForgotPasswordModule(),
     BranchesModule(),
+    ServicesModule(),
   ]);
   await moduleRegistry.initAll();
 

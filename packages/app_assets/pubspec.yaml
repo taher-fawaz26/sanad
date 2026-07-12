@@ -24,6 +24,7 @@ flutter:
     - assets/svgs/
     - assets/images/illustrations/
     - assets/images/empty_states/
+    - assets/images/branches/
     - assets/images/onboarding/
     - assets/icons/
     - assets/lottie/

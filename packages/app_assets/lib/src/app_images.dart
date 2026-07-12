@@ -12,4 +12,8 @@ abstract final class AppImages {
 
   /// Figma `empty states / No branches yet` (`328:9898`) — generic empty.
   static const String emptyState = '$_base/empty_states/empty_state.png';
+
+  /// Figma `empty states / No branch locations` (`347:13862`).
+  static const String noBranchLocations =
+      '$_base/branches/no_branch_locations.png';
 }

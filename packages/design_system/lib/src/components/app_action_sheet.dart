@@ -24,16 +24,28 @@ class AppActionSheetItem {
 /// Figma `Views / Action Sheets` (`40:9109`).
 class AppActionSheet extends StatelessWidget {
   const AppActionSheet({
-    required this.items, super.key,
+    super.key,
     this.title,
+    this.child,
+    this.footer,
+    this.items = const [],
     this.cancelLabel = 'Cancel',
     this.onCancel,
+    this.showCancel = true,
   });
 
   final String? title;
+
+  /// Optional custom body — rendered after [title], before [items].
+  final Widget? child;
+
+  /// Optional footer slot — e.g. a primary confirm button (`251:7195`).
+  final Widget? footer;
+
   final List<AppActionSheetItem> items;
   final String cancelLabel;
   final VoidCallback? onCancel;
+  final bool showCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +69,7 @@ class AppActionSheet extends StatelessWidget {
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (title != null) ...[
                   SizedBox(height: AppSpacing.lg),
@@ -68,8 +81,9 @@ class AppActionSheet extends StatelessWidget {
                   ),
                   SizedBox(height: AppSpacing.sm),
                 ],
+                if (child != null) child!,
                 for (var i = 0; i < items.length; i++) ...[
-                  if (i > 0)
+                  if (i > 0 || child != null)
                     Divider(height: 1, color: spec.dividerColor),
                   _ActionSheetRow(
                     item: items[i],
@@ -77,25 +91,39 @@ class AppActionSheet extends StatelessWidget {
                     colors: colors,
                   ),
                 ],
+                if (footer != null) ...[
+                  Divider(height: 1, color: spec.dividerColor),
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      spec.horizontalPadding,
+                      AppSpacing.sm,
+                      spec.horizontalPadding,
+                      AppSpacing.sm,
+                    ),
+                    child: footer!,
+                  ),
+                ],
               ],
             ),
           ),
-          SizedBox(height: AppSpacing.sm),
-          Container(
-            decoration: BoxDecoration(
-              color: spec.surfaceColor,
-              borderRadius: spec.topRadius,
-            ),
-            child: _ActionSheetRow(
-              item: AppActionSheetItem(
-                label: cancelLabel,
-                onTap: onCancel ?? () => Navigator.of(context).pop(),
+          if (showCancel) ...[
+            SizedBox(height: AppSpacing.sm),
+            Container(
+              decoration: BoxDecoration(
+                color: spec.surfaceColor,
+                borderRadius: spec.topRadius,
               ),
-              spec: spec,
-              colors: colors,
-              isCancel: true,
+              child: _ActionSheetRow(
+                item: AppActionSheetItem(
+                  label: cancelLabel,
+                  onTap: onCancel ?? () => Navigator.of(context).pop(),
+                ),
+                spec: spec,
+                colors: colors,
+                isCancel: true,
+              ),
             ),
-          ),
+          ],
           SizedBox(height: AppSpacing.md),
         ],
       ),
@@ -159,11 +187,16 @@ class _ActionSheetRow extends StatelessWidget {
 }
 
 /// Shows a Figma-styled action sheet.
-Future<void> showAppActionSheet({
+Future<T?> showAppActionSheet<T>({
   required BuildContext context,
-  required List<AppActionSheetItem> items, String? title,
+  List<AppActionSheetItem> items = const [],
+  String? title,
+  Widget? child,
+  Widget? footer,
   String cancelLabel = 'Cancel',
   VoidCallback? onCancel,
+  bool showCancel = true,
+  bool isScrollControlled = false,
 }) {
   final colors = context.appColors;
   final typography = context.appTypography;
@@ -174,15 +207,19 @@ Future<void> showAppActionSheet({
     brightness: brightness,
   );
 
-  return showModalBottomSheet<void>(
+  return showModalBottomSheet<T>(
     context: context,
+    isScrollControlled: isScrollControlled,
     backgroundColor: Colors.transparent,
     barrierColor: spec.barrierColor,
     builder: (context) => AppActionSheet(
       title: title,
+      child: child,
+      footer: footer,
       items: items,
       cancelLabel: cancelLabel,
       onCancel: onCancel,
+      showCancel: showCancel,
     ),
   );
 }

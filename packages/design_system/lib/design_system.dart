@@ -6,6 +6,7 @@ export 'src/blocs/theme/theme_bloc.dart';
 // Components
 export 'src/components/app_action_sheet.dart';
 export 'src/components/app_avatar.dart';
+export 'src/components/app_avatar_stack.dart';
 export 'src/components/app_backdrop.dart';
 export 'src/components/app_bottom_nav_bar.dart';
 export 'src/components/app_bottom_sheet.dart';
@@ -19,8 +20,10 @@ export 'src/components/app_date_picker.dart';
 export 'src/components/app_divider.dart';
 export 'src/components/app_feature_icon.dart';
 export 'src/components/app_field_action.dart';
+export 'src/components/app_grouped_key_value_list.dart';
 export 'src/components/app_key_value_card.dart';
 export 'src/components/app_list_card.dart';
+export 'src/components/app_map_link_card.dart';
 export 'src/components/app_notification_icon.dart';
 export 'src/components/app_phone_field.dart';
 export 'src/components/app_radio_tile.dart';

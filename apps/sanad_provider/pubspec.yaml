@@ -16,6 +16,8 @@ dependencies:
     path: ../../packages/features/auth
   branches:
     path: ../../packages/features/branches
+  services:
+    path: ../../packages/features/services
   core:
     path: ../../packages/core
   cupertino_icons: ^1.0.8

@@ -1,0 +1,30 @@
+name: services
+description: >
+  Services feature — list provider services and select services via action sheet.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+  flutter: ">=3.19.0"
+
+dependencies:
+  core:
+    path: ../../core
+  design_system:
+    path: ../../design_system
+  easy_localization: ^3.0.8
+  equatable: ^2.1.0
+  flutter:
+    sdk: flutter
+  fpdart: ^1.2.0
+  localization:
+    path: ../../localization
+  network:
+    path: ../../network
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: ^9.0.0

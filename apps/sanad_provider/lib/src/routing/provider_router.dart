@@ -40,7 +40,7 @@ GoRouter buildProviderRouter() {
     redirect: (context, state) {
       if (state.matchedLocation == AuthRoutes.splash) return null;
 
-      final isProtected = routeContext.protectedRoutes.contains(
+      final isProtected = BranchRoutes.isProtectedRoute(
         state.matchedLocation,
       );
       if (isProtected && authStatus.status != AuthStatus.authenticated) {

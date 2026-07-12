@@ -46,6 +46,30 @@
     "empty_workers_description": "Assign workers so they can be scheduled for jobs.",
     "empty_workers_action": "assign worker",
     "more_actions": "More actions",
+    "details": {
+      "section_contact": "Contact",
+      "section_working_hours": "Working hours",
+      "section_coverage": "Coverage area",
+      "section_services": "Services",
+      "section_team": "Team",
+      "schedule_custom": "Custom",
+      "coverage_closed": "Closed",
+      "branch_phone": "Branch phone",
+      "open_in_maps": "Open in Maps",
+      "maps_unavailable": "Map link is not available",
+      "closed": "Closed",
+      "radius_km": "{radius} km radius",
+      "services_more": "+{count} more",
+      "view_all_workers": "View all {count}",
+      "manage_team": "Manage team",
+      "edit_branch": "Edit branch",
+      "edit_coming_soon": "Edit branch is coming soon",
+      "manage_team_coming_soon": "Manage team is coming soon",
+      "delete_coming_soon": "Delete branch is coming soon",
+      "manager_caption": "Branch manager · {name}",
+      "action_edit": "Edit branch",
+      "action_delete": "Delete branch"
+    },
     "add_branch": {
       "title": "Add branch",
       "subtitle": "Set up a location, its coverage, and team.",
@@ -63,11 +87,43 @@
       "branch_phone": "Branch phone",
       "branch_phone_hint": "+971 4 123 4567",
       "branch_manager": "Branch manager",
-      "branch_manager_hint": "Coming soon",
+      "branch_manager_hint": "Select a manager",
       "use_company_schedule": "Use company schedule",
       "set_custom_schedule": "Set custom schedule",
-      "next_button": "Save branch",
-      "success": "Branch created successfully"
+      "add_custom_day": "Add custom day",
+      "add_custom_day_title": "Add custom day",
+      "day_label": "Day",
+      "from_label": "From",
+      "to_label": "To",
+      "add_day_button": "Add day",
+      "all_days_added": "All days are already in the schedule",
+      "cancel": "Cancel",
+      "coverage_title": "add branch coverage",
+      "coverage_description": "Set up a location to manage its coverage.",
+      "add_location_button": "Add",
+      "add_location_coming_soon": "Location picker is coming soon",
+      "next_button": "Next",
+      "success": "Branch created successfully",
+      "error_title": "Couldn't save the branch",
+      "error_caption": "Your changes weren't lost. Try saving again.",
+      "days": {
+        "saturday": "Saturday",
+        "sunday": "Sunday",
+        "monday": "Monday",
+        "tuesday": "Tuesday",
+        "wednesday": "Wednesday",
+        "thursday": "Thursday",
+        "friday": "Friday"
+      }
+    }
+  },
+  "services": {
+    "select_service": {
+      "title": "Select Service",
+      "search_hint": "Search",
+      "confirm": "Confirm",
+      "retry": "Retry",
+      "empty": "No services found"
     }
   },
   "auth": {

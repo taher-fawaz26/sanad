@@ -1,7 +1,9 @@
 import 'package:branches/src/data/datasources/branch_remote_data_source.dart';
 import 'package:branches/src/data/models/requests/create_branch_request.dart';
 import 'package:branches/src/data/models/requests/update_branch_request.dart';
+import 'package:branches/src/domain/entities/branch_availability_entity.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
+import 'package:branches/src/domain/entities/branch_manager_entity.dart';
 import 'package:branches/src/domain/entities/paginated_branches_entity.dart';
 import 'package:branches/src/domain/repositories/branch_repository.dart';
 import 'package:branches/src/domain/usecases/branch_usecase_params.dart';
@@ -81,4 +83,12 @@ class BranchRepositoryImpl implements BranchRepository {
   @override
   TaskEither<Failure, void> deleteBranch(DeleteBranchParams params) =>
       _remoteDataSource.deleteBranch(params.id);
+
+  @override
+  TaskEither<Failure, List<BranchAvailabilityEntity>> getCompanySchedule() =>
+      _remoteDataSource.getCompanySchedule();
+
+  @override
+  TaskEither<Failure, List<BranchManagerEntity>> getBranchManagers() =>
+      _remoteDataSource.getBranchManagers();
 }

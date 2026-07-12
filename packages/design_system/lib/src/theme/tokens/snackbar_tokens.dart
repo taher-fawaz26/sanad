@@ -8,6 +8,9 @@ import 'package:flutter/material.dart';
 enum AppSnackbarColor {
   dark,
   primary,
+
+  /// Figma error snackbar (`322:9721`) — red/500 background.
+  error,
 }
 
 /// Figma snackbar layout (`97:3434`).
@@ -70,24 +73,29 @@ class AppSnackbarTheme extends ThemeExtension<AppSnackbarTheme> {
   const AppSnackbarTheme({
     required this.dark,
     required this.primary,
+    required this.error,
   });
 
   final SnackbarStyleSpec dark;
   final SnackbarStyleSpec primary;
+  final SnackbarStyleSpec error;
 
   SnackbarStyleSpec specFor(AppSnackbarColor color) => switch (color) {
         AppSnackbarColor.dark => dark,
         AppSnackbarColor.primary => primary,
+        AppSnackbarColor.error => error,
       };
 
   @override
   AppSnackbarTheme copyWith({
     SnackbarStyleSpec? dark,
     SnackbarStyleSpec? primary,
+    SnackbarStyleSpec? error,
   }) {
     return AppSnackbarTheme(
       dark: dark ?? this.dark,
       primary: primary ?? this.primary,
+      error: error ?? this.error,
     );
   }
 
@@ -136,6 +144,12 @@ abstract final class SnackbarTokens {
         typography: typography,
         brightness: brightness,
       ),
+      error: _resolve(
+        color: AppSnackbarColor.error,
+        colors: colors,
+        typography: typography,
+        brightness: brightness,
+      ),
     );
   }
 
@@ -161,10 +175,17 @@ abstract final class SnackbarTokens {
   }) {
     final main = colors.palettes.main;
     final dark = colors.palettes.dark;
+    final red = colors.palettes.red;
+    final sky = colors.palettes.sky;
     final isPrimary = color == AppSnackbarColor.primary;
+    final isError = color == AppSnackbarColor.error;
 
     return SnackbarStyleSpec(
-      backgroundColor: isPrimary ? main.shade700 : dark.shade950,
+      backgroundColor: switch (color) {
+        AppSnackbarColor.primary => main.shade700,
+        AppSnackbarColor.error => red.shade500,
+        AppSnackbarColor.dark => dark.shade950,
+      },
       borderRadius: BorderRadius.circular(responsiveDimension(borderRadius)),
       horizontalPadding: responsiveDimension(horizontalPadding),
       verticalPaddingCompact: responsiveDimension(verticalPaddingCompact),
@@ -177,7 +198,9 @@ abstract final class SnackbarTokens {
         height: 20 / 16,
       ),
       captionStyle: typography.smallNormal.copyWith(
-        color: isPrimary ? main.shade200 : dark.shade400,
+        color: isError
+            ? sky.shade50
+            : (isPrimary ? main.shade200 : dark.shade400),
         height: 16 / 14,
       ),
       actionStyle: typography.regularNormal.copyWith(

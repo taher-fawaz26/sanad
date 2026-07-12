@@ -1,7 +1,9 @@
 import 'package:branches/src/di/branches_di.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
+import 'package:branches/src/presentation/bloc/branch_details/branch_details_bloc.dart';
 import 'package:branches/src/presentation/bloc/branches/branches_bloc.dart';
 import 'package:branches/src/presentation/pages/add_branch_page.dart';
+import 'package:branches/src/presentation/pages/branch_details_page.dart';
 import 'package:branches/src/presentation/pages/branches_page.dart';
 import 'package:branches/src/routes/branch_routes.dart';
 import 'package:core/core.dart';
@@ -36,6 +38,17 @@ class BranchesModule extends FeatureModule {
             create: (_) => sl<AddBranchBloc>(),
             child: const AddBranchPage(),
           ),
+        ),
+        GoRoute(
+          path: BranchRoutes.details,
+          builder: (context, state) {
+            final branchId = state.pathParameters['id']!;
+            return BlocProvider(
+              create: (_) => sl<BranchDetailsBloc>()
+                ..add(BranchDetailsFetchEvent(branchId)),
+              child: BranchDetailsPage(branchId: branchId),
+            );
+          },
         ),
       ];
 }

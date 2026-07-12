@@ -22,6 +22,7 @@
 <module fileurl="file://$PROJECT_DIR$/packages/features/otp/melos_otp.iml" filepath="$PROJECT_DIR$/packages/features/otp/melos_otp.iml"/>
 <module fileurl="file://$PROJECT_DIR$/apps/sanad_client/melos_sanad_client.iml" filepath="$PROJECT_DIR$/apps/sanad_client/melos_sanad_client.iml"/>
 <module fileurl="file://$PROJECT_DIR$/apps/sanad_provider/melos_sanad_provider.iml" filepath="$PROJECT_DIR$/apps/sanad_provider/melos_sanad_provider.iml"/>
+<module fileurl="file://$PROJECT_DIR$/packages/features/services/melos_services.iml" filepath="$PROJECT_DIR$/packages/features/services/melos_services.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/shared_blocs/melos_shared_blocs.iml" filepath="$PROJECT_DIR$/packages/shared_blocs/melos_shared_blocs.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/shared_models/melos_shared_models.iml" filepath="$PROJECT_DIR$/packages/shared_models/melos_shared_models.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/storage/melos_storage.iml" filepath="$PROJECT_DIR$/packages/storage/melos_storage.iml"/>

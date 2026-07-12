@@ -11,6 +11,13 @@ enum AppChipStyle {
   outline,
 }
 
+/// Tonal chip preset — coverage tags, service tags (`365:14920`, `194:2647`).
+enum AppChipTone {
+  normal,
+  softSuccess,
+  softNeutral,
+}
+
 enum AppChipIconPosition {
   none,
   left,
@@ -100,9 +107,28 @@ abstract final class ChipTokens {
     required bool selected,
     required AppColors colors,
     required Brightness brightness,
+    AppChipTone tone = AppChipTone.normal,
   }) {
     final isDark = brightness == Brightness.dark;
     final clear = colors.palettes.white.withValues(alpha: 0);
+    final main = colors.palettes.main;
+    final sky = colors.palettes.sky;
+
+    if (tone == AppChipTone.softSuccess) {
+      return ChipSurfaceColors(
+        background: isDark ? main.shade900 : main.shade50,
+        foreground: isDark ? main.shade300 : main.shade700,
+        border: clear,
+      );
+    }
+
+    if (tone == AppChipTone.softNeutral) {
+      return ChipSurfaceColors(
+        background: isDark ? sky.shade800 : sky.shade100,
+        foreground: colors.textPrimary,
+        border: clear,
+      );
+    }
 
     if (style == AppChipStyle.outline) {
       return ChipSurfaceColors(

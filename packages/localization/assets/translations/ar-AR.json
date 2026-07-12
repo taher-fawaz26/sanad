@@ -46,6 +46,30 @@
     "empty_workers_description": "عيّن عمالاً ليتم جدولتهم في المهام.",
     "empty_workers_action": "تعيين عامل",
     "more_actions": "مزيد من الإجراءات",
+    "details": {
+      "section_contact": "التواصل",
+      "section_working_hours": "ساعات العمل",
+      "section_coverage": "منطقة التغطية",
+      "section_services": "الخدمات",
+      "section_team": "الفريق",
+      "schedule_custom": "مخصص",
+      "coverage_closed": "مغلق",
+      "branch_phone": "هاتف الفرع",
+      "open_in_maps": "فتح في الخرائط",
+      "maps_unavailable": "رابط الخريطة غير متاح",
+      "closed": "مغلق",
+      "radius_km": "نطاق {radius} كم",
+      "services_more": "+{count} أخرى",
+      "view_all_workers": "عرض الكل {count}",
+      "manage_team": "إدارة الفريق",
+      "edit_branch": "تعديل الفرع",
+      "edit_coming_soon": "تعديل الفرع قادم قريباً",
+      "manage_team_coming_soon": "إدارة الفريق قادمة قريباً",
+      "delete_coming_soon": "حذف الفرع قادم قريباً",
+      "manager_caption": "مدير الفرع · {name}",
+      "action_edit": "تعديل الفرع",
+      "action_delete": "حذف الفرع"
+    },
     "add_branch": {
       "title": "إضافة فرع",
       "subtitle": "إعداد الموقع والتغطية والفريق.",
@@ -63,11 +87,43 @@
       "branch_phone": "هاتف الفرع",
       "branch_phone_hint": "+971 4 123 4567",
       "branch_manager": "مدير الفرع",
-      "branch_manager_hint": "قريباً",
+      "branch_manager_hint": "اختر مديراً",
       "use_company_schedule": "استخدام جدول الشركة",
       "set_custom_schedule": "تعيين جدول مخصص",
-      "next_button": "حفظ الفرع",
-      "success": "تم إنشاء الفرع بنجاح"
+      "add_custom_day": "إضافة يوم مخصص",
+      "add_custom_day_title": "إضافة يوم مخصص",
+      "day_label": "اليوم",
+      "from_label": "من",
+      "to_label": "إلى",
+      "add_day_button": "إضافة اليوم",
+      "all_days_added": "جميع الأيام مضافة بالفعل في الجدول",
+      "cancel": "إلغاء",
+      "coverage_title": "إضافة تغطية الفرع",
+      "coverage_description": "أعد موقعاً لإدارة تغطيته.",
+      "add_location_button": "إضافة",
+      "add_location_coming_soon": "محدد الموقع قريباً",
+      "next_button": "التالي",
+      "success": "تم إنشاء الفرع بنجاح",
+      "error_title": "تعذّر حفظ الفرع",
+      "error_caption": "لم تُفقد تغييراتك. حاول الحفظ مرة أخرى.",
+      "days": {
+        "saturday": "السبت",
+        "sunday": "الأحد",
+        "monday": "الاثنين",
+        "tuesday": "الثلاثاء",
+        "wednesday": "الأربعاء",
+        "thursday": "الخميس",
+        "friday": "الجمعة"
+      }
+    }
+  },
+  "services": {
+    "select_service": {
+      "title": "اختر الخدمة",
+      "search_hint": "بحث",
+      "confirm": "تأكيد",
+      "retry": "إعادة المحاولة",
+      "empty": "لا توجد خدمات"
     }
   },
   "auth": {
