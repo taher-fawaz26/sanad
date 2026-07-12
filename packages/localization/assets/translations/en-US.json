@@ -45,6 +45,7 @@
     "empty_workers_title": "No workers assigned",
     "empty_workers_description": "Assign workers so they can be scheduled for jobs.",
     "empty_workers_action": "assign worker",
+    "more_actions": "More actions",
     "add_branch": {
       "title": "Add branch",
       "subtitle": "Set up a location, its coverage, and team.",
@@ -52,19 +53,21 @@
       "section_contact": "Contact",
       "section_working_hours": "Working hours",
       "branch_name": "Branch name",
-      "branch_name_hint": "Dubai Marina",
-      "branch_type": "Branch type",
-      "branch_type_hint": "Select branch type",
-      "location": "Location",
-      "location_hint": "Marina Plaza, Tower 2",
+      "branch_name_hint": "e.g. Dubai Marina",
+      "city": "City",
+      "city_hint": "e.g. Dubai",
+      "location": "Address",
+      "location_hint": "e.g. Marina Plaza, Tower 2",
       "location_set": "set",
+      "location_required": "Please set a branch address",
       "branch_phone": "Branch phone",
       "branch_phone_hint": "+971 4 123 4567",
       "branch_manager": "Branch manager",
-      "branch_manager_hint": "Select manager",
+      "branch_manager_hint": "Coming soon",
       "use_company_schedule": "Use company schedule",
       "set_custom_schedule": "Set custom schedule",
-      "next_button": "next"
+      "next_button": "Save branch",
+      "success": "Branch created successfully"
     }
   },
   "auth": {

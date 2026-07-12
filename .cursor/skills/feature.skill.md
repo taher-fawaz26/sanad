@@ -10,7 +10,7 @@ Create a new feature package following Sanad clean architecture.
 ## Step 1 — Scaffold Package
 
 ```
-packages/<name>/
+packages/features/<name>/
   lib/
     <name>.dart          # barrel
     src/
@@ -37,9 +37,8 @@ packages/<name>/
 
 ## Step 2 — Register in Workspace
 
-1. Add to root `pubspec.yaml` workspace list
-2. Add to `melos.yaml` packages list
-3. Run `melos bootstrap`
+1. Add to root `pubspec.yaml` `workspace:` list as `packages/features/<name>`
+2. Run `melos bootstrap`
 
 ## Step 3 — Domain Layer
 

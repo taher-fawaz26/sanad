@@ -7,10 +7,17 @@ alwaysApply: true
 
 ## Workspace
 
-- `melos.yaml` at root defines packages and scripts
-- Root `pubspec.yaml` lists workspace members
-- **Always** `melos bootstrap` after any `pubspec.yaml` change
-- **Never** `flutter pub get` directly in workspace packages
+- Melos 7.x has **no standalone `melos.yaml` file**. All config (scripts, ide,
+  command hooks) lives under a `melos:` key in the root `pubspec.yaml`.
+- Package discovery uses the native Dart pub `workspace:` list in the root
+  `pubspec.yaml` — this is the single source of truth for member packages.
+- Each member package's `pubspec.yaml` must have `resolution: workspace`.
+- **Always** `melos bootstrap` after any `pubspec.yaml` change.
+- **Never** `flutter pub get` directly in workspace packages.
+- Scripts with args must be run as `melos run <script> -- <args>` — passing
+  `--flags` directly to `melos <script>` is intercepted by Melos itself and
+  will fail (e.g. use `melos run feature:create -- orders shared`, not
+  `melos feature:create orders --shared`).
 
 ## Package Naming
 
@@ -19,10 +26,15 @@ All packages: `publish_to: none`
 
 ## New Package
 
-1. Create `packages/<name>/` with `pubspec.yaml`
-2. Add to root `pubspec.yaml` workspace list
-3. Add to `melos.yaml` packages list
-4. Run `melos bootstrap`
+**Infrastructure / shared packages** (stay under `packages/`):
+1. Create `packages/<name>/` with `pubspec.yaml` (include `resolution: workspace`)
+2. Add to root `pubspec.yaml` `workspace:` list
+3. Run `melos bootstrap`
+
+**Feature packages** (go under `packages/features/`):
+1. Use `melos run feature:create -- <name> shared` — scaffolds into `packages/features/<name>/`
+2. Or create manually under `packages/features/<name>/` and register as `packages/features/<name>` in workspace
+3. Run `melos bootstrap`
 
 ## Scripts
 

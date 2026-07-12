@@ -124,4 +124,4 @@ routes/ → (path constants only)
 
 ## Removed Packages
 
-- `dependencies` and `settings` have been deleted (zero consumers verified for both). `shared_widgets` has been dissolved into `design_system`, `packages/otp`, and `sanad_provider`. Do not re-create these packages or depend on them.
+- `dependencies` and `settings` have been deleted (zero consumers verified for both). `shared_widgets` has been dissolved into `design_system`, `packages/features/otp`, and `packages/features/branches`. Do not re-create these packages or depend on them.

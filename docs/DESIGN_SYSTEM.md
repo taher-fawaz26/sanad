@@ -11,7 +11,7 @@ The Sanad Design System (`packages/design_system`) provides theme, tokens, and r
 | `app_assets` | Shared images, SVGs, icons, lottie/animations, and their path constants only — no widgets, no fonts (fonts stay in `design_system`) |
 | `design_system` | Design tokens, primitive components (`lib/src/components/`), and higher-level domain-agnostic composed UI (`lib/src/shared_ui/`) |
 
-`shared_widgets` was dissolved: primitive widgets (`AppSvgPicture`, `AppListCard`, `AppCloseIcon`, `AppNotificationIcon`) moved into `design_system/components/`; the OTP field moved into `packages/otp`; feature-specific fields (`AppLocationField`, `AppPersonSelectField`) moved into `sanad_provider`'s branches feature. See the Component Ownership Policy and Architecture Decision Tree in `docs/ARCHITECTURE.md`.
+`shared_widgets` was dissolved: primitive widgets (`AppSvgPicture`, `AppListCard`, `AppCloseIcon`, `AppNotificationIcon`) moved into `design_system/components/`; the OTP field moved into `packages/features/otp`; branch widgets moved into `packages/features/branches`. See the Component Ownership Policy and Architecture Decision Tree in `docs/ARCHITECTURE.md`.
 
 Dev-only preview/showcase widgets (`AppColorPalettePreview`, `AppTypographyPreview`) live in `design_system/lib/src/dev/` and are intentionally **not** exported from any barrel — internal use only.
 

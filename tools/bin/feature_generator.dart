@@ -7,20 +7,31 @@ import 'package:sanad_tools/workspace.dart';
 
 /// Scaffolds feature packages or app features.
 ///
-/// Usage:
-///   dart run bin/feature_generator.dart orders --shared
-///   dart run bin/feature_generator.dart branches --app provider
-///   dart run bin/feature_generator.dart profile --app client
-///   dart run bin/feature_generator.dart branches --app provider --with-backend
+/// Positional form (use with `melos run feature:create -- ...`):
+///   dart run bin/feature_generator.dart <name> shared
+///   dart run bin/feature_generator.dart <name> provider
+///   dart run bin/feature_generator.dart <name> client
+///   dart run bin/feature_generator.dart <name> provider with-backend
+///
+/// Flag form (direct dart run):
+///   dart run bin/feature_generator.dart <name> --shared
+///   dart run bin/feature_generator.dart <name> --app provider
+///   dart run bin/feature_generator.dart <name> --app client
 void main(List<String> args) {
-  if (args.isEmpty || args.contains('--help')) {
+  if (args.isEmpty || args.contains('--help') || args.contains('help')) {
     _printUsage();
     exit(args.isEmpty ? 1 : 0);
   }
 
   final ws = Workspace.find();
-  final flags = _parseFlags(args);
-  final name = args.firstWhere((a) => !a.startsWith('--'));
+  // Name is always the first argument that is not a --flag.
+  final name = args.firstWhere((a) => !a.startsWith('-'), orElse: () => '');
+  if (name.isEmpty) {
+    print('Error: feature name is required.');
+    _printUsage();
+    exit(1);
+  }
+  final flags = _parseFlags(args, name);
   final names = FeatureNames(name);
 
   if (flags.shared) {
@@ -31,7 +42,10 @@ void main(List<String> args) {
       _createSharedPackage(ws, names, _FeatureFlags(shared: true, withBackend: true));
     }
   } else {
-    print('Error: specify --shared or --app provider|client');
+    print('Error: specify a mode. Examples:');
+    print('  melos run feature:create -- orders shared');
+    print('  melos run feature:create -- branches provider');
+    print('  melos run feature:create -- profile client');
     exit(1);
   }
 }
@@ -40,17 +54,26 @@ void _printUsage() {
   print('''
 Sanad Feature Generator
 
-Usage:
-  dart run bin/feature_generator.dart <name> --shared [options]
-  dart run bin/feature_generator.dart <name> --app provider|client [options]
+Via Melos (recommended):
+  melos run feature:create -- <name> shared
+  melos run feature:create -- <name> provider
+  melos run feature:create -- <name> client
+  melos run feature:create -- <name> provider with-backend
 
-Options:
-  --shared          Full clean-arch package under packages/
-  --app provider    UI-only scaffold under apps/sanad_provider/
-  --app client      UI-only scaffold under apps/sanad_client/
-  --with-backend    Also create packages/<name>/ when using --app
-  --assets          Add assets/ folder and pubspec declaration
-  --no-tests        Skip test stub generation
+Direct dart run:
+  dart run bin/feature_generator.dart <name> --shared
+  dart run bin/feature_generator.dart <name> --app provider
+  dart run bin/feature_generator.dart <name> --app client
+
+Modes:
+  shared           Full clean-arch package under packages/features/
+  provider         UI-only scaffold under apps/sanad_provider/
+  client           UI-only scaffold under apps/sanad_client/
+
+Options (append after mode):
+  with-backend     Also create packages/features/<name>/ when using provider|client
+  assets           Add assets/ folder and pubspec declaration
+  no-tests         Skip test stub generation
 ''');
 }
 
@@ -70,19 +93,66 @@ class _FeatureFlags {
   final bool noTests;
 }
 
-_FeatureFlags _parseFlags(List<String> args) {
-  String? app;
-  if (args.contains('--app')) {
-    final idx = args.indexOf('--app');
-    if (idx + 1 < args.length) app = args[idx + 1];
+/// Parses flags from both positional and --flag style args.
+///
+/// Positional style (Melos-friendly): `orders shared`, `branches provider`
+/// Flag style (dart run): `orders --shared`, `branches --app provider`
+/// Mixed style: `orders shared --no-tests` (positional mode + flag options)
+_FeatureFlags _parseFlags(List<String> args, String name) {
+  // Strip the feature name from consideration.
+  final rest = args.where((a) => a != name).toList();
+
+  // Check for an explicit positional mode word first.
+  const modeWords = {'shared', 'provider', 'client'};
+  final positionalMode =
+      rest.where((a) => !a.startsWith('-')).where(modeWords.contains).firstOrNull;
+
+  // Boolean options — accept both positional and --flag forms.
+  bool hasOpt(String positional, String flag) =>
+      rest.contains(positional) || rest.contains(flag);
+
+  if (positionalMode != null) {
+    switch (positionalMode) {
+      case 'shared':
+        return _FeatureFlags(
+          shared: true,
+          assets: hasOpt('assets', '--assets'),
+          noTests: hasOpt('no-tests', '--no-tests'),
+        );
+      case 'provider':
+        return _FeatureFlags(
+          app: 'provider',
+          withBackend: hasOpt('with-backend', '--with-backend'),
+          assets: hasOpt('assets', '--assets'),
+          noTests: hasOpt('no-tests', '--no-tests'),
+        );
+      case 'client':
+        return _FeatureFlags(
+          app: 'client',
+          withBackend: hasOpt('with-backend', '--with-backend'),
+          assets: hasOpt('assets', '--assets'),
+          noTests: hasOpt('no-tests', '--no-tests'),
+        );
+    }
   }
-  return _FeatureFlags(
-    shared: args.contains('--shared'),
-    app: app,
-    withBackend: args.contains('--with-backend'),
-    assets: args.contains('--assets'),
-    noTests: args.contains('--no-tests'),
-  );
+
+  // Fall back to --flag style (direct dart run without positional mode).
+  if (rest.any((a) => a.startsWith('--'))) {
+    String? app;
+    if (rest.contains('--app')) {
+      final idx = rest.indexOf('--app');
+      if (idx + 1 < rest.length) app = rest[idx + 1];
+    }
+    return _FeatureFlags(
+      shared: rest.contains('--shared'),
+      app: app,
+      withBackend: rest.contains('--with-backend'),
+      assets: rest.contains('--assets'),
+      noTests: rest.contains('--no-tests'),
+    );
+  }
+
+  return _FeatureFlags();
 }
 
 class FeatureNames {
@@ -106,9 +176,9 @@ class FeatureNames {
 }
 
 void _createSharedPackage(Workspace ws, FeatureNames n, _FeatureFlags flags) {
-  final pkgDir = p.join(ws.root, 'packages', n.snake);
+  final pkgDir = p.join(ws.root, 'packages', 'features', n.snake);
   if (Directory(pkgDir).existsSync()) {
-    print('Error: packages/${n.snake} already exists');
+    print('Error: packages/features/${n.snake} already exists');
     exit(1);
   }
 
@@ -116,7 +186,7 @@ void _createSharedPackage(Workspace ws, FeatureNames n, _FeatureFlags flags) {
   _registerPackage(ws, n.snake);
   _appendL10nKeys(ws, n.snake);
 
-  print('✅ Created packages/${n.snake}/');
+  print('✅ Created packages/features/${n.snake}/');
   print('   Run: melos bootstrap');
   print('   Add: ${n.pascal}Module() to app module list');
 }
@@ -251,9 +321,9 @@ environment:
 
 dependencies:
   core:
-    path: ../core
+    path: ../../core
   design_system:
-    path: ../design_system
+    path: ../../design_system
   easy_localization: ^3.0.8
   equatable: ^2.1.0
   flutter:
@@ -263,9 +333,9 @@ dependencies:
   fpdart: ^1.2.0
   go_router: ^17.3.0
   localization:
-    path: ../localization
+    path: ../../localization
   network:
-    path: ../network
+    path: ../../network
 
 dev_dependencies:
   bloc_test: ^10.0.0
@@ -273,7 +343,7 @@ dev_dependencies:
     sdk: flutter
   mocktail: ^1.0.4
   testing:
-    path: ../testing
+    path: ../../testing
   very_good_analysis: ^9.0.0
 $assetsBlock''');
 
@@ -293,7 +363,7 @@ import 'package:${n.snake}/${n.snake}.dart';
 Call `${n.pascal}DI.init()` during app bootstrap, or register `${n.pascal}Module()`.
 ''');
 
-  // Core source files — abbreviated scaffold matching packages/auth patterns
+  // Core source files — abbreviated scaffold matching packages/features/auth patterns
   _writeSharedSources(pkgDir, n, flags);
 }
 
@@ -655,19 +725,13 @@ void main() {
 }
 
 void _registerPackage(Workspace ws, String name) {
-  final melosPath = p.join(ws.root, 'melos.yaml');
   final rootPubspecPath = p.join(ws.root, 'pubspec.yaml');
-  final entry = '  - packages/$name';
+  final entry = '  - packages/features/$name';
 
-  for (final filePath in [melosPath, rootPubspecPath]) {
-    final content = File(filePath).readAsStringSync();
-    if (content.contains('packages/$name')) continue;
-    final marker = filePath.endsWith('melos.yaml')
-        ? 'packages:'
-        : 'workspace:';
-    final updated = content.replaceFirst(marker, '$marker\n$entry');
-    File(filePath).writeAsStringSync(updated);
-  }
+  final content = File(rootPubspecPath).readAsStringSync();
+  if (content.contains('packages/features/$name')) return;
+  final updated = content.replaceFirst('workspace:', 'workspace:\n$entry');
+  File(rootPubspecPath).writeAsStringSync(updated);
 }
 
 void _appendL10nKeys(Workspace ws, String feature) {

@@ -1,16 +1,16 @@
 ---
 description: Canonical feature package structure, naming conventions, and layer dependency rules
-globs: "packages/**"
+globs: "packages/features/**"
 alwaysApply: false
 ---
 
 # Feature Template
 
-Reference: `packages/auth/` and `docs/FEATURE_GUIDE.md`
+Reference: `packages/features/auth/` and `docs/FEATURE_GUIDE.md`
 
 ## Structure (Required)
 
-Every shared feature package under `packages/<feature>/` must follow:
+Every shared feature package under `packages/features/<feature>/` must follow:
 
 ```
 lib/src/
@@ -56,7 +56,10 @@ lib/src/
 ## New Feature Workflow
 
 ```bash
-melos feature:create <name> --shared
+# Always use melos run + -- separator
+melos run feature:create -- <name> shared      # shared package
+melos run feature:create -- <name> provider    # provider UI-only
+melos run feature:create -- <name> client      # client UI-only
 melos bootstrap
 # Add <Feature>Module() to app module list — one line
 ```

@@ -40,4 +40,4 @@ Use a single Git monorepo managed by [Melos](https://melos.invertase.dev/) with:
 ## Links
 
 - `docs/MELOS.md`
-- `melos.yaml`
+- `pubspec.yaml` (`melos:` key — Melos 7.x removed the standalone `melos.yaml` file; see `docs/MELOS.md` for the migration note)

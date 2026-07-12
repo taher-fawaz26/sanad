@@ -14,18 +14,19 @@ sanad/
 │   └── sanad_provider/      # Provider-facing app (service providers)
 │       └── assets/          # icons/, images/{branches,workers,splash}/
 ├── packages/
-│   ├── core/                 # Failure, UseCase, DI base, validators — zero asset/UI knowledge
-│   ├── app_assets/           # Shared images, SVGs, icons, lottie/animations + path constants only
-│   ├── network/               # Dio, interceptors, error mapping
-│   ├── storage/               # Secure storage, Hive cache
-│   ├── design_system/         # Theme, tokens, primitive components (components/), composed UI (shared_ui/)
-│   ├── localization/          # EasyLocalization, TranslateBloc
-│   ├── auth/                  # Authentication feature (reference impl)
-│   ├── otp/                   # OTP verification (owns AppOtpField)
-│   ├── forgot_password/       # Password reset
-│   └── ...                    # See PACKAGE_GUIDE.md
-├── melos.yaml
-└── pubspec.yaml               # Workspace root
+│   ├── core/                 # Failure, UseCase, DI base, validators
+│   ├── app_assets/           # Shared images, SVGs, icons
+│   ├── network/              # Dio, interceptors, error mapping
+│   ├── storage/              # Secure storage, Hive cache
+│   ├── design_system/        # Theme, tokens, components
+│   ├── localization/         # EasyLocalization, TranslateBloc
+│   └── features/             # Business feature packages
+│       ├── auth/             # Authentication (reference impl)
+│       ├── otp/              # OTP verification
+│       ├── forgot_password/  # Password reset
+│       ├── branches/         # Provider branches
+│       └── ...               # See PACKAGE_GUIDE.md
+└── pubspec.yaml               # Workspace root — `workspace:` list + `melos:` config
 ```
 
 `packages/dependencies`, `packages/settings`, and `packages/shared_widgets` have been removed — see the Asset Ownership Policy, Component Ownership Policy, and Package Ownership Matrix below for where their responsibilities now live.
@@ -61,19 +62,19 @@ apps → feature packages → UI/infra packages → core
 | Location | Contains | Example |
 |----------|----------|---------|
 | `apps/*/features/` | UI pages only | `branches_page.dart` |
-| `packages/<feature>/` | Full clean arch | `packages/auth/` |
+| `packages/features/<feature>/` | Full clean arch | `packages/features/branches/` |
 
 ## Adding a New Feature
 
 ```
 Does it have business logic?
 ├── Yes → Is it shared between apps?
-│   ├── Yes → Create feature package under packages/
+│   ├── Yes → Create feature package under packages/features/
 │   └── No → Consider feature package or app features/
 └── No → App features/ folder (page only)
 ```
 
-Reference implementation: `packages/auth/lib/src/`
+Reference implementation: `packages/features/auth/lib/src/`
 
 ## State Management
 
@@ -90,7 +91,7 @@ Every asset file belongs to **exactly one** owner. Never duplicate an asset acro
 |------|-------|------|
 | Shared (2+ apps, or consumed by `design_system`) | `packages/app_assets/assets/` | Images under `images/{illustrations,empty_states,onboarding}/`, icons under `icons/`, SVGs under `svgs/`, Lottie under `lottie/`, motion under `animations/`. Loaded with `package: AppAssets.package` |
 | Application (exactly one app) | `apps/<app>/assets/` | e.g. `apps/sanad_provider/assets/images/{branches,workers,splash}/`. Loaded with no `package:` argument |
-| Feature (exactly one feature package) | `packages/<feature>/assets/` | Only if a feature package ships its own bundled asset; declare in that package's own `pubspec.yaml` |
+| Feature (exactly one feature package) | `packages/features/<feature>/assets/` | Only if a feature package ships its own bundled asset; declare in that package's own `pubspec.yaml` |
 
 Fonts are the one exception: they are a **Design Language / Typography System** concern, not a generic asset, and stay declared in `packages/design_system/pubspec.yaml` regardless of this tiering — never move fonts into `app_assets`.
 
@@ -103,7 +104,7 @@ Fonts are the one exception: they are a **Design Language / Typography System** 
 | Design Tokens | `design_system/lib/src/theme/tokens/` | `AppSpacing`, `AppRadius`, `AppShadows`, `ButtonTokens`, `OverlayTokens` |
 | Primitive Components | `design_system/lib/src/components/` | `AppButton`, `AppTextField`, `AppAvatar`, `AppSvgPicture`, `AppCloseIcon`, `AppListCard`, `AppNotificationIcon` |
 | Higher-Level Shared UI | `design_system/lib/src/shared_ui/` | `AppEmptyState`, `AppNetworkFailureState`, `AppGenericEmptyState` — composed from primitives + tokens, still domain-agnostic |
-| Feature Widgets | `packages/<feature>/lib/src/presentation/widgets/` or `apps/<app>/lib/src/features/<feature>/widgets/` | `AppOtpField` (`packages/otp`), `AppLocationField` / `AppPersonSelectField` (`sanad_provider` branches feature) |
+| Feature Widgets | `packages/features/<feature>/lib/src/presentation/widgets/` or `apps/<app>/lib/src/features/<feature>/widgets/` | `AppOtpField` (`packages/features/otp`), branch widgets (`packages/features/branches`) |
 
 Feature widgets must **never** live inside `design_system` — even if they're built entirely from design-system primitives. The test: if the widget encodes knowledge of a specific feature/domain (OTP length, branch location, person selection), it belongs to that feature, not to `design_system`.
 
@@ -135,7 +136,7 @@ Is it an asset (image, SVG, icon, lottie, animation)?
 │   ├── Yes → packages/app_assets/
 │   └── No  → owned by exactly one app?
 │       ├── Yes → apps/<app>/assets/
-│       └── No  → owned by exactly one feature package → packages/<feature>/assets/
+│       └── No  → owned by exactly one feature package → packages/features/<feature>/assets/
 └── No → Is it a font?
     └── Yes → packages/design_system/ (fonts stay with Typography, never app_assets)
 
@@ -147,7 +148,7 @@ Is it a visual UI component?
 │       └── No  → it encodes feature/domain knowledge → owning feature package or app
 
 Is it business logic (BLoC, UseCase, Repository, data source)?
-└── Yes → feature package (packages/<feature>/), following data/ → domain/ → presentation/ → di/ → routes/
+└── Yes → feature package (packages/features/<feature>/), following data/ → domain/ → presentation/ → di/ → routes/
 
 Is it application-specific (routing glue, app-only page, app DI bootstrap)?
 └── Yes → apps/<app>/lib/src/

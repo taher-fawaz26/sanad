@@ -1,5 +1,6 @@
 ﻿import 'package:app_logger/app_logger.dart';
 import 'package:auth/auth.dart';
+import 'package:branches/branches.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:dio/dio.dart';
@@ -99,10 +100,11 @@ Future<void> configureDependencies() async {
     );
 
   // ── Feature modules ────────────────────────────────────────────────────────
-  final moduleRegistry = ModuleRegistry([
+  moduleRegistry = ModuleRegistry([
     AuthModule(),
     OtpModule(),
     ForgotPasswordModule(),
+    BranchesModule(),
   ]);
   await moduleRegistry.initAll();
 

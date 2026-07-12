@@ -8,7 +8,8 @@ alwaysApply: true
 ## Monorepo Structure
 
 - `apps/` = thin shells (routing, DI bootstrap, app-specific pages only)
-- `packages/` = all business logic, features, infrastructure, and shared UI
+- `packages/` = infrastructure and shared UI (`core`, `network`, `design_system`, etc.)
+- `packages/features/` = business feature packages (`auth`, `otp`, `branches`, etc.)
 - Managed by Melos — run `melos bootstrap` after any `pubspec.yaml` change
 
 ## Clean Architecture (Feature Packages)
@@ -38,8 +39,8 @@ data/ → domain/ → presentation/ → di/ → routes/
 ## App Features vs Feature Packages
 
 - `apps/*/lib/src/features/` = UI pages only (no BLoC, no repository, no use case)
-- Real feature logic lives in `packages/auth`, `packages/otp`, etc.
-- Reference implementation: `packages/auth/lib/src/`
+- Real feature logic lives in `packages/features/auth`, `packages/features/otp`, etc.
+- Reference implementation: `packages/features/auth/lib/src/`
 
 ## SOLID
 
@@ -49,8 +50,8 @@ data/ → domain/ → presentation/ → di/ → routes/
 
 ## Adding a New Feature
 
-1. Create package under `packages/<name>/` with clean arch folders
-2. Register in workspace (`pubspec.yaml` + `melos.yaml`)
+1. Create package under `packages/features/<name>/` with clean arch folders
+2. Register in root `pubspec.yaml` `workspace:` list (no separate `melos.yaml` — Melos 7.x config lives under `pubspec.yaml`'s `melos:` key)
 3. Add DI module `<Name>DI.init()` called from `app_di.dart`
 4. Register routes in app router
 5. App `features/` folder gets only the page widget if app-specific

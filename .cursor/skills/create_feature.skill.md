@@ -4,13 +4,13 @@ Triggered when the user says "create a new feature", "scaffold feature X", or "a
 
 ## Workflow
 
-1. Determine mode:
-   - Shared business logic → `melos feature:create <name> --shared`
-   - Provider UI only → `melos feature:create <name> --app provider`
-   - Client UI only → `melos feature:create <name> --app client`
-   - UI + backend → add `--with-backend`
+1. Determine mode and run generator (always use `melos run` + `--` separator):
+   - Shared business logic → `melos run feature:create -- <name> shared`
+   - Provider UI only → `melos run feature:create -- <name> provider`
+   - Client UI only → `melos run feature:create -- <name> client`
+   - UI + backend package → `melos run feature:create -- <name> provider with-backend`
 
-2. Run generator, then `melos bootstrap`
+2. Run `melos bootstrap`
 
 3. Add `<Feature>Module()` to app `moduleRegistry` list (one line)
 
@@ -23,4 +23,4 @@ Triggered when the user says "create a new feature", "scaffold feature X", or "a
 ## Reference
 
 - `docs/FEATURE_GUIDE.md`
-- `packages/auth/` canonical implementation
+- `packages/features/auth/` canonical implementation

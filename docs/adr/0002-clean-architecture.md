@@ -10,7 +10,7 @@ Features like auth, OTP, and forgot-password share patterns but must remain inde
 
 ## Decision
 
-Every feature lives in `packages/<feature>/` with strict layer separation:
+Every feature lives in `packages/features/<feature>/` with strict layer separation:
 
 ```
 data/ → domain/ → presentation/ → di/ → routes/
@@ -21,7 +21,7 @@ data/ → domain/ → presentation/ → di/ → routes/
 - `presentation/` owns BLoC and UI — never imports Dio or repo impls
 - Apps contain UI-only pages for app-specific screens
 
-Reference: `packages/auth/`
+Reference: `packages/features/auth/`
 
 ## Consequences
 

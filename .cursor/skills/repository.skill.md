@@ -10,7 +10,7 @@ Create a repository following Sanad clean architecture.
 ## Step 1 — Domain Contract
 
 ```dart
-// packages/<feature>/lib/src/domain/repositories/feature_repository.dart
+// packages/features/<feature>/lib/src/domain/repositories/feature_repository.dart
 abstract interface class FeatureRepository {
   TaskEither<Failure, List<Entity>> getAll();
   TaskEither<Failure, Entity> getById(String id);
@@ -21,7 +21,7 @@ abstract interface class FeatureRepository {
 ## Step 2 — Data Source
 
 ```dart
-// packages/<feature>/lib/src/data/datasources/feature_remote_data_source.dart
+// packages/features/<feature>/lib/src/data/datasources/feature_remote_data_source.dart
 abstract interface class FeatureRemoteDataSource {
   TaskEither<Failure, List<FeatureDto>> fetchAll();
 }
@@ -35,7 +35,7 @@ class FeatureRemoteDataSourceImpl implements FeatureRemoteDataSource {
 ## Step 3 — Repository Implementation
 
 ```dart
-// packages/<feature>/lib/src/data/repositories/feature_repository_impl.dart
+// packages/features/<feature>/lib/src/data/repositories/feature_repository_impl.dart
 class FeatureRepositoryImpl implements FeatureRepository {
   FeatureRepositoryImpl(this._dataSource);
   final FeatureRemoteDataSource _dataSource;

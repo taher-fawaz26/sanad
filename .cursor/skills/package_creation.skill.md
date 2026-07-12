@@ -9,9 +9,17 @@ Create a new package in the Sanad monorepo.
 
 ## Step 1 — Scaffold
 
+**Infrastructure / shared packages** (under `packages/`):
+
 ```bash
 mkdir -p packages/<name>/lib/src
 mkdir -p packages/<name>/test
+```
+
+**Feature packages** (under `packages/features/`):
+
+```bash
+melos run feature:create -- <name> shared
 ```
 
 Create `pubspec.yaml`:
@@ -36,8 +44,7 @@ dev_dependencies:
 
 ## Step 2 — Workspace Registration
 
-1. Add to root `pubspec.yaml` workspace list
-2. Add to `melos.yaml` packages list
+1. Add to root `pubspec.yaml` `workspace:` list (no separate `melos.yaml` — Melos 7.x reads scripts/ide/command config from `pubspec.yaml`'s `melos:` key)
 
 ## Step 3 — Analysis Options
 
@@ -53,7 +60,7 @@ library;
 export 'src/...';
 ```
 
-## Step 5 — Clean Arch Folders (Feature Packages)
+## Step 5 — Clean Arch Folders (Feature Packages under `packages/features/<name>/`)
 
 ```
 lib/src/

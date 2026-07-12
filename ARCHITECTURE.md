@@ -38,7 +38,7 @@ The monorepo is managed with [Melos](https://melos.invertase.dev/) and follows a
 ## 2. Directory Structure
 
 ```
-sanad/                          ← workspace root (name: sanad in melos.yaml)
+sanad/                          ← workspace root (name: sanad in pubspec.yaml)
 ├── apps/
 │   ├── sanad_client/           ← Client application
 │   └── sanad_provider/         ← Provider application
@@ -62,8 +62,7 @@ sanad/                          ← workspace root (name: sanad in melos.yaml)
 │   └── utilities/              ← Pure-Dart helpers (extensions, validators)
 ├── .github/
 │   └── workflows/              ← CI: analyze, test, coverage, release
-├── melos.yaml
-└── pubspec.yaml                ← Workspace root (no deps — packages only)
+└── pubspec.yaml                ← Workspace root (`workspace:` list + `melos:` config)
 ```
 
 ---
@@ -314,7 +313,7 @@ melos run ci
 |------|---------|
 | No project prefix on package names | `auth` not `sanad_auth` |
 | `lowercase_snake_case` for all package names | `design_system`, `app_logger` |
-| Barrel file matches package name | `packages/auth/lib/auth.dart` |
+| Barrel file matches package name | `packages/features/auth/lib/auth.dart` |
 | `library` declaration in barrel | `library auth;` |
 | Internal `src/` imports use `package:` URI | `package:auth/src/presentation/bloc/auth/auth_bloc.dart` |
 | Public surface exported from barrel only | consumers import `package:auth/auth.dart` |
@@ -333,6 +332,6 @@ This document reflects the **v3.0** architecture. Changes from v2.0:
 | Package naming | `sand_core`, `sand_auth`, … | `core`, `auth`, … |
 | Shared features layer | `packages/shared_features/{auth,otp,…}` | Removed — use packages directly |
 | Shared profile package | `packages/profile` | Removed — each app owns `features/profile/` |
-| Auth pages | In `shared_features/auth` | In `packages/auth/src/presentation/pages/` |
+| Auth pages | In `shared_features/auth` | In `packages/features/auth/src/presentation/pages/` |
 | Melos workspace name | `name: sand` | `name: sanad` |
 | Package glob in melos.yaml | `packages/**` (picked up deleted packages) | Explicit list of active packages only |

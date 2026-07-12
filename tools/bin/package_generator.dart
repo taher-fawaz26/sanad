@@ -7,20 +7,28 @@ import 'package:sanad_tools/workspace.dart';
 
 /// Scaffolds infrastructure, shared, feature, or utility packages.
 ///
-/// Usage:
+/// Positional form (use with `melos run package:create -- ...`):
+///   dart run bin/package_generator.dart analytics infrastructure
+///   dart run bin/package_generator.dart localization shared
+///   dart run bin/package_generator.dart payments feature
+///   dart run bin/package_generator.dart date_formatter utility
+///
+/// Flag form (direct dart run):
 ///   dart run bin/package_generator.dart analytics --type infrastructure
-///   dart run bin/package_generator.dart localization --type shared
-///   dart run bin/package_generator.dart payments --type feature
-///   dart run bin/package_generator.dart date_formatter --type utility
 void main(List<String> args) {
-  if (args.isEmpty || args.contains('--help')) {
+  if (args.isEmpty || args.contains('--help') || args.contains('help')) {
     _printUsage();
     exit(args.isEmpty ? 1 : 0);
   }
 
   final ws = Workspace.find();
-  final name = args.firstWhere((a) => !a.startsWith('--'));
-  final type = _parseType(args);
+  final name = args.firstWhere((a) => !a.startsWith('-'), orElse: () => '');
+  if (name.isEmpty) {
+    print('Error: package name is required.');
+    _printUsage();
+    exit(1);
+  }
+  final type = _parseType(args, name);
 
   if (type == 'feature') {
     // Delegate to feature generator
@@ -65,24 +73,45 @@ void _printUsage() {
   print('''
 Sanad Package Generator
 
-Usage:
-  dart run bin/package_generator.dart <name> --type <type>
+Via Melos (recommended):
+  melos run package:create -- <name> infrastructure
+  melos run package:create -- <name> shared
+  melos run package:create -- <name> feature
+  melos run package:create -- <name> utility
+
+Direct dart run:
+  dart run bin/package_generator.dart <name> --type infrastructure
 
 Types:
   infrastructure  Abstract service + impl (depends on core)
   shared          Minimal Flutter package (assets, constants)
-  feature         Delegates to feature_generator --shared
+  feature         Delegates to feature_generator (shared mode)
   utility         Pure Dart utility package
 ''');
 }
 
-String _parseType(List<String> args) {
-  final idx = args.indexOf('--type');
-  if (idx == -1 || idx + 1 >= args.length) {
-    print('Error: --type is required');
-    exit(1);
+/// Parses the package type from both positional and --type flag styles.
+String _parseType(List<String> args, String name) {
+  const validTypes = {'infrastructure', 'shared', 'feature', 'utility'};
+
+  // --flag style
+  if (args.contains('--type')) {
+    final idx = args.indexOf('--type');
+    if (idx + 1 >= args.length) {
+      print('Error: --type requires a value');
+      exit(1);
+    }
+    return args[idx + 1];
   }
-  return args[idx + 1];
+
+  // Positional style: first arg that is not the name and is a valid type
+  final rest = args.where((a) => a != name && !a.startsWith('-')).toList();
+  if (rest.isNotEmpty && validTypes.contains(rest.first)) {
+    return rest.first;
+  }
+
+  print('Error: type is required. Use one of: ${validTypes.join(', ')}');
+  exit(1);
 }
 
 class _PackageNames {
@@ -228,16 +257,13 @@ void main() {
 }
 
 void _registerPackage(Workspace ws, String name) {
+  final rootPubspecPath = p.join(ws.root, 'pubspec.yaml');
   final entry = '  - packages/$name';
-  for (final filePath in [
-    p.join(ws.root, 'melos.yaml'),
-    p.join(ws.root, 'pubspec.yaml'),
-  ]) {
-    final content = File(filePath).readAsStringSync();
-    if (content.contains('packages/$name')) continue;
-    final marker = filePath.endsWith('melos.yaml') ? 'packages:' : 'workspace:';
-    File(filePath).writeAsStringSync(content.replaceFirst(marker, '$marker\n$entry'));
-  }
+
+  final content = File(rootPubspecPath).readAsStringSync();
+  if (content.contains('packages/$name')) return;
+  final updated = content.replaceFirst('workspace:', 'workspace:\n$entry');
+  File(rootPubspecPath).writeAsStringSync(updated);
 }
 
 void _appendPackageGuide(Workspace ws, _PackageNames n) {

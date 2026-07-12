@@ -16,6 +16,15 @@ GoRouter buildClientRouter() {
     homeRoute: _clientHome,
     userType: FeatureUserType.client,
     protectedRoutes: {_clientHome},
+    onRegisteredNeedsVerification: (context, identifier, isPhoneIdentifier) {
+      context.push(
+        OtpRoutes.otp,
+        extra: OtpArgs(
+          identifier: identifier,
+          type: isPhoneIdentifier ? IdentifierType.phone : IdentifierType.email,
+        ),
+      );
+    },
   );
 
   return GoRouter(

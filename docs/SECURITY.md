@@ -25,7 +25,7 @@ Sensitive data never reaches the presentation layer as raw HTTP errors or tokens
 |---------|-----|---------|
 | Access token | `SecureTokenStorage` | `packages/storage` |
 | Refresh token | `SecureTokenStorage` | `packages/storage` |
-| Session state | `AuthStatusNotifier` | `packages/auth` |
+| Session state | `AuthStatusNotifier` | `packages/features/auth` |
 
 **Never** store tokens in:
 - `SharedPreferences`

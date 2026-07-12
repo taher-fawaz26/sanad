@@ -15,4 +15,4 @@ Triggered when the user says "review this data layer", "check my API", or "revie
 
 ## Reference
 
-`docs/API_GUIDE.md`, `packages/auth/lib/src/data/`
+`docs/API_GUIDE.md`, `packages/features/auth/lib/src/data/`

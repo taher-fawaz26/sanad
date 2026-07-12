@@ -36,7 +36,7 @@ Complete testing architecture for the Sanad platform — every test category, ev
 ## Test Folder Structure
 
 ```
-packages/<feature>/test/
+packages/features/<feature>/test/
 ├── src/
 │   ├── data/
 │   │   ├── datasources/
@@ -243,7 +243,7 @@ void main() {
 
 ```bash
 # Single package
-cd packages/auth && flutter test
+cd packages/features/auth && flutter test
 
 # All packages
 melos test

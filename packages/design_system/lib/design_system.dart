@@ -63,7 +63,7 @@ export 'src/theme/app_theme.dart';
 // internals with zero usage outside this package — access colors via
 // `context.appColors` instead. `field_tokens.dart` (`FieldTokens`) IS
 // exported below: it has real external consumers (e.g. `AppOtpField` in
-// `packages/otp`).
+// `packages/features/otp`).
 export 'src/theme/colors/app_colors.dart';
 export 'src/theme/colors/field_tokens.dart';
 // Tokens — single barrel; see src/theme/tokens.dart for the full re-export

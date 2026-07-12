@@ -11,11 +11,11 @@ Reference for clean architecture decisions in the Sanad monorepo.
 
 | Layer | Owns | Location |
 |-------|------|----------|
-| Domain | Entities, repo contracts, use cases | `packages/<feature>/lib/src/domain/` |
-| Data | DTOs, data sources, repo impls | `packages/<feature>/lib/src/data/` |
-| Presentation | BLoC, pages, widgets | `packages/<feature>/lib/src/presentation/` |
-| DI | GetIt registrations | `packages/<feature>/lib/src/di/` |
-| Routes | Path constants | `packages/<feature>/lib/src/routes/` |
+| Domain | Entities, repo contracts, use cases | `packages/features/<feature>/lib/src/domain/` |
+| Data | DTOs, data sources, repo impls | `packages/features/<feature>/lib/src/data/` |
+| Presentation | BLoC, pages, widgets | `packages/features/<feature>/lib/src/presentation/` |
+| DI | GetIt registrations | `packages/features/<feature>/lib/src/di/` |
+| Routes | Path constants | `packages/features/<feature>/lib/src/routes/` |
 
 ## Dependency Direction
 
@@ -57,4 +57,4 @@ New functionality needed?
 
 ## Reference Implementation
 
-`packages/auth/` is the canonical example of clean architecture in this monorepo.
+`packages/features/auth/` is the canonical example of clean architecture in this monorepo.

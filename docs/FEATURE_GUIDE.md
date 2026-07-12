@@ -2,14 +2,14 @@
 
 Canonical structure, naming conventions, and layer rules for every feature package in the Sanad monorepo.
 
-**Reference implementation:** `packages/auth/`
+**Reference implementation:** `packages/features/auth/`
 
 ---
 
 ## Feature Package Structure
 
 ```
-packages/<feature>/
+packages/features/<feature>/
 ├── pubspec.yaml
 ├── analysis_options.yaml
 ├── README.md
@@ -63,7 +63,7 @@ packages/<feature>/
 
 | Type | Location | Contains | Example |
 |------|----------|----------|---------|
-| Feature Package | `packages/<name>/` | Full clean arch | `auth`, `otp` |
+| Feature Package | `packages/features/<name>/` | Full clean arch | `auth`, `otp`, `branches` |
 | App Feature | `apps/*/lib/src/features/` | UI page only | `branches_page.dart` |
 
 App features are thin UI shells. Business logic must live in packages.
@@ -164,18 +164,26 @@ All feature strings use `'feature.key'.tr()` with keys in both `ar-AR.json` and 
 
 ## Creating a New Feature
 
+Always use `melos run` with `--` to pass arguments through Melos without flag conflicts:
+
 ```bash
 # Shared feature package (full clean arch)
-melos feature:create orders --shared
+melos run feature:create -- orders shared
 
 # Provider app UI-only feature
-melos feature:create branches --app provider
+melos run feature:create -- branches provider
 
 # Client app UI-only feature
-melos feature:create profile --app client
+melos run feature:create -- profile client
 
-# App feature with backend package
-melos feature:create branches --app provider --with-backend
+# App feature + shared backend package
+melos run feature:create -- branches provider with-backend
+
+# Add assets folder
+melos run feature:create -- orders shared assets
+
+# Skip test stubs
+melos run feature:create -- orders shared no-tests
 ```
 
 See `.cursor/skills/create_feature.skill.md` for the complete workflow.
@@ -189,6 +197,7 @@ See `.cursor/skills/create_feature.skill.md` for the complete workflow.
 | `auth` | `/`, `/login`, `/register` | `AuthBloc` | Active |
 | `otp` | `/otp` | `OtpBloc` | Active |
 | `forgot_password` | `/forgot-password`, `/forgot-password/reset` | `ForgotPasswordBloc` | Active |
+| `branches` | `/branches`, `/branches/add` | `BranchesBloc`, `AddBranchBloc` | Active |
 
 ## App Features (Provider)
 
@@ -198,7 +207,6 @@ See `.cursor/skills/create_feature.skill.md` for the complete workflow.
 | requests | Yes (`/requests`) | `requests_page.dart` |
 | messages | Yes (`/messages`) | `messages_page.dart` |
 | settings | Yes (`/settings`) | `settings_page.dart` |
-| branches | Yes (`/branches`, `/branches/add`) | `branches_page.dart`, `add_branch_page.dart` |
 | availability | No | `availability_page.dart` |
 | schedule | No | `schedule_page.dart` |
 | services | No | `services_page.dart` |

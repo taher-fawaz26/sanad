@@ -10,7 +10,7 @@ alwaysApply: false
 
 - Shared (used by 2+ apps or by `design_system`) → `packages/app_assets/`
 - Application-specific (used by exactly one app) → `apps/<app>/assets/`
-- Feature-specific (used by exactly one feature package) → `packages/<feature>/assets/`
+- Feature-specific (used by exactly one feature package) → `packages/features/<feature>/assets/`
 - Never duplicate the same asset in two locations — if a second consumer appears, promote it to `app_assets`
 - `core` owns zero asset knowledge — never add asset files or path constants to `core`
 

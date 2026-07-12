@@ -45,6 +45,7 @@
     "empty_workers_title": "لا يوجد عمال معيّنون",
     "empty_workers_description": "عيّن عمالاً ليتم جدولتهم في المهام.",
     "empty_workers_action": "تعيين عامل",
+    "more_actions": "مزيد من الإجراءات",
     "add_branch": {
       "title": "إضافة فرع",
       "subtitle": "إعداد الموقع والتغطية والفريق.",
@@ -52,19 +53,21 @@
       "section_contact": "التواصل",
       "section_working_hours": "ساعات العمل",
       "branch_name": "اسم الفرع",
-      "branch_name_hint": "دبي مارينا",
-      "branch_type": "نوع الفرع",
-      "branch_type_hint": "اختر نوع الفرع",
-      "location": "الموقع",
-      "location_hint": "مارينا بلازا، البرج 2",
+      "branch_name_hint": "مثال: دبي مارينا",
+      "city": "المدينة",
+      "city_hint": "مثال: دبي",
+      "location": "العنوان",
+      "location_hint": "مثال: مارينا بلازا، البرج 2",
       "location_set": "تعيين",
+      "location_required": "يرجى تحديد عنوان الفرع",
       "branch_phone": "هاتف الفرع",
       "branch_phone_hint": "+971 4 123 4567",
       "branch_manager": "مدير الفرع",
-      "branch_manager_hint": "اختر المدير",
+      "branch_manager_hint": "قريباً",
       "use_company_schedule": "استخدام جدول الشركة",
       "set_custom_schedule": "تعيين جدول مخصص",
-      "next_button": "التالي"
+      "next_button": "حفظ الفرع",
+      "success": "تم إنشاء الفرع بنجاح"
     }
   },
   "auth": {

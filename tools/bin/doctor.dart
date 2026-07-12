@@ -79,7 +79,9 @@ void main(List<String> args) {
 
 _Check _exec(String name, String cmd, List<String> args) {
   try {
-    final r = Process.runSync(cmd, args);
+    // runInShell is required on Windows to resolve .bat/.cmd shims
+    // (e.g. flutter.bat, melos.bat) that Process.run cannot exec directly.
+    final r = Process.runSync(cmd, args, runInShell: Platform.isWindows);
     final ok = r.exitCode == 0;
     final msg = r.stdout.toString().trim().split('\n').first;
     return _Check(name: name, passed: ok, message: msg.isEmpty ? cmd : msg);

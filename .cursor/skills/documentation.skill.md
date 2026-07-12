@@ -28,7 +28,8 @@ Update project documentation when making changes.
 ```markdown
 ## <Feature Name>
 
-**Package:** `packages/<name>/`
+**Infrastructure package:** `packages/<name>/`
+**Feature package:** `packages/features/<name>/`
 **Status:** Active | Stub | Orphaned
 **Dependencies:** core, network, design_system
 

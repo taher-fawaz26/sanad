@@ -2,19 +2,46 @@
 
 ## Overview
 
-Sanad uses [Melos](https://melos.invertase.dev/) for monorepo management. Configuration in `melos.yaml` at root.
+Sanad uses [Melos](https://melos.invertase.dev/) v7.x for monorepo management. Melos 7.x introduced native Dart pub workspaces — there is **no standalone `melos.yaml` file**. All Melos configuration (scripts, ide settings, command hooks) lives under a `melos:` key inside the root `pubspec.yaml`.
+
+See the [7.x migration guide](https://melos.invertase.dev/guides/migrations#6xx-to-7xx) for background.
 
 ## Workspace Structure
 
 ```yaml
-# melos.yaml
+# pubspec.yaml (workspace root)
 name: sanad
-packages:
-  - apps/*
-  - packages/*
+publish_to: none
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+
+workspace:
+  - apps/sanad_client
+  - apps/sanad_provider
+  - packages/features/auth
+  # ...infrastructure under packages/, features under packages/features/
+
+dev_dependencies:
+  melos: ^7.0.0
+
+melos:
+  # scripts, ide, command config — see pubspec.yaml
 ```
 
-Root `pubspec.yaml` lists workspace members. All packages use `publish_to: none`.
+The `workspace:` list (native Dart pub workspaces) is the single source of truth for member packages — package discovery no longer uses a `melos.packages` glob. Each member package's `pubspec.yaml` must declare `resolution: workspace`. All packages use `publish_to: none`.
+
+## Running Scripts
+
+Scripts are invoked with `melos run <script>`. When passing arguments, always
+use the `--` separator so Melos forwards them to the script instead of trying
+to parse them as its own CLI flags:
+
+```bash
+melos run feature:create -- orders shared
+melos run package:create -- analytics infrastructure
+```
+
+Passing `--flags` directly after a bare `melos <script>` command (e.g. `melos feature:create orders --shared`) does **not** work — Melos intercepts unrecognized flags itself.
 
 ## Bootstrap
 
@@ -48,12 +75,13 @@ Run after any `pubspec.yaml` change. Links local packages and runs `pub get`.
 
 ## Creating a Package
 
-1. `mkdir packages/<name>/lib/src`
-2. Create `pubspec.yaml` with `publish_to: none`
-3. Add to root `pubspec.yaml` workspace list
-4. Add to `melos.yaml` packages list
-5. Create `analysis_options.yaml`, barrel file, `test/` folder
-6. `melos bootstrap`
+1. **Infrastructure:** Create `packages/<name>/` with `pubspec.yaml` (`publish_to: none`)
+2. **Feature:** Use `melos run feature:create -- <name> shared` (creates `packages/features/<name>/`)
+3. Add to root `pubspec.yaml` workspace list (`packages/<name>` or `packages/features/<name>`)
+4. Create `analysis_options.yaml`, barrel file, `test/` folder
+5. `melos bootstrap`
+
+Or scaffold automatically: `melos run package:create -- <name> <type>` (see `package_creation.skill.md`).
 
 See `package_creation.skill.md` for details.
 

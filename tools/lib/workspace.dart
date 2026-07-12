@@ -9,15 +9,27 @@ class Workspace {
 
   final String root;
 
+  /// Finds the workspace root by walking up from the current directory
+  /// looking for a root `pubspec.yaml` with a `workspace:` key.
+  ///
+  /// Melos 7.x has no standalone `melos.yaml` file — the workspace root is
+  /// defined solely by the native Dart pub workspace list in `pubspec.yaml`.
   static Workspace find() {
     var dir = Directory.current;
     while (true) {
-      if (File(p.join(dir.path, 'melos.yaml')).existsSync()) {
-        return Workspace(dir.path);
+      final pubspecFile = File(p.join(dir.path, 'pubspec.yaml'));
+      if (pubspecFile.existsSync()) {
+        final doc = loadYaml(pubspecFile.readAsStringSync());
+        if (doc is YamlMap && doc.containsKey('workspace')) {
+          return Workspace(dir.path);
+        }
       }
       final parent = dir.parent;
       if (parent.path == dir.path) {
-        throw StateError('Could not find melos.yaml from ${Directory.current.path}');
+        throw StateError(
+          'Could not find a workspace root pubspec.yaml (with a `workspace:` '
+          'key) from ${Directory.current.path}',
+        );
       }
       dir = parent;
     }

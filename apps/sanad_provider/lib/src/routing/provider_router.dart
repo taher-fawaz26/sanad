@@ -1,12 +1,11 @@
 import 'package:auth/auth.dart';
+import 'package:branches/branches.dart';
 import 'package:core/core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:forgot_password/forgot_password.dart';
 import 'package:go_router/go_router.dart';
 import 'package:otp/otp.dart';
 import 'package:sanad_provider/src/di/app_di.dart';
-import 'package:sanad_provider/src/features/branches/add_branch_page.dart';
-import 'package:sanad_provider/src/features/branches/branches_page.dart';
 import 'package:sanad_provider/src/features/home/home_page.dart';
 import 'package:sanad_provider/src/features/messages/messages_page.dart';
 import 'package:sanad_provider/src/features/requests/requests_page.dart';
@@ -20,7 +19,19 @@ GoRouter buildProviderRouter() {
   final routeContext = FeatureRouteContext(
     homeRoute: AppRoutes.home,
     userType: FeatureUserType.provider,
-    protectedRoutes: AppRoutes.protected,
+    protectedRoutes: {
+      ...AppRoutes.protected,
+      ...BranchRoutes.protectedRoutes,
+    },
+    onRegisteredNeedsVerification: (context, identifier, isPhoneIdentifier) {
+      context.push(
+        OtpRoutes.otp,
+        extra: OtpArgs(
+          identifier: identifier,
+          type: isPhoneIdentifier ? IdentifierType.phone : IdentifierType.email,
+        ),
+      );
+    },
   );
 
   return GoRouter(
@@ -29,8 +40,9 @@ GoRouter buildProviderRouter() {
     redirect: (context, state) {
       if (state.matchedLocation == AuthRoutes.splash) return null;
 
-      final isProtected = routeContext.protectedRoutes
-          .contains(state.matchedLocation);
+      final isProtected = routeContext.protectedRoutes.contains(
+        state.matchedLocation,
+      );
       if (isProtected && authStatus.status != AuthStatus.authenticated) {
         return AuthRoutes.login;
       }
@@ -74,14 +86,6 @@ GoRouter buildProviderRouter() {
               );
             },
           ),
-          GoRoute(
-            path: AppRoutes.branches,
-            builder: (context, state) => const ProviderBranchesPage(),
-          ),
-          GoRoute(
-            path: AppRoutes.addBranch,
-            builder: (context, state) => const AddBranchPage(),
-          ),
           StatefulShellRoute.indexedStack(
             builder: (context, state, navigationShell) =>
                 MainShell(navigationShell: navigationShell),
@@ -98,7 +102,7 @@ GoRouter buildProviderRouter() {
                 routes: [
                   GoRoute(
                     path: AppRoutes.requests,
-                    builder: (context, state) => const ProviderRequestsPage(),
+                    builder: (context, state) => const RequestsPage(),
                   ),
                 ],
               ),

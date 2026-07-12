@@ -32,6 +32,7 @@
 | `otp` | OTP verification flow | Active |
 | `forgot_password` | Password reset flow | Active |
 | `change_password` | Authenticated password update | Stub |
+| `branches` | Provider branch management | Active |
 
 ### UI / Localization
 
@@ -50,9 +51,9 @@
 
 ## Creating a New Package
 
-1. Create `packages/<name>/` with `pubspec.yaml` (`publish_to: none`)
-2. Add to root `pubspec.yaml` workspace list
-3. Add to `melos.yaml` packages list
+1. **Infrastructure / shared:** Create `packages/<name>/` with `pubspec.yaml` (`publish_to: none`)
+2. **Feature:** Use `melos run feature:create -- <name> shared` (creates `packages/features/<name>/`)
+3. Add to root `pubspec.yaml` workspace list
 4. Create `analysis_options.yaml` (include `very_good_analysis`)
 5. Create `lib/<name>.dart` barrel file
 6. Create `test/` folder
@@ -72,7 +73,7 @@ See `package_creation.skill.md` for detailed workflow.
 
 - `dependencies` (centralized third-party re-export hub) — **deleted**, zero consumers verified. Import third-party packages directly instead.
 - `settings` — **deleted**, dead stub (route constant only, zero imports anywhere). The real settings UI lives in `apps/sanad_provider/lib/src/features/settings/`.
-- `shared_widgets` — **deleted**, dissolved into `design_system/components/` (primitives), `packages/otp` (OTP field), and `sanad_provider`'s branches feature (feature-specific fields).
+- `shared_widgets` — **deleted**, dissolved into `design_system/components/` (primitives), `packages/features/otp` (OTP field), and `packages/features/branches` (branch widgets).
 
 ## Naming Recommendation: `shared_models` (Not Executed)
 

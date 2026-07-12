@@ -1,15 +1,16 @@
+import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
-/// Provider requests tab — lists incoming service requests.
-class ProviderRequestsPage extends StatelessWidget {
-  const ProviderRequestsPage({super.key});
+/// Requests screen — app-specific UI shell.
+class RequestsPage extends StatelessWidget {
+  const RequestsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('nav.requests'.tr())),
-      body: const Center(child: Text('Requests')),
+      appBar: AppNavBar(title: 'requests.title'.tr()),
+      body: Center(child: Text('requests.title'.tr())),
     );
   }
 }

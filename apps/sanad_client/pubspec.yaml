@@ -13,7 +13,7 @@ dependencies:
   app_logger:
     path: ../../packages/app_logger
   auth:
-    path: ../../packages/auth
+    path: ../../packages/features/auth
   core:
     path: ../../packages/core
   cupertino_icons: ^1.0.8
@@ -28,7 +28,7 @@ dependencies:
   flutter_screenutil: ^5.9.3
   flutter_secure_storage: ^10.3.1
   forgot_password:
-    path: ../../packages/forgot_password
+    path: ../../packages/features/forgot_password
   go_router: ^17.3.0
   hive_ce: ^2.10.1
   hydrated_bloc: ^11.0.0
@@ -37,7 +37,7 @@ dependencies:
   network:
     path: ../../packages/network
   otp:
-    path: ../../packages/otp
+    path: ../../packages/features/otp
   path_provider: ^2.1.5
   provider: ^6.1.5
   shared_blocs:
