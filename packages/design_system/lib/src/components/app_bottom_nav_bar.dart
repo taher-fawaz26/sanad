@@ -1,4 +1,5 @@
-﻿import 'package:design_system/src/theme/tokens/bottom_nav_tokens.dart';
+﻿import 'package:core/core.dart';
+import 'package:design_system/src/theme/tokens/bottom_nav_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -93,6 +94,7 @@ class _BottomNavTab extends StatelessWidget {
             children: [
               SvgPicture.asset(
                 item.iconAsset,
+                package: AppAssets.package,
                 width: spec.iconSize,
                 height: spec.iconSize,
                 colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),

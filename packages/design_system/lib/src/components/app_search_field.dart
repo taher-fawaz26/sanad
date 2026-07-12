@@ -1,7 +1,12 @@
+import 'package:core/core.dart';
 import 'package:design_system/src/theme/tokens/search_bar_tokens.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
-/// Figma `Bars / Search Bars` (`40:6999`).
+/// Figma `Bars / Search Bars` — Branches instance (`73:2915` / Default `40:7016`).
+///
+/// Flat Sky/Lighter bar, 36×8 radius, search icon at start. Optional mic at end.
+/// Cancel is opt-in via [showCancelOnFocus] (Focused/Filled component states).
 class AppSearchField extends StatefulWidget {
   const AppSearchField({
     super.key,
@@ -11,7 +16,9 @@ class AppSearchField extends StatefulWidget {
     this.onCancel,
     this.onChanged,
     this.onSubmitted,
+    this.onMicTap,
     this.showMicIcon = true,
+    this.showCancelOnFocus = false,
     this.autofocus = false,
   });
 
@@ -21,7 +28,9 @@ class AppSearchField extends StatefulWidget {
   final VoidCallback? onCancel;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
+  final VoidCallback? onMicTap;
   final bool showMicIcon;
+  final bool showCancelOnFocus;
   final bool autofocus;
 
   @override
@@ -63,8 +72,10 @@ class _AppSearchFieldState extends State<AppSearchField> {
     setState(() {});
   }
 
-  bool get _showCancel => _focused;
+  bool get _showCancel => widget.showCancelOnFocus && _focused;
   bool get _hasText => _controller.text.isNotEmpty;
+  bool get _showClear => _hasText && _focused;
+  bool get _showMic => widget.showMicIcon && !_focused && !_showClear;
 
   void _handleCancel() {
     _focusNode.unfocus();
@@ -76,9 +87,39 @@ class _AppSearchFieldState extends State<AppSearchField> {
     widget.onChanged?.call('');
   }
 
+  Widget _svgIcon(String asset, SearchBarStyleSpec spec) {
+    return SvgPicture.asset(
+      asset,
+      package: AppAssets.package,
+      width: spec.iconSize,
+      height: spec.iconSize,
+      colorFilter: ColorFilter.mode(spec.iconColor, BlendMode.srcIn),
+      fit: BoxFit.contain,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final spec = context.appSearchBarTheme.spec;
+
+    Widget? trailing;
+    if (_showClear) {
+      trailing = GestureDetector(
+        onTap: _handleClear,
+        behavior: HitTestBehavior.opaque,
+        child: Icon(
+          Icons.close,
+          size: spec.iconSize,
+          color: spec.iconColor,
+        ),
+      );
+    } else if (_showMic) {
+      trailing = GestureDetector(
+        onTap: widget.onMicTap,
+        behavior: HitTestBehavior.opaque,
+        child: _svgIcon(AppSvgs.mic, spec),
+      );
+    }
 
     return SizedBox(
       height: spec.height,
@@ -88,21 +129,20 @@ class _AppSearchFieldState extends State<AppSearchField> {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeInOut,
-              margin: EdgeInsets.only(
-                right: _showCancel ? spec.cancelGap : 0,
+              height: spec.height,
+              margin: EdgeInsetsDirectional.only(
+                end: _showCancel ? spec.cancelGap : 0,
               ),
               decoration: BoxDecoration(
                 color: spec.backgroundColor,
                 borderRadius: spec.borderRadius,
               ),
+              clipBehavior: Clip.antiAlias,
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   SizedBox(width: spec.iconPadding),
-                  Icon(
-                    Icons.search,
-                    size: spec.iconSize,
-                    color: spec.iconColor,
-                  ),
+                  _svgIcon(AppSvgs.search, spec),
                   SizedBox(width: spec.iconGap),
                   Expanded(
                     child: TextField(
@@ -111,9 +151,20 @@ class _AppSearchFieldState extends State<AppSearchField> {
                       autofocus: widget.autofocus,
                       style: spec.valueStyle,
                       cursorColor: spec.cursorColor,
+                      textAlignVertical: TextAlignVertical.center,
                       decoration: InputDecoration(
                         isDense: true,
+                        isCollapsed: true,
+                        filled: false,
+                        fillColor: Colors.transparent,
                         border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        focusedErrorBorder: InputBorder.none,
+                        // Override theme's 48px field constraints.
+                        constraints: const BoxConstraints(),
                         hintText: widget.hint,
                         hintStyle: spec.hintStyle,
                         contentPadding: EdgeInsets.zero,
@@ -122,24 +173,11 @@ class _AppSearchFieldState extends State<AppSearchField> {
                       onSubmitted: widget.onSubmitted,
                     ),
                   ),
-                  if (_hasText && _focused) ...[
-                    GestureDetector(
-                      onTap: _handleClear,
-                      child: Icon(
-                        Icons.close,
-                        size: spec.iconSize,
-                        color: spec.iconColor,
-                      ),
-                    ),
+                  if (trailing != null) ...[
                     SizedBox(width: spec.iconPadding),
-                  ] else if (widget.showMicIcon && !_focused) ...[
-                    Icon(
-                      Icons.mic_none,
-                      size: spec.iconSize,
-                      color: spec.iconColor,
-                    ),
-                    SizedBox(width: spec.iconPadding),
+                    trailing,
                   ],
+                  SizedBox(width: spec.iconPadding),
                 ],
               ),
             ),

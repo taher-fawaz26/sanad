@@ -1,0 +1,46 @@
+---
+description: Localization — EasyLocalization keys, RTL-first, no hardcoded strings
+globs: "**/*.dart"
+alwaysApply: false
+---
+
+# Localization
+
+## Rules
+
+- Never hardcode strings in UI — always `'key'.tr()`
+- Arabic (`ar-AR`) is the default locale — design RTL first
+- Both `ar-AR.json` and `en-US.json` must be updated together before using a key
+
+## Key Convention
+
+Dot-separated hierarchical keys grouped by domain:
+
+```
+auth.login_title
+errors.no_internet
+branches.add_branch.title
+validation.form.required
+```
+
+Translation files: `packages/localization/assets/translations/`
+
+## Constants
+
+- Validation: `ValidationMessageKeys.*` (e.g. `ValidationMessageKeys.required`)
+- Network errors: `ErrorMessages.*` (e.g. `ErrorMessages.noInternet`)
+
+## Language Switching
+
+`TranslateBloc` events only: `TrArabicEvent` / `TrEnglishEvent`
+Never call `context.setLocale()` directly in widgets.
+
+## Pluralization
+
+Use EasyLocalization `plural()` API — never string interpolation workarounds.
+
+## Adding a New Key
+
+1. Add to `ar-AR.json`
+2. Add to `en-US.json`
+3. Use `'domain.key'.tr()` in code

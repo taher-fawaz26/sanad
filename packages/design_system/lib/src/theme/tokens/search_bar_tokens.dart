@@ -1,4 +1,4 @@
-import 'package:design_system/design_system.dart' show AppSearchField, AppTheme;
+import 'package:design_system/design_system.dart' show AppSearchField;
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/spacing/responsive_spacing.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
@@ -67,7 +67,7 @@ extension AppSearchBarThemeX on BuildContext {
       Theme.of(this).extension<AppSearchBarTheme>()!;
 }
 
-/// Figma `Bars / Search Bars` (`40:6999`) token resolver.
+/// Figma `Bars / Search Bars` (`73:2915` / Default `40:7016`) token resolver.
 abstract final class SearchBarTokens {
   SearchBarTokens._();
 
@@ -100,10 +100,10 @@ abstract final class SearchBarTokens {
     );
 
     return SearchBarStyleSpec(
-      height: AppDimension.fieldHeightSm,
+      height: AppDimension.fieldHeightMd,
       borderRadius: BorderRadius.circular(AppDimension.radiusSm),
       backgroundColor: colors.controlFill,
-      iconColor: colors.textMuted,
+      iconColor: isDark ? colors.textInverse : colors.textPrimary,
       hintStyle: baseStyle.copyWith(color: colors.textMuted),
       valueStyle: baseStyle.copyWith(color: colors.textPrimary),
       cancelStyle: baseStyle.copyWith(

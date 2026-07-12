@@ -34,17 +34,19 @@ enum AppButtonSize {
 
 /// Figma icon placement (`30:1738`).
 enum AppButtonIconPosition {
-  /// Text centered; no icon.
+  /// Text centered; no icon (`Icon Position=None`).
   none,
 
-  /// Icon pinned to the start edge; label stays centered.
+  /// Icon pinned to the start edge; label stays centered (`Icon Position=Left`).
   left,
 
-  /// Icon pinned to the end edge; label stays centered.
+  /// Icon pinned to the end edge; label stays centered (`Icon Position=Right`).
   right,
 
-  /// Icon + label grouped and centered together.
-  side,
+  /// Icon + label grouped and centered together (`Icon Position=Side`).
+  ///
+  /// Use for CTAs like Figma `731:3785` (icon immediately before the label).
+  center,
 }
 
 /// Resolved colours for one button render pass.

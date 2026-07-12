@@ -29,19 +29,19 @@ flutter:
   uses-material-design: true
   # Fonts are declared here so every consumer gets them via package dependency.
   fonts:
-    - family: Poppins
+    - family: Inter
       fonts:
-        - asset: assets/fonts/Poppins-Regular.ttf
+        - asset: assets/fonts/Inter-Regular.ttf
           weight: 400
-        - asset: assets/fonts/Poppins-Medium.ttf
+        - asset: assets/fonts/Inter-Medium.ttf
           weight: 500
-        - asset: assets/fonts/Poppins-Bold.ttf
+        - asset: assets/fonts/Inter-Bold.ttf
           weight: 700
-    - family: NotoSansArabic
+    - family: IBMPlexSansArabic
       fonts:
-        - asset: assets/fonts/NotoSansArabic-Regular.ttf
+        - asset: assets/fonts/IBMPlexSansArabic-Regular.ttf
           weight: 400
-        - asset: assets/fonts/NotoSansArabic-Medium.ttf
+        - asset: assets/fonts/IBMPlexSansArabic-Medium.ttf
           weight: 500
-        - asset: assets/fonts/NotoSansArabic-Bold.ttf
+        - asset: assets/fonts/IBMPlexSansArabic-Bold.ttf
           weight: 700

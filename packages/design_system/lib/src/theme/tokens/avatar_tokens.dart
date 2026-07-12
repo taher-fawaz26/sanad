@@ -7,6 +7,9 @@ import 'package:flutter/material.dart';
 
 /// Figma avatar size tier (`40:8349`).
 enum AppAvatarSize {
+  /// 24 dp — inline field prefix (`245:6233`).
+  small,
+
   /// 40 dp — table rows and list items (`40:8354`).
   medium,
 }
@@ -34,6 +37,7 @@ abstract final class AvatarTokens {
   AvatarTokens._();
 
   static double size(AppAvatarSize avatarSize) => switch (avatarSize) {
+        AppAvatarSize.small => AppDimension.iconLg,
         AppAvatarSize.medium => AppDimension.fieldHeightMd,
       };
 

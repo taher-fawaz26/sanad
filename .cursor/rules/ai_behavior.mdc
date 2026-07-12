@@ -1,0 +1,35 @@
+---
+description: Mandatory AI behavior — search first, no placeholders, preserve architecture
+alwaysApply: true
+---
+
+# AI Behavior
+
+## Existing Code First (Mandatory)
+
+Before creating any Widget, Class, Repository, UseCase, Model, Entity, Extension, Utility, Constant, or Component:
+
+1. **Search the entire workspace** for an existing implementation
+2. **Reuse or extend** existing implementations whenever possible
+3. **Create new only** when no suitable existing implementation exists
+4. **Never duplicate** abstractions under different names
+5. **Prefer refactoring** an existing implementation instead of creating a parallel one
+
+## Core Principles
+
+- **Search before creating** — check `packages/design_system`, `packages/shared_widgets`, `packages/core`, and existing feature packages
+- **Never generate placeholder code** — no `// TODO`, `throw UnimplementedError()`, or `return null` stubs; implement fully or ask
+- **Never remove working code** without explicit instruction
+- **Never simplify architecture** — keep clean arch layers even for simple features
+- **Never add colors, spacing, or shadows** without checking DS tokens first
+- **Never use `setState` for network/async state** — use BLoC
+- **Preserve backward compatibility** — never change a public API signature without instruction
+- **Never duplicate code** — extract to shared package or helper class
+- **Never guess a translation key** — read `ar-AR.json` and `en-US.json` to find the correct key
+- **Fix analyzer errors before ending a task** — zero errors is the definition of done
+
+## Quality Gate
+
+- Batch all file edits before running analyzer (see `analyzer.mdc`)
+- Analyze only the affected package at task end
+- Update relevant `docs/*.md` when adding features, packages, or API endpoints

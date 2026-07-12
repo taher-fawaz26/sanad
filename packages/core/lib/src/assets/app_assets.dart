@@ -1,10 +1,10 @@
 /// Root asset registry for the Sanad monorepo.
 ///
-/// Physical files live under `packages/core/assets/`. Flutter packages that
-/// load them must list those paths under `flutter.assets` (see design_system).
+/// Physical files live under `packages/core/assets/`. Load them with
+/// `SvgPicture.asset(AppSvgs.x, package: AppAssets.package)`.
 abstract final class AppAssets {
   AppAssets._();
 
-  /// Package directory that owns the asset files on disk.
+  /// Flutter package that owns the asset files.
   static const String package = 'core';
 }

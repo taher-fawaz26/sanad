@@ -1,0 +1,36 @@
+---
+description: Dart code style — naming, imports, barrel files, file size limits
+globs: "**/*.dart"
+alwaysApply: false
+---
+
+# Code Style
+
+## Imports
+
+- `always_use_package_imports` — no relative imports across packages
+- `prefer_single_quotes` for strings
+- Import order: `dart:` → `package:flutter/` → external `package:` → internal `package:` → relative
+
+## Naming
+
+| Item | Convention | Example |
+|------|-----------|---------|
+| Files | `snake_case.dart` | `auth_bloc.dart` |
+| Classes | `PascalCase` | `AuthBloc` |
+| Constants | `camelCase` | `loginPath` |
+| Routes class | `abstract final class` | `AuthRoutes` |
+| Utility classes | `abstract final class` + private ctor | `TypeScale._()` |
+
+## Structure
+
+- One barrel file per package root: `lib/<package>.dart`
+- Max 300 lines per file — split into `part` files if longer
+- No commented-out code in committed files
+- Avoid `dynamic` — use generics or sealed types
+
+## BLoC File Layout
+
+Consistent per package — either:
+- `part` files: `auth_bloc.dart` + `part 'auth_event.dart'` + `part 'auth_state.dart'`
+- Separate files: `auth_bloc.dart`, `auth_event.dart`, `auth_state.dart`

@@ -285,5 +285,5 @@ abstract final class AppDimension {
   static double get tableRowHeight => responsiveDimension(64);
 
   /// Notification badge diameter (`40:10681`).
-  static double get notificationBadgeSize => responsiveDimension(32);
+  static double get notificationBadgeSize => responsiveDimension(18);
 }

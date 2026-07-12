@@ -1,0 +1,27 @@
+---
+description: Documentation maintenance — which docs to update per change type
+globs: "**/*.md"
+alwaysApply: false
+---
+
+# Documentation
+
+## Update Map
+
+| Change Type | Update |
+|-------------|--------|
+| New package | `docs/PACKAGE_GUIDE.md` |
+| New feature | `docs/FEATURE_GUIDE.md` + `docs/ARCHITECTURE.md` |
+| New API endpoint | `docs/API_GUIDE.md` |
+| New DS component | `docs/DESIGN_SYSTEM.md` |
+| New localization pattern | `docs/LOCALIZATION_GUIDE.md` |
+| Architecture change | `docs/ARCHITECTURE.md` + `docs/DEPENDENCY_GRAPH.md` |
+| Security change | `docs/SECURITY.md` |
+| Routing change | `docs/ROUTING.md` |
+| Config/flavor change | `docs/CONFIGURATION.md` + `docs/FLAVORS.md` |
+| Release | `docs/RELEASE.md` + CHANGELOG |
+
+## Quality
+
+- Keep code examples up to date with actual code — no stale examples
+- Use project-accurate paths, class names, and commands

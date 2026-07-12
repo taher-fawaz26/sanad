@@ -1,3 +1,4 @@
+import 'package:design_system/src/components/internal/overlay_drag_handle.dart';
 import 'package:design_system/src/spacing/responsive_spacing.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
 import 'package:design_system/src/theme/tokens/bottom_sheet_tokens.dart';
@@ -39,17 +40,10 @@ class AppBottomSheet extends StatelessWidget {
         children: [
           if (showDragHandle) ...[
             SizedBox(height: spec.dragHandleTopPadding),
-            Center(
-              child: Container(
-                width: spec.dragHandleWidth,
-                height: spec.dragHandleHeight,
-                decoration: BoxDecoration(
-                  color: spec.dragHandleColor,
-                  borderRadius: BorderRadius.circular(
-                    spec.dragHandleHeight / 2,
-                  ),
-                ),
-              ),
+            OverlayDragHandle(
+              width: spec.dragHandleWidth,
+              height: spec.dragHandleHeight,
+              color: spec.dragHandleColor,
             ),
             SizedBox(height: AppSpacing.lg),
           ],

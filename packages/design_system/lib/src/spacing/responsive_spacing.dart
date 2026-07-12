@@ -1,14 +1,11 @@
-﻿import 'package:flutter/cupertino.dart' show BuildContext, EdgeInsets, MediaQuery;
-import 'package:flutter/material.dart' show BuildContext, EdgeInsets, MediaQuery;
-import 'package:flutter/widgets.dart' show BuildContext, EdgeInsets, MediaQuery;
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+﻿import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 /// **Single-pass clamp-based responsive spacing engine.**
 ///
 /// Mirrors the font engine pattern — one multiplication step, then a manual
-/// branch clamp. No [BuildContext], no [MediaQuery], O(1).
+/// branch clamp. No BuildContext, no MediaQuery, O(1).
 ///
-/// Clamp bounds: [base × 0.85, base × 1.20]
+/// Clamp bounds: [base × 0.85, base × 1.25]
 ///
 /// Usage (via token class — never call directly in widgets):
 /// ```dart
@@ -27,69 +24,107 @@ double responsiveSpacing(double base) {
 
 // ─── AppSpacing ──────────────────────────────────────────────────────────────
 
-/// **4-based spacing token scale.**
+/// **Spacing scale — Figma `892:4898` Guide (16px base).**
 ///
 /// All values are design-spec dp sizes routed through [responsiveSpacing].
-/// Widgets must never use raw [EdgeInsets] literals or `.w` / `.h` extensions.
+/// Widgets must never use raw EdgeInsets literals or `.w` / `.h` extensions.
 ///
-/// | Token   | Base (dp) |
-/// |---------|-----------|
-/// | `xs`    | 4         |
-/// | `sm`    | 8         |
-/// | `md`    | 12        |
-/// | `lg`    | 16        |
-/// | `xl`    | 20        |
-/// | `xxl`   | 24        |
-/// | `xxxl`  | 32        |
-/// | `xxxxl` | 40        |
+/// Figma steps (Name → rem → px) map to semantic tokens:
+///
+/// | Step | rem     | dp  | Token |
+/// |------|---------|-----|-------|
+/// | 1    | 0.25rem | 4   | [xs] |
+/// | 2    | 0.5rem  | 8   | [sm] |
+/// | 3    | 0.75rem | 12  | [md] |
+/// | 4    | 1rem    | 16  | [lg] |
+/// | 5    | 1.25rem | 20  | [xl] |
+/// | 6    | 1.5rem  | 24  | [xxl] |
+/// | 8    | 2rem    | 32  | [xxxl] |
+/// | 10   | 2.5rem  | 40  | [xxxxl] |
+/// | 12   | 3rem    | 48  | [xxxxxl] |
+/// | 16   | 4rem    | 64  | [space64] |
+/// | 20   | 5rem    | 80  | [pageGap] / [space80] |
+/// | 24   | 6rem    | 96  | [space96] |
+/// | 32   | 8rem    | 128 | [space128] |
+/// | 40   | 10rem   | 160 | [space160] |
+/// | 48   | 12rem   | 192 | [space192] |
+/// | 56   | 14rem   | 224 | [space224] |
+/// | 64   | 16rem   | 256 | [space256] |
 abstract final class AppSpacing {
   AppSpacing._();
 
-  /// 4 dp — micro gaps, icon-to-label nudges.
+  /// 4 dp — Figma step 1 (0.25rem). Micro gaps, icon-to-label nudges.
   static double get xs => responsiveSpacing(4);
 
-  /// 8 dp — compact internal padding, small separator.
+  /// 8 dp — Figma step 2 (0.5rem). Compact internal padding.
   static double get sm => responsiveSpacing(8);
 
-  /// 12 dp — default list/grid item padding, standard card inset.
+  /// 12 dp — Figma step 3 (0.75rem). Default list/card inset.
   static double get md => responsiveSpacing(12);
 
   /// 13 dp — tight card inset when design calls for 12 + 1 dp.
+  /// Not in Figma spacing guide — legacy app-specific token.
   static double get mdPlus => responsiveSpacing(13);
 
   /// 17 dp — inline notice card padding (e.g. emergency priority callout).
+  /// Not in Figma spacing guide — legacy app-specific token.
   static double get emergencyNoticePaddingAll => responsiveSpacing(17);
 
-  /// 18 dp — emergency service grid tile padding (lg + half xs).
+  /// 18 dp — emergency service grid tile padding.
+  /// Not in Figma spacing guide — legacy app-specific token.
   static double get emergencyServiceTilePaddingAll => responsiveSpacing(18);
 
-  /// 16 dp — default screen horizontal padding, section gap.
+  /// 16 dp — Figma step 4 (1rem). Default screen horizontal padding.
   static double get lg => responsiveSpacing(16);
 
-  /// 20 dp — comfortable vertical rhythm.
+  /// 20 dp — Figma step 5 (1.25rem). Comfortable vertical rhythm.
   static double get xl => responsiveSpacing(20);
 
-  /// 24 dp — dialog padding, hero section spacing.
+  /// 24 dp — Figma step 6 (1.5rem). Dialog padding, hero section spacing.
   static double get xxl => responsiveSpacing(24);
 
-  /// 32 dp — large section divider, empty-state padding.
+  /// 32 dp — Figma step 8 (2rem). Large section divider.
   static double get xxxl => responsiveSpacing(32);
 
-  /// 40 dp — extra-large hero gap.
+  /// 40 dp — Figma step 10 (2.5rem). Extra-large hero gap.
   static double get xxxxl => responsiveSpacing(40);
 
-  /// 48 dp — maximum spacing for most layouts, used sparingly.
+  /// 48 dp — Figma step 12 (3rem).
   static double get xxxxxl => responsiveSpacing(48);
 
-  /// 60 dp — section divider gaps (Figma section spacing).
+  /// 64 dp — Figma step 16 (4rem).
+  static double get space64 => responsiveSpacing(64);
+
+  /// 60 dp — section divider gaps (legacy layout token, not in Figma guide).
   static double get section => responsiveSpacing(60);
 
-  /// 80 dp — page section gaps.
+  /// 80 dp — Figma step 20 (5rem). Page section gaps.
   static double get pageGap => responsiveSpacing(80);
 
-  /// 110 dp — large page section gaps.
+  /// Alias for [pageGap] — Figma step 20.
+  static double get space80 => pageGap;
+
+  /// 96 dp — Figma step 24 (6rem).
+  static double get space96 => responsiveSpacing(96);
+
+  /// 110 dp — large page section gaps (legacy layout token).
   static double get largeSection => responsiveSpacing(110);
 
-  /// 140 dp — page horizontal padding (Figma layout).
+  /// 128 dp — Figma step 32 (8rem).
+  static double get space128 => responsiveSpacing(128);
+
+  /// 140 dp — page horizontal padding (legacy Figma layout token).
   static double get pagePadding => responsiveSpacing(140);
+
+  /// 160 dp — Figma step 40 (10rem).
+  static double get space160 => responsiveSpacing(160);
+
+  /// 192 dp — Figma step 48 (12rem).
+  static double get space192 => responsiveSpacing(192);
+
+  /// 224 dp — Figma step 56 (14rem).
+  static double get space224 => responsiveSpacing(224);
+
+  /// 256 dp — Figma step 64 (16rem).
+  static double get space256 => responsiveSpacing(256);
 }

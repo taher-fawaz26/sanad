@@ -1,5 +1,6 @@
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
+import 'package:design_system/src/theme/tokens/overlay_tokens.dart';
 import 'package:design_system/src/theme/typography/app_typography.dart';
 import 'package:flutter/material.dart';
 
@@ -17,6 +18,8 @@ class BottomSheetStyleSpec {
     required this.horizontalPadding,
     required this.titleStyle,
     required this.bodyStyle,
+    required this.backdropPeekHeight,
+    required this.backdropPeekHorizontalInset,
   });
 
   final BorderRadius topRadius;
@@ -29,6 +32,14 @@ class BottomSheetStyleSpec {
   final double horizontalPadding;
   final TextStyle titleStyle;
   final TextStyle bodyStyle;
+
+  /// Height of the `AppBackdrop` back-sheet peek strip
+  /// (Figma `Views / Backdrops`, `40:9149`).
+  final double backdropPeekHeight;
+
+  /// Horizontal inset of the back-sheet peek strip from the front sheet's
+  /// edges (Figma `Views / Backdrops`, `40:9149`).
+  final double backdropPeekHorizontalInset;
 }
 
 /// Figma `Views / Bottom Sheets` (`40:9140`) and `Backdrops` (`40:9149`).
@@ -40,14 +51,21 @@ abstract final class BottomSheetTokens {
   static const double dragHandleHeight = 5;
   static const double dragHandleTopPadding = 8;
   static const double horizontalPadding = 24;
-  static const double barrierOpacity = 0.7;
+  static const double barrierOpacity = OverlayTokens.scrimOpacity;
+
+  // Views/Backdrops (`40:9149`) — back-sheet peek strip visible above the
+  // front sheet. The peek itself is a flattened raster image in Figma (not
+  // vector), so its exact fill/shadow cannot be extracted from tokens; this
+  // reuses the front sheet's `surfaceColor`/`topRadius` (documented, allowed
+  // reuse — not invention). See docs/DESIGN_SYSTEM.md "Overlays" section.
+  static const double backdropPeekHeight = 10;
+  static const double backdropPeekHorizontalInset = 16;
 
   static BottomSheetStyleSpec resolve({
     required AppColors colors,
     required AppTypography typography,
     required Brightness brightness,
   }) {
-    final dark = colors.palettes.dark;
     final isDark = brightness == Brightness.dark;
 
     return BottomSheetStyleSpec(
@@ -57,9 +75,9 @@ abstract final class BottomSheetTokens {
       dragHandleWidth: responsiveDimension(dragHandleWidth),
       dragHandleHeight: responsiveDimension(dragHandleHeight),
       dragHandleTopPadding: responsiveDimension(dragHandleTopPadding),
-      dragHandleColor: isDark ? dark.shade700 : dark.shade300,
-      surfaceColor: isDark ? dark.shade900 : colors.white,
-      barrierColor: dark.shade950.withValues(alpha: barrierOpacity),
+      dragHandleColor: isDark ? OverlayTokens.ink600 : OverlayTokens.chromeBase,
+      surfaceColor: isDark ? OverlayTokens.ink800 : colors.white,
+      barrierColor: OverlayTokens.scrimColor(),
       horizontalPadding: responsiveDimension(horizontalPadding),
       titleStyle: typography.title3.copyWith(
         fontWeight: FontWeight.w700,
@@ -67,6 +85,10 @@ abstract final class BottomSheetTokens {
       ),
       bodyStyle: typography.regularNormal.copyWith(
         color: colors.textSecondary,
+      ),
+      backdropPeekHeight: responsiveDimension(backdropPeekHeight),
+      backdropPeekHorizontalInset: responsiveDimension(
+        backdropPeekHorizontalInset,
       ),
     );
   }

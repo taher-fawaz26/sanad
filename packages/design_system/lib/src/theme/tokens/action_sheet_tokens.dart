@@ -1,12 +1,11 @@
-import 'package:design_system/design_system.dart' show AppActionSheet;
-import 'package:design_system/src/components/app_action_sheet.dart' show AppActionSheet;
-import 'package:design_system/src/components/components.dart' show AppActionSheet;
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
+import 'package:design_system/src/spacing/responsive_spacing.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
+import 'package:design_system/src/theme/tokens/overlay_tokens.dart';
 import 'package:design_system/src/theme/typography/app_typography.dart';
 import 'package:flutter/material.dart';
 
-/// Resolved styling for [AppActionSheet].
+/// Resolved styling for `AppActionSheet`.
 @immutable
 class ActionSheetStyleSpec {
   const ActionSheetStyleSpec({
@@ -19,6 +18,9 @@ class ActionSheetStyleSpec {
     required this.itemStyle,
     required this.cancelStyle,
     required this.dividerColor,
+    required this.leadingIconSize,
+    required this.itemHorizontalGap,
+    required this.leadingLabelInset,
   });
 
   final Color barrierColor;
@@ -30,6 +32,16 @@ class ActionSheetStyleSpec {
   final TextStyle itemStyle;
   final TextStyle cancelStyle;
   final Color dividerColor;
+
+  /// Size of the optional leading icon slot (Figma: 24dp).
+  final double leadingIconSize;
+
+  /// Horizontal gap between the leading icon and the label.
+  final double itemHorizontalGap;
+
+  /// Left inset of the label when a leading icon is present
+  /// (Figma: `60px` label offset vs. `24px` icon offset).
+  final double leadingLabelInset;
 }
 
 /// Figma `Views / Action Sheets` (`40:9109`) token resolver.
@@ -39,19 +51,20 @@ abstract final class ActionSheetTokens {
   static const double topRadius = 16;
   static const double horizontalPadding = 24;
   static const double itemHeight = 56;
-  static const double barrierOpacity = 0.7;
+  static const double barrierOpacity = OverlayTokens.scrimOpacity;
+  static const double leadingIconSize = 24;
+  static const double leadingLabelInset = 60;
 
   static ActionSheetStyleSpec resolve({
     required AppColors colors,
     required AppTypography typography,
     required Brightness brightness,
   }) {
-    final dark = colors.palettes.dark;
     final isDark = brightness == Brightness.dark;
 
     return ActionSheetStyleSpec(
-      barrierColor: dark.shade950.withValues(alpha: barrierOpacity),
-      surfaceColor: isDark ? dark.shade900 : colors.white,
+      barrierColor: OverlayTokens.scrimColor(),
+      surfaceColor: isDark ? OverlayTokens.ink800 : colors.white,
       topRadius: BorderRadius.vertical(
         top: Radius.circular(responsiveDimension(topRadius)),
       ),
@@ -65,9 +78,14 @@ abstract final class ActionSheetTokens {
         color: colors.textPrimary,
       ),
       cancelStyle: typography.regularNormal.copyWith(
-        color: colors.textSecondary,
+        color: isDark ? OverlayTokens.ink600 : OverlayTokens.chromeDark,
       ),
-      dividerColor: isDark ? dark.shade800 : dark.shade100,
+      dividerColor: isDark ? OverlayTokens.ink700 : OverlayTokens.chromeLighter,
+      leadingIconSize: responsiveDimension(leadingIconSize),
+      // horizontalPadding(24) + leadingIconSize(24) + itemHorizontalGap(12)
+      // = leadingLabelInset(60), matching Figma's icon/label offsets exactly.
+      itemHorizontalGap: AppSpacing.md,
+      leadingLabelInset: responsiveDimension(leadingLabelInset),
     );
   }
 }

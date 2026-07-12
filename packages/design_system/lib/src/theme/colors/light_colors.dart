@@ -42,20 +42,24 @@ final class LightColors {
     // ── States ──────────────────────────────────────────────────────────────
     success: MainPalette.shade500,
     onSuccess: AppPalettes.whiteValue,
-    successContainer: MainPalette.shade50,
-    onSuccessContainer: MainPalette.shade700,
+    // Figma status badge Success — Green/Lightest + Green/Darkest (`40:10689`).
+    successContainer: Color(0xFFECFCE5),
+    onSuccessContainer: Color(0xFF198155),
     error: RedPalette.shade600,
     onError: AppPalettes.whiteValue,
-    errorContainer: RedPalette.shade50,
-    onErrorContainer: RedPalette.shade700,
+    // Figma status badge Alert — Red/Lightest + Red/Darkest (`40:10689`).
+    errorContainer: RedPalette.shade100,
+    onErrorContainer: Color(0xFFD3180C),
     warning: YellowPalette.shade500,
     onWarning: AppPalettes.whiteValue,
-    warningContainer: YellowPalette.shade50,
-    onWarningContainer: YellowPalette.shade700,
+    // Figma status badge Warning — Yellow/Lightest + Yellow/Darkest (`40:10689`).
+    warningContainer: Color(0xFFFFEFD7),
+    onWarningContainer: Color(0xFFA05E03),
     info: SkyPalette.shade600,
     onInfo: AppPalettes.whiteValue,
-    infoContainer: SkyPalette.shade50,
-    onInfoContainer: SkyPalette.shade700,
+    // Figma status badge Info — Blue/Lightest + Blue/Darkest (`40:10689`).
+    infoContainer: Color(0xFFC9F0FF),
+    onInfoContainer: Color(0xFF0065D0),
 
     // ── Borders & Dividers ───────────────────────────────────────────────────
     border: DarkPalette.shade200,

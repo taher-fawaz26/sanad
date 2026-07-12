@@ -1,0 +1,38 @@
+---
+description: Package management — dependency direction, workspace rules, no circular deps
+globs: "**/pubspec.yaml"
+alwaysApply: false
+---
+
+# Packages
+
+## Independence
+
+- Packages are independent units — never import `apps/` from a package
+- All packages: `publish_to: none` — internal only, never publish to pub.dev
+
+## Dependency Direction
+
+```
+apps → feature packages → infra packages → core
+```
+
+Never reverse. Circular deps are a build error.
+
+## Adding a Dependency
+
+1. Add to package `pubspec.yaml` dependencies
+2. Run `melos bootstrap` — never `flutter pub get` directly in workspace packages
+
+## New Package Checklist
+
+- `pubspec.yaml` (`publish_to: none`, SDK `>=3.11.0 <4.0.0`)
+- `analysis_options.yaml` (include `very_good_analysis`)
+- `lib/<name>.dart` barrel file
+- `test/` folder
+- Register in root `pubspec.yaml` workspace list and `melos.yaml`
+
+## Known Issues
+
+- `settings` package is orphaned (not in workspace) — do not depend on it
+- `dependencies` package is the canonical third-party re-export hub

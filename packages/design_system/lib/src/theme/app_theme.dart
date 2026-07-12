@@ -87,11 +87,11 @@ abstract final class AppTheme {
       useMaterial3: true,
       brightness: brightness,
       colorScheme: colorScheme,
-      // Primary UI font — Poppins (Figma: Dr2_Font_family)
-      fontFamily: AppFontFamily.poppins,
-      // Fallback chain: NotoSansArabic handles Arabic glyphs automatically
+      // Primary UI font — Inter (Figma: Dr2_Font_family)
+      fontFamily: AppFontFamily.inter,
+      // Fallback chain: IBMPlexSansArabic handles Arabic glyphs automatically
       // when the OS / locale selects Arabic text, without per-widget overrides.
-      fontFamilyFallback: const [AppFontFamily.notoSansArabic],
+      fontFamilyFallback: const [AppFontFamily.ibmPlexSansArabic],
 
       // ── Extensions (design tokens injected into the theme tree) ─────
       extensions: [

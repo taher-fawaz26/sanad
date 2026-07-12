@@ -1,0 +1,45 @@
+---
+description: Asset management — SVG, images, fonts, naming, package-aware loading
+globs: "**/assets/**"
+alwaysApply: false
+---
+
+# Assets
+
+## SVG (Shared)
+
+- Location: `packages/core/assets/svgs/`
+- Constants: `AppSvgs` in `packages/core/lib/src/assets/app_svgs.dart`
+- Loading: `AppSvgPicture.asset(AppSvgs.iconName)` from `shared_widgets`
+- Never `SvgPicture.asset()` directly — breaks package asset loading
+
+## Adding a New SVG
+
+1. Add file to `packages/core/assets/svgs/`
+2. Add constant to `AppSvgs`
+3. Use `AppSvgPicture.asset(AppSvgs.newIcon)`
+
+## Fonts
+
+- Declared in `packages/design_system/pubspec.yaml`
+- Always via `AppFont` / `AppFontArabic` — never raw family name strings
+
+## Images
+
+- App-specific: `apps/<app>/assets/images/`
+- Shared: `packages/core/assets/images/`
+- Loading: `Image.asset(path, package: AppAssets.package)`
+
+## Lottie
+
+Store in `assets/animations/` — never in `assets/images/`
+
+## Naming
+
+`snake_case` for all asset files — no spaces or special characters
+
+## Rules
+
+- Declare every asset folder in owning package's `pubspec.yaml` under `flutter.assets`
+- PNG assets ≤ 200 KB; provide `@2x` / `@3x` for non-SVG
+- Never bundle assets in feature packages — use `core` (shared) or app (app-specific)

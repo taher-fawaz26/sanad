@@ -1,20 +1,26 @@
 ﻿import 'package:design_system/src/theme/typography/responsive_font_scale.dart';
 import 'package:flutter/material.dart';
 
-/// **Typography scale tokens — Figma `177:2763` (Poppins).**
+/// **Typography scale tokens — Figma `177:2763` (Inter / IBM Plex Sans Arabic).**
 ///
 /// Each size tier exposes three line-height variants:
 /// - **None** — line height equals font size (1.0)
 /// - **Tight** — compact multi-line rhythm
 /// - **Normal** — comfortable reading rhythm
 ///
-/// Each variant supports three weights in UI: **Regular** (400),
-/// **Medium** (500), **Bold** (700). Titles use Bold only.
+/// Each variant supports four weights in UI: **Regular** (400),
+/// **Medium** (500), **SemiBold** (600), **Bold** (700).
+/// Title 1 and Title 2 use Bold; Title 3 uses SemiBold per design tokens.
+///
+/// **Token authoring gap:** [weightMedium] (w500) is used in Flutter but not
+/// yet defined in `fontWeights` in the design tokens. Implementation is
+/// intentionally kept until tokens add `fontWeights.inter-medium`.
 abstract final class TypeScale {
   TypeScale._();
 
   static const FontWeight weightRegular = FontWeight.w400;
   static const FontWeight weightMedium = FontWeight.w500;
+  static const FontWeight weightSemiBold = FontWeight.w600;
   static const FontWeight weightBold = FontWeight.w700;
 
   // ── Titles ────────────────────────────────────────────────────────────────
@@ -25,6 +31,11 @@ abstract final class TypeScale {
   static const double lineHeightTitle1 = 56 / 48;
   static const double lineHeightTitle2 = 36 / 32;
   static const double lineHeightTitle3 = 32 / 24;
+
+  /// Title letter-spacing from design tokens (percentage × font size).
+  static const double trackingTitle1 = -0.96; // 48 × -2%
+  static const double trackingTitle2 = -0.32; // 32 × -1%
+  static const double trackingTitle3 = -0.12; // 24 × -0.5%
 
   // ── Large (18) ─────────────────────────────────────────────────────────
   static double get large => 18.rfs;

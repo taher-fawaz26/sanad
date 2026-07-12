@@ -1,5 +1,3 @@
-import 'package:design_system/design_system.dart' show AppTableCell, AppTableRow;
-import 'package:design_system/src/components/components.dart' show AppTableCell, AppTableRow;
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/spacing/responsive_spacing.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
@@ -12,14 +10,13 @@ import 'package:flutter/material.dart';
 class TableCellStyleSpec {
   const TableCellStyleSpec({
     required this.height,
-    required this.heightWithCaption,
     required this.titleStyle,
     required this.captionStyle,
     required this.textGap,
   });
 
+  /// Figma `_Partials / Tables` content height — 40 dp.
   final double height;
-  final double heightWithCaption;
   final TextStyle titleStyle;
   final TextStyle captionStyle;
   final double textGap;
@@ -35,17 +32,26 @@ class TableRowStyleSpec {
     required this.trailingGap,
     required this.backgroundColor,
     required this.leadingIconSize,
+    required this.trailingIconSize,
     required this.avatarSize,
     required this.trailingTextStyle,
     required this.trailingIconColor,
   });
 
+  /// Figma row height — 64 dp.
   final double height;
   final double horizontalPadding;
   final double leadingGap;
   final double trailingGap;
   final Color backgroundColor;
+
+  /// Leading icon size — 24 dp (`Left=Icon`).
   final double leadingIconSize;
+
+  /// Trailing icon size — 24 dp (`Right=Icon`).
+  final double trailingIconSize;
+
+  /// Leading avatar size — 40 dp (`Left=Avatar`).
   final double avatarSize;
   final TextStyle trailingTextStyle;
   final Color trailingIconColor;
@@ -53,17 +59,31 @@ class TableRowStyleSpec {
 
 /// Figma table row leading slot (`40:9256`).
 enum AppTableLeading {
+  /// `Left=Empty`
   none,
+
+  /// `Left=Avatar` — 40 dp.
   avatar,
+
+  /// `Left=Icon` — 24 dp.
   icon,
 }
 
 /// Figma table row trailing slot (`40:9256`).
 enum AppTableTrailing {
+  /// `Right=No Actions`
   none,
+
+  /// `Right=Text` — primary medium link label.
   text,
+
+  /// `Right=Icon` — 24 dp glyph.
   icon,
+
+  /// `Right=Button` — small primary pill.
   button,
+
+  /// `Right=Switch`
   switchControl,
 }
 
@@ -102,7 +122,7 @@ extension AppTableThemeX on BuildContext {
       Theme.of(this).extension<AppTableTheme>()!;
 }
 
-/// Figma `_Partials / Tables` (`194:3008`) and `Views / Tables` (`40:9256`).
+/// Figma `_Partials / Tables` (`40:8360`) and `Views / Tables` (`40:9256`).
 abstract final class TableTokens {
   TableTokens._();
 
@@ -112,15 +132,8 @@ abstract final class TableTokens {
     required Brightness brightness,
   }) {
     return AppTableTheme(
-      cell: resolveCell(
-        colors: colors,
-        typography: typography,
-      ),
-      row: resolveRow(
-        colors: colors,
-        typography: typography,
-        brightness: brightness,
-      ),
+      cell: resolveCell(colors: colors, typography: typography),
+      row: resolveRow(colors: colors, typography: typography),
     );
   }
 
@@ -130,14 +143,17 @@ abstract final class TableTokens {
   }) {
     return TableCellStyleSpec(
       height: AppDimension.fieldHeightMd,
-      heightWithCaption: AppDimension.fieldHeightMd,
       titleStyle: typography.regularNormal.copyWith(
-        color: colors.textPrimary,
+        fontSize: 16.rfs,
         height: 20 / 16,
+        fontWeight: FontWeight.w400,
+        color: colors.textPrimary,
       ),
       captionStyle: typography.smallNormal.copyWith(
-        color: colors.textMuted,
+        fontSize: 14.rfs,
         height: 16 / 14,
+        fontWeight: FontWeight.w400,
+        color: colors.textMuted,
       ),
       textGap: AppSpacing.xs,
     );
@@ -146,7 +162,6 @@ abstract final class TableTokens {
   static TableRowStyleSpec resolveRow({
     required AppColors colors,
     required AppTypography typography,
-    required Brightness brightness,
   }) {
     return TableRowStyleSpec(
       height: AppDimension.tableRowHeight,
@@ -155,6 +170,7 @@ abstract final class TableTokens {
       trailingGap: AppSpacing.md,
       backgroundColor: colors.surface,
       leadingIconSize: AppDimension.iconMenu,
+      trailingIconSize: AppDimension.iconMenu,
       avatarSize: AppDimension.fieldHeightMd,
       trailingTextStyle: typography.regularNormal.copyWith(
         fontSize: 16.rfs,

@@ -3,10 +3,44 @@ import 'package:design_system/src/theme/app_font.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart' show AppColors;
 import 'package:design_system/src/theme/typography/type_scale.dart';
 import 'package:flutter/material.dart';
+
+/// **Typography system — synchronized with Design Tokens (source of truth).**
 ///
-/// [AppTypography] is a [ThemeExtension] that exposes all text roles from
-/// Figma `177:2763`. Widgets read `context.appTypography.regularNormal` —
-/// they never hardcode font sizes, weights, or family names.
+/// ## Architecture
+///
+/// ```
+/// Design Tokens
+///   → TypeScale (English sizes, line-heights, letter-spacing, weights)
+///   → ArabicTypeScale (Arabic line-heights only)
+///   → AppFont / AppFontArabic (weight presets)
+///   → AppFontScaleX / AppFontArabicScaleX (size + line-height composition)
+///   → AppFontStyle / AppFontArabicStyle (pre-built styles)
+///   → AppTypography (ThemeExtension consumed by widgets)
+/// ```
+///
+/// ## English typography
+/// Use [AppFont] + [AppFontScaleX] or [AppFontStyle]. Line heights from
+/// [TypeScale]. Title letter-spacing from [TypeScale.trackingTitle1/2/3].
+/// Title 3 uses SemiBold (w600); Title 1 and 2 use Bold (w700).
+///
+/// ## Arabic typography
+/// Use [AppFontArabic] + [AppFontArabicScaleX] or [AppFontArabicStyle].
+/// Arabic line heights come from [ArabicTypeScale] — never reuse English
+/// [TypeScale] line heights for Arabic locale text.
+///
+/// ## Token synchronization strategy
+/// Design Tokens are the single source of truth. When tokens and Flutter
+/// differ, Flutter is updated unless there is a documented technical limit.
+///
+/// ## Known token-authoring gaps (Flutter ahead — no code change)
+/// - **Medium weight (w500):** Used via [TypeScale.weightMedium] but not yet in
+///   `fontWeights` in tokens. Token team should add `fontWeights.inter-medium`.
+/// - **Themes:** `$themes.json` is empty; [LightColors]/[DarkColors] are coded
+///   directly. No token-pipeline migration planned.
+///
+/// [AppTypography] exposes all text roles from Figma `177:2763`. Widgets read
+/// `context.appTypography.regularNormal` — they never hardcode font sizes,
+/// weights, or family names.
 ///
 /// Color for text styles must come from [AppColors], not from here.
 @immutable
@@ -207,6 +241,9 @@ extension AppTypographyX on BuildContext {
 extension AppTypographyWeights on AppTypography {
   TextStyle bold(TextStyle style) =>
       style.copyWith(fontWeight: TypeScale.weightBold);
+
+  TextStyle semiBold(TextStyle style) =>
+      style.copyWith(fontWeight: TypeScale.weightSemiBold);
 
   TextStyle medium(TextStyle style) =>
       style.copyWith(fontWeight: TypeScale.weightMedium);

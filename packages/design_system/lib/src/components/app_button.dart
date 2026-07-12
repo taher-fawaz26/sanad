@@ -4,13 +4,18 @@ import 'package:design_system/src/theme/tokens/button_tokens.dart';
 import 'package:design_system/src/theme/typography/app_typography.dart';
 import 'package:flutter/material.dart';
 
-/// Figma `Controls / Buttons` (`30:1738`).
+/// Figma `Controls / Buttons` (`30:1738`, `731:3785`).
 ///
-/// Covers all size × type × state × icon-position variants from the design
-/// system, including the 42 symbol instances referenced in Figma.
+/// Icon positions:
+/// - [AppButtonIconPosition.none] — label only, centered
+/// - [AppButtonIconPosition.left] — icon at leading edge, label centered
+/// - [AppButtonIconPosition.right] — icon at trailing edge, label centered
+/// - [AppButtonIconPosition.center] — icon + label grouped and centered
 class AppButton extends StatefulWidget {
   const AppButton({
-    required this.label, required this.onPressed, super.key,
+    required this.label,
+    required this.onPressed,
+    super.key,
     this.type = AppButtonType.primary,
     this.size = AppButtonSize.block,
     this.icon,
@@ -69,9 +74,7 @@ class _AppButtonState extends State<AppButton> {
       shape: RoundedRectangleBorder(
         borderRadius: radius,
         side: surface.hasBorder
-            ? BorderSide(
-                color: surface.border,
-              )
+            ? BorderSide(color: surface.border)
             : BorderSide.none,
       ),
       clipBehavior: Clip.antiAlias,
@@ -138,27 +141,35 @@ class _AppButtonState extends State<AppButton> {
     );
 
     return switch (widget.iconPosition) {
-      AppButtonIconPosition.side => Center(
+      // Figma `Icon Position=Side` (`731:3785`) — icon + label centered as a group.
+      AppButtonIconPosition.center => Center(
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               iconWidget,
               SizedBox(width: AppSpacing.sm),
-              labelWidget,
+              Flexible(child: labelWidget),
             ],
           ),
         ),
-      AppButtonIconPosition.left || AppButtonIconPosition.right => Stack(
+      // Figma `Icon Position=Left` — icon at leading edge, label centered.
+      AppButtonIconPosition.left => Stack(
           alignment: Alignment.center,
           children: [
             Center(child: labelWidget),
             Positioned(
-              left: widget.iconPosition == AppButtonIconPosition.left
-                  ? 0
-                  : null,
-              right: widget.iconPosition == AppButtonIconPosition.right
-                  ? 0
-                  : null,
+              left: 0,
+              child: iconWidget,
+            ),
+          ],
+        ),
+      // Figma `Icon Position=Right` — icon at trailing edge, label centered.
+      AppButtonIconPosition.right => Stack(
+          alignment: Alignment.center,
+          children: [
+            Center(child: labelWidget),
+            Positioned(
+              right: 0,
               child: iconWidget,
             ),
           ],
@@ -171,7 +182,9 @@ class _AppButtonState extends State<AppButton> {
 /// Convenience constructors for common Figma button presets.
 extension AppButtonPresets on AppButton {
   static AppButton primary({
-    required String label, required VoidCallback? onPressed, Key? key,
+    required String label,
+    required VoidCallback? onPressed,
+    Key? key,
     AppButtonSize size = AppButtonSize.block,
     Widget? icon,
     AppButtonIconPosition iconPosition = AppButtonIconPosition.none,
@@ -189,7 +202,9 @@ extension AppButtonPresets on AppButton {
   }
 
   static AppButton secondary({
-    required String label, required VoidCallback? onPressed, Key? key,
+    required String label,
+    required VoidCallback? onPressed,
+    Key? key,
     AppButtonSize size = AppButtonSize.block,
     Widget? icon,
     AppButtonIconPosition iconPosition = AppButtonIconPosition.none,
@@ -208,7 +223,9 @@ extension AppButtonPresets on AppButton {
   }
 
   static AppButton outline({
-    required String label, required VoidCallback? onPressed, Key? key,
+    required String label,
+    required VoidCallback? onPressed,
+    Key? key,
     AppButtonSize size = AppButtonSize.block,
     Widget? icon,
     AppButtonIconPosition iconPosition = AppButtonIconPosition.none,
@@ -227,7 +244,9 @@ extension AppButtonPresets on AppButton {
   }
 
   static AppButton transparent({
-    required String label, required VoidCallback? onPressed, Key? key,
+    required String label,
+    required VoidCallback? onPressed,
+    Key? key,
     AppButtonSize size = AppButtonSize.block,
     Widget? icon,
     AppButtonIconPosition iconPosition = AppButtonIconPosition.none,

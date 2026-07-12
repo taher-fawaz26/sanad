@@ -1,0 +1,38 @@
+---
+description: Design System usage — tokens, components, no raw colors/spacing/typography
+globs: "**/*.dart"
+alwaysApply: false
+---
+
+# Design System
+
+## Token Usage (Mandatory)
+
+| Need | Use | Never |
+|------|-----|-------|
+| Colors | `context.appColors.*` | `Colors.*`, hex literals |
+| Typography | `context.appTypography.*` or `AppFont.*` | Raw `TextStyle(...)` |
+| Spacing | `AppSpacing.*` | Raw `EdgeInsets`, numeric padding |
+| Radius | `AppRadius.*` | Raw `BorderRadius.circular(n)` |
+| Shadows | `AppShadows.*` | Raw `BoxShadow(...)` |
+| Sizes | `AppDimension.*` | Raw `double` for icons/components |
+| Durations | `AppDurations.*` | Raw `Duration(milliseconds: n)` |
+
+## Components
+
+Use existing DS components — never build equivalents from scratch:
+
+- `AppButton`, `AppTextField`, `AppSection`, `AppNavBar`, `AppSelectField`
+- `AppWizardStepIndicator`, `AppKeyValueCard`, `AppPhoneField`, `AppRadioGroup`
+
+## Adding a New Component
+
+1. Create in `packages/design_system/lib/src/components/`
+2. Add tokens in `packages/design_system/lib/src/theme/tokens/`
+3. Export in `packages/design_system/lib/design_system.dart`
+
+## Package Boundaries
+
+- **design_system** = primitive, domain-agnostic UI components and tokens
+- **shared_widgets** = composite, domain-aware widgets (OTP field, location field, list card)
+- Never put business logic in either package

@@ -1,0 +1,60 @@
+---
+description: GoRouter routing — typed routes, auth guards, feature-owned routes, deep linking
+globs: "**/routing/**/*.dart, **/routes/**/*.dart"
+alwaysApply: false
+---
+
+# Routing
+
+## GoRouter Only
+
+- `context.go()`, `context.push()`, `context.pop()`, `context.pushReplacement()`
+- Never `Navigator.push()`, `Navigator.pushNamed()` directly
+
+## Route Constants
+
+```dart
+abstract final class AuthRoutes {
+  static const String login = '/login';
+  static const String register = '/register';
+}
+```
+
+## Auth Guard
+
+```dart
+GoRouter(
+  refreshListenable: sl<AuthStatusNotifier>(),
+  redirect: (context, state) { /* check auth */ },
+)
+```
+
+Never check auth inside widget `build()`.
+
+## Protected Routes
+
+Declared in `AppRoutes.protected` set — redirect to `/login` when unauthenticated.
+
+## Feature-Owned Routes
+
+Each feature package defines `<Feature>Routes` and registers with app router.
+App routers: `buildProviderRouter()` / `buildClientRouter()` in `apps/*/lib/src/routing/`
+
+## Typed Extras
+
+Pass typed args via `state.extra`:
+```dart
+final args = state.extra as OtpArgs;
+```
+
+## Shell Navigation
+
+`StatefulShellRoute.indexedStack` for bottom-nav tabs (provider app).
+
+## Deep Linking
+
+Route paths must be stable and URL-safe (no spaces, use hyphens).
+
+## DI in Routes
+
+Inject via `BlocProvider` in `GoRoute.builder` — never `sl<T>()` in widget constructor.

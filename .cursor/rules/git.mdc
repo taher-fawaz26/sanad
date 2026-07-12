@@ -1,0 +1,31 @@
+---
+description: Git conventions — conventional commits, branch naming, atomic changes
+alwaysApply: true
+---
+
+# Git
+
+## Conventional Commits
+
+```
+feat(scope): description
+fix(scope): description
+chore(scope): description
+refactor(scope): description
+test(scope): description
+docs(scope): description
+```
+
+Scope = package or app name: `feat(auth):`, `fix(network):`, `chore(design_system):`
+
+## Branch Naming
+
+- `feat/<scope>-<short-description>`
+- `fix/<scope>-<short-description>`
+
+## Rules
+
+- Atomic commits — one logical change per commit
+- One feature or fix per PR
+- Never commit generated files (`*.g.dart`, `*.freezed.dart`)
+- Never commit `.dart_tool/`, `build/`, `android/.gradle/`

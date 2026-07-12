@@ -1,0 +1,47 @@
+---
+description: Melos workspace — bootstrap, scripts, package creation, dependency management
+alwaysApply: true
+---
+
+# Melos
+
+## Workspace
+
+- `melos.yaml` at root defines packages and scripts
+- Root `pubspec.yaml` lists workspace members
+- **Always** `melos bootstrap` after any `pubspec.yaml` change
+- **Never** `flutter pub get` directly in workspace packages
+
+## Package Naming
+
+`snake_case`, describes domain: `auth`, `network`, `design_system`
+All packages: `publish_to: none`
+
+## New Package
+
+1. Create `packages/<name>/` with `pubspec.yaml`
+2. Add to root `pubspec.yaml` workspace list
+3. Add to `melos.yaml` packages list
+4. Run `melos bootstrap`
+
+## Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `melos bootstrap` | Link local packages, run pub get |
+| `melos analyze` | Full workspace analyze (CI only) |
+| `melos test` | Run tests across packages |
+| `melos format` | Check formatting |
+| `melos check` | format + analyze + test (pre-commit) |
+| `melos ci` | bootstrap + check (CI entry) |
+| `melos build:provider:android` | Release APK |
+| `melos build:client:android` | Release APK |
+
+## melos exec
+
+Run command in each package: `melos exec --scope=<name> -- <command>`
+
+## When NOT to Run
+
+- Do **not** run `melos analyze` during development — per-package `flutter analyze` instead
+- Do **not** run `melos check` during routine development — pre-commit only

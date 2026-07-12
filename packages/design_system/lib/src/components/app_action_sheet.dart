@@ -9,11 +9,15 @@ class AppActionSheetItem {
   const AppActionSheetItem({
     required this.label,
     required this.onTap,
+    this.leading,
     this.isDestructive = false,
   });
 
   final String label;
   final VoidCallback onTap;
+
+  /// Optional 24dp leading icon (Figma `Views / Action Sheets`, `40:9109`).
+  final Widget? leading;
   final bool isDestructive;
 }
 
@@ -119,6 +123,7 @@ class _ActionSheetRow extends StatelessWidget {
         : spec.itemStyle.copyWith(
             color: item.isDestructive ? colors.error : colors.textPrimary,
           );
+    final leading = item.leading;
 
     return Material(
       color: Colors.transparent,
@@ -129,7 +134,24 @@ class _ActionSheetRow extends StatelessWidget {
         },
         child: SizedBox(
           height: spec.itemHeight,
-          child: Center(child: Text(item.label, style: style)),
+          child: leading == null
+              ? Center(child: Text(item.label, style: style))
+              : Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: spec.horizontalPadding,
+                  ),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: spec.leadingIconSize,
+                        height: spec.leadingIconSize,
+                        child: leading,
+                      ),
+                      SizedBox(width: spec.itemHorizontalGap),
+                      Expanded(child: Text(item.label, style: style)),
+                    ],
+                  ),
+                ),
         ),
       ),
     );

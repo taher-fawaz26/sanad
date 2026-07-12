@@ -24,7 +24,7 @@ class AppFeatureIcon extends StatelessWidget {
 
   /// Optional SVG asset path. Defaults to the Figma glyph for [color].
   ///
-  /// Prefer [AppSvgs] paths (already prefixed with `packages/core/...`).
+  /// Prefer [AppSvgs] paths with `SvgPicture.asset(..., package: AppAssets.package)`.
   final String? iconAsset;
 
   @override
@@ -55,6 +55,7 @@ class AppFeatureIcon extends StatelessWidget {
         child: Center(
           child: SvgPicture.asset(
             iconAsset ?? spec.defaultIconAsset,
+            package: AppAssets.package,
             width: spec.iconSize,
             height: spec.iconSize,
             colorFilter: ColorFilter.mode(

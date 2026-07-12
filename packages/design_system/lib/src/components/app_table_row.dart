@@ -8,9 +8,15 @@ import 'package:design_system/src/theme/tokens/table_tokens.dart';
 import 'package:flutter/material.dart';
 
 /// Figma `Views / Tables` (`40:9256`).
+///
+/// Combinations:
+/// - Leading: none / avatar / icon
+/// - Caption: optional
+/// - Trailing: none / text (link) / icon / small button / switch
 class AppTableRow extends StatelessWidget {
   const AppTableRow({
-    required this.title, super.key,
+    required this.title,
+    super.key,
     this.caption,
     this.leading = AppTableLeading.none,
     this.leadingAvatar,
@@ -19,6 +25,7 @@ class AppTableRow extends StatelessWidget {
     this.trailingText,
     this.onTrailingTextTap,
     this.trailingIcon,
+    this.onTrailingIconTap,
     this.trailingButtonLabel,
     this.onTrailingButton,
     this.switchValue,
@@ -26,19 +33,45 @@ class AppTableRow extends StatelessWidget {
     this.onTap,
   });
 
+  /// Primary label (`Title`).
   final String title;
+
+  /// Optional secondary label (`Caption`).
   final String? caption;
+
+  /// Leading slot — [AppTableLeading.none], [.avatar], or [.icon].
   final AppTableLeading leading;
+
+  /// Custom avatar when [leading] is [AppTableLeading.avatar].
   final Widget? leadingAvatar;
+
+  /// Custom icon when [leading] is [AppTableLeading.icon].
   final Widget? leadingIcon;
+
+  /// Trailing slot — none / link / icon / button / switch.
   final AppTableTrailing trailing;
+
+  /// Link label when [trailing] is [AppTableTrailing.text].
   final String? trailingText;
+
   final VoidCallback? onTrailingTextTap;
+
+  /// Icon widget when [trailing] is [AppTableTrailing.icon].
   final Widget? trailingIcon;
+
+  final VoidCallback? onTrailingIconTap;
+
+  /// Button label when [trailing] is [AppTableTrailing.button].
   final String? trailingButtonLabel;
+
   final VoidCallback? onTrailingButton;
+
+  /// Switch value when [trailing] is [AppTableTrailing.switchControl].
   final bool? switchValue;
+
   final ValueChanged<bool>? onSwitchChanged;
+
+  /// Optional row tap (does not fire for trailing interactive controls).
   final VoidCallback? onTap;
 
   @override
@@ -49,6 +82,7 @@ class AppTableRow extends StatelessWidget {
 
     return SizedBox(
       height: spec.height,
+      width: double.infinity,
       child: Material(
         color: spec.backgroundColor,
         child: InkWell(
@@ -83,13 +117,22 @@ class AppTableRow extends StatelessWidget {
 
   Widget _buildLeading(TableRowStyleSpec spec) {
     return switch (leading) {
-      AppTableLeading.avatar =>
-        leadingAvatar ?? const AppAvatar(initials: 'AB'),
+      AppTableLeading.avatar => SizedBox(
+        width: spec.avatarSize,
+        height: spec.avatarSize,
+        child: leadingAvatar ?? const AppAvatar(initials: 'AB'),
+      ),
       AppTableLeading.icon => SizedBox(
-          width: spec.leadingIconSize,
-          height: spec.leadingIconSize,
-          child: leadingIcon,
+        width: spec.leadingIconSize,
+        height: spec.leadingIconSize,
+        child: IconTheme(
+          data: IconThemeData(
+            size: spec.leadingIconSize,
+            color: spec.trailingIconColor,
+          ),
+          child: leadingIcon ?? const Icon(Icons.circle_outlined),
         ),
+      ),
       AppTableLeading.none => const SizedBox.shrink(),
     };
   }
@@ -97,32 +140,37 @@ class AppTableRow extends StatelessWidget {
   Widget _buildTrailing(BuildContext context, TableRowStyleSpec spec) {
     return switch (trailing) {
       AppTableTrailing.text => GestureDetector(
-          onTap: onTrailingTextTap,
-          child: Text(
-            trailingText ?? 'Link',
-            style: spec.trailingTextStyle,
-          ),
+        onTap: onTrailingTextTap,
+        behavior: HitTestBehavior.opaque,
+        child: Text(
+          trailingText ?? 'Link',
+          style: spec.trailingTextStyle,
         ),
-      AppTableTrailing.icon => SizedBox(
-          width: spec.leadingIconSize,
-          height: spec.leadingIconSize,
+      ),
+      AppTableTrailing.icon => GestureDetector(
+        onTap: onTrailingIconTap,
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox(
+          width: spec.trailingIconSize,
+          height: spec.trailingIconSize,
           child: IconTheme(
             data: IconThemeData(
               color: spec.trailingIconColor,
-              size: spec.leadingIconSize,
+              size: spec.trailingIconSize,
             ),
-            child: trailingIcon ?? const Icon(Icons.chevron_right),
+            child: trailingIcon ?? const Icon(Icons.circle_outlined),
           ),
         ),
+      ),
       AppTableTrailing.button => AppButton(
-          label: trailingButtonLabel ?? 'Small',
-          onPressed: onTrailingButton,
-          size: AppButtonSize.small,
-        ),
+        label: trailingButtonLabel ?? 'Small',
+        onPressed: onTrailingButton,
+        size: AppButtonSize.small,
+      ),
       AppTableTrailing.switchControl => AppSwitch(
-          value: switchValue ?? false,
-          onChanged: onSwitchChanged,
-        ),
+        value: switchValue ?? false,
+        onChanged: onSwitchChanged,
+      ),
       AppTableTrailing.none => const SizedBox.shrink(),
     };
   }

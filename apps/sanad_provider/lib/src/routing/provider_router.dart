@@ -4,20 +4,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:forgot_password/forgot_password.dart';
 import 'package:go_router/go_router.dart';
 import 'package:otp/otp.dart';
+import 'package:sanad_provider/src/features/branches/add_branch_page.dart';
+import 'package:sanad_provider/src/features/branches/branches_page.dart';
 import 'package:sanad_provider/src/features/home/home_page.dart';
 import 'package:sanad_provider/src/features/messages/messages_page.dart';
 import 'package:sanad_provider/src/features/requests/requests_page.dart';
 import 'package:sanad_provider/src/features/settings/settings_page.dart';
+import 'package:sanad_provider/src/routing/app_routes.dart';
 import 'package:sanad_provider/src/routing/shell/main_shell.dart';
-
-/// Routes that require authentication. Any navigation into one of these
-/// while unauthenticated is redirected to the login screen.
-const _protectedRoutes = <String>{
-  _providerHome,
-  _providerRequests,
-  _providerMessages,
-  _providerSettings,
-};
 
 /// sanad_provider top-level router, independent from sanad_client.
 GoRouter buildProviderRouter() {
@@ -29,7 +23,7 @@ GoRouter buildProviderRouter() {
       // Splash screen decides its own destination; never redirect.
       if (state.matchedLocation == AuthRoutes.splash) return null;
 
-      final isProtected = _protectedRoutes.contains(state.matchedLocation);
+      final isProtected = AppRoutes.protected.contains(state.matchedLocation);
       if (isProtected && authStatus.status != AuthStatus.authenticated) {
         return AuthRoutes.login;
       }
@@ -49,14 +43,14 @@ GoRouter buildProviderRouter() {
           GoRoute(
             path: AuthRoutes.splash,
             builder: (context, state) => SplashPage(
-              onAuthenticated: () => context.go(_providerHome),
+              onAuthenticated: () => context.go(AppRoutes.home),
               onUnauthenticated: () => context.go(AuthRoutes.login),
             ),
           ),
           GoRoute(
             path: AuthRoutes.login,
             builder: (context, state) => LoginPage(
-              onAuthenticated: () => context.go(_providerHome),
+              onAuthenticated: () => context.go(AppRoutes.home),
               onForgotPassword: () =>
                   context.push(ForgotPasswordRoutes.forgotPassword),
               onRegister: () => context.push(AuthRoutes.register),
@@ -125,6 +119,14 @@ GoRouter buildProviderRouter() {
               );
             },
           ),
+          GoRoute(
+            path: AppRoutes.branches,
+            builder: (context, state) => const ProviderBranchesPage(),
+          ),
+          GoRoute(
+            path: AppRoutes.addBranch,
+            builder: (context, state) => const AddBranchPage(),
+          ),
           StatefulShellRoute.indexedStack(
             builder: (context, state, navigationShell) =>
                 MainShell(navigationShell: navigationShell),
@@ -132,7 +134,7 @@ GoRouter buildProviderRouter() {
               StatefulShellBranch(
                 routes: [
                   GoRoute(
-                    path: _providerHome,
+                    path: AppRoutes.home,
                     builder: (context, state) => const ProviderHomePage(),
                   ),
                 ],
@@ -140,7 +142,7 @@ GoRouter buildProviderRouter() {
               StatefulShellBranch(
                 routes: [
                   GoRoute(
-                    path: _providerRequests,
+                    path: AppRoutes.requests,
                     builder: (context, state) => const ProviderRequestsPage(),
                   ),
                 ],
@@ -148,7 +150,7 @@ GoRouter buildProviderRouter() {
               StatefulShellBranch(
                 routes: [
                   GoRoute(
-                    path: _providerMessages,
+                    path: AppRoutes.messages,
                     builder: (context, state) => const ProviderMessagesPage(),
                   ),
                 ],
@@ -156,7 +158,7 @@ GoRouter buildProviderRouter() {
               StatefulShellBranch(
                 routes: [
                   GoRoute(
-                    path: _providerSettings,
+                    path: AppRoutes.settings,
                     builder: (context, state) => const ProviderSettingsPage(),
                   ),
                 ],
@@ -168,8 +170,3 @@ GoRouter buildProviderRouter() {
     ],
   );
 }
-
-const _providerHome = '/home';
-const _providerRequests = '/requests';
-const _providerMessages = '/messages';
-const _providerSettings = '/settings';

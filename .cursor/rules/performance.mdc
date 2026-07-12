@@ -1,0 +1,34 @@
+---
+description: Performance — const widgets, list builders, memory management, image optimization
+globs: "**/*.dart"
+alwaysApply: false
+---
+
+# Performance
+
+## Widgets
+
+- `const` on every widget that accepts no dynamic data
+- `const` constructors on token/color classes
+- `ListView.builder` / `GridView.builder` for lists with > 3 items
+- Avoid `Column`/`Row` with many `if` expressions — use conditional lists
+
+## State
+
+- No `setState` for global state — use BLoC
+- Use `BlocSelector` / `BlocBuilder`'s `buildWhen` to limit rebuilds
+
+## Images
+
+- Use `cached_network_image` with explicit `width`/`height`
+- Set `memCacheWidth` for large images
+
+## Layout
+
+- No `MediaQuery.of(context)` in build — use `ScreenUtil` globals or `AppSpacing`
+- `addPostFrameCallback` only when absolutely necessary
+
+## Memory
+
+- Cancel stream subscriptions in `dispose()`
+- Close `TextEditingController`, `FocusNode`, `ScrollController` in `dispose()`

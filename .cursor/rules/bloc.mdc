@@ -1,0 +1,42 @@
+---
+description: BLoC conventions — naming, UseCase wiring, no business logic in UI
+globs: "**/bloc/**/*.dart, **/presentation/**/*.dart"
+alwaysApply: false
+---
+
+# BLoC Conventions
+
+## Naming
+
+| Type | Pattern | Example |
+|------|---------|---------|
+| BLoC | `<Feature>Bloc` | `AuthBloc` |
+| Event | `<Feature><Action>Event` | `AuthLoginEvent` |
+| State | `<Feature><Status>State` | `AuthLoginLoadingState` |
+
+## BLoC Responsibilities
+
+BLoC only: dispatch event → call use case → emit state. **No business logic inline.**
+
+```dart
+// Correct pattern
+await useCase(params).run().then(
+  (either) => either.fold(
+    (failure) => emit(AuthLoginFailureState(failure)),
+    (result) => emit(AuthLoginSuccessState(result)),
+  ),
+);
+```
+
+## Rules
+
+- No `BuildContext` inside BLoC
+- No direct `Repository` calls — always via `UseCase`
+- No BLoC-to-BLoC direct injection — use shared stream or `EventBus`
+- `BlocProvider` in route builder or DI factory — never deep in widget tree
+- `HydratedBloc` only for persistence (theme, locale)
+- `BaseRequestBloc<T,P>` for standard fetch/refresh/retry — do not re-implement
+
+## Cubit Exception
+
+Cubit allowed only for pure UI state with **no network calls** (e.g. `OtpUiCubit`).

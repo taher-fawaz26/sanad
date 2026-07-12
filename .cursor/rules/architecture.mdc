@@ -1,0 +1,56 @@
+---
+description: Sanad monorepo architecture — Clean Architecture, package boundaries, dependency rules
+alwaysApply: true
+---
+
+# Architecture
+
+## Monorepo Structure
+
+- `apps/` = thin shells (routing, DI bootstrap, app-specific pages only)
+- `packages/` = all business logic, features, infrastructure, and shared UI
+- Managed by Melos — run `melos bootstrap` after any `pubspec.yaml` change
+
+## Clean Architecture (Feature Packages)
+
+Every feature package follows this layer order:
+
+```
+data/ → domain/ → presentation/ → di/ → routes/
+```
+
+| Layer | Owns | Must NOT import |
+|-------|------|-----------------|
+| `domain/` | Entities, repository contracts, use cases | `data/`, `presentation/`, Flutter |
+| `data/` | DTOs, data sources, repository impls | `presentation/` |
+| `presentation/` | BLoC, pages, widgets | Direct Dio or repository impls |
+| `di/` | GetIt registrations | — |
+| `routes/` | Route path constants | — |
+
+## Dependency Rules
+
+- Apps import packages — **never** the reverse
+- Dependency direction: `apps → feature packages → infra → core`
+- No circular dependencies between packages
+- Abstract repository contracts live in `domain/` — implementations in `data/`
+- New feature = new package (or extend existing feature package) — never put business logic in an app
+
+## App Features vs Feature Packages
+
+- `apps/*/lib/src/features/` = UI pages only (no BLoC, no repository, no use case)
+- Real feature logic lives in `packages/auth`, `packages/otp`, etc.
+- Reference implementation: `packages/auth/lib/src/`
+
+## SOLID
+
+- **Dependency Inversion**: BLoC depends on `UseCase`, UseCase depends on abstract `Repository`
+- **Single Responsibility**: one BLoC per feature flow, one UseCase per action
+- **Open/Closed**: extend via new packages, not by modifying core contracts
+
+## Adding a New Feature
+
+1. Create package under `packages/<name>/` with clean arch folders
+2. Register in workspace (`pubspec.yaml` + `melos.yaml`)
+3. Add DI module `<Name>DI.init()` called from `app_di.dart`
+4. Register routes in app router
+5. App `features/` folder gets only the page widget if app-specific

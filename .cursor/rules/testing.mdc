@@ -1,0 +1,32 @@
+---
+description: Testing conventions — unit, BLoC, widget, golden tests, coverage targets
+globs: "**/test/**/*.dart"
+alwaysApply: false
+---
+
+# Testing
+
+## Stack
+
+- Unit tests: `test` / `flutter_test`
+- BLoC tests: `bloc_test` + `mocktail`
+- Fakes: `packages/testing` (`FakeRepository`, BLoC helpers)
+
+## Coverage Targets
+
+- 80% for `domain/` and `data/` layers per feature package
+- No `test/` at app level — test packages, not apps
+
+## Patterns
+
+| Layer | Approach |
+|-------|----------|
+| UseCase | Test with `FakeRepository` from `packages/testing` |
+| BLoC | `blocTest` + `MockRepository` via `mocktail` |
+| Repository | Test `TaskEither` via `.run()` |
+| Widget | Wrap with `AppTheme.light()` + `ScreenUtilInit` |
+
+## File Structure
+
+Mirror source: `lib/src/x.dart` → `test/src/x_test.dart`
+Golden tests: store in `test/goldens/`; regenerate with `--update-goldens`

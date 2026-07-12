@@ -40,6 +40,8 @@ dependencies:
   provider: ^6.1.5
   shared_blocs:
     path: ../../packages/shared_blocs
+  shared_widgets:
+    path: ../../packages/shared_widgets
   storage:
     path: ../../packages/storage
 
