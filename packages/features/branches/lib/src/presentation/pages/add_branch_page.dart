@@ -9,6 +9,8 @@ import 'package:branches/src/presentation/widgets/add_branch_coverage_step.dart'
 import 'package:branches/src/presentation/widgets/branch_location_field.dart';
 import 'package:branches/src/presentation/widgets/branch_manager_picker_field.dart';
 import 'package:branches/src/presentation/widgets/branch_schedule_section.dart';
+import 'package:branches/src/presentation/widgets/location_picker_sheet.dart';
+import 'package:maps/maps.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -34,6 +36,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
   final _phoneController = TextEditingController();
 
   String? _branchAddress;
+  LatLng? _pickedPosition;
   int _currentStep = 1;
   BranchScheduleMode _scheduleMode = BranchScheduleMode.company;
   List<BranchAvailabilityEntity> _companySchedule = const [];
@@ -47,6 +50,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
       _cityController.text.trim().isNotEmpty &&
       _phoneController.text.trim().isNotEmpty &&
       _branchAddress != null &&
+      _pickedPosition != null &&
       _selectedManager != null &&
       (_scheduleMode == BranchScheduleMode.company
           ? _companySchedule.isNotEmpty
@@ -118,11 +122,18 @@ class _AddBranchPageState extends State<AddBranchPage> {
     }
   }
 
+  Future<void> _pickLocation() async {
+    final result = await showLocationPickerSheet(context);
+    if (!mounted || result == null) return;
+
+    setState(() {
+      _branchAddress = result.address;
+      _pickedPosition = result.position;
+    });
+  }
+
   void _onAddLocationPressed() {
-    showAppSnackbar(
-      context: context,
-      title: 'branches.add_branch.add_location_coming_soon'.tr(),
-    );
+    _pickLocation();
   }
 
   void _onScheduleModeChanged(BranchScheduleMode mode) {
@@ -271,15 +282,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
                     value: _branchAddress,
                     hint: 'branches.add_branch.location_hint'.tr(),
                     actionLabel: 'branches.add_branch.location_set'.tr(),
-                    onActionTap: () {
-                      // TODO(branches): integrate map picker
-                      setState(() {
-                        _branchAddress =
-                            _cityController.text.trim().isNotEmpty
-                            ? _cityController.text.trim()
-                            : 'Address';
-                      });
-                    },
+                    onActionTap: _pickLocation,
                   ),
                 ],
               ),
@@ -360,6 +363,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
         ),
         Expanded(
           child: AddBranchCoverageStep(
+            pickedAddress: _branchAddress,
             onAddLocation: _onAddLocationPressed,
           ),
         ),

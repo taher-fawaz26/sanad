@@ -115,6 +115,17 @@
         "thursday": "Thursday",
         "friday": "Friday"
       }
+    },
+    "location_picker": {
+      "search_hint": "Search location",
+      "specified_location": "The specified location",
+      "address_hint": "Move the pin to select a location",
+      "confirm": "Confirm",
+      "permission_denied": "Location permission is required to pick a branch location.",
+      "permission_permanently_denied": "Location permission is permanently denied. Open settings to enable it.",
+      "open_settings": "Open settings",
+      "service_disabled": "Turn on device location services to pick a branch location.",
+      "generic_error": "Couldn't load the location. Please try again."
     }
   },
   "services": {

@@ -8,9 +8,16 @@ environment:
   sdk: ">=3.11.0 <4.0.0"
 
 dependencies:
+  core:
+    path: ../core
   flutter:
     sdk: flutter
+  fpdart: ^1.2.0
+  geocoding: ^4.0.0
+  geolocator: ^14.0.3
   google_maps_flutter: ^2.10.0
+  permissions:
+    path: ../permissions
 
 dev_dependencies:
   flutter_test:

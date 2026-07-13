@@ -38,11 +38,15 @@ dependencies:
   hydrated_bloc: ^11.0.0
   localization:
     path: ../../packages/localization
+  maps:
+    path: ../../packages/maps
   network:
     path: ../../packages/network
   otp:
     path: ../../packages/features/otp
   path_provider: ^2.1.5
+  permissions:
+    path: ../../packages/permissions
   provider: ^6.1.5
   shared_blocs:
     path: ../../packages/shared_blocs

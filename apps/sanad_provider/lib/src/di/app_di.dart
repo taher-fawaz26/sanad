@@ -7,8 +7,10 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:forgot_password/forgot_password.dart';
 import 'package:localization/localization.dart';
+import 'package:maps/maps.dart';
 import 'package:network/network.dart';
 import 'package:otp/otp.dart';
+import 'package:permissions/permissions.dart';
 import 'package:sanad_provider/src/config/app_config.dart';
 import 'package:services/services.dart';
 import 'package:storage/storage.dart';
@@ -98,6 +100,15 @@ Future<void> configureDependencies() async {
     )
     ..registerLazySingleton<BaseApiClient>(
       () => ApiClientImpl(sl<SecureDioClient>(), sl<NetworkGuard>()),
+    )
+    ..registerLazySingleton<PermissionsService>(
+      () => const PermissionsServiceImpl(),
+    )
+    ..registerLazySingleton<LocationService>(
+      () => LocationServiceImpl(sl<PermissionsService>()),
+    )
+    ..registerLazySingleton<GeocodingService>(
+      () => const GeocodingServiceImpl(),
     );
 
   // ── Feature modules ────────────────────────────────────────────────────────

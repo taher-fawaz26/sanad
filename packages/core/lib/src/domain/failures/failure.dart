@@ -54,6 +54,12 @@ class SecureConnectionFailure extends Failure {
   });
 }
 
+// ─── Location Failures ─────────────────────────────────────────────────────
+
+class LocationFailure extends Failure {
+  const LocationFailure({required super.message, super.code, super.metadata});
+}
+
 // ─── Local & Cache Failures ────────────────────────────────────────────────
 
 class CacheFailure extends Failure {

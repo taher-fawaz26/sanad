@@ -7,13 +7,34 @@ import 'package:flutter/material.dart';
 class AddBranchCoverageStep extends StatelessWidget {
   const AddBranchCoverageStep({
     required this.onAddLocation,
+    this.pickedAddress,
     super.key,
   });
 
   final VoidCallback onAddLocation;
+  final String? pickedAddress;
 
   @override
   Widget build(BuildContext context) {
+    if (pickedAddress != null && pickedAddress!.isNotEmpty) {
+      return Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSpacing.xl,
+          vertical: AppSpacing.md,
+        ),
+        child: AppMapLinkCard(
+          title: 'branches.location_picker.specified_location'.tr(),
+          caption: pickedAddress!,
+          leading: AppSvgPicture.asset(
+            AppSvgs.map,
+            width: AppDimension.iconLg,
+            height: AppDimension.iconLg,
+          ),
+          onTap: onAddLocation,
+        ),
+      );
+    }
+
     return Center(
       child: AppEmptyState(
         illustration: AppEmptyStateImage(
