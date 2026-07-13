@@ -1,0 +1,38 @@
+name: branches
+description: >
+  Branches feature — list, create, update, and delete provider branches.
+  Includes domain entities, repository contract, use cases, BLoC, and routes.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+  flutter: ">=3.19.0"
+
+dependencies:
+  app_assets:
+    path: ../../app_assets
+  core:
+    path: ../../core
+  design_system:
+    path: ../../design_system
+  easy_localization: ^3.0.8
+  equatable: ^2.1.0
+  flutter:
+    sdk: flutter
+  flutter_bloc: ^9.1.1
+  fpdart: ^1.2.0
+  go_router: ^17.3.0
+  localization:
+    path: ../../localization
+  network:
+    path: ../../network
+  url_launcher: ^6.3.1
+
+dev_dependencies:
+  bloc_test: ^10.0.0
+  flutter_test:
+    sdk: flutter
+  mocktail: ^1.0.4
+  very_good_analysis: ^9.0.0

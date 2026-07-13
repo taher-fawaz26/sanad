@@ -1,0 +1,47 @@
+---
+description: Flutter conventions — Material 3, BLoC, GoRouter, GetIt, EasyLocalization
+globs: "**/*.dart"
+alwaysApply: false
+---
+
+# Flutter Conventions
+
+## UI Framework
+
+- Material Design 3 only — no deprecated Material 2 APIs
+- `StatelessWidget` first
+- `StatefulWidget` only for local ephemeral state (form controllers, scroll controllers, animation controllers)
+
+## State Management
+
+- `flutter_bloc` only — BLoC class for feature logic
+- Cubit only for pure UI state with **no network calls** (e.g. `OtpUiCubit`)
+- No Provider, Riverpod, GetX, or `setState` for feature/network logic
+- `HydratedBloc` only for persistence-required state (theme, locale)
+
+## Navigation
+
+- GoRouter only: `context.go()`, `context.push()`, `context.pop()`
+- Never `Navigator.push()` or `Navigator.pushNamed()` directly
+
+## Networking
+
+- Dio via `sl<ApiClientImpl>()` — never instantiate `Dio` in features
+- Return type: `TaskEither<Failure, T>` — never `Future<T>` in repositories
+
+## Dependency Injection
+
+- GetIt (`sl`) — register in `di/` files
+- Never call `sl<T>()` inside a widget constructor
+- BLoCs registered as factories; repos/use cases as lazy singletons
+
+## Localization
+
+- Never hardcode UI strings — always `'key'.tr()`
+- Arabic (`ar-AR`) is the default locale — design RTL first
+
+## Responsive Layout
+
+- `ScreenUtilInit` at app root (design size 360×800)
+- Use `AppSpacing`, `AppDimension` — never `.w` / `.h` on primitives
+- Fonts via `AppFont` / `AppFontArabic` only

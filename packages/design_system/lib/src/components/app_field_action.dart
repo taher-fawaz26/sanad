@@ -1,0 +1,107 @@
+import 'package:design_system/src/dimensions/responsive_dimension.dart';
+import 'package:design_system/src/spacing/responsive_spacing.dart';
+import 'package:design_system/src/theme/colors/app_colors.dart';
+import 'package:design_system/src/theme/colors/field_tokens.dart';
+import 'package:design_system/src/theme/typography/app_typography.dart';
+import 'package:flutter/material.dart';
+
+/// Figma location field — labeled input with leading icon and inline action.
+class AppFieldAction extends StatelessWidget {
+  const AppFieldAction({
+    required this.label,
+    required this.actionLabel,
+    super.key,
+    this.value,
+    this.hint,
+    this.leading,
+    this.onActionTap,
+    this.onTap,
+    this.enabled = true,
+  });
+
+  final String label;
+  final String? value;
+  final String? hint;
+  final Widget? leading;
+  final String actionLabel;
+  final VoidCallback? onActionTap;
+  final VoidCallback? onTap;
+  final bool enabled;
+
+  bool get _hasValue => value != null && value!.isNotEmpty;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final typography = context.appTypography;
+    final brightness = Theme.of(context).brightness;
+    final fieldHeight = responsiveDimension(FieldTokens.fieldHeight);
+    final labelGap = responsiveDimension(FieldTokens.labelGap);
+
+    final displayStyle = _hasValue
+        ? FieldTokens.valueStyle(typography, colors, brightness, enabled: enabled)
+        : FieldTokens.hintStyle(typography, colors, brightness, enabled: enabled);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: FieldTokens.labelStyle(typography, colors, brightness),
+        ),
+        SizedBox(height: labelGap),
+        Material(
+          color: FieldTokens.background(colors, brightness, enabled: enabled),
+          shape: RoundedRectangleBorder(
+            borderRadius: FieldTokens.borderRadiusAll(),
+            side: BorderSide(
+              color: FieldTokens.borderDefault(colors, brightness),
+              width: responsiveDimension(FieldTokens.borderWidthDefault),
+            ),
+          ),
+          child: InkWell(
+            onTap: enabled ? onTap : null,
+            borderRadius: FieldTokens.borderRadiusAll(),
+            child: SizedBox(
+              height: fieldHeight,
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: responsiveDimension(FieldTokens.horizontalPadding),
+                ),
+                child: Row(
+                  children: [
+                    if (leading != null) ...[
+                      leading!,
+                      SizedBox(width: AppSpacing.sm),
+                    ],
+                    Expanded(
+                      child: Text(
+                        _hasValue ? value! : (hint ?? ''),
+                        style: displayStyle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: enabled ? onActionTap : null,
+                      behavior: HitTestBehavior.opaque,
+                      child: Text(
+                        actionLabel,
+                        style: typography.regularNormal.copyWith(
+                          color: colors.link,
+                          fontWeight: FontWeight.w400,
+                          height: 16 / 16,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}

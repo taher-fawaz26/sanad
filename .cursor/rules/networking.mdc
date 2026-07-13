@@ -1,0 +1,48 @@
+---
+description: Networking — Dio, TaskEither, interceptors, error mapping, token refresh
+globs: "packages/network/**/*.dart, packages/api/**/*.dart"
+alwaysApply: false
+---
+
+# Networking
+
+## Return Types
+
+All API calls return `TaskEither<Failure, T>` — never `Future<T>` in repositories.
+
+## Dio Instances
+
+| Instance | Name | Purpose |
+|----------|------|---------|
+| Authenticated | `'authDio'` | All feature API calls |
+| Raw | `'rawDio'` | Token refresh only (avoids interceptor loop) |
+
+Never instantiate `Dio` directly in features — use `sl<ApiClientImpl>()`.
+
+## Interceptor Chain (authDio)
+
+```
+AcceptLanguage → Auth → RetryOnTimeout → TimeoutError → Logging
+```
+
+## Error Handling
+
+- `ErrorMapper.mapError()` is the single entry point for `DioException → Failure`
+- Sealed `Failure` hierarchy — never expose `DioException` beyond `ErrorMapper`
+- Presentation resolves i18n keys via `ErrorMessages.*` constants
+
+## Token Refresh
+
+Handled exclusively in `AuthInterceptor` — never manually in features.
+
+## Connectivity
+
+Wrap repo calls in `NetworkGuard.execute()`.
+
+## Timeouts
+
+15s default — only override with a documented reason.
+
+## BLoC Rule
+
+Never call Dio directly from BLoC — always via `ApiClientImpl` through UseCase → Repository.

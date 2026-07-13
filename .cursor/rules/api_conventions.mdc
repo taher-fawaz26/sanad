@@ -1,0 +1,27 @@
+---
+description: API data layer conventions — TaskEither, DTO naming, FailureMapper, pagination
+globs: "packages/**/lib/src/data/**"
+alwaysApply: false
+---
+
+# API Conventions
+
+See `docs/API_GUIDE.md`.
+
+## Rules
+
+- All data source methods return `TaskEither<Failure, T>` — never `Future<T>`
+- Use `BaseApiClient.request()` — never raw `Dio` outside `packages/network`
+- Map errors via `FailureMapper.map()` — `DioException` never leaks to features
+- Response models: `fromJson` factory + `toEntity()` method
+- Request models: `toJson()` → `Map<String, dynamic>`
+- Pagination: `PaginatedResponse<T>` or `CursorResponse<T>` from `network`
+- API paths: `abstract final class <Feature>ApiPaths`
+
+## Naming
+
+| Artifact | Pattern |
+|----------|---------|
+| DataSource | `<Feature>RemoteDataSource` / `Impl` |
+| Request DTO | `<Action><Feature>Request` |
+| Response DTO | `<Feature>ResponseModel` |

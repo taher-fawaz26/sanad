@@ -1,0 +1,41 @@
+---
+description: Design System usage — tokens, components, no raw colors/spacing/typography
+globs: "**/*.dart"
+alwaysApply: false
+---
+
+# Design System
+
+## Token Usage (Mandatory)
+
+| Need | Use | Never |
+|------|-----|-------|
+| Colors | `context.appColors.*` | `Colors.*`, hex literals |
+| Typography | `context.appTypography.*` or `AppFont.*` | Raw `TextStyle(...)` |
+| Spacing | `AppSpacing.*` | Raw `EdgeInsets`, numeric padding |
+| Radius | `AppRadius.*` | Raw `BorderRadius.circular(n)` |
+| Shadows | `AppShadows.*` | Raw `BoxShadow(...)` |
+| Sizes | `AppDimension.*` | Raw `double` for icons/components |
+| Durations | `AppDurations.*` | Raw `Duration(milliseconds: n)` |
+
+## Components
+
+Use existing DS components — never build equivalents from scratch:
+
+- `AppButton`, `AppTextField`, `AppSection`, `AppNavBar`, `AppSelectField`
+- `AppWizardStepIndicator`, `AppKeyValueCard`, `AppPhoneField`, `AppRadioGroup`
+
+## Adding a New Component
+
+1. Primitive (button, chip, avatar, field, overlay, ...) → `packages/design_system/lib/src/components/`
+2. Higher-level composed UI, still domain-agnostic (empty state, loading, retry, ...) → `packages/design_system/lib/src/shared_ui/`
+3. Add tokens in `packages/design_system/lib/src/theme/tokens/`
+4. Export the new file from `components.dart` or `shared_ui.dart`, then from `packages/design_system/lib/design_system.dart` (or add a `show` clause in `theme/tokens.dart` for token files)
+
+## Package Boundaries
+
+- **`design_system/components/`** = primitive, domain-agnostic UI components
+- **`design_system/shared_ui/`** = higher-level composed UI, still domain-agnostic (e.g. `AppEmptyState`)
+- **`design_system/dev/`** = dev-only preview/showcase widgets, never exported from any barrel
+- Feature-specific or domain-aware widgets (OTP field, branch location field, etc.) belong to the owning feature package or app — never to `design_system`. `shared_widgets` no longer exists; see the Component Ownership Policy in `docs/ARCHITECTURE.md`
+- Never put business logic in `design_system`

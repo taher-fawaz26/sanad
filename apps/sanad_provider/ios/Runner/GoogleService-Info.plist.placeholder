@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- TODO: Replace this file with the real GoogleService-Info.plist from Firebase Console. -->
+<!--
+  Steps:
+  1. Go to https://console.firebase.google.com
+  2. Create or select a Firebase project for Sand Provider
+  3. Add an iOS app with Bundle ID: com.sand.provider
+  4. Download GoogleService-Info.plist and place it here (rename to GoogleService-Info.plist)
+-->

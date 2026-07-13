@@ -1,0 +1,44 @@
+---
+description: Typography tokens — TypeScale, ArabicTypeScale, AppFont, letter-spacing, weights
+globs: "packages/design_system/**/*.dart"
+alwaysApply: false
+---
+
+# Typography
+
+## Source of Truth
+
+Design Tokens are the source of truth. Flutter typography must match tokens.
+
+## English Typography
+
+- Sizes: `TypeScale` (title1=48, title2=32, title3=24, large=18, regular=16, small=14, tiny=12)
+- Line heights: `TypeScale.lineHeight*` constants
+- Letter spacing (titles only): `TypeScale.trackingTitle1` (-0.96), `trackingTitle2` (-0.32), `trackingTitle3` (-0.12)
+- Weights: `AppFont.regular` (w400), `medium` (w500), `semiBold` (w600), `bold` (w700)
+- Pre-built styles: `AppFontStyle.*` or `AppFont.<weight>.<scale>` via `AppFontScaleX`
+
+## Arabic Typography
+
+- Same font sizes as English — different line heights from `ArabicTypeScale`
+- Never reuse English `TypeScale` line heights for Arabic text
+- Pre-built styles: `AppFontArabicStyle.*` or `AppFontArabic.<weight>.<arScale>` via `AppFontArabicScaleX`
+
+## Title Weights
+
+| Style | Weight | Token |
+|-------|--------|-------|
+| Title 1 | Bold w700 | `AppFont.bold.title1` |
+| Title 2 | Bold w700 | `AppFont.bold.title2` |
+| Title 3 | SemiBold w600 | `AppFont.semiBold.title3` |
+| Body | Regular w400 | `AppFont.regular.*` |
+
+## Widget Layer
+
+Consume via `context.appTypography.*` — never hardcode `fontSize`, `fontWeight`, or `height`.
+
+## Token Gap
+
+`FontWeight.w500` (Medium) is used in Flutter but not yet in design tokens — intentionally kept until tokens add `fontWeights.inter-medium`.
+
+Do not add new `TypeScale` entries without a corresponding design token.

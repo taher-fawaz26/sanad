@@ -1,0 +1,24 @@
+﻿name: shared_blocs
+description: Backwards-compatibility re-export facade. Prefer importing from core, design_system, or auth directly.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Canonical home packages — re-exported from the barrel
+  auth:
+    path: ../features/auth
+  core:
+    path: ../core
+  design_system:
+    path: ../design_system
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: ^9.0.0

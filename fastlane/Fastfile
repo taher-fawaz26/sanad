@@ -1,0 +1,55 @@
+# Fastlane configuration for Sanad hybrid release pipeline.
+# GitHub Actions orchestrates; Fastlane handles signing and store upload.
+
+default_platform(:android)
+
+platform :android do
+  desc "Upload Provider APK to Play Store internal track"
+  lane :provider_internal do
+    supply(
+      track: "internal",
+      apk: "../apps/sanad_provider/build/app/outputs/flutter-apk/app-release.apk",
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+
+  desc "Upload Client APK to Play Store internal track"
+  lane :client_internal do
+    supply(
+      track: "internal",
+      apk: "../apps/sanad_client/build/app/outputs/flutter-apk/app-release.apk",
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+end
+
+platform :ios do
+  desc "Sync certificates and profiles via match"
+  lane :sync_signing do
+    match(type: "appstore", readonly: true)
+  end
+
+  desc "Upload Provider IPA to App Store Connect"
+  lane :provider_deliver do
+    deliver(
+      ipa: "../apps/sanad_provider/build/ios/ipa/sanad_provider.ipa",
+      skip_metadata: true,
+      skip_screenshots: true,
+      submit_for_review: false
+    )
+  end
+
+  desc "Upload Client IPA to App Store Connect"
+  lane :client_deliver do
+    deliver(
+      ipa: "../apps/sanad_client/build/ios/ipa/sanad_client.ipa",
+      skip_metadata: true,
+      skip_screenshots: true,
+      submit_for_review: false
+    )
+  end
+end

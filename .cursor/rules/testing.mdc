@@ -1,0 +1,49 @@
+---
+description: Testing conventions — unit, BLoC, widget, golden tests, coverage targets, mock vs fake rules
+globs: "**/test/**/*.dart"
+alwaysApply: false
+---
+
+# Testing
+
+See `docs/TESTING_GUIDE.md` for the complete guide.
+
+## Stack
+
+- Unit tests: `test` / `flutter_test`
+- BLoC tests: `bloc_test` + `mocktail` via `sandBlocTest`
+- Fakes/mocks: `packages/testing`
+
+## Coverage Targets
+
+| Layer | Minimum | CI |
+|-------|---------|-----|
+| `domain/usecases/` | 100% | Blocking |
+| `data/` | 80% | Blocking |
+| `presentation/bloc/` | 80% | Blocking |
+| `presentation/pages/` | 0% | Excluded |
+
+## Rules
+
+- Never mock a concrete class — mock the abstract interface only
+- Shared mocks (2+ packages) live in `packages/testing/lib/src/mocks/`
+- Every `group` describes the class under test
+- Every test name is a behavioural statement in plain English
+- No `print()` or `debugPrint()` in test files
+- Use `sandBlocTest` / `blocTest` — never `expect(bloc.state, ...)` without the DSL
+- Fakes for widget/integration tests; mocks for unit tests
+
+## File Structure
+
+Mirror source: `lib/src/x.dart` → `test/src/x_test.dart`
+Golden tests: `test/goldens/` in `design_system` only
+
+## Helpers
+
+```dart
+import 'package:testing/testing.dart';
+
+await pumpDsWidget(tester, widget);
+final value = await useCase(params).expectRight();
+expect(failure, FailureMatchers.isFailureOf<TimeoutFailure>());
+```

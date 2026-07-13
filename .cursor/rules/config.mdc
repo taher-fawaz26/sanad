@@ -1,0 +1,36 @@
+---
+description: Configuration — environments, flavors, feature flags, build-time config
+globs: "packages/config/**/*.dart, packages/flavors/**/*.dart, apps/**/config/**/*.dart"
+alwaysApply: false
+---
+
+# Configuration
+
+## Environment
+
+Selected via `--dart-define=ENV=dev|qa|stage|prod` at build time. Default: `dev`.
+
+## Base URLs
+
+| ENV | URL |
+|-----|-----|
+| dev | `https://dev-api.trysanad.us/api/v1/` |
+| qa | `https://qa-api.trysanad.us/api/v1/` |
+| stage | `https://stage-api.trysanad.us/api/v1/` |
+| prod | `https://api.trysanad.us/api/v1/` |
+
+## Package Ownership
+
+| Package | Role |
+|---------|------|
+| `packages/config` | Pure Dart — `AppConfig`, `NetworkConfig`, `FeatureFlags` |
+| `packages/flavors` | Maps ENV to URLs, Firebase project IDs, feature flag overrides |
+| `apps/*/lib/src/config/` | App-level adapter to `packages/config` |
+
+## Rules
+
+- Never hardcode base URLs or API keys — always read from `AppConfig`
+- `packages/config` must remain pure Dart (no `flutter` dependency)
+- Feature flags: `FeatureFlags` class in `config` package
+- Timeouts: 15s default in `NetworkConfig`
+- No user-facing config mutation at runtime — all config is build-time

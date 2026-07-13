@@ -1,0 +1,65 @@
+---
+description: Canonical feature package structure, naming conventions, and layer dependency rules
+globs: "packages/features/**"
+alwaysApply: false
+---
+
+# Feature Template
+
+Reference: `packages/features/auth/` and `docs/FEATURE_GUIDE.md`
+
+## Structure (Required)
+
+Every shared feature package under `packages/features/<feature>/` must follow:
+
+```
+lib/src/
+├── data/          → datasources, models, repositories, endpoints
+├── domain/        → entities, repositories (abstract), usecases
+├── presentation/  → bloc, pages, widgets (optional)
+├── di/            → <Feature>DI.init()
+├── routes/        → <Feature>Routes constants
+└── module/        → <Feature>Module implements FeatureModule
+```
+
+## Naming
+
+| Artifact | Pattern | Example |
+|----------|---------|---------|
+| Package | `snake_case` | `forgot_password` |
+| BLoC | `<Feature>Bloc` | `AuthBloc` |
+| UseCase | `<Verb><Feature>UseCase` | `AuthLoginUseCase` |
+| Repository | `<Feature>Repository` / `Impl` | `AuthRepository` |
+| DI | `<Feature>DI` | `AuthDI` |
+| Module | `<Feature>Module` | `AuthModule` |
+| Routes | `<Feature>Routes` | `AuthRoutes` |
+
+## Layer Rules (Enforced by `melos validate:arch`)
+
+| Layer | May import | Must NOT import |
+|-------|-----------|-----------------|
+| `domain/` | `core` | `data/`, `presentation/`, Flutter |
+| `data/` | `domain/`, `network`, `storage`, `core` | `presentation/` |
+| `presentation/` | `domain/`, `design_system`, `localization`, `core` | Dio, repo impls |
+| `di/` | All layers | — |
+
+## Public API
+
+- Export via `lib/<feature>.dart` barrel only
+- Never `import 'package:X/src/...'` from outside the package
+- Hide `*_impl.dart` unless DI registration requires it
+
+## App Features
+
+`apps/*/lib/src/features/` = UI pages only. No BLoC, no repository, no use case.
+
+## New Feature Workflow
+
+```bash
+# Always use melos run + -- separator
+melos run feature:create -- <name> shared      # shared package
+melos run feature:create -- <name> provider    # provider UI-only
+melos run feature:create -- <name> client      # client UI-only
+melos bootstrap
+# Add <Feature>Module() to app module list — one line
+```

@@ -1,0 +1,195 @@
+name: sanad
+description: Sanad monorepo workspace root — not a publishable package.
+publish_to: none
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+
+workspace:
+  - apps/sanad_client
+  - apps/sanad_provider
+  - apps/design_catalog
+  - packages/analytics
+  - packages/api
+  - packages/app_assets
+  - packages/app_logger
+  - packages/config
+  - packages/core
+  - packages/design_system
+  - packages/domain
+  - packages/features/auth
+  - packages/features/branches
+  - packages/features/change_password
+  - packages/features/forgot_password
+  - packages/features/otp
+  - packages/features/services
+  - packages/flavors
+  - packages/localization
+  - packages/network
+  - packages/notifications
+  - packages/shared_blocs
+  - packages/shared_models
+  - packages/storage
+  - packages/testing
+  - packages/utilities
+
+dev_dependencies:
+  melos: ^7.0.0
+
+# This is the workspace root. All real packages live under apps/ and packages/.
+# Do not add dependencies here — add them to the individual package pubspecs.
+
+# ─── Melos Configuration ─────────────────────────────────────────────────────
+# NOTE: Melos 7.x has no standalone melos.yaml file — all Melos config
+# (scripts, ide, command hooks) must live under this `melos:` key. Package
+# discovery uses the native Dart `workspace:` list above, not `melos.packages`.
+# See: https://melos.invertase.dev/guides/migrations#6xx-to-7xx
+melos:
+  repository: https://github.com/trypass-ai/sanad
+
+  ide:
+    intellij: true
+
+  command:
+    bootstrap:
+      environment:
+        sdk: ">=3.11.0 <4.0.0"
+
+    version:
+      updateGitTagRefs: true
+      workspaceChangelog: true
+
+  scripts:
+    # ─── Analysis ───────────────────────────────────────────────────────────
+    analyze:
+      run: melos exec -c 5 -- dart analyze . --fatal-infos
+      description: Run dart analyzer across all packages.
+
+    # ─── Testing ────────────────────────────────────────────────────────────
+    test:
+      run: melos exec -c 6 --dir-exists=test -- flutter test --coverage --no-pub
+      description: Run Flutter unit tests with coverage.
+
+    test:dart:
+      run: melos exec -c 6 --dir-exists=test -- dart test --coverage=coverage
+      description: Run pure-Dart unit tests with coverage.
+
+    # ─── Formatting ─────────────────────────────────────────────────────────
+    format:
+      run: melos exec -c 6 -- dart format . --set-exit-if-changed
+      description: Format Dart code (fails if files need formatting).
+
+    format:fix:
+      run: melos exec -c 6 -- dart format .
+      description: Format Dart code and apply changes.
+
+    # ─── Code Generation ─────────────────────────────────────────────────────
+    # Usage: melos run feature:create -- <name> <mode> [options]
+    # Modes: shared | provider | client
+    # Example: melos run feature:create -- orders shared
+    # Example: melos run feature:create -- branches provider
+    # Example: melos run feature:create -- profile client with-backend
+    feature:create:
+      run: cd tools && dart pub get && dart run bin/feature_generator.dart
+      description: "Scaffold a feature. Usage: melos run feature:create -- <name> shared|provider|client"
+
+    # Usage: melos run package:create -- <name> <type>
+    # Types: infrastructure | shared | feature | utility
+    # Example: melos run package:create -- analytics infrastructure
+    # Example: melos run package:create -- date_formatter utility
+    package:create:
+      run: cd tools && dart pub get && dart run bin/package_generator.dart
+      description: "Scaffold a package. Usage: melos run package:create -- <name> infrastructure|shared|feature|utility"
+
+    generate:
+      run: >
+        melos exec -c 3 --dir-exists=lib --
+        dart run build_runner build --delete-conflicting-outputs
+      description: Run build_runner in all packages that have a lib/ dir.
+
+    generate:watch:
+      run: >
+        melos exec -c 1 --dir-exists=lib --
+        dart run build_runner watch --delete-conflicting-outputs
+      description: Watch mode build_runner (run per package).
+
+    # ─── Cleaning ─────────────────────────────────────────────────────────────
+    clean:
+      run: melos exec -c 6 -- flutter clean
+      description: Run flutter clean across all packages.
+
+    clean:dart:
+      run: melos exec -c 6 -- dart pub cache clean
+      description: Clean Dart pub cache.
+
+    # ─── Coverage ─────────────────────────────────────────────────────────────
+    coverage:
+      run: |
+        melos run test
+        melos exec -c 1 --dir-exists=coverage -- \
+          lcov --ignore-errors unused --list coverage/lcov.info
+      description: Run tests and generate LCOV coverage report.
+
+    # ─── Building ─────────────────────────────────────────────────────────────
+    build:client:android:
+      run: >
+        melos exec -c 1 --scope="sanad_client" --
+        flutter build apk --release
+      description: Build sanad_client Android APK.
+
+    build:client:ios:
+      run: >
+        melos exec -c 1 --scope="sanad_client" --
+        flutter build ipa --release
+      description: Build sanad_client iOS IPA.
+
+    build:provider:android:
+      run: >
+        melos exec -c 1 --scope="sanad_provider" --
+        flutter build apk --release
+      description: Build sanad_provider Android APK.
+
+    build:provider:ios:
+      run: >
+        melos exec -c 1 --scope="sanad_provider" --
+        flutter build ipa --release
+      description: Build sanad_provider iOS IPA.
+
+    # ─── Architecture Validation ───────────────────────────────────────────────
+    validate:deps:
+      run: cd tools && dart pub get && dart run bin/validate_deps.dart
+      description: Validate package-level dependency graph.
+
+    validate:imports:
+      run: cd tools && dart pub get && dart run bin/scan_imports.dart
+      description: Validate import-level rules (public API, layer violations).
+
+    validate:arch:
+      run: |
+        melos run validate:deps
+        melos run validate:imports
+      description: Full architecture validation — graph + imports.
+
+    validate:l10n:
+      run: cd tools && dart pub get && dart run bin/validate_l10n.dart
+      description: Assert all localization keys are present in all locale files.
+
+    doctor:
+      run: cd tools && dart pub get && dart run bin/doctor.dart
+      description: Check developer environment health.
+
+    # ─── Compound Quality Gates ────────────────────────────────────────────────
+    check:
+      run: |
+        melos run format
+        melos run analyze
+        melos run test
+        melos run validate:arch
+        melos run validate:l10n
+      description: Full quality gate — format, analyze, test, arch, l10n.
+
+    ci:
+      run: |
+        melos bootstrap
+        melos run check
+      description: CI entry-point — bootstrap then full quality gate.

@@ -1,0 +1,38 @@
+---
+description: Security — secrets, secure storage, SSL, logging, authentication best practices
+alwaysApply: true
+---
+
+# Security
+
+## Secrets
+
+- Never hardcode API keys, tokens, passwords, or secrets in source code
+- Never commit secrets — use `--dart-define` or environment variables
+- No secrets in `packages/config` source — only URLs and feature flags
+
+## Logging
+
+- Never log sensitive data (tokens, passwords, PII) — not even at debug level
+- Disable `LoggingInterceptor` verbose output in release builds (`kReleaseMode`)
+- No `print()` statements with sensitive data
+
+## Storage
+
+- Sensitive data: `flutter_secure_storage` via `packages/storage` `SecureTokenStorage`
+- Never store tokens in `SharedPreferences` or unencrypted Hive
+- Token storage: `SecureTokenStorage` from `packages/storage` only
+
+## Network
+
+- SSL pinning configured in `packages/network` — do not disable without explicit instruction
+- Never use `badCertificateCallback` that returns `true`
+- Bearer tokens injected only by `AuthInterceptor` — never manually in features
+- Never expose `DioException` or raw HTTP errors to presentation layer
+
+## OWASP Mobile
+
+Keep in mind when reviewing:
+- M1: Improper credential usage
+- M2: Inadequate supply chain security
+- M9: Insecure data storage

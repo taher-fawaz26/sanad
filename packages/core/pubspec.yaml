@@ -1,0 +1,24 @@
+﻿name: core
+description: Core abstractions — Failure, Result, UseCase, DI base, extensions, and validators.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+
+dependencies:
+  bloc: ^9.0.0
+  equatable: ^2.1.0
+  flutter:
+    sdk: flutter
+  fpdart: ^1.2.0
+  get_it: ^8.0.3
+  go_router: ^17.3.0
+  logger: ^2.6.0
+  meta: ^1.16.0
+  phone_numbers_parser: ^9.0.24
+
+dev_dependencies:
+  test: ^1.24.0
+  very_good_analysis: ^9.0.0

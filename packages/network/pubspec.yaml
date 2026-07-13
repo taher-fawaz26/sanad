@@ -1,0 +1,23 @@
+﻿name: network
+description: Networking layer — Dio client, interceptors, token management, retry, connectivity, SSL pinning.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+
+dependencies:
+  connectivity_plus: ^7.2.0
+  core:
+    path: ../core
+  dio: ^5.10.0
+  flutter:
+    sdk: flutter
+  fpdart: ^1.2.0
+  logger: ^2.6.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: ^9.0.0

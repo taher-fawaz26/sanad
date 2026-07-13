@@ -1,0 +1,31 @@
+---
+description: Analyzer workflow — batch edits, per-package analysis, never full monorepo during dev
+alwaysApply: true
+---
+
+# Analyzer Workflow
+
+## During Development
+
+- **Never run `flutter analyze` after every file edit** — it is slow and disruptive
+- **Batch all edits first**, then run analyzer **once** at the end of the task
+- Analyze only the affected package:
+  ```bash
+  cd packages/<name> && flutter analyze
+  ```
+- Use the Dart MCP `analyze_files` tool when available — faster than shell
+
+## What NOT to Run
+
+- Do **not** run `melos analyze` (entire monorepo) unless explicitly asked
+- Do **not** use `dart analyze --fatal-infos` during development — CI only (`melos check`)
+- Do **not** run `melos check` during routine development — pre-commit quality gate only
+
+## Fixing Issues
+
+Fix in order: **errors → warnings → hints**
+Never suppress with `// ignore:` without a documented reason comment.
+
+## Definition of Done
+
+Zero analyzer errors in the affected package before marking a task complete.
