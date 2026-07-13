@@ -1,0 +1,3 @@
+# Copy to local.properties and fill MAPS_API_KEY from the team vault.
+# Android key must be restricted to package name + debug/release SHA-1.
+MAPS_API_KEY=

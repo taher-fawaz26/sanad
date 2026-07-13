@@ -68,5 +68,7 @@
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>GMSApiKey</key>
+		<string>$(MAPS_API_KEY)</string>
 	</dict>
 </plist>

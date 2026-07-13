@@ -15,6 +15,7 @@
 | `app_logger` | App-level logger + BLoC observer | Active |
 | `utilities` | Date/string/number formatting helpers | Active |
 | `testing` | Shared test utilities, fakes, matchers | Active |
+| `maps` | Shared Google Maps widgets over `google_maps_flutter` | Active |
 
 ### Domain / Data
 

@@ -26,6 +26,8 @@ dependencies:
   go_router: ^17.3.0
   localization:
     path: ../../localization
+  maps:
+    path: ../../maps
   network:
     path: ../../network
   url_launcher: ^6.3.1

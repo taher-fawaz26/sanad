@@ -25,6 +25,7 @@ workspace:
   - packages/features/services
   - packages/flavors
   - packages/localization
+  - packages/maps
   - packages/network
   - packages/notifications
   - packages/shared_blocs
