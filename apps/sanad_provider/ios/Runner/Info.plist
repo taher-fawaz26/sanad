@@ -70,5 +70,10 @@
 		<false/>
 		<key>GMSApiKey</key>
 		<string>$(MAPS_API_KEY)</string>
+		<!-- Location usage strings — required by permission_handler and Google Maps SDK -->
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>Sanad Provider uses your location to help you set the branch location on the map.</string>
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>Sanad Provider uses your location to help you set the branch location on the map.</string>
 	</dict>
 </plist>

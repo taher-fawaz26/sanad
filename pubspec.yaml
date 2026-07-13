@@ -28,6 +28,7 @@ workspace:
   - packages/maps
   - packages/network
   - packages/notifications
+  - packages/permissions
   - packages/shared_blocs
   - packages/shared_models
   - packages/storage

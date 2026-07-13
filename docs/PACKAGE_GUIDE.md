@@ -16,6 +16,7 @@
 | `utilities` | Date/string/number formatting helpers | Active |
 | `testing` | Shared test utilities, fakes, matchers | Active |
 | `maps` | Shared Google Maps widgets over `google_maps_flutter` | Active |
+| `permissions` | Shared permission handling over `permission_handler` | Active |
 
 ### Domain / Data
 

@@ -68,5 +68,10 @@
 	</array>
 	<key>GMSApiKey</key>
 	<string>$(MAPS_API_KEY)</string>
+	<!-- Location usage strings — required by permission_handler and Google Maps SDK -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Sanad uses your location to show you nearby services and help you select a location on the map.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Sanad uses your location to show you nearby services and help you select a location on the map.</string>
 </dict>
 </plist>
