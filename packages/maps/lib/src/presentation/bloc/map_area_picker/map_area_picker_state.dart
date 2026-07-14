@@ -22,6 +22,7 @@ class MapAreaPickerState extends Equatable {
     this.cameraSource = MapAreaPickerCameraSource.none,
     this.selectedPlaceId,
     this.selectedTitle,
+    this.resolvedAreaName,
     this.predictions = const [],
     this.searchStatus = PlaceSearchStatus.idle,
     this.searchQuery = '',
@@ -36,6 +37,10 @@ class MapAreaPickerState extends Equatable {
   final MapAreaPickerCameraSource cameraSource;
   final String? selectedPlaceId;
   final String? selectedTitle;
+
+  /// Human-friendly area name from reverse-geocoding the current [position]
+  /// (used as the picked area label when no Places prediction was selected).
+  final String? resolvedAreaName;
   final List<PlacePrediction> predictions;
   final PlaceSearchStatus searchStatus;
   final String searchQuery;
@@ -55,6 +60,7 @@ class MapAreaPickerState extends Equatable {
     MapAreaPickerCameraSource? cameraSource,
     String? selectedPlaceId,
     String? selectedTitle,
+    String? resolvedAreaName,
     List<PlacePrediction>? predictions,
     PlaceSearchStatus? searchStatus,
     String? searchQuery,
@@ -78,6 +84,7 @@ class MapAreaPickerState extends Equatable {
           : (selectedPlaceId ?? this.selectedPlaceId),
       selectedTitle:
           clearSelectedPlace ? null : (selectedTitle ?? this.selectedTitle),
+      resolvedAreaName: resolvedAreaName ?? this.resolvedAreaName,
       predictions:
           clearPredictions ? const [] : (predictions ?? this.predictions),
       searchStatus: searchStatus ??
@@ -99,6 +106,7 @@ class MapAreaPickerState extends Equatable {
         cameraSource,
         selectedPlaceId,
         selectedTitle,
+        resolvedAreaName,
         predictions,
         searchStatus,
         searchQuery,

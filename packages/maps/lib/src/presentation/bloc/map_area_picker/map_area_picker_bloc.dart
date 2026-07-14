@@ -224,7 +224,9 @@ class MapAreaPickerBloc
       state.copyWith(
         pickedResult: MapAreaPickerResult(
           placeId: state.selectedPlaceId,
-          title: state.selectedTitle ?? address,
+          // Prefer the chosen prediction's name, then the reverse-geocoded
+          // area name, and only fall back to the full address as a last resort.
+          areaName: state.selectedTitle ?? state.resolvedAreaName ?? address,
           address: address,
           position: position,
         ),
@@ -252,11 +254,12 @@ class MapAreaPickerBloc
           failure: failure,
         ),
       ),
-      (address) => emit(
+      (geocoded) => emit(
         state.copyWith(
           status: MapAreaPickerStatus.ready,
           position: position,
-          address: address,
+          address: geocoded.formattedAddress,
+          resolvedAreaName: geocoded.areaName,
           clearFailure: true,
         ),
       ),

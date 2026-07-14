@@ -1,6 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:maps/src/data/cache/geocoding_cache.dart';
+import 'package:maps/src/domain/entities/geocoded_address.dart';
+
+GeocodedAddress _addr(String value) =>
+    GeocodedAddress(formattedAddress: value, areaName: value);
 
 void main() {
   late GeocodingCache cache;
@@ -21,8 +25,8 @@ void main() {
     });
 
     test('put and get round-trip', () {
-      cache.put('k1', 'Dubai Marina');
-      expect(cache.get('k1'), 'Dubai Marina');
+      cache.put('k1', _addr('Dubai Marina'));
+      expect(cache.get('k1')?.formattedAddress, 'Dubai Marina');
     });
 
     test('get returns null for missing key', () {
@@ -31,42 +35,42 @@ void main() {
 
     test('evicts oldest entry when capacity reached', () {
       cache
-        ..put('k1', 'v1')
-        ..put('k2', 'v2')
-        ..put('k3', 'v3')
-        ..put('k4', 'v4');
+        ..put('k1', _addr('v1'))
+        ..put('k2', _addr('v2'))
+        ..put('k3', _addr('v3'))
+        ..put('k4', _addr('v4'));
 
       expect(cache.get('k1'), isNull);
-      expect(cache.get('k2'), 'v2');
+      expect(cache.get('k2')?.formattedAddress, 'v2');
       expect(cache.length, 3);
     });
 
     test('accessing an entry promotes it in LRU order', () {
       cache
-        ..put('k1', 'v1')
-        ..put('k2', 'v2')
-        ..put('k3', 'v3');
+        ..put('k1', _addr('v1'))
+        ..put('k2', _addr('v2'))
+        ..put('k3', _addr('v3'));
 
       cache.get('k1');
-      cache.put('k4', 'v4');
+      cache.put('k4', _addr('v4'));
 
-      expect(cache.get('k1'), 'v1');
+      expect(cache.get('k1')?.formattedAddress, 'v1');
       expect(cache.get('k2'), isNull);
     });
 
     test('updating existing key does not increase size', () {
       cache
-        ..put('k1', 'v1')
-        ..put('k1', 'v1-updated');
+        ..put('k1', _addr('v1'))
+        ..put('k1', _addr('v1-updated'));
 
       expect(cache.length, 1);
-      expect(cache.get('k1'), 'v1-updated');
+      expect(cache.get('k1')?.formattedAddress, 'v1-updated');
     });
 
     test('clear removes all entries', () {
       cache
-        ..put('k1', 'v1')
-        ..put('k2', 'v2')
+        ..put('k1', _addr('v1'))
+        ..put('k2', _addr('v2'))
         ..clear();
 
       expect(cache.length, 0);

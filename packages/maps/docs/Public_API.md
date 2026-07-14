@@ -19,7 +19,7 @@ documented extension points. Everything else is internal to the package.
 | Type | Description |
 |------|-------------|
 | `PlacePrediction` | Autocomplete result with `placeId`, `mainText`, `secondaryText` |
-| `MapAreaPickerResult` | One picked area: `placeId?`, `title`, `address`, `position` |
+| `MapAreaPickerResult` | One picked area: `placeId?`, `areaName`, `address`, `position` |
 | `ServingArea` | Generic named area value object: `placeId`, `name`, `address`, `latLng` |
 | `CoverageMode` | Enum: `create`, `edit`, `recalculate` |
 
@@ -107,6 +107,6 @@ final result = await showMapAreaPicker(
   labels: MapAreaPickerLabels(/* ... */),
 );
 if (result != null) {
-  // result.placeId / result.title / result.address / result.position
+  // result.placeId / result.areaName / result.address / result.position
 }
 ```

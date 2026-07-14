@@ -336,11 +336,11 @@ class LocationPickerBloc
           failure: failure,
         ),
       ),
-      (address) => emit(
+      (geocoded) => emit(
         state.copyWith(
           status: LocationPickerStatus.ready,
           position: position,
-          address: address,
+          address: geocoded.formattedAddress,
           clearFailure: true,
         ),
       ),

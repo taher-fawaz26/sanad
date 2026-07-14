@@ -1,13 +1,14 @@
 import 'package:core/core.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:maps/src/domain/entities/geocoded_address.dart';
 
 /// Repository contract for geocoding operations.
 ///
 /// Consumers depend on this contract. The concrete implementation handles
 /// caching, locale management, and delegation to platform services.
 abstract class GeocodingRepository {
-  TaskEither<Failure, String> reverseGeocode(
+  TaskEither<Failure, GeocodedAddress> reverseGeocode(
     LatLng position, {
     String? localeIdentifier,
   });

@@ -4,6 +4,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:maps/src/domain/entities/geocoded_address.dart';
 import 'package:maps/src/domain/entities/place_prediction.dart';
 import 'package:maps/src/domain/usecases/get_place_details_usecase.dart';
 import 'package:maps/src/domain/usecases/reverse_geocode_usecase.dart';
@@ -21,6 +22,11 @@ class _MockGetPlaceDetails extends Mock implements GetPlaceDetailsUseCase {}
 const _tPosition = LatLng(25.0, 55.0);
 const _tOtherPosition = LatLng(25.1, 55.1);
 const _tAddress = 'Dubai Marina, Dubai';
+const _tAreaName = 'Marina District';
+const _tGeocoded = GeocodedAddress(
+  formattedAddress: _tAddress,
+  areaName: _tAreaName,
+);
 
 const _tPrediction = PlacePrediction(
   placeId: 'abc',
@@ -90,7 +96,7 @@ void main() {
         'with initial position only -> geocodes address',
         build: () {
           when(() => reverseGeocode(any()))
-              .thenReturn(TaskEither.right(_tAddress));
+              .thenReturn(TaskEither.right(_tGeocoded));
           return buildBloc();
         },
         act: (bloc) => bloc.add(
@@ -116,7 +122,7 @@ void main() {
         'user move clears selected place and reverse geocodes',
         build: () {
           when(() => reverseGeocode(any()))
-              .thenReturn(TaskEither.right(_tAddress));
+              .thenReturn(TaskEither.right(_tGeocoded));
           return buildBloc();
         },
         seed: () => const MapAreaPickerState(
@@ -187,7 +193,7 @@ void main() {
           when(() => getPlaceDetails(any()))
               .thenReturn(TaskEither.right(_tPosition));
           when(() => reverseGeocode(any()))
-              .thenReturn(TaskEither.right(_tAddress));
+              .thenReturn(TaskEither.right(_tGeocoded));
           return buildBloc(withPlaces: true);
         },
         act: (bloc) => bloc.add(
@@ -225,9 +231,27 @@ void main() {
         expect: () => [
           isA<MapAreaPickerState>()
               .having((s) => s.pickedResult?.placeId, 'placeId', isNull)
-              .having((s) => s.pickedResult?.title, 'title', _tAddress)
+              .having((s) => s.pickedResult?.areaName, 'areaName', _tAddress)
               .having((s) => s.pickedResult?.address, 'address', _tAddress)
               .having((s) => s.pickedResult?.position, 'position', _tPosition),
+        ],
+      );
+
+      blocTest<MapAreaPickerBloc, MapAreaPickerState>(
+        'uses the reverse-geocoded area name for a map-only pick',
+        build: buildBloc,
+        seed: () => const MapAreaPickerState(
+          status: MapAreaPickerStatus.ready,
+          position: _tPosition,
+          address: _tAddress,
+          resolvedAreaName: _tAreaName,
+        ),
+        act: (bloc) => bloc.add(const MapAreaPickerConfirmed()),
+        expect: () => [
+          isA<MapAreaPickerState>()
+              .having((s) => s.pickedResult?.placeId, 'placeId', isNull)
+              .having((s) => s.pickedResult?.areaName, 'areaName', _tAreaName)
+              .having((s) => s.pickedResult?.address, 'address', _tAddress),
         ],
       );
 
@@ -245,7 +269,7 @@ void main() {
         expect: () => [
           isA<MapAreaPickerState>()
               .having((s) => s.pickedResult?.placeId, 'placeId', 'abc')
-              .having((s) => s.pickedResult?.title, 'title', 'Dubai Marina'),
+              .having((s) => s.pickedResult?.areaName, 'areaName', 'Dubai Marina'),
         ],
       );
     });

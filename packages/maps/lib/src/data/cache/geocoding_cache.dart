@@ -1,4 +1,5 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:maps/src/domain/entities/geocoded_address.dart';
 
 /// LRU cache for reverse-geocode results keyed by rounded coordinates.
 ///
@@ -9,7 +10,7 @@ class GeocodingCache {
 
   final int maxSize;
 
-  final _entries = <String, String>{};
+  final _entries = <String, GeocodedAddress>{};
   final _accessOrder = <String>[];
 
   static const _precision = 4;
@@ -20,7 +21,7 @@ class GeocodingCache {
     return '$lat,$lng|${locale ?? ''}';
   }
 
-  String? get(String key) {
+  GeocodedAddress? get(String key) {
     final value = _entries[key];
     if (value != null) {
       _accessOrder
@@ -30,7 +31,7 @@ class GeocodingCache {
     return value;
   }
 
-  void put(String key, String value) {
+  void put(String key, GeocodedAddress value) {
     if (_entries.containsKey(key)) {
       _accessOrder.remove(key);
     } else if (_entries.length >= maxSize) {

@@ -5,6 +5,7 @@ import 'package:core/core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:maps/src/domain/entities/geocoded_address.dart';
 import 'package:maps/src/domain/entities/place_prediction.dart';
 import 'package:maps/src/domain/usecases/forward_geocode_usecase.dart';
 import 'package:maps/src/domain/usecases/get_current_location_usecase.dart';
@@ -32,6 +33,10 @@ class _MockGetPlaceDetails extends Mock implements GetPlaceDetailsUseCase {}
 
 const _tPosition = LatLng(25.0, 55.0);
 const _tAddress = 'Dubai Marina, Dubai';
+const _tGeocoded = GeocodedAddress(
+  formattedAddress: _tAddress,
+  areaName: 'Marina District',
+);
 const _tFailure = LocationFailure(
   message: 'denied',
   code: LocationFailureCodes.permissionDenied,
@@ -118,7 +123,7 @@ void main() {
         'with initial position only -> geocodes address',
         build: () {
           when(() => reverseGeocode(any()))
-              .thenReturn(TaskEither.right(_tAddress));
+              .thenReturn(TaskEither.right(_tGeocoded));
           return buildBloc();
         },
         act: (bloc) => bloc.add(
@@ -144,7 +149,7 @@ void main() {
           when(() => getCurrentLocation(any()))
               .thenReturn(TaskEither.right(_tPosition));
           when(() => reverseGeocode(any()))
-              .thenReturn(TaskEither.right(_tAddress));
+              .thenReturn(TaskEither.right(_tGeocoded));
           return buildBloc();
         },
         act: (bloc) => bloc.add(LocationPickerStarted()),
@@ -197,7 +202,7 @@ void main() {
           when(() => forwardGeocode(any()))
               .thenReturn(TaskEither.right(_tPosition));
           when(() => reverseGeocode(any()))
-              .thenReturn(TaskEither.right(_tAddress));
+              .thenReturn(TaskEither.right(_tGeocoded));
           return buildBloc();
         },
         act: (bloc) =>
@@ -248,7 +253,7 @@ void main() {
           when(() => forwardGeocode(any()))
               .thenReturn(TaskEither.right(_tPosition));
           when(() => reverseGeocode(any()))
-              .thenReturn(TaskEither.right(_tAddress));
+              .thenReturn(TaskEither.right(_tGeocoded));
           return buildBloc(withPlaces: true);
         },
         act: (bloc) =>
@@ -396,7 +401,7 @@ void main() {
           when(() => getPlaceDetails(any()))
               .thenReturn(TaskEither.right(_tPosition));
           when(() => reverseGeocode(any()))
-              .thenReturn(TaskEither.right(_tAddress));
+              .thenReturn(TaskEither.right(_tGeocoded));
           return buildBloc(withPlaces: true);
         },
         act: (bloc) => bloc.add(

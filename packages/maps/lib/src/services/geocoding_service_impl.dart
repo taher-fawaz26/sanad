@@ -4,6 +4,7 @@ import 'package:core/core.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:maps/src/domain/entities/geocoded_address.dart';
 import 'package:maps/src/services/geocoding_service.dart';
 import 'package:maps/src/services/location_failure_codes.dart';
 
@@ -32,7 +33,7 @@ class GeocodingServiceImpl implements GeocodingService {
   static const _minSampleRadiusKm = 0.5;
 
   @override
-  TaskEither<Failure, String> addressFromCoordinates(
+  TaskEither<Failure, GeocodedAddress> addressFromCoordinates(
     LatLng position, {
     String? localeIdentifier,
   }) {
@@ -50,7 +51,11 @@ class GeocodingServiceImpl implements GeocodingService {
             message: 'No address found for the selected location.',
           );
         }
-        return _formatPlacemark(placemarks.first);
+        final placemark = placemarks.first;
+        return GeocodedAddress(
+          formattedAddress: _formatPlacemark(placemark),
+          areaName: _areaNameFromPlacemark(placemark),
+        );
       },
       (error, _) => LocationFailure(
         message: error.toString(),
@@ -153,16 +158,22 @@ class GeocodingServiceImpl implements GeocodingService {
     }
   }
 
+  /// Picks the best human-friendly area name from a placemark, preferring the
+  /// most local, neighborhood-like value and falling back outward.
+  ///
+  /// Priority: neighborhood/sub-locality → locality → sub-administrative area →
+  /// administrative area → place name. Returns null when none are present, in
+  /// which case callers fall back to the full formatted address.
   String? _areaNameFromPlacemark(Placemark placemark) {
-    if (placemark.subLocality != null && placemark.subLocality!.isNotEmpty) {
-      return placemark.subLocality;
-    }
-    if (placemark.locality != null && placemark.locality!.isNotEmpty) {
-      return placemark.locality;
-    }
-    if (placemark.administrativeArea != null &&
-        placemark.administrativeArea!.isNotEmpty) {
-      return placemark.administrativeArea;
+    final candidates = <String?>[
+      placemark.subLocality,
+      placemark.locality,
+      placemark.subAdministrativeArea,
+      placemark.administrativeArea,
+      placemark.name,
+    ];
+    for (final value in candidates) {
+      if (value != null && value.isNotEmpty) return value;
     }
     return null;
   }

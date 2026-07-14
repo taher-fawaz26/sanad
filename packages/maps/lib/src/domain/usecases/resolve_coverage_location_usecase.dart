@@ -25,10 +25,10 @@ class ResolveCoverageLocationUseCase
           localeIdentifier: intent.localeIdentifier,
         ),
       ).flatMap(
-        (address) => _resolveNearbyAreas(intent).map(
+        (geocoded) => _resolveNearbyAreas(intent).map(
           (nearbyAreas) => CoverageLocation(
             center: intent.center,
-            address: address,
+            address: geocoded.formattedAddress,
             nearbyAreas: nearbyAreas,
           ),
         ),

@@ -8,7 +8,7 @@ void main() {
       final area = servingAreaFromPickerResult(
         const MapAreaPickerResult(
           placeId: 'ChIJ_real_place',
-          title: 'Dubai Marina',
+          areaName: 'Dubai Marina',
           address: 'Dubai Marina, Dubai',
           position: LatLng(25.0, 55.0),
         ),
@@ -21,7 +21,7 @@ void main() {
     test('derives id from coordinates (not address) when place id is null', () {
       final area = servingAreaFromPickerResult(
         const MapAreaPickerResult(
-          title: 'Dropped pin',
+          areaName: 'Dropped pin',
           address: 'Dubai Marina, Dubai',
           position: LatLng(25.0, 55.0),
         ),
@@ -38,14 +38,14 @@ void main() {
       () {
         final first = servingAreaFromPickerResult(
           const MapAreaPickerResult(
-            title: 'Dubai Marina',
+            areaName: 'Dubai Marina',
             address: 'Dubai Marina, Dubai',
             position: LatLng(25.0, 55.0),
           ),
         );
         final second = servingAreaFromPickerResult(
           const MapAreaPickerResult(
-            title: 'Dubai Marina',
+            areaName: 'Dubai Marina',
             address: 'Dubai Marina, Dubai',
             position: LatLng(25.05, 55.05),
           ),
