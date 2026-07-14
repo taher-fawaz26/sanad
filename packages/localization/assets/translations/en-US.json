@@ -100,9 +100,14 @@
       "cancel": "Cancel",
       "coverage_title": "add branch coverage",
       "coverage_description": "Set up a location to manage its coverage.",
+      "coverage_step_subtitle": "Set up a location, its coverage",
+      "coverage_set_title": "Coverage area set",
+      "coverage_set_description": "{area} area with {radius} km radius covering {count} areas.",
       "add_location_button": "Add",
       "add_location_coming_soon": "Location picker is coming soon",
+      "upcoming_step_placeholder": "This step is coming soon.",
       "next_button": "Next",
+      "save_button": "Save branch",
       "success": "Branch created successfully",
       "error_title": "Couldn't save the branch",
       "error_caption": "Your changes weren't lost. Try saving again.",
@@ -126,6 +131,18 @@
       "open_settings": "Open settings",
       "service_disabled": "Turn on device location services to pick a branch location.",
       "generic_error": "Couldn't load the location. Please try again."
+    },
+    "coverage_area": {
+      "title": "Coverage area",
+      "subtitle": "Adjust the radius to cover the areas you serve",
+      "radius": "Radius",
+      "radius_value": "{value} km",
+      "covered_areas": "Covered areas",
+      "areas_count": "{count} areas",
+      "add_area": "Add",
+      "add_area_title": "Add covered area",
+      "add_area_hint": "Area name",
+      "confirm": "confirm Coverage"
     }
   },
   "services": {

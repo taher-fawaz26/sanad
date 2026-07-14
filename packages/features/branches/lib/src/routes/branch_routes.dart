@@ -3,11 +3,12 @@ abstract final class BranchRoutes {
 
   static const String list = '/branches';
   static const String add = '/branches/add';
+  static const String coverage = '/branches/coverage';
   static const String details = '/branches/:id';
 
   static String detailsFor(String id) => '/branches/$id';
 
-  static Set<String> get protectedRoutes => {list, add};
+  static Set<String> get protectedRoutes => {list, add, coverage};
 
   static bool isProtectedRoute(String location) {
     if (protectedRoutes.contains(location)) return true;

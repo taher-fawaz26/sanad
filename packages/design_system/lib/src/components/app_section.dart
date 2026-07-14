@@ -156,11 +156,12 @@ class _CompactSection extends StatelessWidget {
     final typography = context.appTypography;
     final navSpec = context.appNavBarTheme.large;
 
-    // Figma `73:2909` — title + badge sit adjacent (not space-between).
+    // Figma coverage rows (`194:5958`, `194:5960`) — title + trailing value
+    // are space-between, Medium 16.
     final titleStyle = typography.regularNormal.copyWith(
       fontSize: 16.rfs,
-      height: 20 / 16,
-      fontWeight: FontWeight.w400,
+      height: 24 / 16,
+      fontWeight: FontWeight.w500,
       letterSpacing: 0,
       color: tone == AppSectionTone.primary
           ? colors.primary
@@ -169,7 +170,7 @@ class _CompactSection extends StatelessWidget {
 
     return Row(
       children: [
-        Flexible(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,

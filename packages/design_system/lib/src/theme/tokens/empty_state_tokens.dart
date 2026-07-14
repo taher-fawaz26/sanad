@@ -33,9 +33,9 @@ abstract final class EmptyStateTokens {
   EmptyStateTokens._();
 
   static const double horizontalPadding = 24;
-  static const double topPadding = 32;
-  static const double bottomPadding = 24;
-  static const double sectionGap = 24;
+  static const double topPadding = 16;
+  static const double bottomPadding = 12;
+  static const double sectionGap = 12;
   static const double textGap = 8;
   static const double contentWidth = 279;
 

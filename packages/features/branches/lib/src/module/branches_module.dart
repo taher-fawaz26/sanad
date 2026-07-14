@@ -2,11 +2,15 @@ import 'package:branches/src/di/branches_di.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
 import 'package:branches/src/presentation/bloc/branch_details/branch_details_bloc.dart';
 import 'package:branches/src/presentation/bloc/branches/branches_bloc.dart';
+import 'package:branches/src/presentation/models/coverage_area_args.dart';
+import 'package:maps/maps.dart';
 import 'package:branches/src/presentation/pages/add_branch_page.dart';
 import 'package:branches/src/presentation/pages/branch_details_page.dart';
 import 'package:branches/src/presentation/pages/branches_page.dart';
+import 'package:branches/src/presentation/pages/coverage_area_page.dart';
 import 'package:branches/src/routes/branch_routes.dart';
 import 'package:core/core.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -35,9 +39,29 @@ class BranchesModule extends FeatureModule {
         GoRoute(
           path: BranchRoutes.add,
           builder: (context, state) => BlocProvider(
-            create: (_) => sl<AddBranchBloc>(),
+            create: (_) => sl<AddBranchBloc>()..add(const AddBranchStarted()),
             child: const AddBranchPage(),
           ),
+        ),
+        GoRoute(
+          path: BranchRoutes.coverage,
+          builder: (context, state) {
+            final args = state.extra is CoverageAreaArgs
+                ? state.extra! as CoverageAreaArgs
+                : null;
+            return BlocProvider(
+              create: (_) => sl<CoverageAreaBloc>()
+                ..add(
+                  CoverageAreaStarted(
+                    initialPosition: args?.position,
+                    initialAddress: args?.address,
+                    initialRadiusKm: args?.radiusKm,
+                    localeIdentifier: context.locale.toString(),
+                  ),
+                ),
+              child: const CoverageAreaPage(),
+            );
+          },
         ),
         GoRoute(
           path: BranchRoutes.details,

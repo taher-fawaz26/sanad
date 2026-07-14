@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 /// Figma `Bars / Nav Bars` (`40:6839`).
 class AppNavBar extends StatelessWidget implements PreferredSizeWidget {
   const AppNavBar({
-    required this.title, super.key,
+    required this.title,
+    super.key,
     this.leading,
     this.leadingLabel,
     this.onLeadingTap,
@@ -128,35 +129,36 @@ class AppNavBar extends StatelessWidget implements PreferredSizeWidget {
     return switch (trailingAction) {
       AppNavBarTrailingAction.none => const SizedBox.shrink(),
       AppNavBarTrailingAction.text => GestureDetector(
-          onTap: onTrailingTap,
-          child: Text(
-            trailingLabel ?? '',
-            style: spec.actionTextStyle,
-          ),
+        onTap: onTrailingTap,
+        child: Text(
+          trailingLabel ?? '',
+          style: spec.actionTextStyle,
         ),
+      ),
       AppNavBarTrailingAction.icon => GestureDetector(
-          onTap: onTrailingTap,
-          child: trailing ??
-              Icon(
-                Icons.settings_outlined,
-                size: spec.iconSize,
-                color: colors.primary,
-              ),
-        ),
-      AppNavBarTrailingAction.button => GestureDetector(
-          onTap: onTrailingButtonTap,
-          child: Container(
-            padding: spec.actionButtonPadding,
-            decoration: BoxDecoration(
+        onTap: onTrailingTap,
+        child:
+            trailing ??
+            Icon(
+              Icons.settings_outlined,
+              size: spec.iconSize,
               color: colors.primary,
-              borderRadius: spec.actionButtonRadius,
             ),
-            child: Text(
-              trailingButtonLabel ?? 'Button',
-              style: spec.actionButtonTextStyle,
-            ),
+      ),
+      AppNavBarTrailingAction.button => GestureDetector(
+        onTap: onTrailingButtonTap,
+        child: Container(
+          padding: spec.actionButtonPadding,
+          decoration: BoxDecoration(
+            color: colors.primary,
+            borderRadius: spec.actionButtonRadius,
+          ),
+          child: Text(
+            trailingButtonLabel ?? 'Button',
+            style: spec.actionButtonTextStyle,
           ),
         ),
+      ),
     };
   }
 }

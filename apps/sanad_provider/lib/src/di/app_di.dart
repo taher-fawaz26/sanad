@@ -111,6 +111,13 @@ Future<void> configureDependencies() async {
       () => const GeocodingServiceImpl(),
     );
 
+  // ── Maps platform ─────────────────────────────────────────────────────────
+  MapsDI.init(
+    config: const MapsConfig(
+      placesApiKey: String.fromEnvironment('MAPS_API_KEY'),
+    ),
+  );
+
   // ── Feature modules ────────────────────────────────────────────────────────
   moduleRegistry = ModuleRegistry([
     AuthModule(),

@@ -1,5 +1,7 @@
 name: maps
-description: Shared Google Maps integration — reusable map widgets over google_maps_flutter.
+description: >-
+  Sanad Maps Platform — reusable map engine, controllers, and widgets
+  for all features that need geographic capabilities.
 version: 0.1.0
 publish_to: none
 resolution: workspace
@@ -8,18 +10,29 @@ environment:
   sdk: ">=3.11.0 <4.0.0"
 
 dependencies:
+  app_assets:
+    path: ../app_assets
   core:
     path: ../core
+  design_system:
+    path: ../design_system
+  dio: ^5.10.0
+  equatable: ^2.0.7
   flutter:
     sdk: flutter
+  flutter_bloc: ^9.1.1
   fpdart: ^1.2.0
   geocoding: ^4.0.0
   geolocator: ^14.0.3
   google_maps_flutter: ^2.10.0
+  network:
+    path: ../network
   permissions:
     path: ../permissions
 
 dev_dependencies:
+  bloc_test: ^10.0.0
   flutter_test:
     sdk: flutter
+  mocktail: ^1.0.4
   very_good_analysis: ^9.0.0

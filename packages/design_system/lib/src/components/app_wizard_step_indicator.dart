@@ -37,12 +37,16 @@ class AppWizardStepIndicator extends StatelessWidget {
               Expanded(
                 child: Container(
                   height: spec.connectorHeight,
-                  color: spec.connectorColor,
+                  // Completed segments stay primary (Figma `347:13772` / `972:9206`).
+                  color: step <= currentStep
+                      ? spec.activeBackground
+                      : spec.connectorColor,
                 ),
               ),
             _StepDot(
               step: step,
-              isActive: step == currentStep,
+              // Past and current steps are filled; upcoming stay inactive.
+              isActive: step <= currentStep,
               spec: spec,
             ),
           ],

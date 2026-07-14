@@ -93,10 +93,11 @@ abstract final class ChipTokens {
     AppTypography typography,
     ChipSurfaceColors surface,
   ) {
-    return typography.bodyLarge.copyWith(
-      fontSize: 16.rfs,
-      height: 1,
-      fontWeight: FontWeight.w400,
+    // Figma pill chips (`194:5964`) — 14 / Medium.
+    return typography.smallNormal.copyWith(
+      fontSize: 14.rfs,
+      height: 16 / 14,
+      fontWeight: FontWeight.w500,
       letterSpacing: 0,
       color: surface.foreground,
     );
@@ -131,19 +132,26 @@ abstract final class ChipTokens {
     }
 
     if (style == AppChipStyle.outline) {
+      if (selected) {
+        // Figma coverage area tags (`194:5964`) — teal outline pill.
+        return ChipSurfaceColors(
+          background: clear,
+          foreground: colors.primary,
+          border: colors.primary,
+        );
+      }
       return ChipSurfaceColors(
         background: clear,
-        foreground: selected
-            ? colors.onSelectedContainer
-            : colors.textPrimary,
+        foreground: colors.textPrimary,
         border: isDark ? colors.border : colors.controlFill,
       );
     }
 
     if (selected) {
+      // Figma primary pill CTA chip (`347:14412`) — solid brand fill.
       return ChipSurfaceColors(
-        background: colors.selectedContainer,
-        foreground: colors.onSelectedContainer,
+        background: colors.primary,
+        foreground: colors.onPrimary,
         border: clear,
       );
     }

@@ -7,7 +7,8 @@ import 'package:flutter/material.dart';
 /// Figma `Controls / Chips: Pill` (`40:7367`).
 class AppChip extends StatelessWidget {
   const AppChip({
-    required this.label, super.key,
+    required this.label,
+    super.key,
     this.selected = false,
     this.style = AppChipStyle.solid,
     this.tone = AppChipTone.normal,
@@ -42,13 +43,13 @@ class AppChip extends StatelessWidget {
     final textStyle = ChipTokens.labelStyle(typography, surface);
     final minHeight = ChipTokens.minHeight(size);
     final radius = ChipTokens.borderRadius(size);
-    final width = ChipTokens.expandedWidthValue(size);
-    final effectiveIconPosition =
-        icon == null ? AppChipIconPosition.none : iconPosition;
+    final expandedWidth = ChipTokens.expandedWidthValue(size);
+    final effectiveIconPosition = icon == null
+        ? AppChipIconPosition.none
+        : iconPosition;
 
     final content = Row(
-      mainAxisSize:
-          size == AppChipSize.expanded ? MainAxisSize.max : MainAxisSize.min,
+      mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         if (effectiveIconPosition == AppChipIconPosition.left) ...[
@@ -71,7 +72,10 @@ class AppChip extends StatelessWidget {
       ],
     );
 
-    return Material(
+    // Compact chips must size to their content. `Ink` with only a height
+    // expands to the parent's max width (e.g. inside [Wrap]), which makes
+    // every chip full-bleed — never set a null width on an expanding box.
+    final chip = Material(
       color: clear,
       child: InkWell(
         onTap: onTap,
@@ -79,7 +83,7 @@ class AppChip extends StatelessWidget {
         splashFactory: NoSplash.splashFactory,
         highlightColor: clear,
         child: Ink(
-          width: width,
+          width: expandedWidth,
           height: minHeight,
           padding: ChipTokens.padding(iconPosition: effectiveIconPosition),
           decoration: BoxDecoration(
@@ -96,5 +100,9 @@ class AppChip extends StatelessWidget {
         ),
       ),
     );
+
+    if (expandedWidth != null) return chip;
+
+    return IntrinsicWidth(child: chip);
   }
 }

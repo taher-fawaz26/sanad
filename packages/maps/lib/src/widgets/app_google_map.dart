@@ -21,6 +21,10 @@ class AppGoogleMap extends StatelessWidget {
     this.zoomControlsEnabled = false,
     this.mapToolbarEnabled = false,
     this.compassEnabled = true,
+    this.scrollGesturesEnabled = true,
+    this.zoomGesturesEnabled = true,
+    this.tiltGesturesEnabled = true,
+    this.rotateGesturesEnabled = true,
     this.mapType = MapType.normal,
     this.padding = EdgeInsets.zero,
     this.gestureRecognizers,
@@ -42,9 +46,20 @@ class AppGoogleMap extends StatelessWidget {
   final bool zoomControlsEnabled;
   final bool mapToolbarEnabled;
   final bool compassEnabled;
+  final bool scrollGesturesEnabled;
+  final bool zoomGesturesEnabled;
+  final bool tiltGesturesEnabled;
+  final bool rotateGesturesEnabled;
   final MapType mapType;
   final EdgeInsets padding;
   final Set<Factory<OneSequenceGestureRecognizer>>? gestureRecognizers;
+
+  /// Claims pan/zoom gestures eagerly so the map stays interactive when it is
+  /// embedded inside a scrolling parent (bottom sheets, scroll views).
+  static const eagerGestureRecognizers =
+      <Factory<OneSequenceGestureRecognizer>>{
+    Factory<OneSequenceGestureRecognizer>(EagerGestureRecognizer.new),
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -64,10 +79,13 @@ class AppGoogleMap extends StatelessWidget {
       zoomControlsEnabled: zoomControlsEnabled,
       mapToolbarEnabled: mapToolbarEnabled,
       compassEnabled: compassEnabled,
+      scrollGesturesEnabled: scrollGesturesEnabled,
+      zoomGesturesEnabled: zoomGesturesEnabled,
+      tiltGesturesEnabled: tiltGesturesEnabled,
+      rotateGesturesEnabled: rotateGesturesEnabled,
       mapType: mapType,
       padding: padding,
-      gestureRecognizers:
-          gestureRecognizers ?? const <Factory<OneSequenceGestureRecognizer>>{},
+      gestureRecognizers: gestureRecognizers ?? eagerGestureRecognizers,
     );
   }
 }

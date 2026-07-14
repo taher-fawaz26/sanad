@@ -1,4 +1,4 @@
-/// Stable [Failure.code] values for location-related errors.
+/// Stable failure code values for location-related errors.
 abstract final class LocationFailureCodes {
   LocationFailureCodes._();
 

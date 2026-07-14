@@ -53,6 +53,12 @@ abstract final class AppSvgs {
   /// Map / location — branch location field leading icon.
   static const String map = '$_base/map.svg';
 
+  /// Red map pin marker — Figma location / coverage map pin.
+  static const String mapPinMarker = '$_base/map_pin_marker.svg';
+
+  /// Teal radius ring overlay — Figma coverage map ellipse.
+  static const String mapRadiusRing = '$_base/map_radius_ring.svg';
+
   /// UAE flag — phone field country prefix.
   static const String flagAe = '$_base/flag_ae.svg';
 

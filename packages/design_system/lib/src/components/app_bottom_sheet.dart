@@ -46,7 +46,8 @@ class AppBottomSheet extends StatelessWidget {
               color: spec.dragHandleColor,
             ),
             SizedBox(height: AppSpacing.lg),
-          ],
+          ] else if (title == null)
+            SizedBox(height: AppSpacing.xxl),
           if (title != null)
             Padding(
               padding: EdgeInsets.symmetric(
@@ -54,15 +55,14 @@ class AppBottomSheet extends StatelessWidget {
               ),
               child: Text(title!, style: spec.titleStyle),
             ),
-          if (title != null && child != null)
-            SizedBox(height: AppSpacing.lg),
+          if (title != null && child != null) SizedBox(height: AppSpacing.lg),
           if (child != null)
             Padding(
               padding: EdgeInsets.fromLTRB(
                 spec.horizontalPadding,
                 0,
                 spec.horizontalPadding,
-                AppSpacing.xxl,
+                AppSpacing.xxl + MediaQuery.viewPaddingOf(context).bottom,
               ),
               child: child,
             ),

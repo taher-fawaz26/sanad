@@ -100,9 +100,14 @@
       "cancel": "إلغاء",
       "coverage_title": "إضافة تغطية الفرع",
       "coverage_description": "أعد موقعاً لإدارة تغطيته.",
+      "coverage_step_subtitle": "إعداد الموقع وتغطيته",
+      "coverage_set_title": "تم تعيين منطقة التغطية",
+      "coverage_set_description": "منطقة {area} بنطاق {radius} كم تغطي {count} مناطق.",
       "add_location_button": "إضافة",
       "add_location_coming_soon": "محدد الموقع قريباً",
+      "upcoming_step_placeholder": "هذه الخطوة قادمة قريباً.",
       "next_button": "التالي",
+      "save_button": "حفظ الفرع",
       "success": "تم إنشاء الفرع بنجاح",
       "error_title": "تعذّر حفظ الفرع",
       "error_caption": "لم تُفقد تغييراتك. حاول الحفظ مرة أخرى.",
@@ -126,6 +131,18 @@
       "open_settings": "فتح الإعدادات",
       "service_disabled": "فعّل خدمات الموقع على الجهاز لتحديد موقع الفرع.",
       "generic_error": "تعذّر تحميل الموقع. يرجى المحاولة مرة أخرى."
+    },
+    "coverage_area": {
+      "title": "منطقة التغطية",
+      "subtitle": "اضبط النطاق لتغطية المناطق التي تخدمها",
+      "radius": "النطاق",
+      "radius_value": "{value} كم",
+      "covered_areas": "المناطق المغطاة",
+      "areas_count": "{count} مناطق",
+      "add_area": "إضافة",
+      "add_area_title": "إضافة منطقة مغطاة",
+      "add_area_hint": "اسم المنطقة",
+      "confirm": "تأكيد التغطية"
     }
   },
   "services": {
