@@ -17,6 +17,3 @@ abstract class PlacesProvider {
     String? sessionToken,
   });
 }
-
-@Deprecated('Use PlacesProvider instead')
-typedef PlacesService = PlacesProvider;

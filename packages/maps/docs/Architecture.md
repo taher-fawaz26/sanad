@@ -28,7 +28,7 @@ The package follows **Clean Architecture** with three layers:
 
 ### Domain Layer
 
-- **Entities**: `MapPosition`, `MapRegion`, `PlacePrediction`, `MapEvent` (typed map events)
+- **Entities**: `PlacePrediction`, `ServingArea`, `MapAreaPickerResult`, `CoverageLocation`, `CoverageMode`, `MapRegion`
 - **Repositories**: Abstract contracts (`PlacesRepository`, `GeocodingRepository`, `LocationRepository`)
 - **Use Cases**: Single-responsibility classes following `UseCase<TResult, Params>` base from core
 - **Failures**: Typed `PlacesFailure` hierarchy extending core `Failure` subtypes
@@ -40,10 +40,11 @@ The package follows **Clean Architecture** with three layers:
 
 ### Presentation Layer
 
-- **BLoCs**: `LocationPickerBloc` (location selection with Places autocomplete), `CoverageAreaBloc` (radius-based area management)
-- **Controllers**: `MapCameraController`, `MapRadiusController`, `MapOverlayController`, `MapCameraFollower`
-- **Widgets**: Reusable widget catalog (LocationPicker, CoverageAreaPicker, PlaceSearchBar, RadiusSelector, NearbyPlacesSheet, map controls)
-- **Models**: Configuration, labels, styles, presets
+- **BLoCs**: `LocationPickerBloc` (single-location selection with Places autocomplete), `CoverageAreaBloc` (radius-based coverage: auto areas + a list of extra areas), `MapAreaPickerBloc` (internal — powers the feature-agnostic single-area picker)
+- **Controllers**: `MapCameraController`, `MapRadiusController`, `ServingAreaController`
+- **Widgets**: Reusable catalog — `AppGoogleMap`, `showLocationPickerSheet`, `showMapAreaPicker`, `PlaceSearchBar`, `ServingAreaChips`, and internal map controls
+- **Shared helpers**: `LatestOperation` (latest-request-wins guard) and `PlaceSearchRunner` (shared autocomplete plumbing) de-duplicate concurrency logic across the pickers
+- **Models**: Configuration, labels, styles
 
 ### Services Layer
 
@@ -80,14 +81,15 @@ Features depend on maps; maps never depends on features.
 ## Extension Points
 
 1. **New PlacesProvider**: Implement `PlacesProvider` for any Places backend
-2. **Custom widgets**: Compose controllers and BLoCs for new map experiences
-3. **New map events**: Extend the `MapEvent` sealed class for additional interactions
-4. **Custom overlays**: Use `MapOverlayController` for markers, polygons, polylines
+2. **Custom widgets**: Compose `MapCameraController` / `MapRadiusController` and the BLoCs for new map experiences
+3. **New feature flows**: Reuse `showMapAreaPicker` / `CoverageAreaBloc`, feeding feature data via bloc events and mapping the generic results back in the feature layer
 
 ## Best Practices
 
 - Always use `MapsConfig` for configuration — never hardcode API keys
-- Use `LocationPickerLabels` / `CoverageAreaLabels` for all user-facing strings
+- Use `LocationPickerLabels` / `MapAreaPickerLabels` for all user-facing strings
 - Prefer `MapCameraController` over raw `GoogleMapController`
-- Use typed `PlacesFailure` classes for error handling, not raw HTTP errors
 - Register via `MapsDI.init()` — never register maps dependencies manually
+- **Never** add feature-specific concepts (branch/warehouse/driver ids, feature
+  repositories) to this package. Feed feature data in through bloc events;
+  return generic results the feature maps into its own domain.

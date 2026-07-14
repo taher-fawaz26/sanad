@@ -121,6 +121,10 @@
       "next_button": "التالي",
       "save_button": "حفظ الفرع",
       "success": "تم إنشاء الفرع بنجاح",
+      "success_dialog_title_highlight": "نجاح! ",
+      "success_dialog_title_body": "تمت إضافة فرعك.",
+      "success_dialog_description": "يمكنك الآن إدارته من لوحة التحكم.",
+      "success_dialog_okay": "حسناً",
       "error_title": "تعذّر حفظ الفرع",
       "error_caption": "لم تُفقد تغييراتك. حاول الحفظ مرة أخرى.",
       "days": {

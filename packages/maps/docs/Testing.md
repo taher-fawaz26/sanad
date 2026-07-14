@@ -9,22 +9,29 @@ Testing strategy and patterns for the Maps Platform.
 test/
   src/
     data/cache/
-      geocoding_cache_test.dart         (7 tests)
+      geocoding_cache_test.dart
     presentation/
       bloc/
         coverage_area/
-          coverage_area_bloc_test.dart  (15 tests)
+          coverage_area_bloc_test.dart      # incl. multiple extra areas,
+                                            # remove/re-add, dedup no-op,
+                                            # removed-auto-area persistence,
+                                            # edit-mode seeding
         location_picker/
-          location_picker_bloc_test.dart (15 tests)
+          location_picker_bloc_test.dart
+        map_area_picker/
+          map_area_picker_bloc_test.dart    # map tap, search, prediction,
+                                            # confirm (map-only & prediction)
       controllers/
-        map_camera_follower_test.dart   (8 tests)
-        map_overlay_controller_test.dart (11 tests)
-        map_radius_controller_test.dart (10 tests)
+        map_radius_controller_test.dart
       utils/
-        geo_math_test.dart             (7 tests)
+        geo_math_test.dart
+        latest_operation_test.dart          # latest-request-wins guard
 ```
 
-**Total: 73 tests**
+The branches feature additionally tests the serving-area mapper
+(`serving_area_mapper_test.dart`), covering the coordinate-key fix that
+prevents the BUG 1 dedup collision.
 
 ## Dependencies
 

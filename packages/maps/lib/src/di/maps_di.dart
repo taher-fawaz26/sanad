@@ -5,7 +5,6 @@ import 'package:maps/src/data/cache/geocoding_cache.dart';
 import 'package:maps/src/data/repositories/geocoding_repository_impl.dart';
 import 'package:maps/src/data/repositories/location_repository_impl.dart';
 import 'package:maps/src/data/repositories/places_repository_impl.dart';
-import 'package:maps/src/domain/repositories/branch_serving_areas_repository.dart';
 import 'package:maps/src/domain/repositories/geocoding_repository.dart';
 import 'package:maps/src/domain/repositories/location_repository.dart';
 import 'package:maps/src/domain/repositories/places_repository.dart';
@@ -49,10 +48,7 @@ abstract final class MapsDI {
         () => ForwardGeocodeUseCase(sl<GeocodingRepository>()),
       )
       ..registerLazySingleton(
-        () => ResolveNearbyAreasUseCase(
-          sl<GeocodingRepository>(),
-          sl<BranchServingAreasRepository>(),
-        ),
+        () => ResolveNearbyAreasUseCase(sl<GeocodingRepository>()),
       )
       ..registerLazySingleton(
         () => ResolveCoverageLocationUseCase(

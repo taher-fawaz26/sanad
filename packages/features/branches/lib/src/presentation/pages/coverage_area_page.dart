@@ -108,7 +108,7 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
         address: address,
         radiusKm: state.radiusKm,
         autoAreaNames: state.autoAreas,
-        extraArea: state.extraArea,
+        extraAreas: state.extraAreas,
       ),
     );
   }
@@ -409,7 +409,7 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
     CoverageAreaState state,
   ) {
     final autoAreas = _autoAreasForDisplay(state);
-    final extraArea = state.extraArea;
+    final extraAreas = state.extraAreas;
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
@@ -443,13 +443,13 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
               );
             },
           ),
-          if (extraArea != null) ...[
+          if (extraAreas.isNotEmpty) ...[
             SizedBox(height: AppSpacing.sm),
             ServingAreaChips(
-              areas: [extraArea],
-              onRemoved: (_) {
+              areas: extraAreas,
+              onRemoved: (area) {
                 context.read<CoverageAreaBloc>().add(
-                  const CoverageAreaExtraAreaRemoved(),
+                  CoverageAreaExtraAreaRemoved(area),
                 );
               },
             ),

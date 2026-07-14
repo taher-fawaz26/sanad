@@ -8,7 +8,6 @@ class CoverageAreaArgs extends Equatable {
     this.address,
     this.radiusKm,
     this.servingAreas = const [],
-    this.branchId,
     this.mode = CoverageMode.create,
   });
 
@@ -16,7 +15,6 @@ class CoverageAreaArgs extends Equatable {
   final String? address;
   final double? radiusKm;
   final List<ServingArea> servingAreas;
-  final String? branchId;
   final CoverageMode mode;
 
   @override
@@ -25,7 +23,6 @@ class CoverageAreaArgs extends Equatable {
         address,
         radiusKm,
         servingAreas,
-        branchId,
         mode,
       ];
 }

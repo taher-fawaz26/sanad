@@ -12,7 +12,8 @@ enum AppDialogImageLayout {
   /// Centered 120×120 image (`40:10040`, `40:10092`).
   imageLarge,
 
-  /// Centered 64×64 icon/image (`40:10060`, `40:10085`).
+  /// Centered 64×64 image (`40:10060`, `40:10085`), or featured icon ring
+  /// (`194:5419`) when [AppPopover.featureIconColor] is set.
   iconSmall,
 
   /// Full-width hero header (`40:10120`, `40:10112`).
@@ -35,6 +36,7 @@ class DialogStyleSpec {
     required this.descriptionStyle,
     required this.imageLargeSize,
     required this.imageSmallSize,
+    required this.featureIconOuterSize,
     required this.imageBorderRadius,
     required this.heroImageHeight,
     required this.imagePlaceholderColor,
@@ -53,6 +55,7 @@ class DialogStyleSpec {
   final TextStyle descriptionStyle;
   final double imageLargeSize;
   final double imageSmallSize;
+  final double featureIconOuterSize;
   final BorderRadius imageBorderRadius;
   final double heroImageHeight;
   final Color imagePlaceholderColor;
@@ -120,6 +123,8 @@ abstract final class DialogTokens {
   static const double bodyLineHeight = 24;
   static const double imageLargeSize = 120;
   static const double imageSmallSize = 64;
+  /// Figma success popover ring (`194:5419`) — 100 dp outer circle.
+  static const double featureIconOuterSize = 100;
   static const double imageBorderRadius = 16;
   static const double heroImageHeight = 186;
   static const double horizontalInset = 24;
@@ -175,6 +180,7 @@ abstract final class DialogTokens {
       ),
       imageLargeSize: responsiveDimension(imageLargeSize),
       imageSmallSize: responsiveDimension(imageSmallSize),
+      featureIconOuterSize: responsiveDimension(featureIconOuterSize),
       imageBorderRadius: BorderRadius.circular(imageRadius),
       heroImageHeight: responsiveDimension(heroImageHeight),
       imagePlaceholderColor: isDark ? colors.gray800 : colors.gray200,

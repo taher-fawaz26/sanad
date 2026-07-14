@@ -10,6 +10,8 @@ import 'package:maps/src/domain/usecases/open_location_settings_usecase.dart';
 import 'package:maps/src/domain/usecases/reverse_geocode_usecase.dart';
 import 'package:maps/src/domain/usecases/search_places_usecase.dart';
 import 'package:maps/src/presentation/models/place_search_status.dart';
+import 'package:maps/src/presentation/utils/latest_operation.dart';
+import 'package:maps/src/presentation/utils/place_search_runner.dart';
 import 'package:maps/src/services/location_failure_codes.dart';
 
 part 'location_picker_event.dart';
@@ -28,8 +30,9 @@ class LocationPickerBloc
         _reverseGeocodeUseCase = reverseGeocodeUseCase,
         _forwardGeocodeUseCase = forwardGeocodeUseCase,
         _openLocationSettingsUseCase = openLocationSettingsUseCase,
-        _searchPlacesUseCase = searchPlacesUseCase,
         _getPlaceDetailsUseCase = getPlaceDetailsUseCase,
+        _searchRunner =
+            PlaceSearchRunner(searchPlacesUseCase: searchPlacesUseCase),
         super(const LocationPickerState()) {
     on<LocationPickerStarted>(_onStarted);
     on<LocationPickerCameraIdle>(_onCameraIdle);
@@ -44,20 +47,22 @@ class LocationPickerBloc
   final ReverseGeocodeUseCase _reverseGeocodeUseCase;
   final ForwardGeocodeUseCase _forwardGeocodeUseCase;
   final OpenLocationSettingsUseCase _openLocationSettingsUseCase;
-  final SearchPlacesUseCase? _searchPlacesUseCase;
   final GetPlaceDetailsUseCase? _getPlaceDetailsUseCase;
+  final PlaceSearchRunner _searchRunner;
 
   String? _localeIdentifier;
 
-  int _geocodeOpId = 0;
-  int _placesOpId = 0;
+  /// Guards location-producing operations (current location, forward geocode,
+  /// place details) and the reverse-geocode that follows them, so only the
+  /// latest such sequence updates the state.
+  final LatestOperation _geocodeOp = LatestOperation();
 
   Future<void> _onStarted(
     LocationPickerStarted event,
     Emitter<LocationPickerState> emit,
   ) async {
     _localeIdentifier = event.localeIdentifier;
-    final opId = ++_geocodeOpId;
+    final token = _geocodeOp.begin();
 
     if (event.initialPosition != null) {
       final hasAddress =
@@ -74,7 +79,7 @@ class LocationPickerBloc
         ),
       );
       if (!hasAddress) {
-        await _reverseGeocode(event.initialPosition!, emit, opId);
+        await _reverseGeocode(event.initialPosition!, emit, token);
       }
       return;
     }
@@ -87,7 +92,7 @@ class LocationPickerBloc
     );
 
     final result = await _getCurrentLocationUseCase(const NoParams()).run();
-    if (_geocodeOpId != opId) return;
+    if (!_geocodeOp.isCurrent(token)) return;
 
     await result.fold(
       (failure) async {
@@ -107,7 +112,7 @@ class LocationPickerBloc
             clearFailure: true,
           ),
         );
-        await _reverseGeocode(position, emit, opId);
+        await _reverseGeocode(position, emit, token);
       },
     );
   }
@@ -119,7 +124,7 @@ class LocationPickerBloc
     if (state.status == LocationPickerStatus.loadingLocation) return;
     if (state.position == event.position) return;
 
-    final opId = ++_geocodeOpId;
+    final token = _geocodeOp.begin();
     emit(
       state.copyWith(
         status: LocationPickerStatus.geocoding,
@@ -130,7 +135,7 @@ class LocationPickerBloc
       ),
     );
 
-    await _reverseGeocode(event.position, emit, opId);
+    await _reverseGeocode(event.position, emit, token);
   }
 
   Future<void> _onSearchSubmitted(
@@ -143,7 +148,7 @@ class LocationPickerBloc
     // Only forward-geocode when no predictions are available AND
     // the Places provider is disabled. When Places is enabled, the user
     // should explicitly tap a prediction.
-    if (_searchPlacesUseCase != null && state.hasPredictions) return;
+    if (_searchRunner.isEnabled && state.hasPredictions) return;
 
     await _submitViaGeocode(query, emit);
   }
@@ -152,8 +157,8 @@ class LocationPickerBloc
     String query,
     Emitter<LocationPickerState> emit,
   ) async {
-    final opId = ++_geocodeOpId;
-    ++_placesOpId;
+    final token = _geocodeOp.begin();
+    _searchRunner.cancelPending();
     emit(
       state.copyWith(
         status: LocationPickerStatus.geocoding,
@@ -168,7 +173,7 @@ class LocationPickerBloc
         localeIdentifier: _localeIdentifier,
       ),
     ).run();
-    if (_geocodeOpId != opId) return;
+    if (!_geocodeOp.isCurrent(token)) return;
 
     await result.fold(
       (failure) async {
@@ -188,7 +193,7 @@ class LocationPickerBloc
             clearFailure: true,
           ),
         );
-        await _reverseGeocode(position, emit, opId);
+        await _reverseGeocode(position, emit, token);
       },
     );
   }
@@ -204,8 +209,7 @@ class LocationPickerBloc
     LocationPickerQueryChanged event,
     Emitter<LocationPickerState> emit,
   ) async {
-    final useCase = _searchPlacesUseCase;
-    if (useCase == null) return;
+    if (!_searchRunner.isEnabled) return;
 
     final query = event.query.trim();
     if (query.length < 2) {
@@ -218,7 +222,6 @@ class LocationPickerBloc
       return;
     }
 
-    final opId = ++_placesOpId;
     emit(
       state.copyWith(
         searchStatus: PlaceSearchStatus.searching,
@@ -227,14 +230,12 @@ class LocationPickerBloc
       ),
     );
 
-    final result = await useCase(
-      SearchPlacesParams(
-        query: query,
-        language: _localeIdentifier,
-        biasLocation: state.position,
-      ),
-    ).run();
-    if (_placesOpId != opId) return;
+    final result = await _searchRunner.search(
+      query: query,
+      language: _localeIdentifier,
+      biasLocation: state.position,
+    );
+    if (result == null) return;
 
     result.fold(
       (failure) {
@@ -270,8 +271,8 @@ class LocationPickerBloc
       return;
     }
 
-    final opId = ++_geocodeOpId;
-    ++_placesOpId;
+    final token = _geocodeOp.begin();
+    _searchRunner.cancelPending();
     emit(
       state.copyWith(
         status: LocationPickerStatus.geocoding,
@@ -283,7 +284,7 @@ class LocationPickerBloc
     final result = await useCase(
       GetPlaceDetailsParams(placeId: event.prediction.placeId),
     ).run();
-    if (_geocodeOpId != opId) return;
+    if (!_geocodeOp.isCurrent(token)) return;
 
     await result.fold(
       (failure) async {
@@ -303,7 +304,7 @@ class LocationPickerBloc
             clearFailure: true,
           ),
         );
-        await _reverseGeocode(position, emit, opId);
+        await _reverseGeocode(position, emit, token);
       },
     );
   }
@@ -318,7 +319,7 @@ class LocationPickerBloc
   Future<void> _reverseGeocode(
     LatLng position,
     Emitter<LocationPickerState> emit,
-    int opId,
+    int token,
   ) async {
     final result = await _reverseGeocodeUseCase(
       ReverseGeocodeParams(
@@ -326,7 +327,7 @@ class LocationPickerBloc
         localeIdentifier: _localeIdentifier,
       ),
     ).run();
-    if (_geocodeOpId != opId) return;
+    if (!_geocodeOp.isCurrent(token)) return;
 
     result.fold(
       (failure) => emit(

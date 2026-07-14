@@ -258,6 +258,39 @@ class _AddBranchPageState extends State<AddBranchPage> {
     );
   }
 
+  void _showBranchCreatedSuccessPopover() {
+    final colors = context.appColors;
+    final spec = context.appDialogTheme.spec;
+
+    showAppPopover<void>(
+      context: context,
+      title: '',
+      titleWidget: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: 'branches.add_branch.success_dialog_title_highlight'.tr(),
+              style: spec.titleStyle.copyWith(color: colors.primary),
+            ),
+            TextSpan(
+              text: 'branches.add_branch.success_dialog_title_body'.tr(),
+              style: spec.titleStyle,
+            ),
+          ],
+        ),
+        textAlign: TextAlign.center,
+      ),
+      description: 'branches.add_branch.success_dialog_description'.tr(),
+      imageLayout: AppDialogImageLayout.iconSmall,
+      featureIconColor: AppFeatureIconColor.success,
+      actions: AppPopoverActions.single,
+      primaryLabel: 'branches.add_branch.success_dialog_okay'.tr(),
+      barrierDismissible: false,
+    ).then((_) {
+      if (mounted) context.pop();
+    });
+  }
+
   void _onScheduleModeChanged(BranchScheduleMode mode) {
     setState(() {
       _scheduleMode = mode;
@@ -276,12 +309,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
       listener: (context, state) {
         _seedFromSetup(state);
         if (state.isSuccess) {
-          showAppSnackbar(
-            context: context,
-            title: 'branches.add_branch.success'.tr(),
-            color: AppSnackbarColor.primary,
-          );
-          context.pop();
+          _showBranchCreatedSuccessPopover();
         } else if (state.hasError && state.failure != null) {
           showAddBranchErrorSnackbar(
             context: context,

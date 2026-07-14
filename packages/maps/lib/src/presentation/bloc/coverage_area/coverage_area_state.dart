@@ -20,7 +20,7 @@ class CoverageAreaState extends Equatable {
     this.radiusKm = defaultRadiusKm,
     this.mode = CoverageMode.create,
     this.autoAreas = const [],
-    this.extraArea,
+    this.extraAreas = const [],
     this.failure,
     this.cameraSource = CoverageAreaCameraSource.none,
   });
@@ -33,7 +33,7 @@ class CoverageAreaState extends Equatable {
   final double radiusKm;
   final CoverageMode mode;
   final List<String> autoAreas;
-  final ServingArea? extraArea;
+  final List<ServingArea> extraAreas;
   final Failure? failure;
   final CoverageAreaCameraSource cameraSource;
 
@@ -45,7 +45,7 @@ class CoverageAreaState extends Equatable {
 
   bool get isLoading => status == CoverageAreaStatus.loading;
 
-  int get totalAreaCount => autoAreas.length + (extraArea != null ? 1 : 0);
+  int get totalAreaCount => autoAreas.length + extraAreas.length;
 
   List<ServingArea> get allServingAreas => [
         ...autoAreas.map(
@@ -56,7 +56,7 @@ class CoverageAreaState extends Equatable {
             latLng: center ?? const LatLng(0, 0),
           ),
         ),
-        if (extraArea != null) extraArea!,
+        ...extraAreas,
       ];
 
   CoverageAreaState copyWith({
@@ -66,12 +66,11 @@ class CoverageAreaState extends Equatable {
     double? radiusKm,
     CoverageMode? mode,
     List<String>? autoAreas,
-    ServingArea? extraArea,
+    List<ServingArea>? extraAreas,
     Failure? failure,
     CoverageAreaCameraSource? cameraSource,
     bool clearFailure = false,
     bool clearAddress = false,
-    bool clearExtraArea = false,
   }) {
     return CoverageAreaState(
       status: status ?? this.status,
@@ -80,7 +79,7 @@ class CoverageAreaState extends Equatable {
       radiusKm: radiusKm ?? this.radiusKm,
       mode: mode ?? this.mode,
       autoAreas: autoAreas ?? this.autoAreas,
-      extraArea: clearExtraArea ? null : (extraArea ?? this.extraArea),
+      extraAreas: extraAreas ?? this.extraAreas,
       failure: clearFailure ? null : (failure ?? this.failure),
       cameraSource: cameraSource ?? this.cameraSource,
     );
@@ -94,7 +93,7 @@ class CoverageAreaState extends Equatable {
         radiusKm,
         mode,
         autoAreas,
-        extraArea,
+        extraAreas,
         failure,
         cameraSource,
       ];

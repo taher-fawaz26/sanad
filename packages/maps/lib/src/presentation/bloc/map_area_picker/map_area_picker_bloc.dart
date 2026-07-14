@@ -8,6 +8,8 @@ import 'package:maps/src/domain/usecases/get_place_details_usecase.dart';
 import 'package:maps/src/domain/usecases/reverse_geocode_usecase.dart';
 import 'package:maps/src/domain/usecases/search_places_usecase.dart';
 import 'package:maps/src/presentation/models/place_search_status.dart';
+import 'package:maps/src/presentation/utils/latest_operation.dart';
+import 'package:maps/src/presentation/utils/place_search_runner.dart';
 
 part 'map_area_picker_event.dart';
 part 'map_area_picker_state.dart';
@@ -20,8 +22,9 @@ class MapAreaPickerBloc
     SearchPlacesUseCase? searchPlacesUseCase,
     GetPlaceDetailsUseCase? getPlaceDetailsUseCase,
   })  : _reverseGeocodeUseCase = reverseGeocodeUseCase,
-        _searchPlacesUseCase = searchPlacesUseCase,
         _getPlaceDetailsUseCase = getPlaceDetailsUseCase,
+        _searchRunner =
+            PlaceSearchRunner(searchPlacesUseCase: searchPlacesUseCase),
         super(const MapAreaPickerState()) {
     on<MapAreaPickerStarted>(_onStarted);
     on<MapAreaPickerLocationChanged>(_onLocationChanged);
@@ -32,14 +35,13 @@ class MapAreaPickerBloc
   }
 
   final ReverseGeocodeUseCase _reverseGeocodeUseCase;
-  final SearchPlacesUseCase? _searchPlacesUseCase;
   final GetPlaceDetailsUseCase? _getPlaceDetailsUseCase;
+  final PlaceSearchRunner _searchRunner;
 
   String? _localeIdentifier;
 
-  int _geocodeOpId = 0;
-  int _placesOpId = 0;
-  int _detailsOpId = 0;
+  final LatestOperation _geocodeOp = LatestOperation();
+  final LatestOperation _detailsOp = LatestOperation();
 
   Future<void> _onStarted(
     MapAreaPickerStarted event,
@@ -62,8 +64,8 @@ class MapAreaPickerBloc
         ),
       );
       if (!hasAddress) {
-        final opId = ++_geocodeOpId;
-        await _reverseGeocode(event.initialPosition!, emit, opId);
+        final token = _geocodeOp.begin();
+        await _reverseGeocode(event.initialPosition!, emit, token);
       }
       return;
     }
@@ -82,7 +84,7 @@ class MapAreaPickerBloc
   ) async {
     if (state.position == event.position) return;
 
-    final opId = ++_geocodeOpId;
+    final token = _geocodeOp.begin();
     final clearPlace = event.cameraSource == MapAreaPickerCameraSource.user;
 
     emit(
@@ -96,15 +98,14 @@ class MapAreaPickerBloc
       ),
     );
 
-    await _reverseGeocode(event.position, emit, opId);
+    await _reverseGeocode(event.position, emit, token);
   }
 
   Future<void> _onQueryChanged(
     MapAreaPickerQueryChanged event,
     Emitter<MapAreaPickerState> emit,
   ) async {
-    final useCase = _searchPlacesUseCase;
-    if (useCase == null) return;
+    if (!_searchRunner.isEnabled) return;
 
     final query = event.query.trim();
     if (query.length < 2) {
@@ -118,7 +119,6 @@ class MapAreaPickerBloc
       return;
     }
 
-    final opId = ++_placesOpId;
     emit(
       state.copyWith(
         searchStatus: PlaceSearchStatus.searching,
@@ -127,14 +127,12 @@ class MapAreaPickerBloc
       ),
     );
 
-    final result = await useCase(
-      SearchPlacesParams(
-        query: query,
-        language: _localeIdentifier,
-        biasLocation: state.position,
-      ),
-    ).run();
-    if (_placesOpId != opId) return;
+    final result = await _searchRunner.search(
+      query: query,
+      language: _localeIdentifier,
+      biasLocation: state.position,
+    );
+    if (result == null) return;
 
     result.fold(
       (failure) {
@@ -168,8 +166,8 @@ class MapAreaPickerBloc
     if (useCase == null) return;
 
     final prediction = event.prediction;
-    final opId = ++_detailsOpId;
-    ++_placesOpId;
+    final token = _detailsOp.begin();
+    _searchRunner.cancelPending();
 
     emit(
       state.copyWith(
@@ -184,7 +182,7 @@ class MapAreaPickerBloc
     final result = await useCase(
       GetPlaceDetailsParams(placeId: prediction.placeId),
     ).run();
-    if (_detailsOpId != opId) return;
+    if (!_detailsOp.isCurrent(token)) return;
 
     await result.fold(
       (failure) async {
@@ -237,7 +235,7 @@ class MapAreaPickerBloc
   Future<void> _reverseGeocode(
     LatLng position,
     Emitter<MapAreaPickerState> emit,
-    int opId,
+    int token,
   ) async {
     final result = await _reverseGeocodeUseCase(
       ReverseGeocodeParams(
@@ -245,7 +243,7 @@ class MapAreaPickerBloc
         localeIdentifier: _localeIdentifier,
       ),
     ).run();
-    if (_geocodeOpId != opId) return;
+    if (!_geocodeOp.isCurrent(token)) return;
 
     result.fold(
       (failure) => emit(

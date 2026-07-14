@@ -15,10 +15,6 @@ MapControlBar(
       cameraController: controller,
       getCurrentLocationUseCase: useCase,
     ),
-    MapTypeButton(
-      currentType: mapType,
-      onChanged: (type) => setState(() => mapType = type),
-    ),
   ],
 )
 ```
@@ -36,12 +32,10 @@ GPS "my location" button with loading state.
 - Shows `CircularProgressIndicator` while loading
 - Prevents duplicate taps during loading
 
-## MapTypeButton
-Toggle between `MapType.normal` and `MapType.satellite`.
-- Shows contextual icons (satellite_alt / map_outlined)
-- Calls `onChanged` with the next map type
-
 ## Best Practices
 - Wrap controls in `MapControlBar` for consistent positioning
 - Place `MapControlBar` inside a `Stack` alongside `AppGoogleMap`
 - Use `Alignment.topRight` (default) for standard control placement
+
+> Note: these control widgets are internal composition parts of the package's
+> pickers and are not part of the public barrel (`package:maps/maps.dart`).

@@ -28,23 +28,9 @@ Manages a center point and radius, produces `Circle` overlays and `LatLngBounds`
 - `buildCircles({strokeColor, style})` — Generate `Set<Circle>` for the map
 - `bounds` → `LatLngBounds?` via `GeoMath.boundsForRadius`
 
-## MapOverlayController
-CRUD operations for markers, polygons, and polylines with single-notification `clearAll()`.
-
-**Key methods:**
-- `addMarker` / `removeMarker` / `setMarkers` / `clearMarkers`
-- `buildPolygon` / `removePolygon` / `setPolygons` / `clearPolygons`
-- `buildPolyline` / `removePolyline` / `setPolylines` / `clearPolylines`
-- `clearAll()` — Single notification for all three
-- `markerById(MarkerId)` — Lookup
-
-## MapCameraFollower
-Subscribes to a `Stream<LatLng>` and auto-animates the camera.
-
-**Key methods:**
-- `follow(Stream<LatLng>)` — Start following (replaces previous stream)
-- `stop()` — Cancel subscription
-- `isFollowing` → `ValueListenable<bool>`
+## ServingAreaController
+Generic ordered set with value-based de-duplication. Backs the coverage bloc's
+auto-area and extra-area lists (`add`/`remove`/`replace`/`contains`).
 
 ## Best Practices
 - Always call `dispose()` on controllers in your widget's `dispose()`

@@ -57,10 +57,14 @@ class BranchesModule extends FeatureModule {
                     ..add(
                       CoverageAreaStarted(
                         mode: args?.mode ?? CoverageMode.create,
-                        branchId: args?.branchId,
                         initialCenter: args?.position,
                         initialAddress: args?.address,
                         initialRadiusKm: args?.radiusKm,
+                        // Seed previously-saved areas (edit mode). The maps
+                        // package never loads them itself.
+                        initialAutoAreas: (args?.servingAreas ?? const [])
+                            .map((area) => area.name)
+                            .toList(growable: false),
                         localeIdentifier: locale,
                       ),
                     ),

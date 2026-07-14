@@ -1,7 +1,13 @@
 import 'package:equatable/equatable.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-sealed class CoverageLocationIntent extends Equatable {
+/// Parameters for resolving a coverage location: the reverse-geocoded address
+/// of [center] plus the list of nearby area names within [radiusKm].
+///
+/// This type is intentionally feature-agnostic — it carries only geographic
+/// inputs. How the resolved areas are used (create, edit, recalculate) is a
+/// concern of the consuming feature, not of the maps platform.
+class CoverageLocationIntent extends Equatable {
   const CoverageLocationIntent({
     required this.center,
     required this.radiusKm,
@@ -14,40 +20,4 @@ sealed class CoverageLocationIntent extends Equatable {
 
   @override
   List<Object?> get props => [center, radiusKm, localeIdentifier];
-}
-
-final class CreateCoverageIntent extends CoverageLocationIntent {
-  const CreateCoverageIntent({
-    required super.center,
-    required super.radiusKm,
-    super.localeIdentifier,
-  });
-}
-
-final class EditCoverageIntent extends CoverageLocationIntent {
-  const EditCoverageIntent({
-    required this.branchId,
-    required super.center,
-    required super.radiusKm,
-    super.localeIdentifier,
-  });
-
-  final String branchId;
-
-  @override
-  List<Object?> get props => [...super.props, branchId];
-}
-
-final class RecalculateCoverageIntent extends CoverageLocationIntent {
-  const RecalculateCoverageIntent({
-    required this.branchId,
-    required super.center,
-    required super.radiusKm,
-    super.localeIdentifier,
-  });
-
-  final String branchId;
-
-  @override
-  List<Object?> get props => [...super.props, branchId];
 }

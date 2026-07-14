@@ -8,6 +8,7 @@ import 'package:maps/src/domain/usecases/coverage_location_intent.dart';
 import 'package:maps/src/domain/usecases/get_current_location_usecase.dart';
 import 'package:maps/src/domain/usecases/resolve_coverage_location_usecase.dart';
 import 'package:maps/src/presentation/controllers/serving_area_controller.dart';
+import 'package:maps/src/presentation/utils/latest_operation.dart';
 
 part 'coverage_area_event.dart';
 part 'coverage_area_state.dart';
@@ -19,6 +20,7 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
   })  : _resolveCoverageLocationUseCase = resolveCoverageLocationUseCase,
         _getCurrentLocationUseCase = getCurrentLocationUseCase,
         _autoAreasController = ServingAreaController<String>(),
+        _extraAreasController = ServingAreaController<ServingArea>(),
         super(const CoverageAreaState()) {
     on<CoverageAreaStarted>(_onStarted);
     on<CoverageAreaMapMoved>(_onMapMoved);
@@ -32,10 +34,14 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
   final ResolveCoverageLocationUseCase _resolveCoverageLocationUseCase;
   final GetCurrentLocationUseCase _getCurrentLocationUseCase;
   final ServingAreaController<String> _autoAreasController;
+  final ServingAreaController<ServingArea> _extraAreasController;
+
+  /// Auto-area names the user has explicitly removed. Persisted for the life
+  /// of the bloc so a subsequent recompute never resurrects them.
+  final Set<String> _removedAutoAreaNames = {};
 
   String? _localeIdentifier;
-  String? _branchId;
-  int _locationOpId = 0;
+  final LatestOperation _locationOp = LatestOperation();
 
   ServingAreaController<String> get autoAreasController => _autoAreasController;
 
@@ -44,14 +50,53 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
     Emitter<CoverageAreaState> emit,
   ) async {
     _localeIdentifier = event.localeIdentifier;
-    _branchId = event.branchId;
+
+    if (event.initialExtraAreas.isNotEmpty) {
+      _extraAreasController.replace(event.initialExtraAreas);
+    }
+
+    // Edit mode: show the caller-provided saved areas immediately, without a
+    // network resolve. The maps platform does not know how to load them — the
+    // feature seeds them via [initialAutoAreas]. The first user interaction
+    // elevates the mode to recalculate and refreshes areas from the geocoder.
+    if (event.mode == CoverageMode.edit &&
+        event.initialCenter != null &&
+        event.initialAutoAreas.isNotEmpty) {
+      _autoAreasController.replace(event.initialAutoAreas);
+      final hasAddress =
+          event.initialAddress != null && event.initialAddress!.isNotEmpty;
+      emit(
+        state.copyWith(
+          status: hasAddress
+              ? CoverageAreaStatus.ready
+              : CoverageAreaStatus.loading,
+          mode: event.mode,
+          center: event.initialCenter,
+          address: event.initialAddress,
+          radiusKm: event.initialRadiusKm ?? state.radiusKm,
+          autoAreas: _autoAreasController.items,
+          extraAreas: _extraAreasController.items,
+          cameraSource: CoverageAreaCameraSource.programmatic,
+          clearFailure: true,
+        ),
+      );
+      if (hasAddress) return;
+      await _resolveLocation(
+        center: event.initialCenter!,
+        emit: emit,
+        radiusKm: event.initialRadiusKm,
+        cameraSource: CoverageAreaCameraSource.programmatic,
+        elevateMode: true,
+      );
+      return;
+    }
 
     emit(
       state.copyWith(
         status: CoverageAreaStatus.loading,
         mode: event.mode,
         radiusKm: event.initialRadiusKm ?? state.radiusKm,
-        extraArea: event.initialExtraArea,
+        extraAreas: _extraAreasController.items,
         clearFailure: true,
       ),
     );
@@ -113,6 +158,7 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
     CoverageAreaAutoAreaRemoved event,
     Emitter<CoverageAreaState> emit,
   ) {
+    _removedAutoAreaNames.add(event.name);
     _autoAreasController.remove(event.name);
     emit(state.copyWith(autoAreas: _autoAreasController.items));
   }
@@ -121,18 +167,20 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
     CoverageAreaExtraAreaSet event,
     Emitter<CoverageAreaState> emit,
   ) {
-    emit(state.copyWith(extraArea: event.area));
+    _extraAreasController.add(event.area);
+    emit(state.copyWith(extraAreas: _extraAreasController.items));
   }
 
   void _onExtraAreaRemoved(
     CoverageAreaExtraAreaRemoved event,
     Emitter<CoverageAreaState> emit,
   ) {
-    emit(state.copyWith(clearExtraArea: true));
+    _extraAreasController.remove(event.area);
+    emit(state.copyWith(extraAreas: _extraAreasController.items));
   }
 
   Future<void> _requestCurrentLocation(Emitter<CoverageAreaState> emit) async {
-    final opId = ++_locationOpId;
+    final token = _locationOp.begin();
     emit(
       state.copyWith(
         status: CoverageAreaStatus.loading,
@@ -141,7 +189,7 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
     );
 
     final result = await _getCurrentLocationUseCase(const NoParams()).run();
-    if (_locationOpId != opId) return;
+    if (!_locationOp.isCurrent(token)) return;
 
     await result.fold(
       (failure) async {
@@ -158,7 +206,7 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
           emit: emit,
           cameraSource: CoverageAreaCameraSource.programmatic,
           elevateMode: true,
-          opId: opId,
+          token: token,
         );
       },
     );
@@ -170,9 +218,9 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
     required bool elevateMode,
     double? radiusKm,
     CoverageAreaCameraSource cameraSource = CoverageAreaCameraSource.none,
-    int? opId,
+    int? token,
   }) async {
-    final resolvedOpId = opId ?? ++_locationOpId;
+    final resolvedToken = token ?? _locationOp.begin();
     final resolvedRadius = radiusKm ?? state.radiusKm;
     final effectiveMode = _effectiveMode(elevateMode: elevateMode);
 
@@ -186,14 +234,14 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
       ),
     );
 
-    final intent = _buildIntent(
+    final intent = CoverageLocationIntent(
       center: center,
       radiusKm: resolvedRadius,
-      mode: effectiveMode,
+      localeIdentifier: _localeIdentifier,
     );
 
     final result = await _resolveCoverageLocationUseCase(intent).run();
-    if (_locationOpId != resolvedOpId) return;
+    if (!_locationOp.isCurrent(resolvedToken)) return;
 
     result.fold(
       (failure) {
@@ -205,7 +253,10 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
         );
       },
       (location) {
-        _autoAreasController.replace(location.nearbyAreas);
+        final areas = location.nearbyAreas
+            .where((name) => !_removedAutoAreaNames.contains(name))
+            .toList(growable: false);
+        _autoAreasController.replace(areas);
         emit(
           state.copyWith(
             status: CoverageAreaStatus.ready,
@@ -228,35 +279,10 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
     return state.mode;
   }
 
-  CoverageLocationIntent _buildIntent({
-    required LatLng center,
-    required double radiusKm,
-    required CoverageMode mode,
-  }) {
-    return switch (mode) {
-      CoverageMode.create => CreateCoverageIntent(
-          center: center,
-          radiusKm: radiusKm,
-          localeIdentifier: _localeIdentifier,
-        ),
-      CoverageMode.edit => EditCoverageIntent(
-          branchId: _branchId!,
-          center: center,
-          radiusKm: radiusKm,
-          localeIdentifier: _localeIdentifier,
-        ),
-      CoverageMode.recalculate => RecalculateCoverageIntent(
-          branchId: _branchId!,
-          center: center,
-          radiusKm: radiusKm,
-          localeIdentifier: _localeIdentifier,
-        ),
-    };
-  }
-
   @override
   Future<void> close() {
     _autoAreasController.dispose();
+    _extraAreasController.dispose();
     return super.close();
   }
 }

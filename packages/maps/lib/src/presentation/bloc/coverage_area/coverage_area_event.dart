@@ -10,30 +10,34 @@ sealed class CoverageAreaEvent extends Equatable {
 final class CoverageAreaStarted extends CoverageAreaEvent {
   const CoverageAreaStarted({
     required this.mode,
-    this.branchId,
     this.initialCenter,
     this.initialAddress,
     this.initialRadiusKm,
-    this.initialExtraArea,
+    this.initialAutoAreas = const [],
+    this.initialExtraAreas = const [],
     this.localeIdentifier,
   });
 
   final CoverageMode mode;
-  final String? branchId;
   final LatLng? initialCenter;
   final String? initialAddress;
   final double? initialRadiusKm;
-  final ServingArea? initialExtraArea;
+
+  /// Pre-existing area names to seed in [CoverageMode.edit]. The consuming
+  /// feature loads these (e.g. a branch's saved serving areas) and passes them
+  /// in; the maps platform never fetches them itself.
+  final List<String> initialAutoAreas;
+  final List<ServingArea> initialExtraAreas;
   final String? localeIdentifier;
 
   @override
   List<Object?> get props => [
         mode,
-        branchId,
         initialCenter,
         initialAddress,
         initialRadiusKm,
-        initialExtraArea,
+        initialAutoAreas,
+        initialExtraAreas,
         localeIdentifier,
       ];
 }
@@ -83,5 +87,10 @@ final class CoverageAreaExtraAreaSet extends CoverageAreaEvent {
 }
 
 final class CoverageAreaExtraAreaRemoved extends CoverageAreaEvent {
-  const CoverageAreaExtraAreaRemoved();
+  const CoverageAreaExtraAreaRemoved(this.area);
+
+  final ServingArea area;
+
+  @override
+  List<Object?> get props => [area];
 }

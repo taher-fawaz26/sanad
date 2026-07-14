@@ -121,6 +121,10 @@
       "next_button": "Next",
       "save_button": "Save branch",
       "success": "Branch created successfully",
+      "success_dialog_title_highlight": "Success! ",
+      "success_dialog_title_body": "Your branch has been added.",
+      "success_dialog_description": "You can now manage it from your dashboard.",
+      "success_dialog_okay": "Okay",
       "error_title": "Couldn't save the branch",
       "error_caption": "Your changes weren't lost. Try saving again.",
       "days": {

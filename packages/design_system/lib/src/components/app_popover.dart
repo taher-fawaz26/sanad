@@ -1,9 +1,11 @@
 import 'package:design_system/src/components/app_button.dart';
+import 'package:design_system/src/components/app_feature_icon.dart';
 import 'package:design_system/src/components/app_text_field.dart';
 import 'package:design_system/src/spacing/responsive_spacing.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
 import 'package:design_system/src/theme/tokens/button_tokens.dart';
 import 'package:design_system/src/theme/tokens/dialog_tokens.dart';
+import 'package:design_system/src/theme/tokens/feature_icon_tokens.dart';
 import 'package:design_system/src/theme/typography/app_typography.dart';
 import 'package:flutter/material.dart';
 
@@ -25,10 +27,15 @@ enum AppPopoverActions {
 /// Figma `Views / Popovers` (`40:10028`) — centered alert-style modal.
 class AppPopover extends StatelessWidget {
   const AppPopover({
-    required this.title, super.key,
+    required this.title,
+    super.key,
+    this.titleWidget,
     this.description,
     this.imageLayout = AppDialogImageLayout.none,
     this.image,
+    this.featureIconColor,
+    this.featureIconSize = AppFeatureIconSize.xl,
+    this.featureIconBackgroundColor,
     this.actions = AppPopoverActions.dual,
     this.primaryLabel,
     this.onPrimary,
@@ -41,9 +48,18 @@ class AppPopover extends StatelessWidget {
   });
 
   final String title;
+
+  /// Optional rich title — overrides [title] text when set.
+  final Widget? titleWidget;
   final String? description;
   final AppDialogImageLayout imageLayout;
   final Widget? image;
+
+  /// When [imageLayout] is [AppDialogImageLayout.iconSmall], renders a featured
+  /// icon inside a circular ring (`194:5419`) instead of a clipped [image].
+  final AppFeatureIconColor? featureIconColor;
+  final AppFeatureIconSize featureIconSize;
+  final Color? featureIconBackgroundColor;
   final AppPopoverActions actions;
   final String? primaryLabel;
   final VoidCallback? onPrimary;
@@ -80,7 +96,7 @@ class AppPopover extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (hasInlineImage) ...[
-            _buildInlineImage(spec),
+            _buildInlineImage(context, spec),
             SizedBox(height: spec.sectionGap),
           ],
           _buildTextBlock(spec),
@@ -137,7 +153,12 @@ class AppPopover extends StatelessWidget {
     );
   }
 
-  Widget _buildInlineImage(DialogStyleSpec spec) {
+  Widget _buildInlineImage(BuildContext context, DialogStyleSpec spec) {
+    if (imageLayout == AppDialogImageLayout.iconSmall &&
+        featureIconColor != null) {
+      return _buildFeatureIconIllustration(context, spec);
+    }
+
     final size = spec.inlineImageSize(imageLayout);
     return ClipRRect(
       borderRadius: spec.imageBorderRadius,
@@ -149,6 +170,31 @@ class AppPopover extends StatelessWidget {
               color: spec.imagePlaceholderColor,
               child: const Center(child: Icon(Icons.image_outlined)),
             ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureIconIllustration(
+    BuildContext context,
+    DialogStyleSpec spec,
+  ) {
+    final colors = context.appColors;
+    final outerSize = spec.featureIconOuterSize;
+
+    return SizedBox(
+      width: outerSize,
+      height: outerSize,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: featureIconBackgroundColor ?? colors.successContainer,
+          shape: BoxShape.circle,
+        ),
+        child: Center(
+          child: AppFeatureIcon(
+            color: featureIconColor!,
+            size: featureIconSize,
+          ),
+        ),
       ),
     );
   }
@@ -167,11 +213,12 @@ class AppPopover extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          title,
-          style: spec.titleStyle,
-          textAlign: TextAlign.center,
-        ),
+        titleWidget ??
+            Text(
+              title,
+              style: spec.titleStyle,
+              textAlign: TextAlign.center,
+            ),
         if (description != null) ...[
           SizedBox(height: spec.textGap),
           Text(
@@ -276,9 +323,13 @@ class _SecondaryAction extends StatelessWidget {
 Future<T?> showAppPopover<T>({
   required BuildContext context,
   required String title,
+  Widget? titleWidget,
   String? description,
   AppDialogImageLayout imageLayout = AppDialogImageLayout.none,
   Widget? image,
+  AppFeatureIconColor? featureIconColor,
+  AppFeatureIconSize featureIconSize = AppFeatureIconSize.xl,
+  Color? featureIconBackgroundColor,
   AppPopoverActions actions = AppPopoverActions.dual,
   String? primaryLabel,
   VoidCallback? onPrimary,
@@ -303,9 +354,13 @@ Future<T?> showAppPopover<T>({
         insetPadding: EdgeInsets.symmetric(horizontal: spec.horizontalInset),
         child: AppPopover(
           title: title,
+          titleWidget: titleWidget,
           description: description,
           imageLayout: imageLayout,
           image: image,
+          featureIconColor: featureIconColor,
+          featureIconSize: featureIconSize,
+          featureIconBackgroundColor: featureIconBackgroundColor,
           actions: actions,
           primaryLabel: primaryLabel,
           onPrimary: onPrimary ?? () => Navigator.of(dialogContext).pop(),
@@ -328,9 +383,13 @@ typedef AppDialog = AppPopover;
 Future<T?> showAppDialog<T>({
   required BuildContext context,
   required String title,
+  Widget? titleWidget,
   String? description,
   AppDialogImageLayout imageLayout = AppDialogImageLayout.none,
   Widget? image,
+  AppFeatureIconColor? featureIconColor,
+  AppFeatureIconSize featureIconSize = AppFeatureIconSize.xl,
+  Color? featureIconBackgroundColor,
   AppPopoverActions actions = AppPopoverActions.dual,
   String? primaryLabel,
   VoidCallback? onPrimary,
@@ -345,9 +404,13 @@ Future<T?> showAppDialog<T>({
   return showAppPopover<T>(
     context: context,
     title: title,
+    titleWidget: titleWidget,
     description: description,
     imageLayout: imageLayout,
     image: image,
+    featureIconColor: featureIconColor,
+    featureIconSize: featureIconSize,
+    featureIconBackgroundColor: featureIconBackgroundColor,
     actions: actions,
     primaryLabel: primaryLabel,
     onPrimary: onPrimary,
