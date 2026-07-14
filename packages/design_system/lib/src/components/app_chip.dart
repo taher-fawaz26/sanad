@@ -60,7 +60,14 @@ class AppChip extends StatelessWidget {
           ),
           SizedBox(width: ChipTokens.iconGapSize()),
         ],
-        Text(label, style: textStyle),
+        Flexible(
+          child: Text(
+            label,
+            style: textStyle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
         if (effectiveIconPosition == AppChipIconPosition.right) ...[
           SizedBox(width: ChipTokens.iconGapSize()),
           SizedBox(
@@ -103,6 +110,16 @@ class AppChip extends StatelessWidget {
 
     if (expandedWidth != null) return chip;
 
-    return IntrinsicWidth(child: chip);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : MediaQuery.sizeOf(context).width;
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxWidth),
+          child: IntrinsicWidth(child: chip),
+        );
+      },
+    );
   }
 }

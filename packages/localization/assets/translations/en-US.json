@@ -104,6 +104,18 @@
       "coverage_set_title": "Coverage area set",
       "coverage_set_description": "{area} area with {radius} km radius covering {count} areas.",
       "add_location_button": "Add",
+      "add_services_button": "Add",
+      "services_step_subtitle": "add your Services",
+      "services_title": "Add your Services",
+      "services_description": "You currently do not have any services. Please add your first service.",
+      "added_services_section": "added services ({count})",
+      "add_service_button": "Add service",
+      "workers_step_subtitle": "add your team",
+      "workers_title": "No workers assigned",
+      "workers_description": "Assign workers so they can be scheduled for jobs.",
+      "added_workers_section": "added workers ({count})",
+      "add_workers_button": "Add",
+      "add_more_workers_button": "Add more workers",
       "add_location_coming_soon": "Location picker is coming soon",
       "upcoming_step_placeholder": "This step is coming soon.",
       "next_button": "Next",
@@ -135,14 +147,19 @@
     "coverage_area": {
       "title": "Coverage area",
       "subtitle": "Adjust the radius to cover the areas you serve",
+      "search_hint": "Search location",
       "radius": "Radius",
       "radius_value": "{value} km",
       "covered_areas": "Covered areas",
       "areas_count": "{count} areas",
+      "no_areas_message": "No serving areas added yet",
       "add_area": "Add",
-      "add_area_title": "Add covered area",
-      "add_area_hint": "Area name",
-      "confirm": "confirm Coverage"
+      "add_serving_area": "Add serving area",
+      "search_serving_area": "Search for an area",
+      "no_areas_found": "No areas found",
+      "search_error": "Search failed. Please try again.",
+      "done": "Done",
+      "confirm": "Confirm Coverage"
     }
   },
   "services": {
@@ -153,6 +170,16 @@
       "retry": "Retry",
       "empty": "No services found"
     }
+  },
+  "workers": {
+    "select_worker": {
+      "title": "Add your team",
+      "search_hint": "Search",
+      "confirm": "Confirm",
+      "retry": "Retry",
+      "empty": "No workers found"
+    },
+    "remove_worker": "Remove worker"
   },
   "auth": {
     "login_title": "Welcome Back",
@@ -231,5 +258,9 @@
     "secure_connection_failed": "Secure connection failed. Please try again.",
     "invalid_credentials": "Invalid credentials. Please try again.",
     "cache_error": "Failed to load cached data."
+  },  "workers": {
+    "title": "Workers",
+    "empty_title": "No workers yet",
+    "empty_description": "Your workers will appear here"
   }
 }

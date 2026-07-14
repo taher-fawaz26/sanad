@@ -10,15 +10,39 @@ abstract interface class ServiceRemoteDataSource {
 
 /// Static services returned until the API is wired.
 const _kStaticServices = <ServiceDto>[
-  ServiceDto(id: 'svc-oil-change', name: 'Oil Change'),
-  ServiceDto(id: 'svc-battery-replacement', name: 'Battery Replacement'),
-  ServiceDto(id: 'svc-car-wash', name: 'Car Wash'),
-  ServiceDto(id: 'svc-engine-repair', name: 'Engine Repair'),
-  ServiceDto(id: 'svc-tire-rotation', name: 'Tire Rotation'),
-  ServiceDto(id: 'svc-brake-pad-replacement', name: 'Brake Pad Replacement'),
+  ServiceDto(id: 'svc-plumbing', name: 'Plumbing', category: 'Maintenance'),
+  ServiceDto(
+    id: 'svc-air-conditioning',
+    name: 'Air Conditioning',
+    category: 'Care',
+  ),
+  ServiceDto(id: 'svc-roofing', name: 'Roofing', category: 'Repair'),
+  ServiceDto(id: 'svc-oil-change', name: 'Oil Change', category: 'Maintenance'),
+  ServiceDto(
+    id: 'svc-battery-replacement',
+    name: 'Battery Replacement',
+    category: 'Repair',
+  ),
+  ServiceDto(id: 'svc-car-wash', name: 'Car Wash', category: 'Care'),
+  ServiceDto(
+    id: 'svc-engine-repair',
+    name: 'Engine Repair',
+    category: 'Repair',
+  ),
+  ServiceDto(
+    id: 'svc-tire-rotation',
+    name: 'Tire Rotation',
+    category: 'Maintenance',
+  ),
+  ServiceDto(
+    id: 'svc-brake-pad-replacement',
+    name: 'Brake Pad Replacement',
+    category: 'Repair',
+  ),
   ServiceDto(
     id: 'svc-transmission-fluid-check',
     name: 'Transmission Fluid Check',
+    category: 'Maintenance',
   ),
 ];
 

@@ -18,6 +18,8 @@ dependencies:
     path: ../../packages/features/branches
   services:
     path: ../../packages/features/services
+  workers:
+    path: ../../packages/features/workers
   core:
     path: ../../packages/core
   cupertino_icons: ^1.0.8

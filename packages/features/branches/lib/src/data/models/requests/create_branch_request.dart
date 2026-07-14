@@ -18,6 +18,7 @@ class CreateBranchRequest extends Equatable {
     this.availability,
     this.serviceIds,
     this.servingAreaPlaceIds,
+    this.workerIds,
   });
 
   final String branchName;
@@ -35,6 +36,7 @@ class CreateBranchRequest extends Equatable {
   final List<BranchAvailabilityEntity>? availability;
   final List<String>? serviceIds;
   final List<String>? servingAreaPlaceIds;
+  final List<String>? workerIds;
 
   Map<String, dynamic> toMap() {
     final body = <String, dynamic>{
@@ -64,6 +66,7 @@ class CreateBranchRequest extends Equatable {
           .toList();
     }
     if (serviceIds != null) body['serviceIds'] = serviceIds;
+    if (workerIds != null) body['workerIds'] = workerIds;
     if (servingAreaPlaceIds != null && servingAreaPlaceIds!.isNotEmpty) {
       body['servingAreaPlaceIds'] = servingAreaPlaceIds;
     }

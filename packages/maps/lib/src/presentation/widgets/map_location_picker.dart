@@ -13,6 +13,7 @@ import 'package:maps/src/presentation/models/location_picker_labels.dart';
 import 'package:maps/src/presentation/models/location_picker_result.dart';
 import 'package:maps/src/presentation/models/map_configuration.dart';
 import 'package:maps/src/presentation/models/place_search_status.dart';
+import 'package:maps/src/presentation/widgets/location_address_field.dart';
 import 'package:maps/src/presentation/widgets/map_control_bar.dart';
 import 'package:maps/src/presentation/widgets/map_my_location_button.dart';
 import 'package:maps/src/presentation/widgets/map_zoom_controls.dart';
@@ -211,7 +212,7 @@ class MapLocationPickerState extends State<MapLocationPicker> {
         if (state.status == LocationPickerStatus.failure) {
           return _ErrorMessage(failure: state.failure, labels: labels);
         }
-        return _LocationAddressField(
+        return LocationAddressField(
           label: labels.specifiedLocation,
           value: state.address,
           hint: labels.addressHint,
@@ -374,94 +375,6 @@ class _MapView extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _LocationAddressField extends StatelessWidget {
-  const _LocationAddressField({
-    required this.label,
-    required this.hint,
-    this.value,
-  });
-
-  final String label;
-  final String? value;
-  final String hint;
-
-  bool get _hasValue => value != null && value!.isNotEmpty;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final typography = context.appTypography;
-    final brightness = Theme.of(context).brightness;
-    final fieldHeight = responsiveDimension(80);
-    final labelGap = responsiveDimension(FieldTokens.labelGap);
-    final iconSize = AppDimension.iconLg;
-
-    final displayStyle = _hasValue
-        ? FieldTokens.valueStyle(
-            typography,
-            colors,
-            brightness,
-            enabled: true,
-          )
-        : FieldTokens.hintStyle(
-            typography,
-            colors,
-            brightness,
-            enabled: true,
-          );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          label,
-          style: FieldTokens.labelStyle(typography, colors, brightness),
-        ),
-        SizedBox(height: labelGap),
-        Material(
-          color: FieldTokens.background(colors, brightness, enabled: true),
-          shape: RoundedRectangleBorder(
-            borderRadius: FieldTokens.borderRadiusAll(),
-            side: BorderSide(
-              color: FieldTokens.borderDefault(colors, brightness),
-              width: responsiveDimension(FieldTokens.borderWidthDefault),
-            ),
-          ),
-          child: SizedBox(
-            height: fieldHeight,
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: responsiveDimension(FieldTokens.horizontalPadding),
-                vertical: responsiveDimension(FieldTokens.verticalPadding),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AppSvgPicture.asset(
-                    AppSvgs.map,
-                    width: iconSize,
-                    height: iconSize,
-                  ),
-                  SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      _hasValue ? value! : hint,
-                      style: displayStyle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

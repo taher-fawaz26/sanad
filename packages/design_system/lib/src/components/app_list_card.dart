@@ -17,6 +17,7 @@ class AppListCard extends StatelessWidget {
     this.badge,
     this.trailing,
     this.onTap,
+    this.captionStyle,
   });
 
   final String title;
@@ -25,6 +26,9 @@ class AppListCard extends StatelessWidget {
   final Widget? badge;
   final Widget? trailing;
   final VoidCallback? onTap;
+
+  /// Overrides [ListCardTokens] caption style (e.g. primary role label).
+  final TextStyle? captionStyle;
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +73,7 @@ class AppListCard extends StatelessWidget {
                   SizedBox(height: AppSpacing.xs),
                   Text(
                     caption!,
-                    style: spec.captionStyle,
+                    style: captionStyle ?? spec.captionStyle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

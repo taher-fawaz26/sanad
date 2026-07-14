@@ -5,18 +5,21 @@ import 'package:maps/src/data/cache/geocoding_cache.dart';
 import 'package:maps/src/data/repositories/geocoding_repository_impl.dart';
 import 'package:maps/src/data/repositories/location_repository_impl.dart';
 import 'package:maps/src/data/repositories/places_repository_impl.dart';
+import 'package:maps/src/domain/repositories/branch_serving_areas_repository.dart';
 import 'package:maps/src/domain/repositories/geocoding_repository.dart';
 import 'package:maps/src/domain/repositories/location_repository.dart';
 import 'package:maps/src/domain/repositories/places_repository.dart';
 import 'package:maps/src/domain/usecases/forward_geocode_usecase.dart';
 import 'package:maps/src/domain/usecases/get_current_location_usecase.dart';
-import 'package:maps/src/domain/usecases/get_nearby_areas_usecase.dart';
 import 'package:maps/src/domain/usecases/get_place_details_usecase.dart';
 import 'package:maps/src/domain/usecases/open_location_settings_usecase.dart';
+import 'package:maps/src/domain/usecases/resolve_coverage_location_usecase.dart';
+import 'package:maps/src/domain/usecases/resolve_nearby_areas_usecase.dart';
 import 'package:maps/src/domain/usecases/reverse_geocode_usecase.dart';
 import 'package:maps/src/domain/usecases/search_places_usecase.dart';
 import 'package:maps/src/presentation/bloc/coverage_area/coverage_area_bloc.dart';
 import 'package:maps/src/presentation/bloc/location_picker/location_picker_bloc.dart';
+import 'package:maps/src/presentation/bloc/map_area_picker/map_area_picker_bloc.dart';
 import 'package:maps/src/services/backend_places_provider.dart';
 import 'package:maps/src/services/geocoding_service.dart';
 import 'package:maps/src/services/google_places_provider.dart';
@@ -46,7 +49,16 @@ abstract final class MapsDI {
         () => ForwardGeocodeUseCase(sl<GeocodingRepository>()),
       )
       ..registerLazySingleton(
-        () => GetNearbyAreasUseCase(sl<GeocodingRepository>()),
+        () => ResolveNearbyAreasUseCase(
+          sl<GeocodingRepository>(),
+          sl<BranchServingAreasRepository>(),
+        ),
+      )
+      ..registerLazySingleton(
+        () => ResolveCoverageLocationUseCase(
+          sl<ReverseGeocodeUseCase>(),
+          sl<ResolveNearbyAreasUseCase>(),
+        ),
       )
       ..registerLazySingleton(
         () => GetCurrentLocationUseCase(sl<LocationRepository>()),
@@ -74,13 +86,8 @@ abstract final class MapsDI {
     sl
       ..registerFactory(
         () => CoverageAreaBloc(
+          resolveCoverageLocationUseCase: sl<ResolveCoverageLocationUseCase>(),
           getCurrentLocationUseCase: sl<GetCurrentLocationUseCase>(),
-          reverseGeocodeUseCase: sl<ReverseGeocodeUseCase>(),
-          forwardGeocodeUseCase: sl<ForwardGeocodeUseCase>(),
-          searchPlacesUseCase:
-              config.placesEnabled ? sl<SearchPlacesUseCase>() : null,
-          getPlaceDetailsUseCase:
-              config.placesEnabled ? sl<GetPlaceDetailsUseCase>() : null,
         ),
       )
       ..registerFactory(
@@ -89,6 +96,15 @@ abstract final class MapsDI {
           reverseGeocodeUseCase: sl<ReverseGeocodeUseCase>(),
           forwardGeocodeUseCase: sl<ForwardGeocodeUseCase>(),
           openLocationSettingsUseCase: sl<OpenLocationSettingsUseCase>(),
+          searchPlacesUseCase:
+              config.placesEnabled ? sl<SearchPlacesUseCase>() : null,
+          getPlaceDetailsUseCase:
+              config.placesEnabled ? sl<GetPlaceDetailsUseCase>() : null,
+        ),
+      )
+      ..registerFactory(
+        () => MapAreaPickerBloc(
+          reverseGeocodeUseCase: sl<ReverseGeocodeUseCase>(),
           searchPlacesUseCase:
               config.placesEnabled ? sl<SearchPlacesUseCase>() : null,
           getPlaceDetailsUseCase:

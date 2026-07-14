@@ -5,27 +5,20 @@ import 'package:core/core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:maps/src/domain/entities/place_prediction.dart';
+import 'package:maps/src/domain/entities/coverage_location.dart';
+import 'package:maps/src/domain/entities/coverage_mode.dart';
 import 'package:maps/src/domain/entities/serving_area.dart';
-import 'package:maps/src/domain/usecases/forward_geocode_usecase.dart';
+import 'package:maps/src/domain/usecases/coverage_location_intent.dart';
 import 'package:maps/src/domain/usecases/get_current_location_usecase.dart';
-import 'package:maps/src/domain/usecases/get_place_details_usecase.dart';
-import 'package:maps/src/domain/usecases/reverse_geocode_usecase.dart';
-import 'package:maps/src/domain/usecases/search_places_usecase.dart';
+import 'package:maps/src/domain/usecases/resolve_coverage_location_usecase.dart';
 import 'package:maps/src/presentation/bloc/coverage_area/coverage_area_bloc.dart';
-import 'package:maps/src/presentation/models/place_search_status.dart';
 import 'package:mocktail/mocktail.dart';
+
+class _MockResolveCoverageLocation extends Mock
+    implements ResolveCoverageLocationUseCase {}
 
 class _MockGetCurrentLocation extends Mock
     implements GetCurrentLocationUseCase {}
-
-class _MockReverseGeocode extends Mock implements ReverseGeocodeUseCase {}
-
-class _MockForwardGeocode extends Mock implements ForwardGeocodeUseCase {}
-
-class _MockSearchPlaces extends Mock implements SearchPlacesUseCase {}
-
-class _MockGetPlaceDetails extends Mock implements GetPlaceDetailsUseCase {}
 
 const _tPosition = LatLng(25.0, 55.0);
 const _tPosition2 = LatLng(25.1, 55.1);
@@ -33,62 +26,40 @@ const _tAddress = 'Dubai Marina, Dubai';
 const _tFailure = ServerFailure(message: 'error');
 
 const _tServingArea = ServingArea(
-  placeId: 'place_1',
-  name: 'Dubai Marina',
-  address: 'Dubai, UAE',
-  latLng: _tPosition,
-);
-
-const _tServingArea2 = ServingArea(
-  placeId: 'place_2',
+  placeId: 'place_extra',
   name: 'JBR',
   address: 'Dubai, UAE',
   latLng: _tPosition2,
 );
 
-const _tPrediction = PlacePrediction(
-  placeId: 'pred_1',
-  description: 'Dubai Marina, Dubai, UAE',
-  mainText: 'Dubai Marina',
-  secondaryText: 'Dubai, UAE',
+const _tCoverageLocation = CoverageLocation(
+  center: _tPosition,
+  address: _tAddress,
+  nearbyAreas: ['Dubai Marina', 'JBR'],
 );
 
 void main() {
+  late _MockResolveCoverageLocation resolveCoverageLocation;
   late _MockGetCurrentLocation getCurrentLocation;
-  late _MockReverseGeocode reverseGeocode;
-  late _MockForwardGeocode forwardGeocode;
-  late _MockSearchPlaces searchPlaces;
-  late _MockGetPlaceDetails getPlaceDetails;
 
-  CoverageAreaBloc buildBloc({
-    bool withPlaces = true,
-  }) =>
-      CoverageAreaBloc(
+  CoverageAreaBloc buildBloc() => CoverageAreaBloc(
+        resolveCoverageLocationUseCase: resolveCoverageLocation,
         getCurrentLocationUseCase: getCurrentLocation,
-        reverseGeocodeUseCase: reverseGeocode,
-        forwardGeocodeUseCase: forwardGeocode,
-        searchPlacesUseCase: withPlaces ? searchPlaces : null,
-        getPlaceDetailsUseCase: withPlaces ? getPlaceDetails : null,
       );
 
   setUpAll(() {
     registerFallbackValue(const NoParams());
-    registerFallbackValue(ReverseGeocodeParams(position: _tPosition));
-    registerFallbackValue(ForwardGeocodeParams(address: ''));
     registerFallbackValue(
-      SearchPlacesParams(query: ''),
-    );
-    registerFallbackValue(
-      GetPlaceDetailsParams(placeId: ''),
+      const CreateCoverageIntent(
+        center: _tPosition,
+        radiusKm: CoverageAreaState.defaultRadiusKm,
+      ),
     );
   });
 
   setUp(() {
+    resolveCoverageLocation = _MockResolveCoverageLocation();
     getCurrentLocation = _MockGetCurrentLocation();
-    reverseGeocode = _MockReverseGeocode();
-    forwardGeocode = _MockForwardGeocode();
-    searchPlaces = _MockSearchPlaces();
-    getPlaceDetails = _MockGetPlaceDetails();
   });
 
   group('CoverageAreaBloc', () {
@@ -96,53 +67,32 @@ void main() {
       final bloc = buildBloc();
       expect(bloc.state.status, CoverageAreaStatus.initial);
       expect(bloc.state.radiusKm, CoverageAreaState.defaultRadiusKm);
-      expect(bloc.state.servingAreas, isEmpty);
-      expect(bloc.state.predictions, isEmpty);
-      expect(
-        bloc.state.searchStatus,
-        PlaceSearchStatus.idle,
-      );
+      expect(bloc.state.autoAreas, isEmpty);
+      expect(bloc.state.mode, CoverageMode.create);
       addTearDown(bloc.close);
     });
 
     group('CoverageAreaStarted', () {
       blocTest<CoverageAreaBloc, CoverageAreaState>(
-        'with initial position resolves address',
+        'with initial center resolves location via use case',
         build: () {
-          when(() => reverseGeocode(any()))
-              .thenReturn(TaskEither.right(_tAddress));
+          when(() => resolveCoverageLocation(any()))
+              .thenReturn(TaskEither.right(_tCoverageLocation));
           return buildBloc();
         },
         act: (bloc) => bloc.add(
-          CoverageAreaStarted(initialPosition: _tPosition),
-        ),
-        wait: const Duration(milliseconds: 50),
-        verify: (bloc) {
-          expect(
-            bloc.state.status,
-            CoverageAreaStatus.ready,
-          );
-          expect(bloc.state.position, _tPosition);
-          expect(bloc.state.address, _tAddress);
-        },
-      );
-
-      blocTest<CoverageAreaBloc, CoverageAreaState>(
-        'preserves initial serving areas',
-        build: () {
-          when(() => reverseGeocode(any()))
-              .thenReturn(TaskEither.right(_tAddress));
-          return buildBloc();
-        },
-        act: (bloc) => bloc.add(
-          CoverageAreaStarted(
-            initialPosition: _tPosition,
-            initialServingAreas: [_tServingArea],
+          const CoverageAreaStarted(
+            mode: CoverageMode.create,
+            initialCenter: _tPosition,
           ),
         ),
         wait: const Duration(milliseconds: 50),
         verify: (bloc) {
-          expect(bloc.state.servingAreas, [_tServingArea]);
+          expect(bloc.state.status, CoverageAreaStatus.ready);
+          expect(bloc.state.center, _tPosition);
+          expect(bloc.state.address, _tAddress);
+          expect(bloc.state.autoAreas, ['Dubai Marina', 'JBR']);
+          expect(bloc.state.mode, CoverageMode.create);
         },
       );
 
@@ -153,7 +103,9 @@ void main() {
               .thenReturn(TaskEither.left(_tFailure));
           return buildBloc();
         },
-        act: (bloc) => bloc.add(CoverageAreaStarted()),
+        act: (bloc) => bloc.add(
+          const CoverageAreaStarted(mode: CoverageMode.create),
+        ),
         expect: () => [
           isA<CoverageAreaState>().having(
             (s) => s.status,
@@ -169,216 +121,148 @@ void main() {
       );
     });
 
-    group('CoverageAreaServingAreaAdded', () {
+    group('CoverageAreaMapMoved', () {
       blocTest<CoverageAreaBloc, CoverageAreaState>(
-        'adds new serving area',
-        build: buildBloc,
-        seed: () => CoverageAreaState(
-          status: CoverageAreaStatus.ready,
-        ),
-        act: (bloc) => bloc.add(
-          CoverageAreaServingAreaAdded(_tServingArea),
-        ),
-        verify: (bloc) {
-          expect(
-            bloc.state.servingAreas,
-            [_tServingArea],
-          );
+        'skips redundant resolve for same center',
+        build: () {
+          when(() => resolveCoverageLocation(any()))
+              .thenReturn(TaskEither.right(_tCoverageLocation));
+          return buildBloc();
         },
-      );
-
-      blocTest<CoverageAreaBloc, CoverageAreaState>(
-        'ignores duplicate placeId',
-        build: buildBloc,
-        seed: () => CoverageAreaState(
+        seed: () => const CoverageAreaState(
           status: CoverageAreaStatus.ready,
-          servingAreas: [_tServingArea],
+          center: _tPosition,
+          address: _tAddress,
         ),
         act: (bloc) => bloc.add(
-          CoverageAreaServingAreaAdded(_tServingArea),
+          const CoverageAreaMapMoved(_tPosition),
         ),
         expect: () => <CoverageAreaState>[],
       );
-    });
 
-    group('CoverageAreaServingAreaRemoved', () {
       blocTest<CoverageAreaBloc, CoverageAreaState>(
-        'removes serving area by placeId',
-        build: buildBloc,
-        seed: () => CoverageAreaState(
-          status: CoverageAreaStatus.ready,
-          servingAreas: [_tServingArea, _tServingArea2],
-        ),
-        act: (bloc) => bloc.add(
-          CoverageAreaServingAreaRemoved('place_1'),
-        ),
-        verify: (bloc) {
-          expect(bloc.state.servingAreas, [_tServingArea2]);
-        },
-      );
-    });
-
-    group('CoverageAreaQueryChanged', () {
-      blocTest<CoverageAreaBloc, CoverageAreaState>(
-        'searches places and emits predictions',
+        'elevates edit mode to recalculate on user move',
         build: () {
-          when(() => searchPlaces(any())).thenReturn(
-            TaskEither.right([_tPrediction]),
-          );
+          when(() => resolveCoverageLocation(any())).thenAnswer((invocation) {
+            final intent =
+                invocation.positionalArguments.first as CoverageLocationIntent;
+            expect(intent, isA<RecalculateCoverageIntent>());
+            return TaskEither.right(
+              const CoverageLocation(
+                center: _tPosition2,
+                address: 'New Address',
+                nearbyAreas: ['New Area'],
+              ),
+            );
+          });
           return buildBloc();
         },
-        seed: () => CoverageAreaState(
-          status: CoverageAreaStatus.ready,
-          position: _tPosition,
-        ),
-        act: (bloc) => bloc.add(
-          CoverageAreaQueryChanged('Dubai'),
-        ),
-        wait: const Duration(milliseconds: 50),
-        verify: (bloc) {
-          expect(
-            bloc.state.searchStatus,
-            PlaceSearchStatus.success,
+        act: (bloc) async {
+          when(() => resolveCoverageLocation(any()))
+              .thenReturn(TaskEither.right(_tCoverageLocation));
+          bloc.add(
+            const CoverageAreaStarted(
+              mode: CoverageMode.edit,
+              branchId: 'branch-1',
+              initialCenter: _tPosition,
+            ),
           );
-          expect(bloc.state.predictions, [_tPrediction]);
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+          when(() => resolveCoverageLocation(any())).thenAnswer((invocation) {
+            final intent =
+                invocation.positionalArguments.first as CoverageLocationIntent;
+            expect(intent, isA<RecalculateCoverageIntent>());
+            return TaskEither.right(
+              const CoverageLocation(
+                center: _tPosition2,
+                address: 'New Address',
+                nearbyAreas: ['New Area'],
+              ),
+            );
+          });
+          bloc.add(const CoverageAreaMapMoved(_tPosition2));
         },
-      );
-
-      blocTest<CoverageAreaBloc, CoverageAreaState>(
-        'empty query resets to idle',
-        build: buildBloc,
-        seed: () => CoverageAreaState(
-          status: CoverageAreaStatus.ready,
-          searchStatus: PlaceSearchStatus.success,
-          predictions: [_tPrediction],
-          searchQuery: 'Dubai',
-        ),
-        act: (bloc) => bloc.add(
-          CoverageAreaQueryChanged(''),
-        ),
+        wait: const Duration(milliseconds: 100),
         verify: (bloc) {
-          expect(
-            bloc.state.searchStatus,
-            PlaceSearchStatus.idle,
-          );
-          expect(bloc.state.predictions, isEmpty);
-        },
-      );
-
-      blocTest<CoverageAreaBloc, CoverageAreaState>(
-        'emits empty status when no predictions found',
-        build: () {
-          when(() => searchPlaces(any())).thenReturn(
-            TaskEither.right(const []),
-          );
-          return buildBloc();
-        },
-        seed: () => CoverageAreaState(
-          status: CoverageAreaStatus.ready,
-          position: _tPosition,
-        ),
-        act: (bloc) => bloc.add(
-          CoverageAreaQueryChanged('zzzzz'),
-        ),
-        wait: const Duration(milliseconds: 50),
-        verify: (bloc) {
-          expect(
-            bloc.state.searchStatus,
-            PlaceSearchStatus.empty,
-          );
+          expect(bloc.state.mode, CoverageMode.recalculate);
+          expect(bloc.state.autoAreas, ['New Area']);
         },
       );
     });
 
-    group('CoverageAreaPredictionSelected', () {
+    group('CoverageAreaExtraAreaSet', () {
       blocTest<CoverageAreaBloc, CoverageAreaState>(
-        'resolves details and adds serving area',
-        build: () {
-          when(() => getPlaceDetails(any())).thenReturn(
-            TaskEither.right(_tPosition),
-          );
-          return buildBloc();
-        },
-        seed: () => CoverageAreaState(
+        'sets extra area and enforces max one by replacement',
+        build: buildBloc,
+        seed: () => const CoverageAreaState(
           status: CoverageAreaStatus.ready,
-          position: _tPosition,
-          predictions: [_tPrediction],
-          searchStatus: PlaceSearchStatus.success,
         ),
-        act: (bloc) => bloc.add(
-          CoverageAreaPredictionSelected(_tPrediction),
-        ),
-        wait: const Duration(milliseconds: 50),
+        act: (bloc) {
+          bloc.add(const CoverageAreaExtraAreaSet(_tServingArea));
+          bloc.add(
+            const CoverageAreaExtraAreaSet(
+              ServingArea(
+                placeId: 'place_other',
+                name: 'Other',
+                address: 'Dubai',
+                latLng: _tPosition,
+              ),
+            ),
+          );
+        },
         verify: (bloc) {
-          expect(bloc.state.servingAreas, hasLength(1));
-          expect(
-            bloc.state.servingAreas.first.placeId,
-            _tPrediction.placeId,
-          );
-          expect(
-            bloc.state.servingAreas.first.name,
-            _tPrediction.mainText,
-          );
-          expect(
-            bloc.state.searchStatus,
-            PlaceSearchStatus.idle,
-          );
-          expect(bloc.state.predictions, isEmpty);
+          expect(bloc.state.extraArea?.placeId, 'place_other');
         },
       );
     });
 
-    group('CoverageAreaPredictionsCleared', () {
+    group('CoverageAreaAutoAreaRemoved', () {
       blocTest<CoverageAreaBloc, CoverageAreaState>(
-        'clears predictions and resets search',
+        'removes auto area by name',
         build: buildBloc,
-        seed: () => CoverageAreaState(
+        seed: () => const CoverageAreaState(
           status: CoverageAreaStatus.ready,
-          predictions: [_tPrediction],
-          searchStatus: PlaceSearchStatus.success,
-          searchQuery: 'Dubai',
+          autoAreas: ['Dubai Marina', 'JBR'],
         ),
-        act: (bloc) => bloc.add(
-          CoverageAreaPredictionsCleared(),
-        ),
+        act: (bloc) {
+          bloc.autoAreasController.replace(['Dubai Marina', 'JBR']);
+          bloc.add(const CoverageAreaAutoAreaRemoved('Dubai Marina'));
+        },
         verify: (bloc) {
-          expect(bloc.state.predictions, isEmpty);
-          expect(
-            bloc.state.searchStatus,
-            PlaceSearchStatus.idle,
-          );
-          expect(bloc.state.searchQuery, isEmpty);
+          expect(bloc.state.autoAreas, ['JBR']);
         },
       );
     });
 
     group('CoverageAreaRadiusChanged', () {
       blocTest<CoverageAreaBloc, CoverageAreaState>(
-        'updates radius without side effects',
-        build: buildBloc,
-        seed: () => CoverageAreaState(
+        'updates radius and resolves nearby areas',
+        build: () {
+          when(() => resolveCoverageLocation(any()))
+              .thenReturn(TaskEither.right(_tCoverageLocation));
+          return buildBloc();
+        },
+        seed: () => const CoverageAreaState(
           status: CoverageAreaStatus.ready,
-          position: _tPosition,
+          center: _tPosition,
           address: _tAddress,
         ),
         act: (bloc) => bloc.add(
-          CoverageAreaRadiusChanged(10),
+          const CoverageAreaRadiusChanged(10),
         ),
+        wait: const Duration(milliseconds: 50),
         verify: (bloc) {
           expect(bloc.state.radiusKm, 10);
-          expect(
-            bloc.state.status,
-            CoverageAreaStatus.ready,
-          );
+          expect(bloc.state.status, CoverageAreaStatus.ready);
         },
       );
     });
 
     group('canConfirm', () {
-      test('true when position + address + ready', () {
+      test('true when center + address + ready', () {
         const state = CoverageAreaState(
           status: CoverageAreaStatus.ready,
-          position: _tPosition,
+          center: _tPosition,
           address: _tAddress,
         );
         expect(state.canConfirm, isTrue);
@@ -387,16 +271,8 @@ void main() {
       test('false when loading', () {
         const state = CoverageAreaState(
           status: CoverageAreaStatus.loading,
-          position: _tPosition,
+          center: _tPosition,
           address: _tAddress,
-        );
-        expect(state.canConfirm, isFalse);
-      });
-
-      test('false when address is null', () {
-        const state = CoverageAreaState(
-          status: CoverageAreaStatus.ready,
-          position: _tPosition,
         );
         expect(state.canConfirm, isFalse);
       });

@@ -15,14 +15,12 @@ enum CoverageAreaCameraSource {
 class CoverageAreaState extends Equatable {
   const CoverageAreaState({
     this.status = CoverageAreaStatus.initial,
-    this.position,
+    this.center,
     this.address,
     this.radiusKm = defaultRadiusKm,
-    this.servingAreas = const [],
-    this.predictions = const [],
-    this.searchStatus = PlaceSearchStatus.idle,
-    this.searchQuery = '',
-    this.searchError,
+    this.mode = CoverageMode.create,
+    this.autoAreas = const [],
+    this.extraArea,
     this.failure,
     this.cameraSource = CoverageAreaCameraSource.none,
   });
@@ -30,52 +28,59 @@ class CoverageAreaState extends Equatable {
   static const double defaultRadiusKm = 5;
 
   final CoverageAreaStatus status;
-  final LatLng? position;
+  final LatLng? center;
   final String? address;
   final double radiusKm;
-  final List<ServingArea> servingAreas;
-  final List<PlacePrediction> predictions;
-  final PlaceSearchStatus searchStatus;
-  final String searchQuery;
-  final String? searchError;
+  final CoverageMode mode;
+  final List<String> autoAreas;
+  final ServingArea? extraArea;
   final Failure? failure;
   final CoverageAreaCameraSource cameraSource;
 
   bool get canConfirm =>
-      position != null &&
+      center != null &&
       address != null &&
       address!.isNotEmpty &&
       status == CoverageAreaStatus.ready;
 
   bool get isLoading => status == CoverageAreaStatus.loading;
 
+  int get totalAreaCount => autoAreas.length + (extraArea != null ? 1 : 0);
+
+  List<ServingArea> get allServingAreas => [
+        ...autoAreas.map(
+          (name) => ServingArea(
+            placeId: name,
+            name: name,
+            address: '',
+            latLng: center ?? const LatLng(0, 0),
+          ),
+        ),
+        if (extraArea != null) extraArea!,
+      ];
+
   CoverageAreaState copyWith({
     CoverageAreaStatus? status,
-    LatLng? position,
+    LatLng? center,
     String? address,
     double? radiusKm,
-    List<ServingArea>? servingAreas,
-    List<PlacePrediction>? predictions,
-    PlaceSearchStatus? searchStatus,
-    String? searchQuery,
-    String? searchError,
+    CoverageMode? mode,
+    List<String>? autoAreas,
+    ServingArea? extraArea,
     Failure? failure,
     CoverageAreaCameraSource? cameraSource,
     bool clearFailure = false,
     bool clearAddress = false,
-    bool clearSearchError = false,
+    bool clearExtraArea = false,
   }) {
     return CoverageAreaState(
       status: status ?? this.status,
-      position: position ?? this.position,
+      center: center ?? this.center,
       address: clearAddress ? null : (address ?? this.address),
       radiusKm: radiusKm ?? this.radiusKm,
-      servingAreas: servingAreas ?? this.servingAreas,
-      predictions: predictions ?? this.predictions,
-      searchStatus: searchStatus ?? this.searchStatus,
-      searchQuery: searchQuery ?? this.searchQuery,
-      searchError:
-          clearSearchError ? null : (searchError ?? this.searchError),
+      mode: mode ?? this.mode,
+      autoAreas: autoAreas ?? this.autoAreas,
+      extraArea: clearExtraArea ? null : (extraArea ?? this.extraArea),
       failure: clearFailure ? null : (failure ?? this.failure),
       cameraSource: cameraSource ?? this.cameraSource,
     );
@@ -84,14 +89,12 @@ class CoverageAreaState extends Equatable {
   @override
   List<Object?> get props => [
         status,
-        position,
+        center,
         address,
         radiusKm,
-        servingAreas,
-        predictions,
-        searchStatus,
-        searchQuery,
-        searchError,
+        mode,
+        autoAreas,
+        extraArea,
         failure,
         cameraSource,
       ];

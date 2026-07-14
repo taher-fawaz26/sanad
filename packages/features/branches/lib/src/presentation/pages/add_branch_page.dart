@@ -7,6 +7,8 @@ import 'package:branches/src/presentation/models/coverage_area_result.dart';
 import 'package:branches/src/presentation/utils/add_branch_error_snackbar.dart';
 import 'package:branches/src/presentation/utils/branch_schedule_formatter.dart';
 import 'package:branches/src/presentation/widgets/add_branch_coverage_step.dart';
+import 'package:branches/src/presentation/widgets/add_branch_services_step.dart';
+import 'package:branches/src/presentation/widgets/add_branch_workers_step.dart';
 import 'package:branches/src/presentation/widgets/branch_location_field.dart';
 import 'package:branches/src/presentation/widgets/branch_manager_picker_field.dart';
 import 'package:branches/src/presentation/widgets/branch_schedule_section.dart';
@@ -19,6 +21,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
 import 'package:maps/maps.dart';
+import 'package:services/services.dart';
+import 'package:workers/workers.dart';
 
 /// Figma Add branch wizard — Step 1 (`194:4056`) and Step 2 (`347:13772` / `972:9206`).
 class AddBranchPage extends StatefulWidget {
@@ -46,6 +50,8 @@ class _AddBranchPageState extends State<AddBranchPage> {
   List<BranchAvailabilityEntity> _customSchedule = const [];
   List<BranchManagerEntity> _managers = const [];
   BranchManagerEntity? _selectedManager;
+  List<ServiceEntity> _selectedServices = const [];
+  List<WorkerEntity> _selectedWorkers = const [];
 
   /// Guards a one-time seed of the editable form fields from bloc setup data.
   bool _setupSeeded = false;
@@ -57,6 +63,10 @@ class _AddBranchPageState extends State<AddBranchPage> {
       _coverageRadiusKm != null &&
       _branchAddress != null &&
       _branchAddress!.isNotEmpty;
+
+  bool get _hasServices => _selectedServices.isNotEmpty;
+
+  bool get _hasWorkers => _selectedWorkers.isNotEmpty;
 
   bool get _canProceedStep1 =>
       _branchNameController.text.trim().isNotEmpty &&
@@ -112,9 +122,12 @@ class _AddBranchPageState extends State<AddBranchPage> {
     }
 
     if (_currentStep == 2 && _hasCoverage) {
-      // Steps 3–4 (services / team) are not implemented yet; keep coverage
-      // and continue the wizard shell so the 4-step indicator stays accurate.
       setState(() => _currentStep = 3);
+      return;
+    }
+
+    if (_currentStep == 3 && _hasServices) {
+      setState(() => _currentStep = 4);
     }
   }
 
@@ -139,6 +152,16 @@ class _AddBranchPageState extends State<AddBranchPage> {
               servingAreaPlaceIds: _servingAreas.isNotEmpty
                   ? _servingAreas
                       .map((a) => a.placeId)
+                      .toList(growable: false)
+                  : null,
+              serviceIds: _selectedServices.isNotEmpty
+                  ? _selectedServices
+                      .map((service) => service.id)
+                      .toList(growable: false)
+                  : null,
+              workerIds: _selectedWorkers.isNotEmpty
+                  ? _selectedWorkers
+                      .map((worker) => worker.id)
                       .toList(growable: false)
                   : null,
             ),
@@ -200,6 +223,41 @@ class _AddBranchPageState extends State<AddBranchPage> {
     _openCoverageArea();
   }
 
+  Future<void> _openSelectServices() async {
+    final result = await showSelectServiceActionSheet(
+      context: context,
+      initialSelectedIds: _selectedServices.map((s) => s.id).toSet(),
+    );
+    if (!mounted || result == null) return;
+
+    setState(() => _selectedServices = result.selectedServices);
+  }
+
+  void _onAddServicesPressed() {
+    _openSelectServices();
+  }
+
+  Future<void> _openSelectWorkers() async {
+    final result = await showSelectWorkerActionSheet(
+      context: context,
+      initialSelectedIds: _selectedWorkers.map((w) => w.id).toSet(),
+    );
+    if (!mounted || result == null) return;
+
+    setState(() => _selectedWorkers = result.selectedWorkers);
+  }
+
+  void _onAddWorkersPressed() {
+    _openSelectWorkers();
+  }
+
+  void _onRemoveWorker(WorkerEntity worker) {
+    setState(
+      () => _selectedWorkers =
+          _selectedWorkers.where((w) => w.id != worker.id).toList(),
+    );
+  }
+
   void _onScheduleModeChanged(BranchScheduleMode mode) {
     setState(() {
       _scheduleMode = mode;
@@ -245,6 +303,8 @@ class _AddBranchPageState extends State<AddBranchPage> {
                 child: switch (_currentStep) {
                   1 => _buildStepOne(),
                   2 => _buildStepTwo(),
+                  3 => _buildStepThree(),
+                  4 => _buildStepFour(),
                   _ => _buildUpcomingStepPlaceholder(),
                 },
               ),
@@ -278,6 +338,33 @@ class _AddBranchPageState extends State<AddBranchPage> {
                       return AppButton(
                         label: 'branches.add_branch.next_button'.tr(),
                         onPressed: _onNextPressed,
+                      );
+                    }
+
+                    if (_currentStep == 3) {
+                      if (!_hasServices) {
+                        return AppButton(
+                          label: 'branches.add_branch.add_services_button'.tr(),
+                          onPressed: _onAddServicesPressed,
+                        );
+                      }
+                      return AppButton(
+                        label: 'branches.add_branch.next_button'.tr(),
+                        onPressed: _onNextPressed,
+                      );
+                    }
+
+                    if (_currentStep == 4) {
+                      if (!_hasWorkers) {
+                        return AppButton(
+                          label: 'branches.add_branch.add_workers_button'.tr(),
+                          onPressed: _onAddWorkersPressed,
+                        );
+                      }
+                      return AppButton(
+                        label: 'branches.add_branch.save_button'.tr(),
+                        isLoading: state.isLoading,
+                        onPressed: state.isLoading ? null : _submit,
                       );
                     }
 
@@ -458,7 +545,60 @@ class _AddBranchPageState extends State<AddBranchPage> {
     );
   }
 
-  /// Temporary shell for steps 3–4 until their Figma screens are wired.
+  Widget _buildStepThree() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppLargeNavBar(
+          title: 'branches.add_branch.title'.tr(),
+          caption: 'branches.add_branch.services_step_subtitle'.tr(),
+          useLargeTitleStyle: false,
+        ),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+          child: AppWizardStepIndicator(
+            currentStep: _currentStep,
+            totalSteps: _totalSteps,
+          ),
+        ),
+        Expanded(
+          child: AddBranchServicesStep(
+            selectedServices: _selectedServices,
+            onAddServices: _onAddServicesPressed,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStepFour() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppLargeNavBar(
+          title: 'branches.add_branch.title'.tr(),
+          caption: 'branches.add_branch.workers_step_subtitle'.tr(),
+          useLargeTitleStyle: false,
+        ),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+          child: AppWizardStepIndicator(
+            currentStep: _currentStep,
+            totalSteps: _totalSteps,
+          ),
+        ),
+        Expanded(
+          child: AddBranchWorkersStep(
+            selectedWorkers: _selectedWorkers,
+            onAddWorkers: _onAddWorkersPressed,
+            onRemoveWorker: _onRemoveWorker,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Fallback for unexpected wizard steps.
   Widget _buildUpcomingStepPlaceholder() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

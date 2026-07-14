@@ -6,6 +6,7 @@ environment:
   sdk: ">=3.11.0 <4.0.0"
 
 workspace:
+  - packages/features/workers
   - apps/sanad_client
   - apps/sanad_provider
   - apps/design_catalog

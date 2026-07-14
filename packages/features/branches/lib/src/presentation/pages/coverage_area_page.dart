@@ -1,6 +1,7 @@
 import 'package:app_assets/app_assets.dart';
 import 'package:branches/src/presentation/models/coverage_area_result.dart';
 import 'package:branches/src/presentation/utils/branch_map_defaults.dart';
+import 'package:branches/src/presentation/utils/serving_area_mapper.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -23,10 +24,9 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
   static const _mapOverlayAlpha = 0.45;
   static const _radiusSnapThresholdKm = 0.01;
 
-  final _radiusDebouncer =
-      Debouncer(delay: const Duration(milliseconds: 400));
+  final _radiusDebouncer = Debouncer(delay: const Duration(milliseconds: 400));
   final _radiusController = MapRadiusController();
-  GoogleMapController? _mapController;
+  final _cameraController = MapCameraController();
   double? _previewRadiusKm;
   bool _isDragging = false;
 
@@ -34,24 +34,12 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
   void dispose() {
     _radiusDebouncer.dispose();
     _radiusController.dispose();
-    _mapController?.dispose();
+    _cameraController.dispose();
     super.dispose();
   }
 
-  Future<void> _animateTo(LatLng position) async {
-    final controller = _mapController;
-    if (controller == null) return;
-    await controller.animateCamera(
-      CameraUpdate.newCameraPosition(
-        CameraPosition(
-          target: position,
-          zoom: BranchMapDefaults.coverageZoom,
-        ),
-      ),
-    );
-  }
-
   void _onCameraMove(CameraPosition position) {
+    _cameraController.onCameraMove(position);
     if (!_isDragging) {
       setState(() => _isDragging = true);
     }
@@ -60,165 +48,241 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
   void _onCameraIdle() {
     if (!_isDragging) return;
     setState(() => _isDragging = false);
-    final controller = _mapController;
-    if (controller == null) return;
-    controller.getVisibleRegion().then((bounds) {
-      if (!mounted) return;
-      final center = LatLng(
-        (bounds.northeast.latitude + bounds.southwest.latitude) / 2,
-        (bounds.northeast.longitude + bounds.southwest.longitude) / 2,
-      );
-      context.read<CoverageAreaBloc>().add(
-        CoverageAreaCameraIdle(center),
-      );
-    });
+    final center = _cameraController.position.value;
+    if (center == null) return;
+    context.read<CoverageAreaBloc>().add(
+      CoverageAreaMapMoved(center),
+    );
   }
 
-  Future<void> _openServingAreaSearch() async {
-    await showServingAreaSearchSheet(
-      context,
-      labels: ServingAreaSearchLabels(
-        title: 'branches.coverage_area.add_serving_area'.tr(),
-        searchHint:
-            'branches.coverage_area.search_serving_area'.tr(),
-        noResultsMessage:
-            'branches.coverage_area.no_areas_found'.tr(),
-        genericError:
-            'branches.coverage_area.search_error'.tr(),
-        confirm: 'branches.coverage_area.done'.tr(),
+  void _onMapTap(LatLng latLng) {
+    _cameraController.animateTo(
+      latLng,
+      zoom: BranchMapDefaults.coverageZoom,
+    );
+    context.read<CoverageAreaBloc>().add(
+      CoverageAreaMapMoved(
+        latLng,
+        cameraSource: CoverageAreaCameraSource.programmatic,
       ),
     );
   }
 
+  void _onSearchPredictionSelected(PlacePrediction prediction) {
+    context.read<LocationPickerBloc>().add(
+      LocationPickerPredictionSelected(prediction),
+    );
+  }
+
+  Future<void> _openAddAreaPicker() async {
+    final bloc = context.read<CoverageAreaBloc>();
+    final state = bloc.state;
+    final result = await showMapAreaPicker(
+      context,
+      initialPosition: state.center,
+      initialAddress: state.address,
+      localeIdentifier: context.locale.toString(),
+      labels: MapAreaPickerLabels(
+        title: 'branches.coverage_area.add_serving_area'.tr(),
+        searchHint: 'branches.coverage_area.search_serving_area'.tr(),
+        noResultsMessage: 'branches.coverage_area.no_areas_found'.tr(),
+        searchError: 'branches.coverage_area.search_error'.tr(),
+        specifiedLocation: 'branches.location_picker.specified_location'.tr(),
+        addressHint: 'branches.location_picker.address_hint'.tr(),
+        genericError: 'branches.location_picker.generic_error'.tr(),
+        confirm: 'branches.coverage_area.done'.tr(),
+      ),
+    );
+    if (!mounted || result == null) return;
+    bloc.add(CoverageAreaExtraAreaSet(servingAreaFromPickerResult(result)));
+  }
+
   void _confirm(CoverageAreaState state) {
-    final position = state.position;
+    final center = state.center;
     final address = state.address;
-    if (position == null || address == null) return;
+    if (center == null || address == null) return;
 
     context.pop(
       CoverageAreaResult(
-        position: position,
+        position: center,
         address: address,
         radiusKm: state.radiusKm,
-        servingAreas: state.servingAreas,
+        autoAreaNames: state.autoAreas,
+        extraArea: state.extraArea,
       ),
     );
   }
 
   void _syncRadiusController(CoverageAreaState state) {
     _radiusController.update(
-      center: state.position,
+      center: state.center,
       radiusKm: _previewRadiusKm ?? state.radiusKm,
     );
   }
 
+  List<ServingArea> _autoAreasForDisplay(CoverageAreaState state) {
+    final center = state.center ?? BranchMapDefaults.position;
+    return state.autoAreas
+        .map(
+          (name) => ServingArea(
+            placeId: name,
+            name: name,
+            address: '',
+            latLng: center,
+          ),
+        )
+        .toList(growable: false);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<CoverageAreaBloc, CoverageAreaState>(
-      listenWhen: (previous, current) =>
-          previous.position != current.position ||
-          previous.cameraSource != current.cameraSource ||
-          previous.radiusKm != current.radiusKm,
-      listener: (context, state) {
-        if (state.cameraSource ==
-                CoverageAreaCameraSource.programmatic &&
-            state.position != null) {
-          _animateTo(state.position!);
-        }
-        final preview = _previewRadiusKm;
-        if (preview != null &&
-            (preview - state.radiusKm).abs() <
-                _radiusSnapThresholdKm) {
-          setState(() => _previewRadiusKm = null);
-        }
-      },
-      builder: (context, state) {
-        _syncRadiusController(state);
-        final mapTarget =
-            state.position ?? BranchMapDefaults.position;
-        final displayRadiusKm =
-            _previewRadiusKm ?? state.radiusKm;
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<CoverageAreaBloc, CoverageAreaState>(
+          listenWhen: (previous, current) =>
+              previous.center != current.center ||
+              previous.cameraSource != current.cameraSource ||
+              previous.radiusKm != current.radiusKm,
+          listener: (context, state) {
+            if (state.cameraSource == CoverageAreaCameraSource.programmatic &&
+                state.center != null) {
+              _cameraController.animateTo(
+                state.center!,
+                zoom: BranchMapDefaults.coverageZoom,
+              );
+            }
+            final preview = _previewRadiusKm;
+            if (preview != null &&
+                (preview - state.radiusKm).abs() < _radiusSnapThresholdKm) {
+              setState(() => _previewRadiusKm = null);
+            }
+          },
+        ),
+        BlocListener<LocationPickerBloc, LocationPickerState>(
+          listenWhen: (prev, curr) =>
+              prev.position != curr.position && curr.position != null,
+          listener: (context, lpState) {
+            context.read<CoverageAreaBloc>().add(
+              CoverageAreaMapMoved(
+                lpState.position!,
+                cameraSource: CoverageAreaCameraSource.programmatic,
+              ),
+            );
+          },
+        ),
+      ],
+      child: BlocBuilder<CoverageAreaBloc, CoverageAreaState>(
+        builder: (context, state) {
+          _syncRadiusController(state);
+          final mapTarget = state.center ?? BranchMapDefaults.position;
+          final displayRadiusKm = _previewRadiusKm ?? state.radiusKm;
 
-        return Scaffold(
-          backgroundColor: context.appColors.surface,
-          body: SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                AppNavBar(
-                  title: '',
-                  showBackButton: true,
-                  onLeadingTap: () => context.pop(),
-                ),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding:
-                        EdgeInsets.only(bottom: AppSpacing.lg),
-                    child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.stretch,
-                      children: [
-                        AppSection(
-                          title: 'branches.coverage_area.title'
-                              .tr(),
-                          caption:
-                              'branches.coverage_area.subtitle'
-                                  .tr(),
-                        ),
-                        SizedBox(height: AppSpacing.md),
-                        _buildMap(context, state, mapTarget),
-                        SizedBox(height: AppSpacing.md),
-                        _buildRadiusSection(
-                          context,
-                          state,
-                          displayRadiusKm,
-                        ),
-                        SizedBox(height: AppSpacing.md),
-                        _buildServingAreasSection(
-                          context,
-                          state,
-                        ),
-                        if (state.failure != null) ...[
-                          SizedBox(height: AppSpacing.sm),
-                          Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: AppSpacing.xl,
-                            ),
-                            child: Text(
-                              state.failure!.message,
-                              style: context
-                                  .appTypography.smallNormal
-                                  .copyWith(
-                                    color:
-                                        context.appColors.error,
-                                  ),
-                            ),
+          return Scaffold(
+            backgroundColor: context.appColors.surface,
+            body: SafeArea(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AppNavBar(
+                    title: '',
+                    showBackButton: true,
+                    onLeadingTap: () => context.pop(),
+                  ),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.only(bottom: AppSpacing.lg),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          AppSection(
+                            title: 'branches.coverage_area.title'.tr(),
+                            caption: 'branches.coverage_area.subtitle'.tr(),
                           ),
+                          SizedBox(height: AppSpacing.md),
+                          _buildSearchBar(context),
+                          SizedBox(height: AppSpacing.md),
+                          _buildMap(context, state, mapTarget),
+                          SizedBox(height: AppSpacing.md),
+                          _buildRadiusSection(
+                            context,
+                            state,
+                            displayRadiusKm,
+                          ),
+                          SizedBox(height: AppSpacing.md),
+                          _buildServingAreasSection(context, state),
+                          if (state.failure != null) ...[
+                            SizedBox(height: AppSpacing.sm),
+                            Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: AppSpacing.xl,
+                              ),
+                              child: Text(
+                                state.failure!.message,
+                                style: context.appTypography.smallNormal
+                                    .copyWith(
+                                      color: context.appColors.error,
+                                    ),
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   ),
-                ),
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    AppSpacing.xl,
-                    AppSpacing.sm,
-                    AppSpacing.xl,
-                    AppSpacing.sm,
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      AppSpacing.xl,
+                      AppSpacing.sm,
+                      AppSpacing.xl,
+                      AppSpacing.sm,
+                    ),
+                    child: AppButton(
+                      label: 'branches.coverage_area.confirm'.tr(),
+                      onPressed: state.canConfirm
+                          ? () => _confirm(state)
+                          : null,
+                    ),
                   ),
-                  child: AppButton(
-                    label:
-                        'branches.coverage_area.confirm'.tr(),
-                    onPressed: state.canConfirm
-                        ? () => _confirm(state)
-                        : null,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSearchBar(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      child: BlocBuilder<LocationPickerBloc, LocationPickerState>(
+        buildWhen: (prev, curr) =>
+            prev.predictions != curr.predictions ||
+            prev.searchStatus != curr.searchStatus ||
+            prev.searchQuery != curr.searchQuery ||
+            prev.searchError != curr.searchError,
+        builder: (context, lpState) {
+          return PlaceSearchBar(
+            hint: 'branches.coverage_area.search_hint'.tr(),
+            predictions: lpState.predictions,
+            searchStatus: lpState.searchStatus,
+            searchQuery: lpState.searchQuery,
+            errorMessage: lpState.searchError,
+            onQueryChanged: (query) {
+              context.read<LocationPickerBloc>().add(
+                LocationPickerQueryChanged(query),
+              );
+            },
+            onSubmitted: (_) {},
+            onPredictionSelected: _onSearchPredictionSelected,
+            onCleared: () {
+              context.read<LocationPickerBloc>().add(
+                const LocationPickerPredictionsCleared(),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 
@@ -250,13 +314,17 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
                   ),
                 ),
                 onMapCreated: (controller) {
-                  _mapController = controller;
-                  if (state.position != null) {
-                    _animateTo(state.position!);
+                  _cameraController.onMapCreated(controller);
+                  if (state.center != null) {
+                    _cameraController.animateTo(
+                      state.center!,
+                      zoom: BranchMapDefaults.coverageZoom,
+                    );
                   }
                 },
                 onCameraMove: _onCameraMove,
                 onCameraIdle: _onCameraIdle,
+                onTap: _onMapTap,
                 tiltGesturesEnabled: false,
                 rotateGesturesEnabled: false,
               ),
@@ -273,8 +341,9 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
               ),
               if (state.isLoading)
                 ColoredBox(
-                  color: context.appColors.surface
-                      .withValues(alpha: _mapOverlayAlpha),
+                  color: context.appColors.surface.withValues(
+                    alpha: _mapOverlayAlpha,
+                  ),
                   child: const Center(
                     child: CircularProgressIndicator(),
                   ),
@@ -306,8 +375,7 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
                   'value': formatRadiusKm(displayRadiusKm),
                 },
               ),
-              style:
-                  context.appTypography.regularNormal.copyWith(
+              style: context.appTypography.regularNormal.copyWith(
                 fontWeight: FontWeight.w500,
                 color: context.appColors.textPrimary,
               ),
@@ -340,24 +408,25 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
     BuildContext context,
     CoverageAreaState state,
   ) {
+    final autoAreas = _autoAreasForDisplay(state);
+    final extraArea = state.extraArea;
+
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           AppSection(
-            title:
-                'branches.coverage_area.covered_areas'.tr(),
+            title: 'branches.coverage_area.covered_areas'.tr(),
             size: AppSectionSize.compact,
             trailing: AppSectionTrailing.custom,
             trailingWidget: Text(
               'branches.coverage_area.areas_count'.tr(
                 namedArgs: {
-                  'count': '${state.servingAreas.length}',
+                  'count': '${state.totalAreaCount}',
                 },
               ),
-              style:
-                  context.appTypography.regularNormal.copyWith(
+              style: context.appTypography.regularNormal.copyWith(
                 fontWeight: FontWeight.w500,
                 color: context.appColors.textPrimary,
               ),
@@ -366,19 +435,28 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
           ),
           SizedBox(height: AppSpacing.sm),
           ServingAreaChips(
-            areas: state.servingAreas,
-            emptyMessage:
-                'branches.coverage_area.no_areas_message'.tr(),
+            areas: autoAreas,
+            emptyMessage: 'branches.coverage_area.no_areas_message'.tr(),
             onRemoved: (area) {
               context.read<CoverageAreaBloc>().add(
-                CoverageAreaServingAreaRemoved(area.placeId),
+                CoverageAreaAutoAreaRemoved(area.name),
               );
             },
           ),
+          if (extraArea != null) ...[
+            SizedBox(height: AppSpacing.sm),
+            ServingAreaChips(
+              areas: [extraArea],
+              onRemoved: (_) {
+                context.read<CoverageAreaBloc>().add(
+                  const CoverageAreaExtraAreaRemoved(),
+                );
+              },
+            ),
+          ],
           SizedBox(height: AppSpacing.sm),
           AppChip(
-            label:
-                'branches.coverage_area.add_area'.tr(),
+            label: 'branches.coverage_area.add_area'.tr(),
             selected: true,
             iconPosition: AppChipIconPosition.left,
             icon: Icon(
@@ -386,7 +464,7 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
               size: AppDimension.iconCompact,
               color: context.appColors.onPrimary,
             ),
-            onTap: _openServingAreaSearch,
+            onTap: _openAddAreaPicker,
           ),
         ],
       ),

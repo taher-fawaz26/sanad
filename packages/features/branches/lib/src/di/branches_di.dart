@@ -1,5 +1,6 @@
 import 'package:branches/src/data/datasources/branch_remote_data_source.dart';
 import 'package:branches/src/data/repositories/branch_repository_impl.dart';
+import 'package:branches/src/data/repositories/branch_serving_areas_repository_impl.dart';
 import 'package:branches/src/domain/repositories/branch_repository.dart';
 import 'package:branches/src/domain/usecases/create_branch_usecase.dart';
 import 'package:branches/src/domain/usecases/delete_branch_usecase.dart';
@@ -12,6 +13,7 @@ import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
 import 'package:branches/src/presentation/bloc/branch_details/branch_details_bloc.dart';
 import 'package:branches/src/presentation/bloc/branches/branches_bloc.dart';
 import 'package:core/core.dart';
+import 'package:maps/src/domain/repositories/branch_serving_areas_repository.dart';
 import 'package:network/network.dart';
 
 abstract final class BranchesDI {
@@ -24,6 +26,9 @@ abstract final class BranchesDI {
       )
       ..registerLazySingleton<BranchRepository>(
         () => BranchRepositoryImpl(sl<BranchRemoteDataSource>()),
+      )
+      ..registerLazySingleton<BranchServingAreasRepository>(
+        () => BranchServingAreasRepositoryImpl(sl<BranchRepository>()),
       )
       ..registerLazySingleton(
         () => GetBranchesUseCase(sl<BranchRepository>()),

@@ -51,6 +51,7 @@ class BranchRepositoryImpl implements BranchRepository {
               availability: params.availability,
               serviceIds: params.serviceIds,
               servingAreaPlaceIds: params.servingAreaPlaceIds,
+              workerIds: params.workerIds,
             ),
           )
           .map((dto) => dto.toEntity());

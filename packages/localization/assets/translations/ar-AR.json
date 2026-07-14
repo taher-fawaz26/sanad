@@ -104,6 +104,18 @@
       "coverage_set_title": "تم تعيين منطقة التغطية",
       "coverage_set_description": "منطقة {area} بنطاق {radius} كم تغطي {count} مناطق.",
       "add_location_button": "إضافة",
+      "add_services_button": "إضافة",
+      "services_step_subtitle": "أضف خدماتك",
+      "services_title": "أضف خدماتك",
+      "services_description": "ليس لديك أي خدمات حالياً. يرجى إضافة خدمتك الأولى.",
+      "added_services_section": "الخدمات المضافة ({count})",
+      "add_service_button": "إضافة خدمة",
+      "workers_step_subtitle": "أضف فريقك",
+      "workers_title": "لا يوجد عمال معيّنون",
+      "workers_description": "عيّن العمال حتى يمكن جدولتهم للمهام.",
+      "added_workers_section": "العمال المضافون ({count})",
+      "add_workers_button": "إضافة",
+      "add_more_workers_button": "إضافة المزيد من العمال",
       "add_location_coming_soon": "محدد الموقع قريباً",
       "upcoming_step_placeholder": "هذه الخطوة قادمة قريباً.",
       "next_button": "التالي",
@@ -135,13 +147,18 @@
     "coverage_area": {
       "title": "منطقة التغطية",
       "subtitle": "اضبط النطاق لتغطية المناطق التي تخدمها",
+      "search_hint": "ابحث عن موقع",
       "radius": "النطاق",
       "radius_value": "{value} كم",
       "covered_areas": "المناطق المغطاة",
       "areas_count": "{count} مناطق",
+      "no_areas_message": "لم تتم إضافة مناطق خدمة بعد",
       "add_area": "إضافة",
-      "add_area_title": "إضافة منطقة مغطاة",
-      "add_area_hint": "اسم المنطقة",
+      "add_serving_area": "إضافة منطقة خدمة",
+      "search_serving_area": "ابحث عن منطقة",
+      "no_areas_found": "لم يتم العثور على مناطق",
+      "search_error": "فشل البحث. يرجى المحاولة مرة أخرى.",
+      "done": "تم",
       "confirm": "تأكيد التغطية"
     }
   },
@@ -153,6 +170,16 @@
       "retry": "إعادة المحاولة",
       "empty": "لا توجد خدمات"
     }
+  },
+  "workers": {
+    "select_worker": {
+      "title": "أضف فريقك",
+      "search_hint": "بحث",
+      "confirm": "تأكيد",
+      "retry": "إعادة المحاولة",
+      "empty": "لا يوجد عمال"
+    },
+    "remove_worker": "إزالة العامل"
   },
   "auth": {
     "login_title": "مرحباً بعودتك",
@@ -231,5 +258,9 @@
     "secure_connection_failed": "فشل الاتصال الآمن. يرجى المحاولة مرة أخرى.",
     "invalid_credentials": "بيانات اعتماد غير صالحة. يرجى المحاولة مرة أخرى.",
     "cache_error": "فشل تحميل البيانات المخزنة مؤقتاً."
+  },  "workers": {
+    "title": "",
+    "empty_title": "",
+    "empty_description": ""
   }
 }

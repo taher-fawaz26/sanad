@@ -30,6 +30,7 @@
 <module fileurl="file://$PROJECT_DIR$/packages/storage/melos_storage.iml" filepath="$PROJECT_DIR$/packages/storage/melos_storage.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/testing/melos_testing.iml" filepath="$PROJECT_DIR$/packages/testing/melos_testing.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/utilities/melos_utilities.iml" filepath="$PROJECT_DIR$/packages/utilities/melos_utilities.iml"/>
+<module fileurl="file://$PROJECT_DIR$/packages/features/workers/melos_workers.iml" filepath="$PROJECT_DIR$/packages/features/workers/melos_workers.iml"/>
 <module fileurl="file://$PROJECT_DIR$/melos_sanad.iml" filepath="$PROJECT_DIR$/melos_sanad.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/dependencies/melos_dependencies.iml" filepath="$PROJECT_DIR$/packages/dependencies/melos_dependencies.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/shared_widgets/melos_shared_widgets.iml" filepath="$PROJECT_DIR$/packages/shared_widgets/melos_shared_widgets.iml"/>

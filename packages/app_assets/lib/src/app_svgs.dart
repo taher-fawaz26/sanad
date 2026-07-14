@@ -67,4 +67,7 @@ abstract final class AppSvgs {
 
   /// Close (X) — modal / form dismiss.
   static const String close = '$_base/close.svg';
+
+  /// Trash / delete — list row remove action.
+  static const String trash = '$_base/trash.svg';
 }

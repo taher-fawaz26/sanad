@@ -30,6 +30,10 @@ dependencies:
     path: ../../maps
   network:
     path: ../../network
+  services:
+    path: ../services
+  workers:
+    path: ../workers
   url_launcher: ^6.3.1
 
 dev_dependencies:

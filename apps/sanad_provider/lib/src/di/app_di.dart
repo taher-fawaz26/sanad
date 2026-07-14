@@ -13,6 +13,7 @@ import 'package:otp/otp.dart';
 import 'package:permissions/permissions.dart';
 import 'package:sanad_provider/src/config/app_config.dart';
 import 'package:services/services.dart';
+import 'package:workers/workers.dart';
 import 'package:storage/storage.dart';
 
 late final ModuleRegistry moduleRegistry;
@@ -125,6 +126,7 @@ Future<void> configureDependencies() async {
     ForgotPasswordModule(),
     BranchesModule(),
     ServicesModule(),
+    WorkersModule(),
   ]);
   await moduleRegistry.initAll();
 

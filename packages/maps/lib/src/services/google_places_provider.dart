@@ -2,6 +2,7 @@ import 'package:core/core.dart';
 import 'package:dio/dio.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:maps/src/data/models/place_prediction_dto.dart';
 import 'package:maps/src/domain/entities/place_prediction.dart';
 import 'package:maps/src/domain/failures/places_failure.dart';
 import 'package:maps/src/services/places_provider.dart';
@@ -51,7 +52,7 @@ class GooglePlacesProvider implements PlacesProvider {
 
         return (json['predictions'] as List<dynamic>)
             .map(
-              (e) => PlacePrediction.fromJson(e as Map<String, dynamic>),
+              (e) => PlacePredictionDto.fromJson(e as Map<String, dynamic>),
             )
             .toList();
       },

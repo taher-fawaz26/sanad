@@ -98,7 +98,11 @@ class _SelectServiceActionSheetState extends State<_SelectServiceActionSheet> {
     final query = _query.trim().toLowerCase();
     if (query.isEmpty) return _services;
     return _services
-        .where((service) => service.name.toLowerCase().contains(query))
+        .where(
+          (service) =>
+              service.name.toLowerCase().contains(query) ||
+              service.category.toLowerCase().contains(query),
+        )
         .toList();
   }
 

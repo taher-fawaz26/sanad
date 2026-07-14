@@ -7,14 +7,39 @@ class CoverageAreaResult extends Equatable {
     required this.position,
     required this.address,
     required this.radiusKm,
-    this.servingAreas = const [],
+    this.autoAreaNames = const [],
+    this.extraArea,
   });
 
   final LatLng position;
   final String address;
   final double radiusKm;
-  final List<ServingArea> servingAreas;
+  final List<String> autoAreaNames;
+  final ServingArea? extraArea;
+
+  List<ServingArea> get servingAreas => [
+        ...autoAreaNames.map(
+          (name) => ServingArea(
+            placeId: name,
+            name: name,
+            address: '',
+            latLng: position,
+          ),
+        ),
+        if (extraArea != null) extraArea!,
+      ];
+
+  List<String> get servingAreaPlaceIds => [
+        ...autoAreaNames,
+        if (extraArea != null) extraArea!.placeId,
+      ];
 
   @override
-  List<Object?> get props => [position, address, radiusKm, servingAreas];
+  List<Object?> get props => [
+        position,
+        address,
+        radiusKm,
+        autoAreaNames,
+        extraArea,
+      ];
 }

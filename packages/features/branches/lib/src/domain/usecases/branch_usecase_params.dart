@@ -37,6 +37,7 @@ class CreateBranchParams extends Equatable {
     this.availability,
     this.serviceIds,
     this.servingAreaPlaceIds,
+    this.workerIds,
   });
 
   final String branchName;
@@ -54,6 +55,7 @@ class CreateBranchParams extends Equatable {
   final List<BranchAvailabilityEntity>? availability;
   final List<String>? serviceIds;
   final List<String>? servingAreaPlaceIds;
+  final List<String>? workerIds;
 
   @override
   List<Object?> get props => [
@@ -72,6 +74,7 @@ class CreateBranchParams extends Equatable {
         availability,
         serviceIds,
         servingAreaPlaceIds,
+        workerIds,
       ];
 }
 

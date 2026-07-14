@@ -49,17 +49,26 @@ class BranchesModule extends FeatureModule {
             final args = state.extra is CoverageAreaArgs
                 ? state.extra! as CoverageAreaArgs
                 : null;
-            return BlocProvider(
-              create: (_) => sl<CoverageAreaBloc>()
-                ..add(
-                  CoverageAreaStarted(
-                    initialPosition: args?.position,
-                    initialAddress: args?.address,
-                    initialRadiusKm: args?.radiusKm,
-                    initialServingAreas: args?.servingAreas ?? const [],
-                    localeIdentifier: context.locale.toString(),
-                  ),
+            final locale = context.locale.toString();
+            return MultiBlocProvider(
+              providers: [
+                BlocProvider(
+                  create: (_) => sl<CoverageAreaBloc>()
+                    ..add(
+                      CoverageAreaStarted(
+                        mode: args?.mode ?? CoverageMode.create,
+                        branchId: args?.branchId,
+                        initialCenter: args?.position,
+                        initialAddress: args?.address,
+                        initialRadiusKm: args?.radiusKm,
+                        localeIdentifier: locale,
+                      ),
+                    ),
                 ),
+                BlocProvider(
+                  create: (_) => sl<LocationPickerBloc>(),
+                ),
+              ],
               child: const CoverageAreaPage(),
             );
           },
