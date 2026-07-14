@@ -144,12 +144,21 @@ class _CoverageAreaPickerState extends State<CoverageAreaPicker> {
               SizedBox(height: AppSpacing.md),
               NearbyPlacesSheet(
                 title: labels.coveredAreasTitle,
-                places: state.coveredAreas,
+                places: state.servingAreas
+                    .map((a) => a.name)
+                    .toList(growable: false),
                 emptyMessage: labels.noAreasMessage,
-                onPlaceRemoved: (area) {
-                  context.read<CoverageAreaBloc>().add(
-                    CoverageAreaAreaRemoved(area),
-                  );
+                onPlaceRemoved: (name) {
+                  for (final area in state.servingAreas) {
+                    if (area.name == name) {
+                      context.read<CoverageAreaBloc>().add(
+                        CoverageAreaServingAreaRemoved(
+                          area.placeId,
+                        ),
+                      );
+                      break;
+                    }
+                  }
                 },
               ),
               SizedBox(height: AppSpacing.md),

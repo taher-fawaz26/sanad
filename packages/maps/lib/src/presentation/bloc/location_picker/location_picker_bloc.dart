@@ -9,6 +9,7 @@ import 'package:maps/src/domain/usecases/get_place_details_usecase.dart';
 import 'package:maps/src/domain/usecases/open_location_settings_usecase.dart';
 import 'package:maps/src/domain/usecases/reverse_geocode_usecase.dart';
 import 'package:maps/src/domain/usecases/search_places_usecase.dart';
+import 'package:maps/src/presentation/models/place_search_status.dart';
 import 'package:maps/src/services/location_failure_codes.dart';
 
 part 'location_picker_event.dart';
@@ -116,6 +117,7 @@ class LocationPickerBloc
     Emitter<LocationPickerState> emit,
   ) async {
     if (state.status == LocationPickerStatus.loadingLocation) return;
+    if (state.position == event.position) return;
 
     final opId = ++_geocodeOpId;
     emit(
@@ -138,6 +140,18 @@ class LocationPickerBloc
     final query = event.query.trim();
     if (query.isEmpty) return;
 
+    // Only forward-geocode when no predictions are available AND
+    // the Places provider is disabled. When Places is enabled, the user
+    // should explicitly tap a prediction.
+    if (_searchPlacesUseCase != null && state.hasPredictions) return;
+
+    await _submitViaGeocode(query, emit);
+  }
+
+  Future<void> _submitViaGeocode(
+    String query,
+    Emitter<LocationPickerState> emit,
+  ) async {
     final opId = ++_geocodeOpId;
     ++_placesOpId;
     emit(
@@ -195,11 +209,23 @@ class LocationPickerBloc
 
     final query = event.query.trim();
     if (query.length < 2) {
-      emit(state.copyWith(clearPredictions: true));
+      emit(
+        state.copyWith(
+          clearPredictions: true,
+          searchQuery: query,
+        ),
+      );
       return;
     }
 
     final opId = ++_placesOpId;
+    emit(
+      state.copyWith(
+        searchStatus: PlaceSearchStatus.searching,
+        searchQuery: query,
+        clearSearchError: true,
+      ),
+    );
 
     final result = await useCase(
       SearchPlacesParams(
@@ -211,8 +237,26 @@ class LocationPickerBloc
     if (_placesOpId != opId) return;
 
     result.fold(
-      (_) => emit(state.copyWith(clearPredictions: true)),
-      (predictions) => emit(state.copyWith(predictions: predictions)),
+      (failure) {
+        emit(
+          state.copyWith(
+            searchStatus: PlaceSearchStatus.failure,
+            searchError: failure.message,
+            clearPredictions: true,
+          ),
+        );
+      },
+      (predictions) {
+        emit(
+          state.copyWith(
+            predictions: predictions,
+            searchStatus: predictions.isEmpty
+                ? PlaceSearchStatus.empty
+                : PlaceSearchStatus.success,
+            clearSearchError: true,
+          ),
+        );
+      },
     );
   }
 

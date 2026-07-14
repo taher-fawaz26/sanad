@@ -1,8 +1,8 @@
 import 'package:app_assets/app_assets.dart';
-import 'package:maps/maps.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:maps/maps.dart';
 
 /// Add branch — Step 2 coverage.
 ///
@@ -12,7 +12,7 @@ class AddBranchCoverageStep extends StatelessWidget {
   const AddBranchCoverageStep({
     required this.onEditCoverage,
     this.pickedAddress,
-    this.coveredAreas = const [],
+    this.servingAreas = const [],
     this.radiusKm,
     super.key,
   });
@@ -20,7 +20,7 @@ class AddBranchCoverageStep extends StatelessWidget {
   /// Opens the coverage area screen to add or edit coverage.
   final VoidCallback onEditCoverage;
   final String? pickedAddress;
-  final List<String> coveredAreas;
+  final List<ServingArea> servingAreas;
   final double? radiusKm;
 
   bool get _hasCoverage =>
@@ -33,7 +33,7 @@ class AddBranchCoverageStep extends StatelessWidget {
     if (_hasCoverage) {
       return _CoverageSetContent(
         address: pickedAddress!,
-        coveredAreas: coveredAreas,
+        servingAreas: servingAreas,
         radiusKm: radiusKm!,
         onEditCoverage: onEditCoverage,
       );
@@ -57,18 +57,18 @@ class AddBranchCoverageStep extends StatelessWidget {
 class _CoverageSetContent extends StatelessWidget {
   const _CoverageSetContent({
     required this.address,
-    required this.coveredAreas,
+    required this.servingAreas,
     required this.radiusKm,
     required this.onEditCoverage,
   });
 
   final String address;
-  final List<String> coveredAreas;
+  final List<ServingArea> servingAreas;
   final double radiusKm;
   final VoidCallback onEditCoverage;
 
   String get _areaLabel {
-    if (coveredAreas.isNotEmpty) return coveredAreas.first;
+    if (servingAreas.isNotEmpty) return servingAreas.first.name;
     final firstPart = address.split(',').first.trim();
     return firstPart.isNotEmpty ? firstPart : address;
   }
@@ -120,7 +120,7 @@ class _CoverageSetContent extends StatelessWidget {
                     namedArgs: {
                       'area': _areaLabel,
                       'radius': formatRadiusKm(radiusKm),
-                      'count': '${coveredAreas.length}',
+                      'count': '${servingAreas.length}',
                     },
                   ),
                   textAlign: TextAlign.center,
@@ -131,20 +131,9 @@ class _CoverageSetContent extends StatelessWidget {
               ],
             ),
           ),
-          if (coveredAreas.isNotEmpty) ...[
+          if (servingAreas.isNotEmpty) ...[
             SizedBox(height: AppSpacing.xxxl),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              children: [
-                for (final area in coveredAreas)
-                  AppChip(
-                    label: area,
-                    tone: AppChipTone.softNeutral,
-                  ),
-              ],
-            ),
+            ServingAreaChips(areas: servingAreas),
           ],
         ],
       ),

@@ -17,6 +17,7 @@ class CreateBranchRequest extends Equatable {
     this.availabilityMode = 'CORE_HOURS',
     this.availability,
     this.serviceIds,
+    this.servingAreaPlaceIds,
   });
 
   final String branchName;
@@ -33,6 +34,7 @@ class CreateBranchRequest extends Equatable {
   final String availabilityMode;
   final List<BranchAvailabilityEntity>? availability;
   final List<String>? serviceIds;
+  final List<String>? servingAreaPlaceIds;
 
   Map<String, dynamic> toMap() {
     final body = <String, dynamic>{
@@ -62,6 +64,9 @@ class CreateBranchRequest extends Equatable {
           .toList();
     }
     if (serviceIds != null) body['serviceIds'] = serviceIds;
+    if (servingAreaPlaceIds != null && servingAreaPlaceIds!.isNotEmpty) {
+      body['servingAreaPlaceIds'] = servingAreaPlaceIds;
+    }
     return body;
   }
 

@@ -13,6 +13,7 @@ import 'package:maps/src/domain/usecases/open_location_settings_usecase.dart';
 import 'package:maps/src/domain/usecases/reverse_geocode_usecase.dart';
 import 'package:maps/src/domain/usecases/search_places_usecase.dart';
 import 'package:maps/src/presentation/bloc/location_picker/location_picker_bloc.dart';
+import 'package:maps/src/presentation/models/place_search_status.dart';
 import 'package:maps/src/services/location_failure_codes.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -91,6 +92,7 @@ void main() {
       final bloc = buildBloc();
       expect(bloc.state.status, LocationPickerStatus.initial);
       expect(bloc.state.position, isNull);
+      expect(bloc.state.searchStatus, PlaceSearchStatus.idle);
       addTearDown(bloc.close);
     });
 
@@ -190,7 +192,7 @@ void main() {
 
     group('LocationPickerSearchSubmitted', () {
       blocTest<LocationPickerBloc, LocationPickerState>(
-        'forward geocodes query and reverse geocodes result',
+        'forward geocodes when Places is disabled',
         build: () {
           when(() => forwardGeocode(any()))
               .thenReturn(TaskEither.right(_tPosition));
@@ -224,6 +226,45 @@ void main() {
         act: (bloc) => bloc.add(LocationPickerSearchSubmitted('  ')),
         expect: () => <LocationPickerState>[],
       );
+
+      blocTest<LocationPickerBloc, LocationPickerState>(
+        'no-op when Places enabled and predictions exist',
+        build: () => buildBloc(withPlaces: true),
+        seed: () => LocationPickerState(
+          predictions: [_tPrediction],
+        ),
+        act: (bloc) =>
+            bloc.add(LocationPickerSearchSubmitted('Dubai Marina')),
+        expect: () => <LocationPickerState>[],
+        verify: (_) {
+          verifyNever(() => forwardGeocode(any()));
+          verifyNever(() => searchPlaces(any()));
+        },
+      );
+
+      blocTest<LocationPickerBloc, LocationPickerState>(
+        'forward geocodes when Places enabled but no predictions',
+        build: () {
+          when(() => forwardGeocode(any()))
+              .thenReturn(TaskEither.right(_tPosition));
+          when(() => reverseGeocode(any()))
+              .thenReturn(TaskEither.right(_tAddress));
+          return buildBloc(withPlaces: true);
+        },
+        act: (bloc) =>
+            bloc.add(LocationPickerSearchSubmitted('Dubai Marina')),
+        expect: () => [
+          isA<LocationPickerState>().having(
+            (s) => s.status,
+            'status',
+            LocationPickerStatus.geocoding,
+          ),
+          isA<LocationPickerState>()
+              .having((s) => s.position, 'position', _tPosition),
+          isA<LocationPickerState>()
+              .having((s) => s.status, 'status', LocationPickerStatus.ready),
+        ],
+      );
     });
 
     group('LocationPickerQueryChanged (Places)', () {
@@ -243,7 +284,12 @@ void main() {
         act: (bloc) => bloc.add(LocationPickerQueryChanged('d')),
         expect: () => [
           isA<LocationPickerState>()
-              .having((s) => s.predictions, 'predictions', isEmpty),
+              .having((s) => s.predictions, 'predictions', isEmpty)
+              .having(
+                (s) => s.searchStatus,
+                'searchStatus',
+                PlaceSearchStatus.idle,
+              ),
         ],
       );
 
@@ -258,11 +304,87 @@ void main() {
         expect: () => [
           isA<LocationPickerState>()
               .having(
+                (s) => s.searchStatus,
+                'searchStatus',
+                PlaceSearchStatus.searching,
+              )
+              .having((s) => s.isSearching, 'isSearching', isTrue),
+          isA<LocationPickerState>()
+              .having(
                 (s) => s.predictions,
                 'predictions',
                 [_tPrediction],
               )
-              .having((s) => s.hasPredictions, 'hasPredictions', isTrue),
+              .having((s) => s.hasPredictions, 'hasPredictions', isTrue)
+              .having(
+                (s) => s.searchStatus,
+                'searchStatus',
+                PlaceSearchStatus.success,
+              ),
+        ],
+      );
+
+      blocTest<LocationPickerBloc, LocationPickerState>(
+        'emits empty status when no predictions found',
+        build: () {
+          when(() => searchPlaces(any()))
+              .thenReturn(TaskEither.right([]));
+          return buildBloc(withPlaces: true);
+        },
+        act: (bloc) => bloc.add(LocationPickerQueryChanged('xyz')),
+        expect: () => [
+          isA<LocationPickerState>().having(
+            (s) => s.searchStatus,
+            'searchStatus',
+            PlaceSearchStatus.searching,
+          ),
+          isA<LocationPickerState>()
+              .having(
+                (s) => s.searchStatus,
+                'searchStatus',
+                PlaceSearchStatus.empty,
+              )
+              .having((s) => s.predictions, 'predictions', isEmpty),
+        ],
+      );
+
+      blocTest<LocationPickerBloc, LocationPickerState>(
+        'emits failure status on search error',
+        build: () {
+          when(() => searchPlaces(any()))
+              .thenReturn(TaskEither.left(_tFailure));
+          return buildBloc(withPlaces: true);
+        },
+        act: (bloc) => bloc.add(LocationPickerQueryChanged('xyz')),
+        expect: () => [
+          isA<LocationPickerState>().having(
+            (s) => s.searchStatus,
+            'searchStatus',
+            PlaceSearchStatus.searching,
+          ),
+          isA<LocationPickerState>()
+              .having(
+                (s) => s.searchStatus,
+                'searchStatus',
+                PlaceSearchStatus.failure,
+              )
+              .having((s) => s.searchError, 'searchError', 'denied'),
+        ],
+      );
+
+      blocTest<LocationPickerBloc, LocationPickerState>(
+        'tracks searchQuery in state',
+        build: () {
+          when(() => searchPlaces(any()))
+              .thenReturn(TaskEither.right([_tPrediction]));
+          return buildBloc(withPlaces: true);
+        },
+        act: (bloc) => bloc.add(LocationPickerQueryChanged('dubai')),
+        expect: () => [
+          isA<LocationPickerState>()
+              .having((s) => s.searchQuery, 'searchQuery', 'dubai'),
+          isA<LocationPickerState>()
+              .having((s) => s.searchQuery, 'searchQuery', 'dubai'),
         ],
       );
     });
@@ -320,6 +442,30 @@ void main() {
           status: LocationPickerStatus.permissionDenied,
         );
         expect(state.hasPermissionError, isTrue);
+      });
+
+      test('isSearching reflects searchStatus', () {
+        const searching = LocationPickerState(
+          searchStatus: PlaceSearchStatus.searching,
+        );
+        expect(searching.isSearching, isTrue);
+
+        const idle = LocationPickerState(
+          searchStatus: PlaceSearchStatus.idle,
+        );
+        expect(idle.isSearching, isFalse);
+      });
+
+      test('clearPredictions resets searchStatus to idle', () {
+        const state = LocationPickerState(
+          searchStatus: PlaceSearchStatus.success,
+          predictions: [_tPrediction],
+          searchError: 'some error',
+        );
+        final cleared = state.copyWith(clearPredictions: true);
+        expect(cleared.predictions, isEmpty);
+        expect(cleared.searchStatus, PlaceSearchStatus.idle);
+        expect(cleared.searchError, isNull);
       });
     });
   });

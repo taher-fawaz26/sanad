@@ -25,6 +25,9 @@ class LocationPickerState extends Equatable {
     this.failure,
     this.cameraSource = LocationPickerCameraSource.none,
     this.predictions = const [],
+    this.searchStatus = PlaceSearchStatus.idle,
+    this.searchError,
+    this.searchQuery = '',
   });
 
   final LocationPickerStatus status;
@@ -33,6 +36,9 @@ class LocationPickerState extends Equatable {
   final Failure? failure;
   final LocationPickerCameraSource cameraSource;
   final List<PlacePrediction> predictions;
+  final PlaceSearchStatus searchStatus;
+  final String? searchError;
+  final String searchQuery;
 
   bool get canConfirm =>
       position != null &&
@@ -53,6 +59,8 @@ class LocationPickerState extends Equatable {
 
   bool get hasPredictions => predictions.isNotEmpty;
 
+  bool get isSearching => searchStatus == PlaceSearchStatus.searching;
+
   LocationPickerState copyWith({
     LocationPickerStatus? status,
     LatLng? position,
@@ -60,9 +68,13 @@ class LocationPickerState extends Equatable {
     Failure? failure,
     LocationPickerCameraSource? cameraSource,
     List<PlacePrediction>? predictions,
+    PlaceSearchStatus? searchStatus,
+    String? searchError,
+    String? searchQuery,
     bool clearFailure = false,
     bool clearAddress = false,
     bool clearPredictions = false,
+    bool clearSearchError = false,
   }) {
     return LocationPickerState(
       status: status ?? this.status,
@@ -72,6 +84,11 @@ class LocationPickerState extends Equatable {
       cameraSource: cameraSource ?? this.cameraSource,
       predictions:
           clearPredictions ? const [] : (predictions ?? this.predictions),
+      searchStatus: searchStatus ??
+          (clearPredictions ? PlaceSearchStatus.idle : this.searchStatus),
+      searchError: searchError ??
+          (clearSearchError || clearPredictions ? null : this.searchError),
+      searchQuery: searchQuery ?? this.searchQuery,
     );
   }
 
@@ -83,5 +100,8 @@ class LocationPickerState extends Equatable {
         failure,
         cameraSource,
         predictions,
+        searchStatus,
+        searchError,
+        searchQuery,
       ];
 }

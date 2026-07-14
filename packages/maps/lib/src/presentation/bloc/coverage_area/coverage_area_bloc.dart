@@ -2,10 +2,14 @@ import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:maps/src/domain/entities/place_prediction.dart';
+import 'package:maps/src/domain/entities/serving_area.dart';
 import 'package:maps/src/domain/usecases/forward_geocode_usecase.dart';
 import 'package:maps/src/domain/usecases/get_current_location_usecase.dart';
-import 'package:maps/src/domain/usecases/get_nearby_areas_usecase.dart';
+import 'package:maps/src/domain/usecases/get_place_details_usecase.dart';
 import 'package:maps/src/domain/usecases/reverse_geocode_usecase.dart';
+import 'package:maps/src/domain/usecases/search_places_usecase.dart';
+import 'package:maps/src/presentation/models/place_search_status.dart';
 
 part 'coverage_area_event.dart';
 part 'coverage_area_state.dart';
@@ -15,30 +19,37 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
     required GetCurrentLocationUseCase getCurrentLocationUseCase,
     required ReverseGeocodeUseCase reverseGeocodeUseCase,
     required ForwardGeocodeUseCase forwardGeocodeUseCase,
-    required GetNearbyAreasUseCase getNearbyAreasUseCase,
+    SearchPlacesUseCase? searchPlacesUseCase,
+    GetPlaceDetailsUseCase? getPlaceDetailsUseCase,
   })  : _getCurrentLocationUseCase = getCurrentLocationUseCase,
         _reverseGeocodeUseCase = reverseGeocodeUseCase,
         _forwardGeocodeUseCase = forwardGeocodeUseCase,
-        _getNearbyAreasUseCase = getNearbyAreasUseCase,
+        _searchPlacesUseCase = searchPlacesUseCase,
+        _getPlaceDetailsUseCase = getPlaceDetailsUseCase,
         super(const CoverageAreaState()) {
     on<CoverageAreaStarted>(_onStarted);
     on<CoverageAreaLocationUpdated>(_onLocationUpdated);
+    on<CoverageAreaCameraIdle>(_onCameraIdle);
     on<CoverageAreaSearchSubmitted>(_onSearchSubmitted);
     on<CoverageAreaRadiusChanged>(_onRadiusChanged);
-    on<CoverageAreaAreaRemoved>(_onAreaRemoved);
-    on<CoverageAreaAreaAdded>(_onAreaAdded);
+    on<CoverageAreaServingAreaAdded>(_onServingAreaAdded);
+    on<CoverageAreaServingAreaRemoved>(_onServingAreaRemoved);
+    on<CoverageAreaQueryChanged>(_onQueryChanged);
+    on<CoverageAreaPredictionSelected>(_onPredictionSelected);
+    on<CoverageAreaPredictionsCleared>(_onPredictionsCleared);
   }
 
   final GetCurrentLocationUseCase _getCurrentLocationUseCase;
   final ReverseGeocodeUseCase _reverseGeocodeUseCase;
   final ForwardGeocodeUseCase _forwardGeocodeUseCase;
-  final GetNearbyAreasUseCase _getNearbyAreasUseCase;
+  final SearchPlacesUseCase? _searchPlacesUseCase;
+  final GetPlaceDetailsUseCase? _getPlaceDetailsUseCase;
 
   String? _localeIdentifier;
 
   int _locationOpId = 0;
 
-  int _areasOpId = 0;
+  int _searchOpId = 0;
 
   Future<void> _onStarted(
     CoverageAreaStarted event,
@@ -49,6 +60,7 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
     emit(
       state.copyWith(
         status: CoverageAreaStatus.loading,
+        servingAreas: event.initialServingAreas,
         clearFailure: true,
       ),
     );
@@ -102,6 +114,19 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
     );
   }
 
+  Future<void> _onCameraIdle(
+    CoverageAreaCameraIdle event,
+    Emitter<CoverageAreaState> emit,
+  ) async {
+    await _applyLocation(
+      opId: ++_locationOpId,
+      position: event.position,
+      radiusKm: state.radiusKm,
+      emit: emit,
+      cameraSource: CoverageAreaCameraSource.none,
+    );
+  }
+
   Future<void> _onSearchSubmitted(
     CoverageAreaSearchSubmitted event,
     Emitter<CoverageAreaState> emit,
@@ -146,68 +171,147 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
     );
   }
 
-  Future<void> _onRadiusChanged(
+  void _onRadiusChanged(
     CoverageAreaRadiusChanged event,
     Emitter<CoverageAreaState> emit,
+  ) {
+    emit(state.copyWith(radiusKm: event.radiusKm));
+  }
+
+  void _onServingAreaAdded(
+    CoverageAreaServingAreaAdded event,
+    Emitter<CoverageAreaState> emit,
+  ) {
+    final exists =
+        state.servingAreas.any((a) => a.placeId == event.area.placeId);
+    if (exists) return;
+    emit(
+      state.copyWith(
+        servingAreas: [...state.servingAreas, event.area],
+      ),
+    );
+  }
+
+  void _onServingAreaRemoved(
+    CoverageAreaServingAreaRemoved event,
+    Emitter<CoverageAreaState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        servingAreas: state.servingAreas
+            .where((a) => a.placeId != event.placeId)
+            .toList(growable: false),
+      ),
+    );
+  }
+
+  Future<void> _onQueryChanged(
+    CoverageAreaQueryChanged event,
+    Emitter<CoverageAreaState> emit,
   ) async {
-    final position = state.position;
-    if (position == null) {
-      emit(state.copyWith(radiusKm: event.radiusKm));
+    final query = event.query.trim();
+    if (query.isEmpty) {
+      emit(
+        state.copyWith(
+          predictions: const [],
+          searchStatus: PlaceSearchStatus.idle,
+          searchQuery: '',
+          clearSearchError: true,
+        ),
+      );
       return;
     }
+
+    final searchUseCase = _searchPlacesUseCase;
+    if (searchUseCase == null) return;
+
+    final opId = ++_searchOpId;
+    emit(
+      state.copyWith(
+        searchStatus: PlaceSearchStatus.searching,
+        searchQuery: query,
+        clearSearchError: true,
+      ),
+    );
+
+    final result = await searchUseCase(
+      SearchPlacesParams(
+        query: query,
+        language: _localeIdentifier,
+        biasLocation: state.position,
+      ),
+    ).run();
+    if (_searchOpId != opId) return;
+
+    result.fold(
+      (failure) => emit(
+        state.copyWith(
+          searchStatus: PlaceSearchStatus.failure,
+          searchError: failure.message,
+          predictions: const [],
+        ),
+      ),
+      (predictions) => emit(
+        state.copyWith(
+          searchStatus: predictions.isEmpty
+              ? PlaceSearchStatus.empty
+              : PlaceSearchStatus.success,
+          predictions: predictions,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _onPredictionSelected(
+    CoverageAreaPredictionSelected event,
+    Emitter<CoverageAreaState> emit,
+  ) async {
+    final prediction = event.prediction;
+    final detailsUseCase = _getPlaceDetailsUseCase;
 
     emit(
       state.copyWith(
-        radiusKm: event.radiusKm,
-        status: CoverageAreaStatus.loading,
+        predictions: const [],
+        searchStatus: PlaceSearchStatus.idle,
+        searchQuery: '',
       ),
     );
-    await _refreshCoveredAreas(
-      areasOpId: ++_areasOpId,
-      position: position,
-      radiusKm: event.radiusKm,
-      emit: emit,
-    );
-  }
 
-  void _onAreaRemoved(
-    CoverageAreaAreaRemoved event,
-    Emitter<CoverageAreaState> emit,
-  ) {
-    final area = event.area;
-    if (state.suggestedAreas.contains(area)) {
-      emit(state.copyWith(removedAreas: {...state.removedAreas, area}));
-    } else if (state.customAreas.contains(area)) {
-      emit(
-        state.copyWith(
-          customAreas: state.customAreas
-              .where((a) => a != area)
-              .toList(growable: false),
-        ),
+    LatLng latLng;
+    if (detailsUseCase != null) {
+      final result = await detailsUseCase(
+        GetPlaceDetailsParams(placeId: prediction.placeId),
+      ).run();
+      final resolved = result.getOrElse(
+        (_) => state.position ?? const LatLng(0, 0),
       );
+      latLng = resolved;
+    } else {
+      latLng = state.position ?? const LatLng(0, 0);
     }
+
+    final area = ServingArea(
+      placeId: prediction.placeId,
+      name: prediction.mainText,
+      address: prediction.secondaryText,
+      latLng: latLng,
+    );
+
+    add(CoverageAreaServingAreaAdded(area));
   }
 
-  void _onAreaAdded(
-    CoverageAreaAreaAdded event,
+  void _onPredictionsCleared(
+    CoverageAreaPredictionsCleared event,
     Emitter<CoverageAreaState> emit,
   ) {
-    final area = event.area.trim();
-    if (area.isEmpty) return;
-
-    if (state.suggestedAreas.contains(area)) {
-      if (state.removedAreas.contains(area)) {
-        emit(
-          state.copyWith(
-            removedAreas: {...state.removedAreas}..remove(area),
-          ),
-        );
-      }
-      return;
-    }
-
-    if (state.customAreas.contains(area)) return;
-    emit(state.copyWith(customAreas: [...state.customAreas, area]));
+    emit(
+      state.copyWith(
+        predictions: const [],
+        searchStatus: PlaceSearchStatus.idle,
+        searchQuery: '',
+        clearSearchError: true,
+      ),
+    );
   }
 
   Future<void> _applyLocation({
@@ -229,7 +333,6 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
         address: address,
         clearAddress: !hasAddress,
         clearFailure: true,
-        resetAreas: true,
       ),
     );
 
@@ -254,45 +357,13 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
 
     emit(
       state.copyWith(
+        status: CoverageAreaStatus.ready,
         address: resolvedAddress,
         clearAddress: resolvedAddress == null,
         position: position,
         radiusKm: radiusKm,
         cameraSource: cameraSource,
         failure: addressFailure,
-      ),
-    );
-
-    await _refreshCoveredAreas(
-      areasOpId: ++_areasOpId,
-      position: position,
-      radiusKm: radiusKm,
-      emit: emit,
-    );
-  }
-
-  Future<void> _refreshCoveredAreas({
-    required int areasOpId,
-    required LatLng position,
-    required double radiusKm,
-    required Emitter<CoverageAreaState> emit,
-  }) async {
-    final areasResult = await _getNearbyAreasUseCase(
-      NearbyAreasParams(
-        center: position,
-        radiusKm: radiusKm,
-        localeIdentifier: _localeIdentifier,
-      ),
-    ).run();
-    if (_areasOpId != areasOpId) return;
-
-    areasResult.fold(
-      (_) => emit(state.copyWith(status: CoverageAreaStatus.ready)),
-      (areas) => emit(
-        state.copyWith(
-          status: CoverageAreaStatus.ready,
-          suggestedAreas: areas,
-        ),
       ),
     );
   }

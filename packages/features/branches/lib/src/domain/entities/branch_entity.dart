@@ -18,6 +18,7 @@ class BranchEntity extends Equatable {
     this.googleMapsLink,
     this.socialMediaLink,
     this.availability,
+    this.servingAreaPlaceIds,
     this.createdAt,
   });
 
@@ -41,6 +42,7 @@ class BranchEntity extends Equatable {
   final String? googleMapsLink;
   final String? socialMediaLink;
   final List<BranchAvailabilityEntity>? availability;
+  final List<String>? servingAreaPlaceIds;
   final DateTime? createdAt;
 
   /// Convenience display: `"Address, City"`.
@@ -63,6 +65,7 @@ class BranchEntity extends Equatable {
         googleMapsLink,
         socialMediaLink,
         availability,
+        servingAreaPlaceIds,
         createdAt,
       ];
 }

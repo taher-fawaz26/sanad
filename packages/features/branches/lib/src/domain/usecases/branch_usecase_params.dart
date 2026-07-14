@@ -36,6 +36,7 @@ class CreateBranchParams extends Equatable {
     this.availabilityMode = 'CORE_HOURS',
     this.availability,
     this.serviceIds,
+    this.servingAreaPlaceIds,
   });
 
   final String branchName;
@@ -52,6 +53,7 @@ class CreateBranchParams extends Equatable {
   final String availabilityMode;
   final List<BranchAvailabilityEntity>? availability;
   final List<String>? serviceIds;
+  final List<String>? servingAreaPlaceIds;
 
   @override
   List<Object?> get props => [
@@ -69,6 +71,7 @@ class CreateBranchParams extends Equatable {
         availabilityMode,
         availability,
         serviceIds,
+        servingAreaPlaceIds,
       ];
 }
 
@@ -89,6 +92,7 @@ class UpdateBranchParams extends Equatable {
     this.availabilityMode,
     this.availability,
     this.serviceIds,
+    this.servingAreaPlaceIds,
   });
 
   final String id;
@@ -106,6 +110,7 @@ class UpdateBranchParams extends Equatable {
   final String? availabilityMode;
   final List<BranchAvailabilityEntity>? availability;
   final List<String>? serviceIds;
+  final List<String>? servingAreaPlaceIds;
 
   @override
   List<Object?> get props => [

@@ -50,6 +50,7 @@ class BranchRepositoryImpl implements BranchRepository {
               availabilityMode: params.availabilityMode,
               availability: params.availability,
               serviceIds: params.serviceIds,
+              servingAreaPlaceIds: params.servingAreaPlaceIds,
             ),
           )
           .map((dto) => dto.toEntity());
@@ -76,6 +77,7 @@ class BranchRepositoryImpl implements BranchRepository {
               availabilityMode: params.availabilityMode,
               availability: params.availability,
               serviceIds: params.serviceIds,
+              servingAreaPlaceIds: params.servingAreaPlaceIds,
             ),
           )
           .map((dto) => dto.toEntity());

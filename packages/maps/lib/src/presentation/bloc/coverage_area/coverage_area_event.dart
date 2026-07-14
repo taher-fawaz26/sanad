@@ -12,12 +12,14 @@ final class CoverageAreaStarted extends CoverageAreaEvent {
     this.initialPosition,
     this.initialAddress,
     this.initialRadiusKm,
+    this.initialServingAreas = const [],
     this.localeIdentifier,
   });
 
   final LatLng? initialPosition;
   final String? initialAddress;
   final double? initialRadiusKm;
+  final List<ServingArea> initialServingAreas;
   final String? localeIdentifier;
 
   @override
@@ -25,6 +27,7 @@ final class CoverageAreaStarted extends CoverageAreaEvent {
         initialPosition,
         initialAddress,
         initialRadiusKm,
+        initialServingAreas,
         localeIdentifier,
       ];
 }
@@ -32,14 +35,23 @@ final class CoverageAreaStarted extends CoverageAreaEvent {
 final class CoverageAreaLocationUpdated extends CoverageAreaEvent {
   const CoverageAreaLocationUpdated({
     required this.position,
-    required this.address,
+    this.address,
   });
 
   final LatLng position;
-  final String address;
+  final String? address;
 
   @override
   List<Object?> get props => [position, address];
+}
+
+final class CoverageAreaCameraIdle extends CoverageAreaEvent {
+  const CoverageAreaCameraIdle(this.position);
+
+  final LatLng position;
+
+  @override
+  List<Object?> get props => [position];
 }
 
 final class CoverageAreaSearchSubmitted extends CoverageAreaEvent {
@@ -60,20 +72,42 @@ final class CoverageAreaRadiusChanged extends CoverageAreaEvent {
   List<Object?> get props => [radiusKm];
 }
 
-final class CoverageAreaAreaRemoved extends CoverageAreaEvent {
-  const CoverageAreaAreaRemoved(this.area);
+final class CoverageAreaServingAreaAdded extends CoverageAreaEvent {
+  const CoverageAreaServingAreaAdded(this.area);
 
-  final String area;
+  final ServingArea area;
 
   @override
   List<Object?> get props => [area];
 }
 
-final class CoverageAreaAreaAdded extends CoverageAreaEvent {
-  const CoverageAreaAreaAdded(this.area);
+final class CoverageAreaServingAreaRemoved extends CoverageAreaEvent {
+  const CoverageAreaServingAreaRemoved(this.placeId);
 
-  final String area;
+  final String placeId;
 
   @override
-  List<Object?> get props => [area];
+  List<Object?> get props => [placeId];
+}
+
+final class CoverageAreaQueryChanged extends CoverageAreaEvent {
+  const CoverageAreaQueryChanged(this.query);
+
+  final String query;
+
+  @override
+  List<Object?> get props => [query];
+}
+
+final class CoverageAreaPredictionSelected extends CoverageAreaEvent {
+  const CoverageAreaPredictionSelected(this.prediction);
+
+  final PlacePrediction prediction;
+
+  @override
+  List<Object?> get props => [prediction];
+}
+
+final class CoverageAreaPredictionsCleared extends CoverageAreaEvent {
+  const CoverageAreaPredictionsCleared();
 }

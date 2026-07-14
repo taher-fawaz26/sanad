@@ -19,6 +19,7 @@ class BranchDto extends BranchEntity implements EntityConverter<BranchEntity> {
     super.googleMapsLink,
     super.socialMediaLink,
     super.availability,
+    super.servingAreaPlaceIds,
     super.createdAt,
   });
 
@@ -45,6 +46,12 @@ class BranchDto extends BranchEntity implements EntityConverter<BranchEntity> {
           .toList();
     }
 
+    final servingAreaPlaceIdsJson = json['servingAreaPlaceIds'];
+    List<String>? servingAreaPlaceIds;
+    if (servingAreaPlaceIdsJson is List) {
+      servingAreaPlaceIds = servingAreaPlaceIdsJson.cast<String>();
+    }
+
     return BranchDto(
       id: json['id'] as String,
       branchName: json['branchName'] as String,
@@ -62,6 +69,7 @@ class BranchDto extends BranchEntity implements EntityConverter<BranchEntity> {
       googleMapsLink: json['googleMapsLink'] as String?,
       socialMediaLink: json['socialMediaLink'] as String?,
       availability: availability,
+      servingAreaPlaceIds: servingAreaPlaceIds,
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'] as String)
           : null,
@@ -85,6 +93,7 @@ class BranchDto extends BranchEntity implements EntityConverter<BranchEntity> {
         googleMapsLink: googleMapsLink,
         socialMediaLink: socialMediaLink,
         availability: availability,
+        servingAreaPlaceIds: servingAreaPlaceIds,
         createdAt: createdAt,
       );
 }

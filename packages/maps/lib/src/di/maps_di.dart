@@ -77,7 +77,10 @@ abstract final class MapsDI {
           getCurrentLocationUseCase: sl<GetCurrentLocationUseCase>(),
           reverseGeocodeUseCase: sl<ReverseGeocodeUseCase>(),
           forwardGeocodeUseCase: sl<ForwardGeocodeUseCase>(),
-          getNearbyAreasUseCase: sl<GetNearbyAreasUseCase>(),
+          searchPlacesUseCase:
+              config.placesEnabled ? sl<SearchPlacesUseCase>() : null,
+          getPlaceDetailsUseCase:
+              config.placesEnabled ? sl<GetPlaceDetailsUseCase>() : null,
         ),
       )
       ..registerFactory(

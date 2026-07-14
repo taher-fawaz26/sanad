@@ -56,6 +56,7 @@ class BranchesModule extends FeatureModule {
                     initialPosition: args?.position,
                     initialAddress: args?.address,
                     initialRadiusKm: args?.radiusKm,
+                    initialServingAreas: args?.servingAreas ?? const [],
                     localeIdentifier: context.locale.toString(),
                   ),
                 ),

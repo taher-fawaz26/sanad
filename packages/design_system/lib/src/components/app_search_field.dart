@@ -11,6 +11,7 @@ class AppSearchField extends StatefulWidget {
   const AppSearchField({
     super.key,
     this.controller,
+    this.focusNode,
     this.hint = 'Search',
     this.cancelLabel = 'Cancel',
     this.onCancel,
@@ -23,6 +24,7 @@ class AppSearchField extends StatefulWidget {
   });
 
   final TextEditingController? controller;
+  final FocusNode? focusNode;
   final String hint;
   final String cancelLabel;
   final VoidCallback? onCancel;
@@ -40,7 +42,8 @@ class AppSearchField extends StatefulWidget {
 class _AppSearchFieldState extends State<AppSearchField> {
   late final TextEditingController _controller;
   late final bool _ownsController;
-  final _focusNode = FocusNode();
+  late final FocusNode _focusNode;
+  late final bool _ownsFocusNode;
   bool _focused = false;
 
   @override
@@ -48,6 +51,8 @@ class _AppSearchFieldState extends State<AppSearchField> {
     super.initState();
     _ownsController = widget.controller == null;
     _controller = widget.controller ?? TextEditingController();
+    _ownsFocusNode = widget.focusNode == null;
+    _focusNode = widget.focusNode ?? FocusNode();
     _focused = widget.autofocus;
     _focusNode.addListener(_handleFocusChange);
     _controller.addListener(_handleTextChange);
@@ -57,7 +62,7 @@ class _AppSearchFieldState extends State<AppSearchField> {
   void dispose() {
     _focusNode.removeListener(_handleFocusChange);
     _controller.removeListener(_handleTextChange);
-    _focusNode.dispose();
+    if (_ownsFocusNode) _focusNode.dispose();
     if (_ownsController) {
       _controller.dispose();
     }

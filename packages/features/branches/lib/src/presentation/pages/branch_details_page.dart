@@ -214,24 +214,10 @@ class _BranchDetailsContent extends StatelessWidget {
                           : null,
                     ),
                     Padding(
-                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                      child: Wrap(
-                        spacing: AppSpacing.sm,
-                        runSpacing: AppSpacing.sm,
-                        children: [
-                          for (final area in BranchDetailsStaticData.coverageAreas)
-                            AppChip(
-                              label: area,
-                              tone: AppChipTone.softSuccess,
-                              icon: Icon(
-                                Icons.location_on_outlined,
-                                size: 16,
-                                color: colors.palettes.main.shade700,
-                              ),
-                              iconPosition: AppChipIconPosition.left,
-                            ),
-                        ],
+                      padding: EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg,
                       ),
+                      child: _buildCoverageChips(context),
                     ),
                     if (branch.radiusKm != null) ...[
                       SizedBox(height: AppSpacing.sm),
@@ -347,6 +333,37 @@ class _BranchDetailsContent extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildCoverageChips(BuildContext context) {
+    final colors = context.appColors;
+    final ids = branch.servingAreaPlaceIds;
+    if (ids == null || ids.isEmpty) {
+      return Text(
+        'branches.details.no_serving_areas'.tr(),
+        style: context.appTypography.smallNormal.copyWith(
+          color: colors.onSurfaceVariant,
+        ),
+      );
+    }
+
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      children: [
+        for (final placeId in ids)
+          AppChip(
+            label: placeId,
+            tone: AppChipTone.softSuccess,
+            icon: Icon(
+              Icons.location_on_outlined,
+              size: 16,
+              color: colors.palettes.main.shade700,
+            ),
+            iconPosition: AppChipIconPosition.left,
+          ),
+      ],
     );
   }
 

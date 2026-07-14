@@ -7,12 +7,14 @@ class CoverageAreaArgs extends Equatable {
     this.position,
     this.address,
     this.radiusKm,
+    this.servingAreas = const [],
   });
 
   final LatLng? position;
   final String? address;
   final double? radiusKm;
+  final List<ServingArea> servingAreas;
 
   @override
-  List<Object?> get props => [position, address, radiusKm];
+  List<Object?> get props => [position, address, radiusKm, servingAreas];
 }

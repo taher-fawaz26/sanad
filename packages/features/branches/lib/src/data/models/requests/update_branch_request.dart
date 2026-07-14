@@ -17,6 +17,7 @@ class UpdateBranchRequest extends Equatable {
     this.availabilityMode,
     this.availability,
     this.serviceIds,
+    this.servingAreaPlaceIds,
   });
 
   final String branchName;
@@ -33,6 +34,7 @@ class UpdateBranchRequest extends Equatable {
   final String? availabilityMode;
   final List<BranchAvailabilityEntity>? availability;
   final List<String>? serviceIds;
+  final List<String>? servingAreaPlaceIds;
 
   Map<String, dynamic> toMap() {
     final body = <String, dynamic>{
@@ -62,6 +64,9 @@ class UpdateBranchRequest extends Equatable {
           .toList();
     }
     if (serviceIds != null) body['serviceIds'] = serviceIds;
+    if (servingAreaPlaceIds != null && servingAreaPlaceIds!.isNotEmpty) {
+      body['servingAreaPlaceIds'] = servingAreaPlaceIds;
+    }
     return body;
   }
 

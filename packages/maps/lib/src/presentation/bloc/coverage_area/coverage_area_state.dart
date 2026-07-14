@@ -18,9 +18,11 @@ class CoverageAreaState extends Equatable {
     this.position,
     this.address,
     this.radiusKm = defaultRadiusKm,
-    this.suggestedAreas = const [],
-    this.customAreas = const [],
-    this.removedAreas = const {},
+    this.servingAreas = const [],
+    this.predictions = const [],
+    this.searchStatus = PlaceSearchStatus.idle,
+    this.searchQuery = '',
+    this.searchError,
     this.failure,
     this.cameraSource = CoverageAreaCameraSource.none,
   });
@@ -31,16 +33,13 @@ class CoverageAreaState extends Equatable {
   final LatLng? position;
   final String? address;
   final double radiusKm;
-  final List<String> suggestedAreas;
-  final List<String> customAreas;
-  final Set<String> removedAreas;
+  final List<ServingArea> servingAreas;
+  final List<PlacePrediction> predictions;
+  final PlaceSearchStatus searchStatus;
+  final String searchQuery;
+  final String? searchError;
   final Failure? failure;
   final CoverageAreaCameraSource cameraSource;
-
-  List<String> get coveredAreas => [
-        ...suggestedAreas.where((area) => !removedAreas.contains(area)),
-        ...customAreas,
-      ];
 
   bool get canConfirm =>
       position != null &&
@@ -55,27 +54,28 @@ class CoverageAreaState extends Equatable {
     LatLng? position,
     String? address,
     double? radiusKm,
-    List<String>? suggestedAreas,
-    List<String>? customAreas,
-    Set<String>? removedAreas,
+    List<ServingArea>? servingAreas,
+    List<PlacePrediction>? predictions,
+    PlaceSearchStatus? searchStatus,
+    String? searchQuery,
+    String? searchError,
     Failure? failure,
     CoverageAreaCameraSource? cameraSource,
     bool clearFailure = false,
     bool clearAddress = false,
-    bool resetAreas = false,
+    bool clearSearchError = false,
   }) {
     return CoverageAreaState(
       status: status ?? this.status,
       position: position ?? this.position,
       address: clearAddress ? null : (address ?? this.address),
       radiusKm: radiusKm ?? this.radiusKm,
-      suggestedAreas: resetAreas
-          ? const []
-          : (suggestedAreas ?? this.suggestedAreas),
-      customAreas:
-          resetAreas ? const [] : (customAreas ?? this.customAreas),
-      removedAreas:
-          resetAreas ? const {} : (removedAreas ?? this.removedAreas),
+      servingAreas: servingAreas ?? this.servingAreas,
+      predictions: predictions ?? this.predictions,
+      searchStatus: searchStatus ?? this.searchStatus,
+      searchQuery: searchQuery ?? this.searchQuery,
+      searchError:
+          clearSearchError ? null : (searchError ?? this.searchError),
       failure: clearFailure ? null : (failure ?? this.failure),
       cameraSource: cameraSource ?? this.cameraSource,
     );
@@ -87,9 +87,11 @@ class CoverageAreaState extends Equatable {
         position,
         address,
         radiusKm,
-        suggestedAreas,
-        customAreas,
-        removedAreas,
+        servingAreas,
+        predictions,
+        searchStatus,
+        searchQuery,
+        searchError,
         failure,
         cameraSource,
       ];

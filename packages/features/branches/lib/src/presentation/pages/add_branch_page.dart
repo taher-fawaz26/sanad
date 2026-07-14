@@ -39,7 +39,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
   String? _branchAddress;
   LatLng? _pickedPosition;
   double? _coverageRadiusKm;
-  List<String> _coveredAreas = const [];
+  List<ServingArea> _servingAreas = const [];
   int _currentStep = 1;
   BranchScheduleMode _scheduleMode = BranchScheduleMode.company;
   List<BranchAvailabilityEntity> _companySchedule = const [];
@@ -136,6 +136,11 @@ class _AddBranchPageState extends State<AddBranchPage> {
               lng: position?.longitude,
               radiusKm: _coverageRadiusKm,
               availability: schedule,
+              servingAreaPlaceIds: _servingAreas.isNotEmpty
+                  ? _servingAreas
+                      .map((a) => a.placeId)
+                      .toList(growable: false)
+                  : null,
             ),
           ),
         );
@@ -178,6 +183,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
         position: _pickedPosition,
         address: _branchAddress,
         radiusKm: _coverageRadiusKm,
+        servingAreas: _servingAreas,
       ),
     );
     if (!mounted || result == null) return;
@@ -186,7 +192,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
       _branchAddress = result.address;
       _pickedPosition = result.position;
       _coverageRadiusKm = result.radiusKm;
-      _coveredAreas = result.coveredAreas;
+      _servingAreas = result.servingAreas;
     });
   }
 
@@ -443,7 +449,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
         Expanded(
           child: AddBranchCoverageStep(
             pickedAddress: _branchAddress,
-            coveredAreas: _coveredAreas,
+            servingAreas: _servingAreas,
             radiusKm: _coverageRadiusKm,
             onEditCoverage: _onAddLocationPressed,
           ),
