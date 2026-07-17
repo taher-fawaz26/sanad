@@ -1,4 +1,6 @@
+import 'package:branches/src/data/models/branch_availability_dto.dart';
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
+import 'package:branches/src/domain/entities/branch_availability_mode.dart';
 import 'package:equatable/equatable.dart';
 
 class UpdateBranchRequest extends Equatable {
@@ -31,7 +33,7 @@ class UpdateBranchRequest extends Equatable {
   final String? googleMapsLink;
   final String? socialMediaLink;
   final bool? isAvailable;
-  final String? availabilityMode;
+  final BranchAvailabilityMode? availabilityMode;
   final List<BranchAvailabilityEntity>? availability;
   final List<String>? serviceIds;
   final List<String>? servingAreaPlaceIds;
@@ -50,18 +52,12 @@ class UpdateBranchRequest extends Equatable {
     if (googleMapsLink != null) body['googleMapsLink'] = googleMapsLink;
     if (socialMediaLink != null) body['socialMediaLink'] = socialMediaLink;
     if (isAvailable != null) body['isAvailable'] = isAvailable;
-    if (availabilityMode != null) body['availabilityMode'] = availabilityMode;
+    if (availabilityMode != null) {
+      body['availabilityMode'] = availabilityMode!.toApiString();
+    }
     if (availability != null) {
-      body['availability'] = availability!
-          .map(
-            (a) => {
-              'day': a.day,
-              'slots': a.slots
-                  .map((s) => {'from': s.from, 'to': s.to})
-                  .toList(),
-            },
-          )
-          .toList();
+      body['availability'] =
+          availability!.map(BranchAvailabilityDto.entityToMap).toList();
     }
     if (serviceIds != null) body['serviceIds'] = serviceIds;
     if (servingAreaPlaceIds != null && servingAreaPlaceIds!.isNotEmpty) {
@@ -71,6 +67,21 @@ class UpdateBranchRequest extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [branchName, branchAddress, city, branchPhone, isAvailable];
+  List<Object?> get props => [
+        branchName,
+        branchAddress,
+        city,
+        branchPhone,
+        branchManagerId,
+        lat,
+        lng,
+        radiusKm,
+        googleMapsLink,
+        socialMediaLink,
+        isAvailable,
+        availabilityMode,
+        availability,
+        serviceIds,
+        servingAreaPlaceIds,
+      ];
 }

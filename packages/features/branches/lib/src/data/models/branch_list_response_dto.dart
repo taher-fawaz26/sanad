@@ -30,8 +30,8 @@ class BranchListResponseDto {
   final List<BranchDto> branches;
   final BranchPaginationMeta meta;
 
-  PaginatedBranchesEntity toEntity() => PaginatedBranchesEntity(
-        branches: branches.map((b) => b.toEntity()).toList(),
+  PaginatedBranchesEntity toDomain() => PaginatedBranchesEntity(
+        branches: branches.map((b) => b.toDomain()).toList(),
         meta: meta,
       );
 }

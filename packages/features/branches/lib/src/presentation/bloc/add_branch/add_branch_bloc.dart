@@ -8,6 +8,7 @@ import 'package:branches/src/domain/usecases/get_company_schedule_usecase.dart';
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fpdart/fpdart.dart';
 
 part 'add_branch_event.dart';
 part 'add_branch_state.dart';
@@ -33,18 +34,30 @@ class AddBranchBloc extends Bloc<AddBranchEvent, AddBranchState> {
     AddBranchStarted event,
     Emitter<AddBranchState> emit,
   ) async {
-    emit(state.copyWith(setupStatus: RequestStatus.loading));
+    emit(state.copyWith(
+      setupStatus: RequestStatus.loading,
+      clearSetupFailure: true,
+    ));
 
-    final scheduleResult =
-        await _getCompanyScheduleUseCase(const NoParams()).run();
-    final managersResult =
-        await _getBranchManagersUseCase(const NoParams()).run();
+    // Fetch schedule and managers in parallel — they are independent.
+    final results = await Future.wait([
+      _getCompanyScheduleUseCase(const NoParams()).run(),
+      _getBranchManagersUseCase(const NoParams()).run(),
+    ]);
 
-    // Setup data is best-effort: a failure leaves the form usable with empty
-    // defaults rather than blocking branch creation entirely.
+    final scheduleResult = results[0] as Either<Failure, List<BranchAvailabilityEntity>>;
+    final managersResult = results[1] as Either<Failure, List<BranchManagerEntity>>;
+
+    final scheduleFailure = scheduleResult.fold((f) => f, (_) => null);
+    final managersFailure = managersResult.fold((f) => f, (_) => null);
+    final setupFailure = scheduleFailure ?? managersFailure;
+
     emit(
       state.copyWith(
-        setupStatus: RequestStatus.success,
+        setupStatus: setupFailure != null
+            ? RequestStatus.failure
+            : RequestStatus.success,
+        setupFailure: setupFailure,
         companySchedule: scheduleResult.fold(
           (_) => const <BranchAvailabilityEntity>[],
           (schedule) => schedule,

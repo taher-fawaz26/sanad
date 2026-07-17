@@ -41,3 +41,22 @@ final class BranchDeletedEvent extends BranchesEvent {
   @override
   List<Object?> get props => [branchId];
 }
+
+final class BranchStatusChangedEvent extends BranchesEvent {
+  const BranchStatusChangedEvent({
+    required this.branchId,
+    required this.isAvailable,
+  });
+
+  final String branchId;
+
+  /// `true` = ACTIVE, `false` = MAINTENANCE.
+  final bool isAvailable;
+
+  @override
+  List<Object?> get props => [branchId, isAvailable];
+}
+
+final class BranchActionFailureClearedEvent extends BranchesEvent {
+  const BranchActionFailureClearedEvent();
+}

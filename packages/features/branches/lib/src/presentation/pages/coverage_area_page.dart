@@ -144,6 +144,9 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
               previous.cameraSource != current.cameraSource ||
               previous.radiusKm != current.radiusKm,
           listener: (context, state) {
+            // Sync the radius overlay whenever center or radius changes.
+            _syncRadiusController(state);
+
             if (state.cameraSource == CoverageAreaCameraSource.programmatic &&
                 state.center != null) {
               _cameraController.animateTo(
@@ -173,7 +176,6 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
       ],
       child: BlocBuilder<CoverageAreaBloc, CoverageAreaState>(
         builder: (context, state) {
-          _syncRadiusController(state);
           final mapTarget = state.center ?? BranchMapDefaults.position;
           final displayRadiusKm = _previewRadiusKm ?? state.radiusKm;
 

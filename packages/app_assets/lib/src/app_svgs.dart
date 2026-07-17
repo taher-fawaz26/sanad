@@ -70,4 +70,21 @@ abstract final class AppSvgs {
 
   /// Trash / delete — list row remove action.
   static const String trash = '$_base/trash.svg';
+
+  /// Bold trash — destructive action rows (e.g. branch actions sheet).
+  static const String trashBold = '$_base/trash_bold.svg';
+
+  // ── Branch actions bottom sheet ────────────────────────────────────────────
+
+  /// Store / branch — header icon on white background.
+  static const String branchStore = '$_base/branch_store.svg';
+
+  /// View branch — expand / focus icon.
+  static const String branchView = '$_base/branch_view.svg';
+
+  /// Set under maintenance — settings gear icon.
+  static const String branchMaintenance = '$_base/branch_maintenance.svg';
+
+  /// Edit branch — pencil icon.
+  static const String branchEdit = '$_base/branch_edit.svg';
 }

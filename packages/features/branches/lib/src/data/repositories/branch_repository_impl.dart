@@ -21,13 +21,13 @@ class BranchRepositoryImpl implements BranchRepository {
   ) =>
       _remoteDataSource
           .getBranches(page: params.page, limit: params.limit)
-          .map((dto) => dto.toEntity());
+          .map((dto) => dto.toDomain());
 
   @override
   TaskEither<Failure, BranchEntity> getBranch(GetBranchParams params) =>
       _remoteDataSource
           .getBranch(params.id)
-          .map((dto) => dto.toEntity());
+          .map((dto) => dto.toDomain());
 
   @override
   TaskEither<Failure, BranchEntity> createBranch(
@@ -54,7 +54,7 @@ class BranchRepositoryImpl implements BranchRepository {
               workerIds: params.workerIds,
             ),
           )
-          .map((dto) => dto.toEntity());
+          .map((dto) => dto.toDomain());
 
   @override
   TaskEither<Failure, BranchEntity> updateBranch(
@@ -81,7 +81,15 @@ class BranchRepositoryImpl implements BranchRepository {
               servingAreaPlaceIds: params.servingAreaPlaceIds,
             ),
           )
-          .map((dto) => dto.toEntity());
+          .map((dto) => dto.toDomain());
+
+  @override
+  TaskEither<Failure, BranchEntity> updateBranchStatus(
+    UpdateBranchStatusParams params,
+  ) =>
+      _remoteDataSource
+          .updateBranchStatus(params.id, params.statusString)
+          .map((dto) => dto.toDomain());
 
   @override
   TaskEither<Failure, void> deleteBranch(DeleteBranchParams params) =>

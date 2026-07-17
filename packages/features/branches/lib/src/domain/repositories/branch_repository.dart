@@ -17,6 +17,10 @@ abstract interface class BranchRepository {
 
   TaskEither<Failure, BranchEntity> updateBranch(UpdateBranchParams params);
 
+  TaskEither<Failure, BranchEntity> updateBranchStatus(
+    UpdateBranchStatusParams params,
+  );
+
   TaskEither<Failure, void> deleteBranch(DeleteBranchParams params);
 
   TaskEither<Failure, List<BranchAvailabilityEntity>> getCompanySchedule();

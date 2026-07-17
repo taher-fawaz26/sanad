@@ -65,7 +65,7 @@ class AppEmptyState extends StatelessWidget {
       typography: context.appTypography,
     );
 
-    return Padding(
+    final content = Padding(
       padding: EdgeInsets.fromLTRB(
         spec.horizontalPadding,
         spec.topPadding,
@@ -109,6 +109,23 @@ class AppEmptyState extends StatelessWidget {
           ],
         ],
       ),
+    );
+
+    // When the parent gives a bounded (often tight) height — e.g. remaining
+    // space below filters — scroll instead of overflowing the Column.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (!constraints.hasBoundedHeight) {
+          return content;
+        }
+
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Center(child: content),
+          ),
+        );
+      },
     );
   }
 }

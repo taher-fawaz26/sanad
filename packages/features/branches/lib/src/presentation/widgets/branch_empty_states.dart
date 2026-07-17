@@ -1,3 +1,4 @@
+import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -17,7 +18,7 @@ class BranchesSearchEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppEmptyState(
       illustration: AppEmptyStateImage(
-        assetPath: 'assets/images/branches/noresults.png',
+        assetPath: AppImages.noBranchResults,
         width: responsiveDimension(EmptyStateTokens.searchIllustrationWidth),
         height: responsiveDimension(EmptyStateTokens.searchIllustrationHeight),
       ),

@@ -7,9 +7,11 @@ import 'package:flutter/material.dart';
 
 /// Figma `Views / Backdrops` (`40:9149`).
 ///
-/// Renders a "back sheet" peek strip directly above an [AppBottomSheet]
-/// -shaped front surface, used to hint that a stacked sheet is behind the
-/// currently presented one.
+/// Renders a "back sheet" peek strip directly above a front sheet surface,
+/// used to hint that a stacked sheet is behind the currently presented one.
+///
+/// Distinct from [AppBottomSheet] (no peek, no scrim) and [AppActionSheet]
+/// (scrimmed action list).
 ///
 /// **Documented gap:** the back-sheet peek in Figma is a flattened raster
 /// image (not vector), so its exact fill/shadow cannot be extracted from

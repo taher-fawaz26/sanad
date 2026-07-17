@@ -1,4 +1,5 @@
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
+import 'package:branches/src/domain/entities/branch_availability_mode.dart';
 import 'package:equatable/equatable.dart';
 
 class BranchEntity extends Equatable {
@@ -19,6 +20,8 @@ class BranchEntity extends Equatable {
     this.socialMediaLink,
     this.availability,
     this.servingAreaPlaceIds,
+    this.servingAreaNames,
+    this.serviceNames,
     this.createdAt,
   });
 
@@ -28,11 +31,10 @@ class BranchEntity extends Equatable {
   final String city;
   final String branchPhone;
 
-  /// `true` = Active, `false` = Maintenance.
+  /// `true` = Active (`ACTIVE`), `false` = Maintenance (`MAINTENANCE`).
   final bool isAvailable;
 
-  /// API enum value: `"CORE_HOURS"` or `"CUSTOM"`.
-  final String availabilityMode;
+  final BranchAvailabilityMode availabilityMode;
 
   final String? branchManagerId;
   final String? branchManagerName;
@@ -42,7 +44,16 @@ class BranchEntity extends Equatable {
   final String? googleMapsLink;
   final String? socialMediaLink;
   final List<BranchAvailabilityEntity>? availability;
+
+  /// Place IDs for serving areas (used for map / coverage display).
   final List<String>? servingAreaPlaceIds;
+
+  /// Human-readable names for serving areas (e.g. "Ras Al-Khaimah").
+  final List<String>? servingAreaNames;
+
+  /// Service names assigned to this branch (e.g. ["Car Repair"]).
+  final List<String>? serviceNames;
+
   final DateTime? createdAt;
 
   /// Convenience display: `"Address, City"`.
@@ -66,6 +77,8 @@ class BranchEntity extends Equatable {
         socialMediaLink,
         availability,
         servingAreaPlaceIds,
+        servingAreaNames,
+        serviceNames,
         createdAt,
       ];
 }

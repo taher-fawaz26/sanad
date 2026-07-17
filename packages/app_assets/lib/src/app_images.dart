@@ -18,6 +18,9 @@ abstract final class AppImages {
   static const String noBranchLocations =
       '$_base/branches/no_branch_locations.png';
 
+  /// Figma `empty states / No search results` (`322:9661`) — branch search.
+  static const String noBranchResults = '$_base/branches/noresults.png';
+
   /// Figma add-branch workers empty state (`245:6400`).
   static const String addWorkers = '$_base/workers/worker.png';
 

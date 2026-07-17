@@ -1,9 +1,7 @@
 import 'package:branches/src/domain/entities/branch_time_slot_entity.dart';
-import 'package:core/core.dart';
 
-class BranchTimeSlotDto extends BranchTimeSlotEntity
-    implements EntityConverter<BranchTimeSlotEntity> {
-  const BranchTimeSlotDto({required super.from, required super.to});
+class BranchTimeSlotDto {
+  const BranchTimeSlotDto({required this.from, required this.to});
 
   factory BranchTimeSlotDto.fromJson(Map<String, dynamic> json) =>
       BranchTimeSlotDto(
@@ -11,9 +9,10 @@ class BranchTimeSlotDto extends BranchTimeSlotEntity
         to: json['to'] as String,
       );
 
+  final String from;
+  final String to;
+
   Map<String, dynamic> toMap() => {'from': from, 'to': to};
 
-  @override
-  BranchTimeSlotEntity toEntity() =>
-      BranchTimeSlotEntity(from: from, to: to);
+  BranchTimeSlotEntity toDomain() => BranchTimeSlotEntity(from: from, to: to);
 }

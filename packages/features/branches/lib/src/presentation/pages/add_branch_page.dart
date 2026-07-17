@@ -1,25 +1,19 @@
-import 'package:branches/src/domain/entities/branch_availability_entity.dart';
-import 'package:branches/src/domain/entities/branch_manager_entity.dart';
-import 'package:branches/src/domain/usecases/branch_usecase_params.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
 import 'package:branches/src/presentation/models/coverage_area_args.dart';
 import 'package:branches/src/presentation/models/coverage_area_result.dart';
+import 'package:branches/src/presentation/models/step_one_data.dart';
 import 'package:branches/src/presentation/utils/add_branch_error_snackbar.dart';
-import 'package:branches/src/presentation/utils/branch_schedule_formatter.dart';
+import 'package:branches/src/presentation/utils/add_branch_submit_helper.dart';
 import 'package:branches/src/presentation/widgets/add_branch_coverage_step.dart';
 import 'package:branches/src/presentation/widgets/add_branch_services_step.dart';
+import 'package:branches/src/presentation/widgets/add_branch_step_one.dart';
 import 'package:branches/src/presentation/widgets/add_branch_workers_step.dart';
-import 'package:branches/src/presentation/widgets/branch_location_field.dart';
-import 'package:branches/src/presentation/widgets/branch_manager_picker_field.dart';
-import 'package:branches/src/presentation/widgets/branch_schedule_section.dart';
 import 'package:branches/src/routes/branch_routes.dart';
-import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:localization/localization.dart';
 import 'package:maps/maps.dart';
 import 'package:services/services.dart';
 import 'package:workers/workers.dart';
@@ -35,29 +29,19 @@ class AddBranchPage extends StatefulWidget {
 class _AddBranchPageState extends State<AddBranchPage> {
   static const _totalSteps = 4;
 
-  final _formKey = GlobalKey<FormState>();
-  final _branchNameController = TextEditingController();
-  final _cityController = TextEditingController();
-  final _phoneController = TextEditingController();
+  final _stepOneKey = GlobalKey<AddBranchStepOneState>();
+  final _canProceedStep1 = ValueNotifier<bool>(false);
 
+  int _currentStep = 1;
+  StepOneData? _stepOneSnapshot;
+
+  // Steps 2–4 state stays in the page since these steps are lightweight.
   String? _branchAddress;
   LatLng? _pickedPosition;
   double? _coverageRadiusKm;
   List<ServingArea> _servingAreas = const [];
-  int _currentStep = 1;
-  BranchScheduleMode _scheduleMode = BranchScheduleMode.company;
-  List<BranchAvailabilityEntity> _companySchedule = const [];
-  List<BranchAvailabilityEntity> _customSchedule = const [];
-  List<BranchManagerEntity> _managers = const [];
-  BranchManagerEntity? _selectedManager;
   List<ServiceEntity> _selectedServices = const [];
   List<WorkerEntity> _selectedWorkers = const [];
-
-  /// Guards a one-time seed of the editable form fields from bloc setup data.
-  bool _setupSeeded = false;
-
-  bool get _isLoadingSetup =>
-      context.watch<AddBranchBloc>().state.isLoadingSetup;
 
   bool get _hasCoverage =>
       _coverageRadiusKm != null &&
@@ -68,56 +52,29 @@ class _AddBranchPageState extends State<AddBranchPage> {
 
   bool get _hasWorkers => _selectedWorkers.isNotEmpty;
 
-  bool get _canProceedStep1 =>
-      _branchNameController.text.trim().isNotEmpty &&
-      _cityController.text.trim().isNotEmpty &&
-      _phoneController.text.trim().isNotEmpty &&
-      _branchAddress != null &&
-      _pickedPosition != null &&
-      _selectedManager != null &&
-      (_scheduleMode == BranchScheduleMode.company
-          ? _companySchedule.isNotEmpty
-          : _customSchedule.isNotEmpty);
-
-  @override
-  void initState() {
-    super.initState();
-    _branchNameController.addListener(_onFieldChanged);
-    _cityController.addListener(_onFieldChanged);
-    _phoneController.addListener(_onFieldChanged);
-  }
-
-  /// Copies bloc-loaded setup data into the editable form state exactly once.
-  void _seedFromSetup(AddBranchState state) {
-    if (_setupSeeded || state.setupStatus != RequestStatus.success) return;
-    _setupSeeded = true;
-    setState(() {
-      _companySchedule = state.companySchedule;
-      _customSchedule =
-          BranchScheduleFormatter.copyAvailability(state.companySchedule);
-      _managers = state.managers;
-      _selectedManager =
-          state.managers.isNotEmpty ? state.managers.first : null;
-    });
-  }
-
-  void _onFieldChanged() => setState(() {});
-
   @override
   void dispose() {
-    _branchNameController.dispose();
-    _cityController.dispose();
-    _phoneController.dispose();
+    _canProceedStep1.dispose();
     super.dispose();
   }
 
+  // ── Navigation ──
+
   void _onNextPressed() {
     if (_currentStep == 1) {
-      if (!(_formKey.currentState?.validate() ?? false)) return;
-      // The Next button is already disabled until step 1 is complete
-      // (see [_isNextDisabled]); this guards against a stale tap.
-      if (!_canProceedStep1) return;
-      setState(() => _currentStep = 2);
+      final stepOne = _stepOneKey.currentState;
+      if (stepOne == null) return;
+      if (!stepOne.validateForm()) return;
+      if (!_canProceedStep1.value) return;
+
+      final data = stepOne.collectData();
+      _branchAddress ??= data.branchAddress;
+      _pickedPosition ??= data.pickedPosition;
+
+      setState(() {
+        _stepOneSnapshot = data;
+        _currentStep = 2;
+      });
       return;
     }
 
@@ -132,42 +89,23 @@ class _AddBranchPageState extends State<AddBranchPage> {
   }
 
   void _submit() {
-    final position = _pickedPosition;
-    final schedule = _scheduleMode == BranchScheduleMode.company
-        ? _companySchedule
-        : _customSchedule;
+    final snapshot = _stepOneSnapshot;
+    if (snapshot == null) return;
 
-    context.read<AddBranchBloc>().add(
-          AddBranchSubmitEvent(
-            params: CreateBranchParams(
-              branchName: _branchNameController.text.trim(),
-              branchAddress: _branchAddress ?? '',
-              city: _cityController.text.trim(),
-              branchPhone: _phoneController.text.trim(),
-              branchManagerId: _selectedManager?.id,
-              lat: position?.latitude,
-              lng: position?.longitude,
-              radiusKm: _coverageRadiusKm,
-              availability: schedule,
-              servingAreaPlaceIds: _servingAreas.isNotEmpty
-                  ? _servingAreas
-                      .map((a) => a.placeId)
-                      .toList(growable: false)
-                  : null,
-              serviceIds: _selectedServices.isNotEmpty
-                  ? _selectedServices
-                      .map((service) => service.id)
-                      .toList(growable: false)
-                  : null,
-              workerIds: _selectedWorkers.isNotEmpty
-                  ? _selectedWorkers
-                      .map((worker) => worker.id)
-                      .toList(growable: false)
-                  : null,
-            ),
-          ),
-        );
+    final params = buildCreateBranchParams(
+      stepOne: snapshot,
+      branchAddress: _branchAddress,
+      pickedPosition: _pickedPosition,
+      coverageRadiusKm: _coverageRadiusKm,
+      servingAreas: _servingAreas,
+      selectedServices: _selectedServices,
+      selectedWorkers: _selectedWorkers,
+    );
+
+    context.read<AddBranchBloc>().add(AddBranchSubmitEvent(params: params));
   }
+
+  // ── Location / Coverage ──
 
   Future<void> _pickLocation() async {
     final result = await showLocationPickerSheet(
@@ -192,6 +130,12 @@ class _AddBranchPageState extends State<AddBranchPage> {
       initialAddress: _branchAddress,
     );
     if (!mounted || result == null) return;
+
+    // Update step 1 internal state if it's still mounted.
+    _stepOneKey.currentState?.updateLocation(
+      address: result.address,
+      position: result.position,
+    );
 
     setState(() {
       _branchAddress = result.address;
@@ -219,9 +163,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
     });
   }
 
-  void _onAddLocationPressed() {
-    _openCoverageArea();
-  }
+  // ── Services / Workers ──
 
   Future<void> _openSelectServices() async {
     final result = await showSelectServiceActionSheet(
@@ -229,12 +171,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
       initialSelectedIds: _selectedServices.map((s) => s.id).toSet(),
     );
     if (!mounted || result == null) return;
-
     setState(() => _selectedServices = result.selectedServices);
-  }
-
-  void _onAddServicesPressed() {
-    _openSelectServices();
   }
 
   Future<void> _openSelectWorkers() async {
@@ -243,12 +180,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
       initialSelectedIds: _selectedWorkers.map((w) => w.id).toSet(),
     );
     if (!mounted || result == null) return;
-
     setState(() => _selectedWorkers = result.selectedWorkers);
-  }
-
-  void _onAddWorkersPressed() {
-    _openSelectWorkers();
   }
 
   void _onRemoveWorker(WorkerEntity worker) {
@@ -257,6 +189,8 @@ class _AddBranchPageState extends State<AddBranchPage> {
           _selectedWorkers.where((w) => w.id != worker.id).toList(),
     );
   }
+
+  // ── Success popover ──
 
   void _showBranchCreatedSuccessPopover() {
     final colors = context.appColors;
@@ -291,29 +225,23 @@ class _AddBranchPageState extends State<AddBranchPage> {
     });
   }
 
-  void _onScheduleModeChanged(BranchScheduleMode mode) {
-    setState(() {
-      _scheduleMode = mode;
-      if (mode == BranchScheduleMode.custom &&
-          _customSchedule.isEmpty &&
-          _companySchedule.isNotEmpty) {
-        _customSchedule =
-            BranchScheduleFormatter.copyAvailability(_companySchedule);
-      }
-    });
-  }
+  // ── Build ──
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<AddBranchBloc, AddBranchState>(
       listener: (context, state) {
-        _seedFromSetup(state);
         if (state.isSuccess) {
           _showBranchCreatedSuccessPopover();
         } else if (state.hasError && state.failure != null) {
           showAddBranchErrorSnackbar(
             context: context,
             failure: state.failure!,
+          );
+        } else if (state.hasSetupError && state.setupFailure != null) {
+          showAddBranchErrorSnackbar(
+            context: context,
+            failure: state.setupFailure!,
           );
         }
       },
@@ -327,15 +255,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
                 title: '',
                 leading: AppCloseIcon(onTap: () => context.pop()),
               ),
-              Expanded(
-                child: switch (_currentStep) {
-                  1 => _buildStepOne(),
-                  2 => _buildStepTwo(),
-                  3 => _buildStepThree(),
-                  4 => _buildStepFour(),
-                  _ => _buildUpcomingStepPlaceholder(),
-                },
-              ),
+              Expanded(child: _buildCurrentStep()),
               Padding(
                 padding: EdgeInsets.fromLTRB(
                   AppSpacing.xl,
@@ -343,66 +263,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
                   AppSpacing.xl,
                   AppSpacing.sm,
                 ),
-                child: BlocBuilder<AddBranchBloc, AddBranchState>(
-                  builder: (context, state) {
-                    if (_currentStep == 1) {
-                      return AppButton(
-                        label: 'branches.add_branch.next_button'.tr(),
-                        isLoading: state.isLoading,
-                        onPressed: state.isLoading || _isNextDisabled
-                            ? null
-                            : _onNextPressed,
-                      );
-                    }
-
-                    if (_currentStep == 2) {
-                      if (!_hasCoverage) {
-                        return AppButton(
-                          label:
-                              'branches.add_branch.add_location_button'.tr(),
-                          onPressed: _onAddLocationPressed,
-                        );
-                      }
-                      return AppButton(
-                        label: 'branches.add_branch.next_button'.tr(),
-                        onPressed: _onNextPressed,
-                      );
-                    }
-
-                    if (_currentStep == 3) {
-                      if (!_hasServices) {
-                        return AppButton(
-                          label: 'branches.add_branch.add_services_button'.tr(),
-                          onPressed: _onAddServicesPressed,
-                        );
-                      }
-                      return AppButton(
-                        label: 'branches.add_branch.next_button'.tr(),
-                        onPressed: _onNextPressed,
-                      );
-                    }
-
-                    if (_currentStep == 4) {
-                      if (!_hasWorkers) {
-                        return AppButton(
-                          label: 'branches.add_branch.add_workers_button'.tr(),
-                          onPressed: _onAddWorkersPressed,
-                        );
-                      }
-                      return AppButton(
-                        label: 'branches.add_branch.save_button'.tr(),
-                        isLoading: state.isLoading,
-                        onPressed: state.isLoading ? null : _submit,
-                      );
-                    }
-
-                    return AppButton(
-                      label: 'branches.add_branch.save_button'.tr(),
-                      isLoading: state.isLoading,
-                      onPressed: state.isLoading ? null : _submit,
-                    );
-                  },
-                ),
+                child: _buildBottomButton(),
               ),
             ],
           ),
@@ -411,239 +272,51 @@ class _AddBranchPageState extends State<AddBranchPage> {
     );
   }
 
-  bool get _isNextDisabled {
-    if (_currentStep == 1) {
-      return _isLoadingSetup || !_canProceedStep1;
-    }
-    return false;
-  }
-
-  Widget _buildStepOne() {
-    return SingleChildScrollView(
-      padding: EdgeInsets.only(bottom: AppSpacing.lg),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AppLargeNavBar(
-              title: 'branches.add_branch.title'.tr(),
-              caption: 'branches.add_branch.subtitle'.tr(),
-              useLargeTitleStyle: false,
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              child: AppWizardStepIndicator(
-                currentStep: _currentStep,
-                totalSteps: _totalSteps,
-              ),
-            ),
-            AppSection(
-              title: 'branches.add_branch.section_main_info'.tr(),
-              size: AppSectionSize.compact,
-              tone: AppSectionTone.primary,
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppSpacing.xl,
-                vertical: AppSpacing.md,
-              ),
-              child: Column(
-                children: [
-                  AppTextField(
-                    controller: _branchNameController,
-                    label: 'branches.add_branch.branch_name'.tr(),
-                    hint: 'branches.add_branch.branch_name_hint'.tr(),
-                    validator: (value) {
-                      if (value?.trim().isEmpty ?? true) {
-                        return ValidationMessageKeys.formRequired;
-                      }
-                      return null;
-                    },
-                  ),
-                  SizedBox(height: AppSpacing.md),
-                  AppTextField(
-                    controller: _cityController,
-                    label: 'branches.add_branch.city'.tr(),
-                    hint: 'branches.add_branch.city_hint'.tr(),
-                    validator: (value) {
-                      if (value?.trim().isEmpty ?? true) {
-                        return ValidationMessageKeys.formRequired;
-                      }
-                      return null;
-                    },
-                  ),
-                  SizedBox(height: AppSpacing.md),
-                  BranchLocationField(
-                    label: 'branches.add_branch.location'.tr(),
-                    value: _branchAddress,
-                    hint: 'branches.add_branch.location_hint'.tr(),
-                    actionLabel: 'branches.add_branch.location_set'.tr(),
-                    onActionTap: _pickLocation,
-                  ),
-                ],
-              ),
-            ),
-            const AppDivider(thickness: AppDividerThickness.thick),
-            AppSection(
-              title: 'branches.add_branch.section_contact'.tr(),
-              size: AppSectionSize.compact,
-              tone: AppSectionTone.primary,
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppSpacing.xl,
-                vertical: AppSpacing.md,
-              ),
-              child: Column(
-                children: [
-                  AppPhoneField(
-                    label: 'branches.add_branch.branch_phone'.tr(),
-                    controller: _phoneController,
-                    hint: 'branches.add_branch.branch_phone_hint'.tr(),
-                  ),
-                  SizedBox(height: AppSpacing.md),
-                  BranchManagerPickerField(
-                    managers: _managers,
-                    selectedManager: _selectedManager,
-                    onManagerSelected: (manager) {
-                      setState(() => _selectedManager = manager);
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const AppDivider(thickness: AppDividerThickness.thick),
-            AppSection(
-              title: 'branches.add_branch.section_working_hours'.tr(),
-              size: AppSectionSize.compact,
-              tone: AppSectionTone.primary,
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppSpacing.xl,
-                vertical: AppSpacing.md,
-              ),
-              child: _isLoadingSetup
-                  ? const Center(child: CircularProgressIndicator())
-                  : BranchScheduleSection(
-                      mode: _scheduleMode,
-                      companySchedule: _companySchedule,
-                      customSchedule: _customSchedule,
-                      onModeChanged: _onScheduleModeChanged,
-                      onCustomScheduleChanged: (schedule) {
-                        setState(() => _customSchedule = schedule);
-                      },
-                    ),
-            ),
-          ],
+  Widget _buildCurrentStep() {
+    return switch (_currentStep) {
+      1 => AddBranchStepOne(
+          key: _stepOneKey,
+          canProceed: _canProceedStep1,
+          onPickLocation: _pickLocation,
+          currentStep: _currentStep,
+          totalSteps: _totalSteps,
         ),
-      ),
-    );
-  }
-
-  Widget _buildStepTwo() {
-    final hasCoverage = _hasCoverage;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppLargeNavBar(
-          title: 'branches.add_branch.title'.tr(),
-          caption: hasCoverage
+      2 => _WizardStepShell(
+          currentStep: _currentStep,
+          totalSteps: _totalSteps,
+          caption: _hasCoverage
               ? 'branches.add_branch.coverage_set_title'.tr()
               : 'branches.add_branch.coverage_step_subtitle'.tr(),
-          useLargeTitleStyle: false,
-        ),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: AppWizardStepIndicator(
-            currentStep: _currentStep,
-            totalSteps: _totalSteps,
-          ),
-        ),
-        Expanded(
           child: AddBranchCoverageStep(
             pickedAddress: _branchAddress,
             servingAreas: _servingAreas,
             radiusKm: _coverageRadiusKm,
-            onEditCoverage: _onAddLocationPressed,
+            onEditCoverage: _openCoverageArea,
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildStepThree() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppLargeNavBar(
-          title: 'branches.add_branch.title'.tr(),
+      3 => _WizardStepShell(
+          currentStep: _currentStep,
+          totalSteps: _totalSteps,
           caption: 'branches.add_branch.services_step_subtitle'.tr(),
-          useLargeTitleStyle: false,
-        ),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: AppWizardStepIndicator(
-            currentStep: _currentStep,
-            totalSteps: _totalSteps,
-          ),
-        ),
-        Expanded(
           child: AddBranchServicesStep(
             selectedServices: _selectedServices,
-            onAddServices: _onAddServicesPressed,
+            onAddServices: _openSelectServices,
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildStepFour() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppLargeNavBar(
-          title: 'branches.add_branch.title'.tr(),
+      4 => _WizardStepShell(
+          currentStep: _currentStep,
+          totalSteps: _totalSteps,
           caption: 'branches.add_branch.workers_step_subtitle'.tr(),
-          useLargeTitleStyle: false,
-        ),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: AppWizardStepIndicator(
-            currentStep: _currentStep,
-            totalSteps: _totalSteps,
-          ),
-        ),
-        Expanded(
           child: AddBranchWorkersStep(
             selectedWorkers: _selectedWorkers,
-            onAddWorkers: _onAddWorkersPressed,
+            onAddWorkers: _openSelectWorkers,
             onRemoveWorker: _onRemoveWorker,
           ),
         ),
-      ],
-    );
-  }
-
-  /// Fallback for unexpected wizard steps.
-  Widget _buildUpcomingStepPlaceholder() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppLargeNavBar(
-          title: 'branches.add_branch.title'.tr(),
+      _ => _WizardStepShell(
+          currentStep: _currentStep,
+          totalSteps: _totalSteps,
           caption: 'branches.add_branch.subtitle'.tr(),
-          useLargeTitleStyle: false,
-        ),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: AppWizardStepIndicator(
-            currentStep: _currentStep,
-            totalSteps: _totalSteps,
-          ),
-        ),
-        Expanded(
           child: Center(
             child: Text(
               'branches.add_branch.upcoming_step_placeholder'.tr(),
@@ -654,6 +327,123 @@ class _AddBranchPageState extends State<AddBranchPage> {
             ),
           ),
         ),
+    };
+  }
+
+  Widget _buildBottomButton() {
+    if (_currentStep == 1) {
+      return ValueListenableBuilder<bool>(
+        valueListenable: _canProceedStep1,
+        builder: (context, canProceed, _) {
+          return BlocSelector<AddBranchBloc, AddBranchState,
+              ({bool isLoading, bool isLoadingSetup})>(
+            selector: (state) => (
+              isLoading: state.isLoading,
+              isLoadingSetup: state.isLoadingSetup,
+            ),
+            builder: (context, rec) {
+              final disabled = rec.isLoadingSetup || !canProceed;
+              return AppButton(
+                label: 'branches.add_branch.next_button'.tr(),
+                isLoading: rec.isLoading,
+                onPressed: rec.isLoading || disabled ? null : _onNextPressed,
+              );
+            },
+          );
+        },
+      );
+    }
+
+    if (_currentStep == 2) {
+      if (!_hasCoverage) {
+        return AppButton(
+          label: 'branches.add_branch.add_location_button'.tr(),
+          onPressed: _openCoverageArea,
+        );
+      }
+      return AppButton(
+        label: 'branches.add_branch.next_button'.tr(),
+        onPressed: _onNextPressed,
+      );
+    }
+
+    if (_currentStep == 3) {
+      if (!_hasServices) {
+        return AppButton(
+          label: 'branches.add_branch.add_services_button'.tr(),
+          onPressed: _openSelectServices,
+        );
+      }
+      return AppButton(
+        label: 'branches.add_branch.next_button'.tr(),
+        onPressed: _onNextPressed,
+      );
+    }
+
+    if (_currentStep == 4) {
+      if (!_hasWorkers) {
+        return AppButton(
+          label: 'branches.add_branch.add_workers_button'.tr(),
+          onPressed: _openSelectWorkers,
+        );
+      }
+      return BlocSelector<AddBranchBloc, AddBranchState, bool>(
+        selector: (state) => state.isLoading,
+        builder: (context, isLoading) {
+          return AppButton(
+            label: 'branches.add_branch.save_button'.tr(),
+            isLoading: isLoading,
+            onPressed: isLoading ? null : _submit,
+          );
+        },
+      );
+    }
+
+    return BlocSelector<AddBranchBloc, AddBranchState, bool>(
+      selector: (state) => state.isLoading,
+      builder: (context, isLoading) {
+        return AppButton(
+          label: 'branches.add_branch.save_button'.tr(),
+          isLoading: isLoading,
+          onPressed: isLoading ? null : _submit,
+        );
+      },
+    );
+  }
+}
+
+/// Shared chrome for steps 2–4: title bar + step indicator + expanded content.
+class _WizardStepShell extends StatelessWidget {
+  const _WizardStepShell({
+    required this.currentStep,
+    required this.totalSteps,
+    required this.caption,
+    required this.child,
+  });
+
+  final int currentStep;
+  final int totalSteps;
+  final String caption;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppLargeNavBar(
+          title: 'branches.add_branch.title'.tr(),
+          caption: caption,
+          useLargeTitleStyle: false,
+        ),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+          child: AppWizardStepIndicator(
+            currentStep: currentStep,
+            totalSteps: totalSteps,
+          ),
+        ),
+        Expanded(child: child),
       ],
     );
   }

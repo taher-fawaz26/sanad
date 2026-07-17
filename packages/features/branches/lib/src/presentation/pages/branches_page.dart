@@ -1,7 +1,9 @@
 import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/presentation/bloc/branches/branches_bloc.dart';
+import 'package:branches/src/presentation/widgets/branch_actions_bottom_sheet.dart';
 import 'package:branches/src/presentation/widgets/branch_empty_states.dart';
 import 'package:branches/src/routes/branch_routes.dart';
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -95,8 +97,24 @@ class _CompanyProfilePlaceholder extends StatelessWidget {
 class _BranchesTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<BranchesBloc, BranchesState>(
-      builder: (context, state) {
+    return BlocListener<BranchesBloc, BranchesState>(
+      listenWhen: (previous, current) =>
+          previous.actionFailure != current.actionFailure &&
+          current.actionFailure != null,
+      listener: (context, state) {
+        final message = state.actionFailure!.message.trim();
+        final title = message.isEmpty
+            ? 'branches.actions.action_failed'.tr()
+            : message.contains(' ')
+                ? message
+                : message.tr();
+        showAppSnackbar(context: context, title: title);
+        context.read<BranchesBloc>().add(
+              const BranchActionFailureClearedEvent(),
+            );
+      },
+      child: BlocBuilder<BranchesBloc, BranchesState>(
+        builder: (context, state) {
         if (state.isLoading && state.branches.isEmpty) {
           return const Center(child: CircularProgressIndicator());
         }
@@ -150,6 +168,7 @@ class _BranchesTab extends StatelessWidget {
             Expanded(
               child: state.hasError && state.branches.isEmpty
                   ? _ErrorState(
+                      failure: state.failure,
                       onRetry: () => context.read<BranchesBloc>().add(
                         const BranchesRefreshEvent(),
                       ),
@@ -171,6 +190,7 @@ class _BranchesTab extends StatelessWidget {
           ],
         );
       },
+      ),
     );
   }
 }
@@ -266,9 +286,11 @@ class _BranchListItem extends StatelessWidget {
           label: 'branches.more_actions'.tr(),
           child: AppIconButton(
             icon: Icons.more_vert,
-            size: AppIconButtonSize.small,
             iconColor: context.appColors.textPrimary,
-            onTap: () {},
+            onTap: () => showBranchActionsBottomSheet(
+              context: context,
+              branch: branch,
+            ),
           ),
         ),
         onTap: () => context.push(BranchRoutes.detailsFor(branch.id)),
@@ -304,17 +326,51 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.onRetry});
+  const _ErrorState({required this.onRetry, this.failure});
 
+  final Failure? failure;
   final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
+    final retryLabel = 'empty_states.retry'.tr();
+    final f = failure;
+
+    if (f is NoInternetFailure || f is NetworkFailure) {
+      return Center(
+        child: AppNetworkFailureState(
+          title: 'empty_states.network_title'.tr(),
+          description: 'empty_states.network_description'.tr(),
+          retryLabel: retryLabel,
+          onRetry: onRetry,
+        ),
+      );
+    }
+
+    if (f is TimeoutFailure) {
+      return Center(
+        child: AppNetworkFailureState(
+          title: 'empty_states.timeout_title'.tr(),
+          description: 'empty_states.timeout_description'.tr(),
+          retryLabel: retryLabel,
+          onRetry: onRetry,
+        ),
+      );
+    }
+
+    // ServerFailure, UnknownFailure, or any other mapped failure.
+    // Show the actual server message when available so users get
+    // meaningful feedback (e.g. "Profile not found. Please start the
+    // setup process.") instead of a generic fallback.
+    final description = (f != null && f.message.isNotEmpty)
+        ? f.message.tr()
+        : 'empty_states.server_error_description'.tr();
+
     return Center(
       child: AppGenericEmptyState(
-        title: 'empty_states.network_title'.tr(),
-        description: 'empty_states.network_description'.tr(),
-        actionLabel: 'empty_states.retry'.tr(),
+        title: 'empty_states.server_error_title'.tr(),
+        description: description,
+        actionLabel: retryLabel,
         onAction: onRetry,
       ),
     );

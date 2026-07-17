@@ -46,6 +46,21 @@
     "empty_workers_description": "عيّن عمالاً ليتم جدولتهم في المهام.",
     "empty_workers_action": "تعيين عامل",
     "more_actions": "مزيد من الإجراءات",
+    "actions": {
+      "service_center": "مركز الخدمة",
+      "view_branch": "عرض الفرع",
+      "set_under_maintenance": "تعيين تحت الصيانة",
+      "edit_branch": "تعديل الفرع",
+      "delete_branch": "حذف الفرع",
+      "delete_confirm_title": "حذف الفرع",
+      "delete_confirm_description": "هل أنت متأكد أنك تريد حذف هذا الفرع؟ لا يمكن التراجع عن هذا الإجراء.",
+      "delete_confirm": "حذف",
+      "cancel": "إلغاء",
+      "maintenance_confirm_title": "تعيين تحت الصيانة؟",
+      "maintenance_confirm_description": "سيؤدي هذا إلى تعطيل جميع العمليات مؤقتًا لفرع {name}. لن يتمكن العملاء من حجز المواعيد أو الوصول إلى الخدمات حتى يتم إيقاف وضع الصيانة.",
+      "maintenance_confirm": "تأكيد",
+      "action_failed": "حدث خطأ. يرجى المحاولة مرة أخرى."
+    },
     "details": {
       "section_contact": "التواصل",
       "section_working_hours": "ساعات العمل",
@@ -68,7 +83,10 @@
       "delete_coming_soon": "حذف الفرع قادم قريباً",
       "manager_caption": "مدير الفرع · {name}",
       "action_edit": "تعديل الفرع",
-      "action_delete": "حذف الفرع"
+      "action_delete": "حذف الفرع",
+      "action_set_maintenance": "تعيين للصيانة",
+      "action_set_active": "تعيين كنشط",
+      "status_update_error": "فشل تحديث حالة الفرع"
     },
     "add_branch": {
       "title": "إضافة فرع",
@@ -176,6 +194,9 @@
     }
   },
   "workers": {
+    "title": "العمال",
+    "empty_title": "لا يوجد عمال بعد",
+    "empty_description": "سيظهر عمالك هنا",
     "select_worker": {
       "title": "أضف فريقك",
       "search_hint": "بحث",
@@ -248,6 +269,10 @@
   "empty_states": {
     "network_title": "لا يوجد اتصال بالإنترنت",
     "network_description": "لا يوجد اتصال بالإنترنت. يرجى التحقق من الاتصال والمحاولة مرة أخرى.",
+    "timeout_title": "انتهت مهلة الطلب",
+    "timeout_description": "استغرق الطلب وقتاً طويلاً. يرجى التحقق من اتصالك والمحاولة مرة أخرى.",
+    "server_error_title": "حدث خطأ ما",
+    "server_error_description": "حدث خطأ. يرجى المحاولة مرة أخرى.",
     "retry": "إعادة المحاولة"
   },
   "errors": {
@@ -262,9 +287,5 @@
     "secure_connection_failed": "فشل الاتصال الآمن. يرجى المحاولة مرة أخرى.",
     "invalid_credentials": "بيانات اعتماد غير صالحة. يرجى المحاولة مرة أخرى.",
     "cache_error": "فشل تحميل البيانات المخزنة مؤقتاً."
-  },  "workers": {
-    "title": "",
-    "empty_title": "",
-    "empty_description": ""
   }
 }

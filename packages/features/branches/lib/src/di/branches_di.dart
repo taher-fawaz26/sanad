@@ -7,6 +7,7 @@ import 'package:branches/src/domain/usecases/get_branch_managers_usecase.dart';
 import 'package:branches/src/domain/usecases/get_branch_usecase.dart';
 import 'package:branches/src/domain/usecases/get_branches_usecase.dart';
 import 'package:branches/src/domain/usecases/get_company_schedule_usecase.dart';
+import 'package:branches/src/domain/usecases/update_branch_status_usecase.dart';
 import 'package:branches/src/domain/usecases/update_branch_usecase.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
 import 'package:branches/src/presentation/bloc/branch_details/branch_details_bloc.dart';
@@ -38,6 +39,9 @@ abstract final class BranchesDI {
         () => UpdateBranchUseCase(sl<BranchRepository>()),
       )
       ..registerLazySingleton(
+        () => UpdateBranchStatusUseCase(sl<BranchRepository>()),
+      )
+      ..registerLazySingleton(
         () => DeleteBranchUseCase(sl<BranchRepository>()),
       )
       ..registerLazySingleton(
@@ -50,6 +54,7 @@ abstract final class BranchesDI {
         () => BranchesBloc(
           getBranchesUseCase: sl<GetBranchesUseCase>(),
           deleteBranchUseCase: sl<DeleteBranchUseCase>(),
+          updateBranchStatusUseCase: sl<UpdateBranchStatusUseCase>(),
         ),
       )
       ..registerFactory(
@@ -62,6 +67,7 @@ abstract final class BranchesDI {
       ..registerFactory(
         () => BranchDetailsBloc(
           getBranchUseCase: sl<GetBranchUseCase>(),
+          updateBranchStatusUseCase: sl<UpdateBranchStatusUseCase>(),
         ),
       );
   }

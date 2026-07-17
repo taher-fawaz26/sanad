@@ -103,9 +103,13 @@ abstract final class ErrorMapper {
           );
         }
         if (statusCode == 404) {
-          return const ServerFailure(
-            message: ErrorMessages.notFound,
+          // Preserve the server's actual message (e.g. "Profile not found.")
+          // so the UI can display something meaningful. Fall back to the
+          // generic i18n key only when the response body contains nothing.
+          return ServerFailure(
+            message: message,
             code: '404',
+            metadata: _coerceMap(data),
           );
         }
         if (statusCode != null && statusCode >= 500) {

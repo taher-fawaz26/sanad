@@ -107,12 +107,20 @@ Figma `Views / Bottom Sheets` (`40:9140`), `Views / Action Sheets` (`40:9109`),
 `Views / Backdrops` (`40:9149`), `Native / Bottom Sheet Indicator` (`40:8321`),
 and `_Partials/Overlay` (`40:8737`).
 
+### Which component to use
+
+| Component | Scrim / barrier | Purpose |
+|---|---|---|
+| `AppBottomSheet` | **None** — sheet floats over the live screen | Contextual content / menus that keep the page visible behind them (`40:9140`) |
+| `AppActionSheet` | Dark scrim (`_Partials/Overlay`) | Discrete action list + Cancel (`40:9109`) |
+| `AppBackdrop` | Used as a stacked front/back sheet surface | Hint that another sheet sits behind the current one (`40:9149`) |
+
 ### Components
 
 | Component | Purpose | Variants / States | Public API |
 |---|---|---|---|
-| `AppBottomSheet` | Modal sheet surface with optional drag handle, title, and body | Light/dark, with/without drag handle, with/without title | `AppBottomSheet({title, child, showDragHandle})`, `showAppBottomSheet(context: ..., title:, child:, isDismissible:, showDragHandle:)` |
-| `AppActionSheet` | List of tappable actions + separate Cancel row | Light/dark, destructive item, optional leading icon per item | `AppActionSheet({title, items, cancelLabel, onCancel})`, `AppActionSheetItem({label, onTap, leading, isDestructive})`, `showAppActionSheet(context: ..., items:, title:, cancelLabel:, onCancel:)` |
+| `AppBottomSheet` | Sheet surface with optional drag handle, title, and body — **no dimming overlay** | Light/dark, with/without drag handle, with/without title, `padChild` for edge-to-edge rows | `AppBottomSheet({title, child, showDragHandle, padChild})`, `showAppBottomSheet(context: ..., title:, child:, isDismissible:, showDragHandle:, padChild:)` |
+| `AppActionSheet` | List of tappable actions + separate Cancel row (with scrim) | Light/dark, destructive item, optional leading icon per item | `AppActionSheet({title, items, cancelLabel, onCancel})`, `AppActionSheetItem({label, onTap, leading, isDestructive})`, `showAppActionSheet(context: ..., items:, title:, cancelLabel:, onCancel:)` |
 | `AppBackdrop` | Front sheet + back-sheet "peek" strip, hinting a stacked sheet behind it | Light/dark, with/without drag handle, with/without title | `AppBackdrop({child, title, showDragHandle})` |
 
 All three share the internal `OverlayDragHandle` widget
@@ -136,7 +144,7 @@ from `_Partials/Overlay` (`40:8737`), `Native / Bottom Sheet Indicator`
 | `chromeBase` | `#CDCFD0` | Sky/Base | Light-mode drag handle |
 | `chromeLighter` | `#F2F4F5` | Sky/Lighter | Light-mode action-sheet divider |
 | `chromeDark` | `#979C9E` | Sky/Dark | Light-mode cancel text |
-| `scrimColor()` | `ink900 @ 70%` | — | Barrier color behind `AppBottomSheet`/`AppActionSheet` |
+| `scrimColor()` | `ink900 @ 70%` | — | Barrier behind `AppActionSheet` only — **not** `AppBottomSheet` |
 
 `ActionSheetStyleSpec` additionally exposes `leadingIconSize` (24dp),
 `itemHorizontalGap` (12dp), and `leadingLabelInset` (60dp) for the optional

@@ -21,6 +21,7 @@ class AppButton extends StatefulWidget {
     this.icon,
     this.iconPosition = AppButtonIconPosition.none,
     this.isLoading = false,
+    this.destructive = false,
   });
 
   final String label;
@@ -30,6 +31,9 @@ class AppButton extends StatefulWidget {
   final Widget? icon;
   final AppButtonIconPosition iconPosition;
   final bool isLoading;
+
+  /// When `true`, uses the red/danger palette (Figma destructive CTAs).
+  final bool destructive;
 
   @override
   State<AppButton> createState() => _AppButtonState();
@@ -54,12 +58,19 @@ class _AppButtonState extends State<AppButton> {
       if (_pressed && enabled) WidgetState.pressed,
     };
 
-    final surface = ButtonTokens.resolve(
-      type: widget.type,
-      colors: colors,
-      brightness: brightness,
-      states: states,
-    );
+    final surface = widget.destructive
+        ? ButtonTokens.destructive(
+            colors: colors,
+            brightness: brightness,
+            variant: ButtonVariant.filled,
+            states: states,
+          )
+        : ButtonTokens.resolve(
+            type: widget.type,
+            colors: colors,
+            brightness: brightness,
+            states: states,
+          );
 
     final minHeight = ButtonTokens.minHeight(widget.size);
     final radius = ButtonTokens.borderRadius();

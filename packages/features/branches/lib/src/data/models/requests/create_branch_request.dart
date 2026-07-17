@@ -1,4 +1,6 @@
+import 'package:branches/src/data/models/branch_availability_dto.dart';
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
+import 'package:branches/src/domain/entities/branch_availability_mode.dart';
 import 'package:equatable/equatable.dart';
 
 class CreateBranchRequest extends Equatable {
@@ -14,7 +16,7 @@ class CreateBranchRequest extends Equatable {
     this.googleMapsLink,
     this.socialMediaLink,
     this.isAvailable = true,
-    this.availabilityMode = 'CORE_HOURS',
+    this.availabilityMode = BranchAvailabilityMode.coreHours,
     this.availability,
     this.serviceIds,
     this.servingAreaPlaceIds,
@@ -32,7 +34,7 @@ class CreateBranchRequest extends Equatable {
   final String? googleMapsLink;
   final String? socialMediaLink;
   final bool isAvailable;
-  final String availabilityMode;
+  final BranchAvailabilityMode availabilityMode;
   final List<BranchAvailabilityEntity>? availability;
   final List<String>? serviceIds;
   final List<String>? servingAreaPlaceIds;
@@ -45,7 +47,7 @@ class CreateBranchRequest extends Equatable {
       'city': city,
       'branchPhone': branchPhone,
       'isAvailable': isAvailable,
-      'availabilityMode': availabilityMode,
+      'availabilityMode': availabilityMode.toApiString(),
     };
     if (branchManagerId != null) body['branchManagerId'] = branchManagerId;
     if (lat != null) body['lat'] = lat;
@@ -54,16 +56,8 @@ class CreateBranchRequest extends Equatable {
     if (googleMapsLink != null) body['googleMapsLink'] = googleMapsLink;
     if (socialMediaLink != null) body['socialMediaLink'] = socialMediaLink;
     if (availability != null) {
-      body['availability'] = availability!
-          .map(
-            (a) => {
-              'day': a.day,
-              'slots': a.slots
-                  .map((s) => {'from': s.from, 'to': s.to})
-                  .toList(),
-            },
-          )
-          .toList();
+      body['availability'] =
+          availability!.map(BranchAvailabilityDto.entityToMap).toList();
     }
     if (serviceIds != null) body['serviceIds'] = serviceIds;
     if (workerIds != null) body['workerIds'] = workerIds;
@@ -80,7 +74,16 @@ class CreateBranchRequest extends Equatable {
         city,
         branchPhone,
         branchManagerId,
+        lat,
+        lng,
+        radiusKm,
+        googleMapsLink,
+        socialMediaLink,
         isAvailable,
         availabilityMode,
+        availability,
+        serviceIds,
+        servingAreaPlaceIds,
+        workerIds,
       ];
 }

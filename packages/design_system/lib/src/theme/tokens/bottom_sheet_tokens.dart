@@ -5,6 +5,9 @@ import 'package:design_system/src/theme/typography/app_typography.dart';
 import 'package:flutter/material.dart';
 
 /// Resolved styling for bottom sheets and backdrops.
+///
+/// Note: [AppBottomSheet] has **no** dimming barrier (Figma `40:9140`).
+/// Scrim lives on [AppActionSheet] / [OverlayTokens.scrimColor] only.
 @immutable
 class BottomSheetStyleSpec {
   const BottomSheetStyleSpec({
@@ -14,7 +17,6 @@ class BottomSheetStyleSpec {
     required this.dragHandleTopPadding,
     required this.dragHandleColor,
     required this.surfaceColor,
-    required this.barrierColor,
     required this.horizontalPadding,
     required this.titleStyle,
     required this.bodyStyle,
@@ -28,7 +30,6 @@ class BottomSheetStyleSpec {
   final double dragHandleTopPadding;
   final Color dragHandleColor;
   final Color surfaceColor;
-  final Color barrierColor;
   final double horizontalPadding;
   final TextStyle titleStyle;
   final TextStyle bodyStyle;
@@ -51,7 +52,6 @@ abstract final class BottomSheetTokens {
   static const double dragHandleHeight = 5;
   static const double dragHandleTopPadding = 8;
   static const double horizontalPadding = 24;
-  static const double barrierOpacity = OverlayTokens.scrimOpacity;
 
   // Views/Backdrops (`40:9149`) — back-sheet peek strip visible above the
   // front sheet. The peek itself is a flattened raster image in Figma (not
@@ -77,7 +77,6 @@ abstract final class BottomSheetTokens {
       dragHandleTopPadding: responsiveDimension(dragHandleTopPadding),
       dragHandleColor: isDark ? OverlayTokens.ink600 : OverlayTokens.chromeBase,
       surfaceColor: isDark ? OverlayTokens.ink800 : colors.white,
-      barrierColor: OverlayTokens.scrimColor(),
       horizontalPadding: responsiveDimension(horizontalPadding),
       titleStyle: typography.title3.copyWith(
         fontWeight: FontWeight.w700,

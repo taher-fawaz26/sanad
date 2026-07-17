@@ -123,9 +123,7 @@ void showAppSnackbar({
       duration: duration,
       behavior:
           isFullWidth ? SnackBarBehavior.fixed : SnackBarBehavior.floating,
-      margin: isFullWidth
-          ? EdgeInsets.zero
-          : EdgeInsets.all(AppSpacing.lg),
+      margin: isFullWidth ? null : EdgeInsets.all(AppSpacing.lg),
       content: AppSnackbar(
         title: title,
         caption: caption,

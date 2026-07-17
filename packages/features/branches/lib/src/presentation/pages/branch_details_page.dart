@@ -1,9 +1,11 @@
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
+import 'package:branches/src/domain/entities/branch_availability_mode.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/presentation/bloc/branch_details/branch_details_bloc.dart';
 import 'package:branches/src/presentation/data/branch_details_static_data.dart';
 import 'package:branches/src/presentation/utils/branch_maps_launcher.dart';
 import 'package:branches/src/presentation/utils/branch_schedule_formatter.dart';
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -18,7 +20,18 @@ class BranchDetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<BranchDetailsBloc, BranchDetailsState>(
+    return BlocConsumer<BranchDetailsBloc, BranchDetailsState>(
+      listenWhen: (prev, curr) =>
+          prev.statusUpdateFailure != curr.statusUpdateFailure &&
+          curr.statusUpdateFailure != null,
+      listener: (context, state) {
+        showAppSnackbar(
+          context: context,
+          title:
+              state.statusUpdateFailure?.message ??
+              'branches.details.status_update_error'.tr(),
+        );
+      },
       builder: (context, state) {
         if (state.isLoading && state.branch == null) {
           return const Scaffold(
@@ -28,6 +41,7 @@ class BranchDetailsPage extends StatelessWidget {
 
         if (state.hasError && state.branch == null) {
           return _BranchDetailsError(
+            failure: state.failure,
             onRetry: () => context.read<BranchDetailsBloc>().add(
               const BranchDetailsRefreshEvent(),
             ),
@@ -47,8 +61,13 @@ class BranchDetailsPage extends StatelessWidget {
 }
 
 class _BranchDetailsError extends StatelessWidget {
-  const _BranchDetailsError({required this.onRetry, required this.onClose});
+  const _BranchDetailsError({
+    required this.onRetry,
+    required this.onClose,
+    this.failure,
+  });
 
+  final Failure? failure;
   final VoidCallback onRetry;
   final VoidCallback onClose;
 
@@ -64,18 +83,45 @@ class _BranchDetailsError extends StatelessWidget {
               leading: AppCloseIcon(onTap: onClose),
             ),
             Expanded(
-              child: Center(
-                child: AppGenericEmptyState(
-                  title: 'empty_states.network_title'.tr(),
-                  description: 'empty_states.network_description'.tr(),
-                  actionLabel: 'empty_states.retry'.tr(),
-                  onAction: onRetry,
-                ),
-              ),
+              child: Center(child: _errorContent()),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _errorContent() {
+    final retryLabel = 'empty_states.retry'.tr();
+    final f = failure;
+
+    if (f is NoInternetFailure || f is NetworkFailure) {
+      return AppNetworkFailureState(
+        title: 'empty_states.network_title'.tr(),
+        description: 'empty_states.network_description'.tr(),
+        retryLabel: retryLabel,
+        onRetry: onRetry,
+      );
+    }
+
+    if (f is TimeoutFailure) {
+      return AppNetworkFailureState(
+        title: 'empty_states.timeout_title'.tr(),
+        description: 'empty_states.timeout_description'.tr(),
+        retryLabel: retryLabel,
+        onRetry: onRetry,
+      );
+    }
+
+    final description = (f != null && f.message.isNotEmpty)
+        ? f.message.tr()
+        : 'empty_states.server_error_description'.tr();
+
+    return AppGenericEmptyState(
+      title: 'empty_states.server_error_title'.tr(),
+      description: description,
+      actionLabel: retryLabel,
+      onAction: onRetry,
     );
   }
 }
@@ -100,10 +146,9 @@ class _BranchDetailsContent extends StatelessWidget {
             namedArgs: {'name': branch.branchManagerName!},
           );
     final scheduleItems = _buildScheduleItems(context);
-    final visibleServices =
-        BranchDetailsStaticData.services.take(_visibleServiceCount).toList();
-    final hiddenServiceCount =
-        BranchDetailsStaticData.services.length - visibleServices.length;
+    final services = branch.serviceNames ?? const <String>[];
+    final visibleServices = services.take(_visibleServiceCount).toList();
+    final hiddenServiceCount = services.length - visibleServices.length;
     final teamCount = BranchDetailsStaticData.teamInitials.length;
     final overflowTeamCount = teamCount - _visibleTeamCount;
 
@@ -183,10 +228,10 @@ class _BranchDetailsContent extends StatelessWidget {
                     AppSection(
                       title: 'branches.details.section_working_hours'.tr(),
                       size: AppSectionSize.compact,
-                      trailing: branch.availabilityMode == 'CUSTOM'
+                      trailing: branch.availabilityMode == BranchAvailabilityMode.custom
                           ? AppSectionTrailing.custom
                           : AppSectionTrailing.none,
-                      trailingWidget: branch.availabilityMode == 'CUSTOM'
+                      trailingWidget: branch.availabilityMode == BranchAvailabilityMode.custom
                           ? AppStatusBadge(
                               label: 'branches.details.schedule_custom'.tr(),
                               type: AppStatusBadgeType.info,
@@ -207,9 +252,10 @@ class _BranchDetailsContent extends StatelessWidget {
                       trailingWidget: !branch.isAvailable
                           ? Text(
                               'branches.details.coverage_closed'.tr(),
-                              style: context.appTypography.regularNormal.copyWith(
-                                color: colors.error,
-                              ),
+                              style: context.appTypography.regularNormal
+                                  .copyWith(
+                                    color: colors.error,
+                                  ),
                             )
                           : null,
                     ),
@@ -222,7 +268,9 @@ class _BranchDetailsContent extends StatelessWidget {
                     if (branch.radiusKm != null) ...[
                       SizedBox(height: AppSpacing.sm),
                       Padding(
-                        padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                        ),
                         child: Text(
                           'branches.details.radius_km'.tr(
                             namedArgs: {
@@ -288,8 +336,9 @@ class _BranchDetailsContent extends StatelessWidget {
                           AppAvatarStack(
                             avatars: [
                               for (final initials
-                                  in BranchDetailsStaticData.teamInitials
-                                      .take(_visibleTeamCount))
+                                  in BranchDetailsStaticData.teamInitials.take(
+                                    _visibleTeamCount,
+                                  ))
                                 AppAvatar(
                                   initials: initials,
                                   backgroundColor: colors.primary,
@@ -338,8 +387,12 @@ class _BranchDetailsContent extends StatelessWidget {
 
   Widget _buildCoverageChips(BuildContext context) {
     final colors = context.appColors;
-    final ids = branch.servingAreaPlaceIds;
-    if (ids == null || ids.isEmpty) {
+    // Prefer human-readable names from the API; fall back to place IDs.
+    final names = branch.servingAreaNames;
+    final areas = (names?.isNotEmpty ?? false)
+        ? names!
+        : branch.servingAreaPlaceIds ?? const <String>[];
+    if (areas.isEmpty) {
       return Text(
         'branches.details.no_serving_areas'.tr(),
         style: context.appTypography.smallNormal.copyWith(
@@ -352,9 +405,9 @@ class _BranchDetailsContent extends StatelessWidget {
       spacing: AppSpacing.sm,
       runSpacing: AppSpacing.sm,
       children: [
-        for (final placeId in ids)
+        for (final area in areas)
           AppChip(
-            label: placeId,
+            label: area,
             tone: AppChipTone.softSuccess,
             icon: Icon(
               Icons.location_on_outlined,
@@ -415,9 +468,23 @@ class _BranchDetailsContent extends StatelessWidget {
   }
 
   void _showMoreActions(BuildContext context) {
-    showAppActionSheet(
+    final isActive = branch.isAvailable;
+    final bloc = context.read<BranchDetailsBloc>();
+    showAppActionSheet<void>(
       context: context,
       items: [
+        AppActionSheetItem(
+          label: isActive
+              ? 'branches.details.action_set_maintenance'.tr()
+              : 'branches.details.action_set_active'.tr(),
+          leading: Icon(
+            isActive ? Icons.pause_circle_outline : Icons.check_circle_outline,
+          ),
+          onTap: () {
+            Navigator.of(context).pop();
+            bloc.add(BranchStatusToggleEvent(isAvailable: !isActive));
+          },
+        ),
         AppActionSheetItem(
           label: 'branches.details.action_edit'.tr(),
           leading: const Icon(Icons.edit_outlined),

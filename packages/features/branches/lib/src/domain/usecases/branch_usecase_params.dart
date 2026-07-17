@@ -1,4 +1,5 @@
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
+import 'package:branches/src/domain/entities/branch_availability_mode.dart';
 import 'package:equatable/equatable.dart';
 
 class GetBranchesParams extends Equatable {
@@ -33,7 +34,7 @@ class CreateBranchParams extends Equatable {
     this.googleMapsLink,
     this.socialMediaLink,
     this.isAvailable = true,
-    this.availabilityMode = 'CORE_HOURS',
+    this.availabilityMode = BranchAvailabilityMode.coreHours,
     this.availability,
     this.serviceIds,
     this.servingAreaPlaceIds,
@@ -51,7 +52,7 @@ class CreateBranchParams extends Equatable {
   final String? googleMapsLink;
   final String? socialMediaLink;
   final bool isAvailable;
-  final String availabilityMode;
+  final BranchAvailabilityMode availabilityMode;
   final List<BranchAvailabilityEntity>? availability;
   final List<String>? serviceIds;
   final List<String>? servingAreaPlaceIds;
@@ -110,7 +111,7 @@ class UpdateBranchParams extends Equatable {
   final String? googleMapsLink;
   final String? socialMediaLink;
   final bool? isAvailable;
-  final String? availabilityMode;
+  final BranchAvailabilityMode? availabilityMode;
   final List<BranchAvailabilityEntity>? availability;
   final List<String>? serviceIds;
   final List<String>? servingAreaPlaceIds;
@@ -123,9 +124,31 @@ class UpdateBranchParams extends Equatable {
         city,
         branchPhone,
         branchManagerId,
+        lat,
+        lng,
+        radiusKm,
+        googleMapsLink,
+        socialMediaLink,
         isAvailable,
         availabilityMode,
+        availability,
+        serviceIds,
+        servingAreaPlaceIds,
       ];
+}
+
+class UpdateBranchStatusParams extends Equatable {
+  const UpdateBranchStatusParams({required this.id, required this.isAvailable});
+
+  final String id;
+
+  /// `true` → sets status to `ACTIVE`; `false` → sets status to `MAINTENANCE`.
+  final bool isAvailable;
+
+  String get statusString => isAvailable ? 'ACTIVE' : 'MAINTENANCE';
+
+  @override
+  List<Object?> get props => [id, isAvailable];
 }
 
 class DeleteBranchParams extends Equatable {

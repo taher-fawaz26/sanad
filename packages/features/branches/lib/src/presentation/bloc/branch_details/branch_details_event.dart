@@ -19,3 +19,14 @@ final class BranchDetailsFetchEvent extends BranchDetailsEvent {
 final class BranchDetailsRefreshEvent extends BranchDetailsEvent {
   const BranchDetailsRefreshEvent();
 }
+
+/// Toggles the branch status between ACTIVE ↔ MAINTENANCE.
+final class BranchStatusToggleEvent extends BranchDetailsEvent {
+  const BranchStatusToggleEvent({required this.isAvailable});
+
+  /// The desired new state: `true` = ACTIVE, `false` = MAINTENANCE.
+  final bool isAvailable;
+
+  @override
+  List<Object?> get props => [isAvailable];
+}

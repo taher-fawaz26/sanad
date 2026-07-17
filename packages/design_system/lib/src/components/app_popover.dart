@@ -35,10 +35,13 @@ class AppPopover extends StatelessWidget {
     this.image,
     this.featureIconColor,
     this.featureIconSize = AppFeatureIconSize.xl,
+    this.featureIconTheme = AppFeatureIconTheme.lightCircle,
+    this.featureIconAsset,
     this.featureIconBackgroundColor,
     this.actions = AppPopoverActions.dual,
     this.primaryLabel,
     this.onPrimary,
+    this.primaryDestructive = false,
     this.secondaryLabel,
     this.onSecondary,
     this.inputField,
@@ -59,10 +62,17 @@ class AppPopover extends StatelessWidget {
   /// icon inside a circular ring (`194:5419`) instead of a clipped [image].
   final AppFeatureIconColor? featureIconColor;
   final AppFeatureIconSize featureIconSize;
+  final AppFeatureIconTheme featureIconTheme;
+
+  /// Optional SVG override for the featured icon (e.g. settings gear).
+  final String? featureIconAsset;
   final Color? featureIconBackgroundColor;
   final AppPopoverActions actions;
   final String? primaryLabel;
   final VoidCallback? onPrimary;
+
+  /// When `true`, primary CTA uses the red/danger palette.
+  final bool primaryDestructive;
   final String? secondaryLabel;
   final VoidCallback? onSecondary;
   final Widget? inputField;
@@ -83,7 +93,8 @@ class AppPopover extends StatelessWidget {
   }
 
   Widget _buildStandardLayout(BuildContext context, DialogStyleSpec spec) {
-    final hasInlineImage = imageLayout == AppDialogImageLayout.imageLarge ||
+    final hasInlineImage =
+        imageLayout == AppDialogImageLayout.imageLarge ||
         imageLayout == AppDialogImageLayout.iconSmall;
 
     return Container(
@@ -159,13 +170,19 @@ class AppPopover extends StatelessWidget {
       return _buildFeatureIconIllustration(context, spec);
     }
 
+    // Custom featured icon without the success-popover outer ring.
+    if (image != null && imageLayout == AppDialogImageLayout.iconSmall) {
+      return image!;
+    }
+
     final size = spec.inlineImageSize(imageLayout);
     return ClipRRect(
       borderRadius: spec.imageBorderRadius,
       child: SizedBox(
         width: size,
         height: size,
-        child: image ??
+        child:
+            image ??
             ColoredBox(
               color: spec.imagePlaceholderColor,
               child: const Center(child: Icon(Icons.image_outlined)),
@@ -179,6 +196,23 @@ class AppPopover extends StatelessWidget {
     DialogStyleSpec spec,
   ) {
     final colors = context.appColors;
+    final icon = AppFeatureIcon(
+      color: featureIconColor!,
+      size: featureIconSize,
+      theme: featureIconTheme,
+      iconAsset: featureIconAsset,
+    );
+
+    // Outer ring is only for the success-style popover (`194:5419`).
+    // Confirm dialogs pass [image] or omit [featureIconBackgroundColor]
+    // and use the featured icon alone when no outer color is set and size
+    // is not wrapped — keep outer ring when background color is provided
+    // OR when using the default success path (background null → success).
+    if (featureIconBackgroundColor == null &&
+        featureIconColor != AppFeatureIconColor.success) {
+      return icon;
+    }
+
     final outerSize = spec.featureIconOuterSize;
 
     return SizedBox(
@@ -189,12 +223,7 @@ class AppPopover extends StatelessWidget {
           color: featureIconBackgroundColor ?? colors.successContainer,
           shape: BoxShape.circle,
         ),
-        child: Center(
-          child: AppFeatureIcon(
-            color: featureIconColor!,
-            size: featureIconSize,
-          ),
-        ),
+        child: Center(child: icon),
       ),
     );
   }
@@ -244,7 +273,6 @@ class AppPopover extends StatelessWidget {
   }
 
   Widget _buildActions(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = context.appColors;
 
     return Column(
@@ -255,6 +283,7 @@ class AppPopover extends StatelessWidget {
           AppButton(
             label: primaryLabel!,
             onPressed: onPrimary,
+            destructive: primaryDestructive,
           ),
         if (actions == AppPopoverActions.dual ||
             actions == AppPopoverActions.textInput) ...[
@@ -263,9 +292,8 @@ class AppPopover extends StatelessWidget {
             _SecondaryAction(
               label: secondaryLabel!,
               onPressed: onSecondary,
-              color: isDark
-                  ? colors.palettes.dark.shade600
-                  : colors.primary,
+              backgroundColor: colors.palettes.sky.shade50,
+              foregroundColor: colors.textPrimary,
             ),
         ],
       ],
@@ -278,29 +306,34 @@ class AppPopover extends StatelessWidget {
       actions == AppPopoverActions.textInput;
 }
 
-/// Secondary popover action — transparent button; gray in dark mode per Figma.
+/// Secondary popover action — soft sky fill (Figma cancel on confirm modals).
 class _SecondaryAction extends StatelessWidget {
   const _SecondaryAction({
     required this.label,
     required this.onPressed,
-    required this.color,
+    required this.backgroundColor,
+    required this.foregroundColor,
   });
 
   final String label;
   final VoidCallback? onPressed;
-  final Color color;
+  final Color backgroundColor;
+  final Color foregroundColor;
 
   @override
   Widget build(BuildContext context) {
     final typography = context.appTypography;
+    final radius = ButtonTokens.borderRadius();
 
     return Material(
-      color: Colors.transparent,
+      color: backgroundColor,
+      borderRadius: radius,
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onPressed,
         splashFactory: NoSplash.splashFactory,
         highlightColor: Colors.transparent,
-        borderRadius: ButtonTokens.borderRadius(),
+        borderRadius: radius,
         child: ConstrainedBox(
           constraints: BoxConstraints(
             minHeight: ButtonTokens.minHeight(AppButtonSize.block),
@@ -309,7 +342,7 @@ class _SecondaryAction extends StatelessWidget {
             child: Text(
               label,
               style: ButtonTokens.labelStyle(typography).copyWith(
-                color: color,
+                color: foregroundColor,
               ),
             ),
           ),
@@ -329,10 +362,13 @@ Future<T?> showAppPopover<T>({
   Widget? image,
   AppFeatureIconColor? featureIconColor,
   AppFeatureIconSize featureIconSize = AppFeatureIconSize.xl,
+  AppFeatureIconTheme featureIconTheme = AppFeatureIconTheme.lightCircle,
+  String? featureIconAsset,
   Color? featureIconBackgroundColor,
   AppPopoverActions actions = AppPopoverActions.dual,
   String? primaryLabel,
   VoidCallback? onPrimary,
+  bool primaryDestructive = false,
   String? secondaryLabel,
   VoidCallback? onSecondary,
   Widget? inputField,
@@ -360,10 +396,13 @@ Future<T?> showAppPopover<T>({
           image: image,
           featureIconColor: featureIconColor,
           featureIconSize: featureIconSize,
+          featureIconTheme: featureIconTheme,
+          featureIconAsset: featureIconAsset,
           featureIconBackgroundColor: featureIconBackgroundColor,
           actions: actions,
           primaryLabel: primaryLabel,
           onPrimary: onPrimary ?? () => Navigator.of(dialogContext).pop(),
+          primaryDestructive: primaryDestructive,
           secondaryLabel: secondaryLabel,
           onSecondary: onSecondary ?? () => Navigator.of(dialogContext).pop(),
           inputField: inputField,
@@ -389,10 +428,13 @@ Future<T?> showAppDialog<T>({
   Widget? image,
   AppFeatureIconColor? featureIconColor,
   AppFeatureIconSize featureIconSize = AppFeatureIconSize.xl,
+  AppFeatureIconTheme featureIconTheme = AppFeatureIconTheme.lightCircle,
+  String? featureIconAsset,
   Color? featureIconBackgroundColor,
   AppPopoverActions actions = AppPopoverActions.dual,
   String? primaryLabel,
   VoidCallback? onPrimary,
+  bool primaryDestructive = false,
   String? secondaryLabel,
   VoidCallback? onSecondary,
   Widget? inputField,
@@ -410,10 +452,13 @@ Future<T?> showAppDialog<T>({
     image: image,
     featureIconColor: featureIconColor,
     featureIconSize: featureIconSize,
+    featureIconTheme: featureIconTheme,
+    featureIconAsset: featureIconAsset,
     featureIconBackgroundColor: featureIconBackgroundColor,
     actions: actions,
     primaryLabel: primaryLabel,
     onPrimary: onPrimary,
+    primaryDestructive: primaryDestructive,
     secondaryLabel: secondaryLabel,
     onSecondary: onSecondary,
     inputField: inputField,

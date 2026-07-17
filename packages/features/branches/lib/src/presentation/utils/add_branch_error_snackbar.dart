@@ -31,7 +31,8 @@ String _resolveErrorCaption(Failure failure) {
     return 'branches.add_branch.error_caption'.tr();
   }
 
-  if (message == ErrorMessages.unknown || message == ErrorMessages.serverError) {
+  if (message == ErrorMessages.unknown ||
+      message == ErrorMessages.serverError) {
     return 'branches.add_branch.error_caption'.tr();
   }
 

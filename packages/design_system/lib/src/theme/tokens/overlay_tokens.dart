@@ -30,6 +30,9 @@ abstract final class OverlayTokens {
 
   static const double scrimOpacity = 0.7;
 
-  /// Scrim color shown behind modal overlays (`_Partials/Overlay`, `40:8737`).
+  /// Scrim behind [AppActionSheet] / dialogs (`_Partials/Overlay`, `40:8737`).
+  ///
+  /// Do **not** use for [AppBottomSheet] — Figma `Views / Bottom Sheets`
+  /// (`40:9140`) has no dimming barrier.
   static Color scrimColor() => ink900.withValues(alpha: scrimOpacity);
 }

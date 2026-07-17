@@ -64,8 +64,7 @@ class AppListCard extends StatelessWidget {
                       ),
                     ),
                     if (badge != null) ...[
-                      SizedBox(width: spec.contentGap),
-                      Expanded(flex: 4, child: badge!),
+                      Expanded(flex: 1, child: badge!),
                     ],
                   ],
                 ),
