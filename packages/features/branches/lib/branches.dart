@@ -12,6 +12,7 @@ export 'src/domain/entities/branch_availability_entity.dart';
 export 'src/domain/entities/branch_availability_mode.dart';
 export 'src/domain/entities/branch_entity.dart';
 export 'src/domain/entities/branch_manager_entity.dart';
+export 'src/domain/entities/branch_type.dart';
 export 'src/domain/entities/branch_time_slot_entity.dart';
 export 'src/domain/entities/paginated_branches_entity.dart';
 export 'src/domain/repositories/branch_repository.dart';

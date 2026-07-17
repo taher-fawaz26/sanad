@@ -37,6 +37,7 @@ class BranchRepositoryImpl implements BranchRepository {
           .createBranch(
             CreateBranchRequest(
               branchName: params.branchName,
+              branchType: params.branchType,
               branchAddress: params.branchAddress,
               city: params.city,
               branchPhone: params.branchPhone,

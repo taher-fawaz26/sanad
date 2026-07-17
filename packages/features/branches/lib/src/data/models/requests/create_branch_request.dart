@@ -1,11 +1,13 @@
 import 'package:branches/src/data/models/branch_availability_dto.dart';
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
 import 'package:branches/src/domain/entities/branch_availability_mode.dart';
+import 'package:branches/src/domain/entities/branch_type.dart';
 import 'package:equatable/equatable.dart';
 
 class CreateBranchRequest extends Equatable {
   const CreateBranchRequest({
     required this.branchName,
+    required this.branchType,
     required this.branchAddress,
     required this.city,
     required this.branchPhone,
@@ -24,6 +26,7 @@ class CreateBranchRequest extends Equatable {
   });
 
   final String branchName;
+  final BranchType branchType;
   final String branchAddress;
   final String city;
   final String branchPhone;
@@ -43,6 +46,7 @@ class CreateBranchRequest extends Equatable {
   Map<String, dynamic> toMap() {
     final body = <String, dynamic>{
       'branchName': branchName,
+      'type': branchType.toApiString(),
       'branchAddress': branchAddress,
       'city': city,
       'branchPhone': branchPhone,
@@ -70,6 +74,7 @@ class CreateBranchRequest extends Equatable {
   @override
   List<Object?> get props => [
         branchName,
+        branchType,
         branchAddress,
         city,
         branchPhone,

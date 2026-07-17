@@ -1,5 +1,6 @@
 import 'package:branches/src/di/branches_di.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
+import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_cubit.dart';
 import 'package:branches/src/presentation/bloc/branch_details/branch_details_bloc.dart';
 import 'package:branches/src/presentation/bloc/branches/branches_bloc.dart';
 import 'package:branches/src/presentation/models/coverage_area_args.dart';
@@ -38,8 +39,14 @@ class BranchesModule extends FeatureModule {
         ),
         GoRoute(
           path: BranchRoutes.add,
-          builder: (context, state) => BlocProvider(
-            create: (_) => sl<AddBranchBloc>()..add(const AddBranchStarted()),
+          builder: (context, state) => MultiBlocProvider(
+            providers: [
+              BlocProvider(
+                create: (_) =>
+                    sl<AddBranchBloc>()..add(const AddBranchStarted()),
+              ),
+              BlocProvider(create: (_) => AddBranchDraftCubit()),
+            ],
             child: const AddBranchPage(),
           ),
         ),
