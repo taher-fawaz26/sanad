@@ -14,17 +14,19 @@ Future<LocationPickerResult?> showLocationPickerSheet(
   MapConfiguration configuration = const MapConfiguration(),
   Widget? pinMarker,
 }) {
-  return showAppBottomSheet<LocationPickerResult>(
+  return showAppModalSheet<LocationPickerResult>(
     context: context,
-    showDragHandle: false,
     child: Builder(
-      builder: (sheetContext) => MapLocationPicker(
-        labels: labels,
-        initialPosition: initialPosition,
-        initialAddress: initialAddress,
-        configuration: configuration,
-        pinMarker: pinMarker,
-        onConfirmed: (result) => Navigator.of(sheetContext).pop(result),
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        child: MapLocationPicker(
+          labels: labels,
+          initialPosition: initialPosition,
+          initialAddress: initialAddress,
+          configuration: configuration,
+          pinMarker: pinMarker,
+          onConfirmed: (result) => Navigator.of(sheetContext).pop(result),
+        ),
       ),
     ),
   );

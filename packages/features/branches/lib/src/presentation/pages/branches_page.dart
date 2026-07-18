@@ -166,26 +166,39 @@ class _BranchesTab extends StatelessWidget {
               ),
               SizedBox(height: AppSpacing.sm),
               Expanded(
-                child: state.hasError && state.branches.isEmpty
-                    ? _ErrorState(
-                        failure: state.failure,
-                        onRetry: () => context.read<BranchesBloc>().add(
-                          const BranchesRefreshEvent(),
+                child: AppRefreshIndicator(
+                  onRefresh: () async {
+                    context.read<BranchesBloc>().add(
+                      const BranchesRefreshEvent(),
+                    );
+                  },
+                  child: state.hasError && state.branches.isEmpty
+                      ? AppFillRemainingScrollable(
+                          child: _ErrorState(
+                            failure: state.failure,
+                            onRetry: () => context.read<BranchesBloc>().add(
+                              const BranchesRefreshEvent(),
+                            ),
+                          ),
+                        )
+                      : branches.isEmpty
+                      ? AppFillRemainingScrollable(
+                          child: _EmptyState(
+                            searchQuery: state.searchQuery,
+                            onClearSearch: () =>
+                                context.read<BranchesBloc>().add(
+                                  const BranchesSearchChangedEvent(''),
+                                ),
+                          ),
+                        )
+                      : ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: EdgeInsets.only(bottom: AppSpacing.lg),
+                          itemCount: branches.length,
+                          itemBuilder: (context, index) =>
+                              _BranchListItem(branch: branches[index]),
                         ),
-                      )
-                    : branches.isEmpty
-                    ? _EmptyState(
-                        searchQuery: state.searchQuery,
-                        onClearSearch: () => context.read<BranchesBloc>().add(
-                          const BranchesSearchChangedEvent(''),
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: EdgeInsets.only(bottom: AppSpacing.lg),
-                        itemCount: branches.length,
-                        itemBuilder: (context, index) =>
-                            _BranchListItem(branch: branches[index]),
-                      ),
+                ),
               ),
             ],
           );

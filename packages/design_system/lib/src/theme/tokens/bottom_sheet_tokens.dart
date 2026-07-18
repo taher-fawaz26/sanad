@@ -53,6 +53,10 @@ abstract final class BottomSheetTokens {
   static const double dragHandleTopPadding = 8;
   static const double horizontalPadding = 24;
 
+  /// Default height fraction for [showAppModalSheet] — the sheet occupies
+  /// this proportion of the screen height.
+  static const double modalHeightFraction = 0.92;
+
   // Views/Backdrops (`40:9149`) — back-sheet peek strip visible above the
   // front sheet. The peek itself is a flattened raster image in Figma (not
   // vector), so its exact fill/shadow cannot be extracted from tokens; this
