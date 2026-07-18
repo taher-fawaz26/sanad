@@ -1,9 +1,7 @@
-import 'package:branches/src/domain/entities/branch_availability_entity.dart';
-import 'package:branches/src/domain/entities/branch_availability_mode.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/presentation/bloc/branch_details/branch_details_bloc.dart';
 import 'package:branches/src/presentation/utils/branch_maps_launcher.dart';
-import 'package:branches/src/presentation/utils/branch_schedule_formatter.dart';
+import 'package:branches/src/presentation/widgets/branch_summary_content.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -11,7 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-/// Figma Branch Details screen (`194:2647`).
+/// Figma branch details / review layout (`365:14892`).
 class BranchDetailsPage extends StatelessWidget {
   const BranchDetailsPage({required this.branchId, super.key});
 
@@ -130,27 +128,22 @@ class _BranchDetailsContent extends StatelessWidget {
 
   final BranchEntity branch;
 
-  static const _visibleServiceCount = 3;
-  static const _visibleTeamCount = 4;
-
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final initial = branch.branchName.isNotEmpty
-        ? branch.branchName[0].toUpperCase()
-        : '?';
-    final managerCaption = branch.branchManagerName == null
-        ? null
-        : 'branches.details.manager_caption'.tr(
-            namedArgs: {'name': branch.branchManagerName!},
-          );
-    final scheduleItems = _buildScheduleItems(context);
-    final services = branch.serviceNames ?? const <String>[];
-    final visibleServices = services.take(_visibleServiceCount).toList();
-    final hiddenServiceCount = services.length - visibleServices.length;
-    final workers = branch.workers;
-    final teamCount = workers.length;
-    final overflowTeamCount = teamCount - _visibleTeamCount;
+    final model = BranchSummaryViewModel.fromEntity(
+      branch: branch,
+      closedScheduleColor: colors.error,
+      onOpenMaps: () => _openMaps(context),
+      onViewAllServices: branch.serviceNames != null &&
+              branch.serviceNames!.length >
+                  BranchSummaryContent.visibleServiceCount
+          ? () => _showComingSoon(context)
+          : null,
+      onViewAllTeam: branch.workers.isNotEmpty
+          ? () => _showComingSoon(context)
+          : null,
+    );
 
     return Scaffold(
       backgroundColor: colors.surface,
@@ -172,216 +165,10 @@ class _BranchDetailsContent extends StatelessWidget {
             Expanded(
               child: SingleChildScrollView(
                 padding: EdgeInsets.only(bottom: AppSpacing.lg),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                      child: AppListCard(
-                        title: branch.branchName,
-                        caption: managerCaption ?? branch.displayAddress,
-                        leading: AppAvatar(
-                          initials: initial,
-                          backgroundColor: colors.primary,
-                          showStatusDot: true,
-                        ),
-                        badge: AppStatusBadge(
-                          label: branch.isAvailable
-                              ? 'branches.status_active'.tr()
-                              : 'branches.status_maintenance'.tr(),
-                          type: branch.isAvailable
-                              ? AppStatusBadgeType.success
-                              : AppStatusBadgeType.warning,
-                          size: AppStatusBadgeSize.compact,
-                        ),
-                      ),
-                    ),
-                    AppSection(
-                      title: 'branches.details.section_contact'.tr(),
-                      size: AppSectionSize.compact,
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                      child: Column(
-                        children: [
-                          AppMapLinkCard(
-                            title: branch.displayAddress,
-                            caption: 'branches.details.open_in_maps'.tr(),
-                            leading: Icon(
-                              Icons.location_on_outlined,
-                              color: colors.primary,
-                            ),
-                            onTap: () => _openMaps(context),
-                          ),
-                          SizedBox(height: AppSpacing.md),
-                          AppGroupedKeyValueList(
-                            items: [
-                              GroupedKeyValueItem(
-                                title: 'branches.details.branch_phone'.tr(),
-                                value: branch.branchPhone,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    AppSection(
-                      title: 'branches.details.section_working_hours'.tr(),
-                      size: AppSectionSize.compact,
-                      trailing:
-                          branch.availabilityMode ==
-                              BranchAvailabilityMode.custom
-                          ? AppSectionTrailing.custom
-                          : AppSectionTrailing.none,
-                      trailingWidget:
-                          branch.availabilityMode ==
-                              BranchAvailabilityMode.custom
-                          ? AppStatusBadge(
-                              label: 'branches.details.schedule_custom'.tr(),
-                              type: AppStatusBadgeType.info,
-                              size: AppStatusBadgeSize.compact,
-                            )
-                          : null,
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                      child: AppGroupedKeyValueList(items: scheduleItems),
-                    ),
-                    AppSection(
-                      title: 'branches.details.section_coverage'.tr(),
-                      size: AppSectionSize.compact,
-                      trailing: !branch.isAvailable
-                          ? AppSectionTrailing.custom
-                          : AppSectionTrailing.none,
-                      trailingWidget: !branch.isAvailable
-                          ? Text(
-                              'branches.details.coverage_closed'.tr(),
-                              style: context.appTypography.regularNormal
-                                  .copyWith(
-                                    color: colors.error,
-                                  ),
-                            )
-                          : null,
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppSpacing.lg,
-                      ),
-                      child: _buildCoverageChips(context),
-                    ),
-                    if (branch.radiusKm != null) ...[
-                      SizedBox(height: AppSpacing.sm),
-                      Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: AppSpacing.lg,
-                        ),
-                        child: Text(
-                          'branches.details.radius_km'.tr(
-                            namedArgs: {
-                              'radius': branch.radiusKm!.toStringAsFixed(0),
-                            },
-                          ),
-                          style: context.appTypography.regularNormal.copyWith(
-                            color: colors.textSecondary,
-                          ),
-                        ),
-                      ),
-                    ],
-                    AppSection(
-                      title: 'branches.details.section_services'.tr(),
-                      size: AppSectionSize.compact,
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                      child: Wrap(
-                        spacing: AppSpacing.sm,
-                        runSpacing: AppSpacing.sm,
-                        children: [
-                          for (final service in visibleServices)
-                            AppChip(
-                              label: service,
-                              tone: AppChipTone.softNeutral,
-                            ),
-                          if (hiddenServiceCount > 0)
-                            AppChip(
-                              label: 'branches.details.services_more'.tr(
-                                namedArgs: {
-                                  'count': '$hiddenServiceCount',
-                                },
-                              ),
-                              tone: AppChipTone.softNeutral,
-                            ),
-                        ],
-                      ),
-                    ),
-                    AppSection(
-                      title: 'branches.details.section_team'.tr(),
-                      size: AppSectionSize.compact,
-                      trailing: AppSectionTrailing.custom,
-                      trailingWidget: workers.isEmpty
-                          ? const SizedBox.shrink()
-                          : GestureDetector(
-                              onTap: () => _showComingSoon(
-                                context,
-                                'branches.details.manage_team_coming_soon'.tr(),
-                              ),
-                              child: Text(
-                                'branches.details.view_all_workers'.tr(
-                                  namedArgs: {'count': '$teamCount'},
-                                ),
-                                style: context.appTypography.regularNormal
-                                    .copyWith(color: colors.primary),
-                              ),
-                            ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                      child: workers.isEmpty
-                          ? Text(
-                              'branches.details.no_team_members'.tr(),
-                              style: context.appTypography.regularNormal
-                                  .copyWith(color: colors.textSecondary),
-                            )
-                          : Row(
-                              children: [
-                                AppAvatarStack(
-                                  avatars: [
-                                    for (final worker in workers.take(
-                                      _visibleTeamCount,
-                                    ))
-                                      AppAvatar(
-                                        initials: worker.initials,
-                                        backgroundColor: colors.primary,
-                                      ),
-                                  ],
-                                  overflowCount: overflowTeamCount > 0
-                                      ? overflowTeamCount
-                                      : 0,
-                                ),
-                                const Spacer(),
-                                AppButtonPresets.outline(
-                                  label: 'branches.details.manage_team'.tr(),
-                                  size: AppButtonSize.small,
-                                  onPressed: () => _showComingSoon(
-                                    context,
-                                    'branches.details.manage_team_coming_soon'
-                                        .tr(),
-                                  ),
-                                ),
-                              ],
-                            ),
-                    ),
-                  ],
-                ),
+                child: BranchSummaryContent(model: model),
               ),
             ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.xl,
-                AppSpacing.sm,
-                AppSpacing.xl,
-                AppSpacing.sm,
-              ),
+            AppBottomActionBar(
               child: AppButton(
                 label: 'branches.details.edit_branch'.tr(),
                 onPressed: () => _showComingSoon(
@@ -393,77 +180,6 @@ class _BranchDetailsContent extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildCoverageChips(BuildContext context) {
-    final colors = context.appColors;
-    // Prefer human-readable names from the API; fall back to place IDs.
-    final names = branch.servingAreaNames;
-    final areas = (names?.isNotEmpty ?? false)
-        ? names!
-        : branch.servingAreaPlaceIds ?? const <String>[];
-    if (areas.isEmpty) {
-      return Text(
-        'branches.details.no_serving_areas'.tr(),
-        style: context.appTypography.smallNormal.copyWith(
-          color: colors.onSurfaceVariant,
-        ),
-      );
-    }
-
-    return Wrap(
-      spacing: AppSpacing.sm,
-      runSpacing: AppSpacing.sm,
-      children: [
-        for (final area in areas)
-          AppChip(
-            label: area,
-            tone: AppChipTone.softSuccess,
-            icon: Icon(
-              Icons.location_on_outlined,
-              size: 16,
-              color: colors.palettes.main.shade700,
-            ),
-            iconPosition: AppChipIconPosition.left,
-          ),
-      ],
-    );
-  }
-
-  List<GroupedKeyValueItem> _buildScheduleItems(BuildContext context) {
-    final colors = context.appColors;
-    final closedLabel = 'branches.details.closed'.tr();
-    final closedColor = colors.error;
-    final availability = branch.availability ?? const [];
-    final availabilityByDay = {
-      for (final entry in availability) entry.day: entry,
-    };
-
-    return [
-      for (final day in BranchWeekdays.all)
-        _scheduleRow(
-          day: day,
-          availability: availabilityByDay[day],
-          closedLabel: closedLabel,
-          closedColor: closedColor,
-        ),
-    ];
-  }
-
-  GroupedKeyValueItem _scheduleRow({
-    required String day,
-    required BranchAvailabilityEntity? availability,
-    required String closedLabel,
-    required Color closedColor,
-  }) {
-    final hasSlots = availability != null && availability.slots.isNotEmpty;
-    return GroupedKeyValueItem(
-      title: BranchScheduleFormatter.localizedDay(day),
-      value: hasSlots
-          ? BranchScheduleFormatter.formatAvailability(availability)
-          : closedLabel,
-      valueColor: hasSlots ? null : closedColor,
     );
   }
 
@@ -523,7 +239,10 @@ class _BranchDetailsContent extends StatelessWidget {
     );
   }
 
-  void _showComingSoon(BuildContext context, String message) {
-    showAppSnackbar(context: context, title: message);
+  void _showComingSoon(BuildContext context, [String? message]) {
+    showAppSnackbar(
+      context: context,
+      title: message ?? 'branches.details.edit_coming_soon'.tr(),
+    );
   }
 }

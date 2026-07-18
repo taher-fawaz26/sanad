@@ -20,6 +20,7 @@ class AppSearchField extends StatefulWidget {
     this.onMicTap,
     this.showMicIcon = true,
     this.showCancelOnFocus = false,
+    this.showClearWhenFilled = false,
     this.autofocus = false,
   });
 
@@ -33,6 +34,7 @@ class AppSearchField extends StatefulWidget {
   final VoidCallback? onMicTap;
   final bool showMicIcon;
   final bool showCancelOnFocus;
+  final bool showClearWhenFilled;
   final bool autofocus;
 
   @override
@@ -79,7 +81,8 @@ class _AppSearchFieldState extends State<AppSearchField> {
 
   bool get _showCancel => widget.showCancelOnFocus && _focused;
   bool get _hasText => _controller.text.isNotEmpty;
-  bool get _showClear => _hasText && _focused;
+  bool get _showClear =>
+      _hasText && (widget.showClearWhenFilled || (_focused && _hasText));
   bool get _showMic => widget.showMicIcon && !_focused && !_showClear;
 
   void _handleCancel() {
@@ -112,11 +115,13 @@ class _AppSearchFieldState extends State<AppSearchField> {
       trailing = GestureDetector(
         onTap: _handleClear,
         behavior: HitTestBehavior.opaque,
-        child: Icon(
-          Icons.close,
-          size: spec.iconSize,
-          color: spec.iconColor,
-        ),
+        child: widget.showClearWhenFilled
+            ? _svgIcon(AppSvgs.xCircle, spec)
+            : Icon(
+                Icons.close,
+                size: spec.iconSize,
+                color: spec.iconColor,
+              ),
       );
     } else if (_showMic) {
       trailing = GestureDetector(

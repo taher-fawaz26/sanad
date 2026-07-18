@@ -1,3 +1,4 @@
+import 'package:app_assets/app_assets.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -145,6 +146,7 @@ class _SelectWorkerActionSheetState extends State<_SelectWorkerActionSheet> {
               controller: _searchController,
               hint: 'workers.select_worker.search_hint'.tr(),
               showMicIcon: false,
+              showClearWhenFilled: true,
               onChanged: (value) => setState(() => _query = value),
             ),
           ),
@@ -193,12 +195,16 @@ class _SelectWorkerActionSheetState extends State<_SelectWorkerActionSheet> {
 
     final workers = _filteredWorkers;
     if (workers.isEmpty) {
+      final isSearch = _query.trim().isNotEmpty;
       return Center(
-        child: Text(
-          'workers.select_worker.empty'.tr(),
-          style: context.appTypography.regularNormal.copyWith(
-            color: context.appColors.textSecondary,
-          ),
+        child: AppIllustratedEmptyState(
+          iconAsset: AppSvgs.users2,
+          title: isSearch
+              ? 'workers.select_worker.search_empty_title'.tr()
+              : 'workers.select_worker.empty_title'.tr(),
+          description: isSearch
+              ? 'workers.select_worker.search_empty_description'.tr()
+              : 'workers.select_worker.empty_description'.tr(),
         ),
       );
     }

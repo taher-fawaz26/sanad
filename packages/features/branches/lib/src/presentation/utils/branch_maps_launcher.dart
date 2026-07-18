@@ -11,6 +11,17 @@ abstract final class BranchMapsLauncher {
     return launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
+  static Future<bool> openCoordinates({
+    required double lat,
+    required double lng,
+    String? label,
+  }) async {
+    final uri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+    );
+    return launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
   static Uri? _resolveUri(BranchEntity branch) {
     final googleMapsLink = branch.googleMapsLink?.trim();
     if (googleMapsLink != null && googleMapsLink.isNotEmpty) {

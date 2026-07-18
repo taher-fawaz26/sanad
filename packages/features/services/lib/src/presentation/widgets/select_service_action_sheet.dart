@@ -1,3 +1,4 @@
+import 'package:app_assets/app_assets.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -145,6 +146,7 @@ class _SelectServiceActionSheetState extends State<_SelectServiceActionSheet> {
               controller: _searchController,
               hint: 'services.select_service.search_hint'.tr(),
               showMicIcon: false,
+              showClearWhenFilled: true,
               onChanged: (value) => setState(() => _query = value),
             ),
           ),
@@ -193,12 +195,16 @@ class _SelectServiceActionSheetState extends State<_SelectServiceActionSheet> {
 
     final services = _filteredServices;
     if (services.isEmpty) {
+      final isSearch = _query.trim().isNotEmpty;
       return Center(
-        child: Text(
-          'services.select_service.empty'.tr(),
-          style: context.appTypography.regularNormal.copyWith(
-            color: context.appColors.textSecondary,
-          ),
+        child: AppIllustratedEmptyState(
+          iconAsset: isSearch ? AppSvgs.searchAlert : AppSvgs.search,
+          title: isSearch
+              ? 'services.select_service.search_empty_title'.tr()
+              : 'services.select_service.empty_title'.tr(),
+          description: isSearch
+              ? 'services.select_service.search_empty_description'.tr()
+              : 'services.select_service.empty_description'.tr(),
         ),
       );
     }

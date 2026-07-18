@@ -12,11 +12,13 @@ class AddBranchServicesStep extends StatelessWidget {
   const AddBranchServicesStep({
     required this.selectedServices,
     required this.onAddServices,
+    required this.onRemoveService,
     super.key,
   });
 
   final List<ServiceEntity> selectedServices;
   final VoidCallback onAddServices;
+  final ValueChanged<ServiceEntity> onRemoveService;
 
   bool get _hasServices => selectedServices.isNotEmpty;
 
@@ -26,6 +28,7 @@ class AddBranchServicesStep extends StatelessWidget {
       return _ServicesSetContent(
         selectedServices: selectedServices,
         onAddServices: onAddServices,
+        onRemoveService: onRemoveService,
       );
     }
 
@@ -48,10 +51,12 @@ class _ServicesSetContent extends StatelessWidget {
   const _ServicesSetContent({
     required this.selectedServices,
     required this.onAddServices,
+    required this.onRemoveService,
   });
 
   final List<ServiceEntity> selectedServices;
   final VoidCallback onAddServices;
+  final ValueChanged<ServiceEntity> onRemoveService;
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +77,10 @@ class _ServicesSetContent extends StatelessWidget {
               children: [
                 for (var i = 0; i < selectedServices.length; i++) ...[
                   if (i > 0) SizedBox(height: AppSpacing.sm),
-                  ServiceListCard(service: selectedServices[i]),
+                  ServiceListCard(
+                    service: selectedServices[i],
+                    onRemove: () => onRemoveService(selectedServices[i]),
+                  ),
                 ],
                 SizedBox(height: AppSpacing.md),
                 AppButtonPresets.outline(

@@ -7,6 +7,7 @@ export 'app_avatar_stack.dart';
 export 'app_backdrop.dart';
 export 'app_bottom_nav_bar.dart';
 export 'app_bottom_sheet.dart';
+export 'app_bottom_action_bar.dart';
 export 'app_button.dart';
 export 'app_button_group.dart';
 export 'app_calendar_day.dart';

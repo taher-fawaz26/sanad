@@ -14,11 +14,13 @@ class BranchManagerPickerField extends StatelessWidget {
   const BranchManagerPickerField({
     required this.selectedManager,
     required this.onManagerSelected,
+    this.errorText,
     super.key,
   });
 
   final BranchManagerEntity? selectedManager;
   final ValueChanged<BranchManagerEntity> onManagerSelected;
+  final String? errorText;
 
   @override
   Widget build(BuildContext context) {
@@ -26,6 +28,7 @@ class BranchManagerPickerField extends StatelessWidget {
       label: 'branches.add_branch.branch_manager'.tr(),
       value: selectedManager?.fullName,
       hint: 'branches.add_branch.branch_manager_hint'.tr(),
+      errorText: errorText,
       avatar: selectedManager == null
           ? null
           : AppAvatar(

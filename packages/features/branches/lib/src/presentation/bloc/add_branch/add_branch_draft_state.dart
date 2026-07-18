@@ -55,6 +55,9 @@ class AddBranchDraft extends Equatable {
 
   bool get isStepFourComplete => selectedWorkers.isNotEmpty;
 
+  /// True when the user has entered any wizard data.
+  bool get isDirty => this != const AddBranchDraft();
+
   AddBranchDraft copyWith({
     String? branchName,
     BranchType? branchType,

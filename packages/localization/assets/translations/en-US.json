@@ -39,6 +39,12 @@
     "empty_first_branch_title": "Add your first branch",
     "empty_first_branch_description": "Set up a location to manage its coverage, services, and team.",
     "empty_first_branch_action": "add branch",
+    "empty_zero_title": "No branches yet",
+    "empty_zero_description": "Add your first branch to start managing your services and team.",
+    "empty_zero_action": "Add Branch",
+    "empty_filter_title": "No branches match this filter",
+    "empty_filter_description": "Try a different filter or view all branches.",
+    "empty_filter_action": "View all",
     "empty_search_title": "No branches found",
     "empty_search_description": "Nothing matches \"{query}\". Try another name or clear the search.",
     "empty_search_action": "clear search",
@@ -87,7 +93,10 @@
       "action_set_maintenance": "Set to Maintenance",
       "action_set_active": "Set to Active",
       "status_update_error": "Failed to update branch status",
-      "no_team_members": "No team members assigned"
+      "no_team_members": "No team members assigned",
+      "no_serving_areas": "No serving areas configured",
+      "no_services": "No services assigned",
+      "view_all_services": "View all {count}"
     },
     "add_branch": {
       "title": "Add branch",
@@ -116,6 +125,22 @@
       "branch_phone_hint": "+971 4 123 4567",
       "branch_manager": "Branch manager",
       "branch_manager_hint": "Select a manager",
+      "manager_search_hint": "Search manager",
+      "load_more": "Load more",
+      "invalid_phone": "Enter a valid UAE phone number",
+      "discard_title": "Discard changes?",
+      "discard_description": "You have unsaved changes. If you leave now, your progress will be lost.",
+      "discard_confirm": "Discard",
+      "discard_keep_editing": "Keep editing",
+      "loading_title": "Adding your branch…",
+      "loading_description": "Please wait while we save your branch.",
+      "review_title": "Review branch",
+      "review_subtitle": "Check everything before submitting.",
+      "review_button": "Add",
+      "submit_button": "Submit",
+      "location_permission_title": "Location access needed",
+      "location_permission_description": "Allow location access to set your branch address on the map.",
+      "location_permission_retry": "Try again",
       "use_company_schedule": "Use company schedule",
       "set_custom_schedule": "Set custom schedule",
       "add_custom_day": "Add custom day",
@@ -196,12 +221,17 @@
     }
   },
   "services": {
+    "remove_service": "Remove service",
     "select_service": {
       "title": "Select Service",
       "search_hint": "Search",
       "confirm": "Confirm",
       "retry": "Retry",
-      "empty": "No services found"
+      "empty": "No services found",
+      "empty_title": "No services yet",
+      "empty_description": "Add services to your catalog first.",
+      "search_empty_title": "No services found",
+      "search_empty_description": "Try another search term."
     }
   },
   "workers": {
@@ -213,7 +243,11 @@
       "search_hint": "Search",
       "confirm": "Confirm",
       "retry": "Retry",
-      "empty": "No workers found"
+      "empty": "No workers found",
+      "empty_title": "No workers found",
+      "empty_description": "Add workers to your team first.",
+      "search_empty_title": "No workers found",
+      "search_empty_description": "Try another search term."
     },
     "remove_worker": "Remove worker"
   },

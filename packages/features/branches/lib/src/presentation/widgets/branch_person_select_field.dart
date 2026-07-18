@@ -11,6 +11,7 @@ class BranchPersonSelectField extends StatelessWidget {
     this.avatar,
     this.onTap,
     this.enabled = true,
+    this.errorText,
   });
 
   final String label;
@@ -19,6 +20,7 @@ class BranchPersonSelectField extends StatelessWidget {
   final Widget? avatar;
   final VoidCallback? onTap;
   final bool enabled;
+  final String? errorText;
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +31,7 @@ class BranchPersonSelectField extends StatelessWidget {
       prefix: avatar,
       onTap: onTap,
       enabled: enabled,
+      errorText: errorText,
     );
   }
 }

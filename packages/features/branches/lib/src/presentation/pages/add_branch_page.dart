@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
 import 'package:core/core.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_cubit.dart';
@@ -6,7 +8,9 @@ import 'package:branches/src/presentation/models/coverage_area_args.dart';
 import 'package:branches/src/presentation/models/coverage_area_result.dart';
 import 'package:branches/src/presentation/utils/add_branch_error_snackbar.dart';
 import 'package:branches/src/presentation/utils/add_branch_params_mapper.dart';
+import 'package:branches/src/presentation/utils/branch_dialogs.dart';
 import 'package:branches/src/presentation/widgets/add_branch_coverage_step.dart';
+import 'package:branches/src/presentation/widgets/add_branch_review_step.dart';
 import 'package:branches/src/presentation/widgets/add_branch_services_step.dart';
 import 'package:branches/src/presentation/widgets/add_branch_step_one.dart';
 import 'package:branches/src/presentation/widgets/add_branch_wizard_footer.dart';
@@ -19,6 +23,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maps/maps.dart';
+import 'package:permissions/permissions.dart';
 import 'package:services/services.dart';
 import 'package:workers/workers.dart';
 
@@ -30,13 +35,27 @@ class AddBranchPage extends StatefulWidget {
 }
 
 class _AddBranchPageState extends State<AddBranchPage> {
-  static const _totalSteps = 4;
+  static const _totalSteps = 5;
 
   final _stepOneFormKey = GlobalKey<FormState>();
   int _currentStep = 1;
   int _furthestStep = 1;
+  bool _locationPermissionDenied = false;
+  bool _stepOneShowErrors = false;
 
-  // ── Navigation ──
+  Future<bool> _handleCloseRequest() async {
+    final draft = context.read<AddBranchDraftCubit>().state;
+    if (!draft.isDirty) return true;
+
+    final shouldDiscard = await showDiscardBranchChangesDialog(context);
+    return shouldDiscard ?? false;
+  }
+
+  Future<void> _onCloseTapped() async {
+    if (await _handleCloseRequest()) {
+      if (mounted) context.pop();
+    }
+  }
 
   void _advanceTo(int step) {
     setState(() {
@@ -53,21 +72,15 @@ class _AddBranchPageState extends State<AddBranchPage> {
 
   void _onNextPressed() {
     if (_currentStep == 1) {
+      setState(() => _stepOneShowErrors = true);
       final formValid = _stepOneFormKey.currentState?.validate() ?? false;
-      if (!formValid) return;
       final draft = context.read<AddBranchDraftCubit>().state;
-      if (!draft.isStepOneComplete) return;
+      if (!formValid || !draft.isStepOneComplete) return;
       if (draft.phone.trim().isNotEmpty &&
           !UaePhoneValidator.isValid(draft.phone)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'branches.add_branch.invalid_phone'.tr(),
-            ),
-          ),
-        );
         return;
       }
+      setState(() => _stepOneShowErrors = false);
       _advanceTo(2);
       return;
     }
@@ -81,12 +94,15 @@ class _AddBranchPageState extends State<AddBranchPage> {
 
     if (_currentStep == 3 && draft.isStepThreeComplete) {
       _advanceTo(4);
+      return;
+    }
+
+    if (_currentStep == 4 && draft.isStepFourComplete) {
+      _advanceTo(5);
     }
   }
 
-  // ── Submission ──
-
-  void _submit() {
+  Future<void> _submit() async {
     final draft = context.read<AddBranchDraftCubit>().state;
     final companySchedule = context.read<AddBranchBloc>().state.companySchedule;
 
@@ -95,12 +111,26 @@ class _AddBranchPageState extends State<AddBranchPage> {
       companySchedule: companySchedule,
     );
 
+    if (!mounted) return;
+    unawaited(showBranchSubmitLoadingDialog(context));
+
     context.read<AddBranchBloc>().add(AddBranchSubmitEvent(params: params));
   }
 
-  // ── Flow pickers ──
-
   Future<void> _pickLocation() async {
+    final permissionResult = await sl<PermissionsService>().request(
+      Permission.locationWhenInUse,
+    );
+
+    if (!mounted) return;
+
+    if (permissionResult != PermissionRequestResult.granted) {
+      setState(() => _locationPermissionDenied = true);
+      return;
+    }
+
+    setState(() => _locationPermissionDenied = false);
+
     final draft = context.read<AddBranchDraftCubit>().state;
     final result = await showLocationPickerSheet(
       context,
@@ -111,9 +141,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
         addressHint: 'branches.location_picker.address_hint'.tr(),
         permissionDenied: 'branches.location_picker.permission_denied'.tr(),
         permissionPermanentlyDenied:
-            'branches.location_picker'
-                    '.permission_permanently_denied'
-                .tr(),
+            'branches.location_picker.permission_permanently_denied'.tr(),
         serviceDisabled: 'branches.location_picker.service_disabled'.tr(),
         genericError: 'branches.location_picker.generic_error'.tr(),
         openSettings: 'branches.location_picker.open_settings'.tr(),
@@ -127,6 +155,13 @@ class _AddBranchPageState extends State<AddBranchPage> {
       address: result.address,
       position: result.position,
     );
+  }
+
+  Future<void> _openLocationSettings() async {
+    await sl<PermissionsService>().openSettings();
+    if (!mounted) return;
+    setState(() => _locationPermissionDenied = false);
+    await _pickLocation();
   }
 
   Future<void> _openCoverageArea() async {
@@ -171,12 +206,16 @@ class _AddBranchPageState extends State<AddBranchPage> {
     context.read<AddBranchDraftCubit>().updateWorkers(result.selectedWorkers);
   }
 
-  // ── Bloc side effects ──
-
   void _onBlocStateChanged(BuildContext context, AddBranchState state) {
     if (state.isSuccess) {
+      if (Navigator.of(context, rootNavigator: true).canPop()) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
       _showBranchCreatedSuccessPopover();
     } else if (state.hasError && state.failure != null) {
+      if (Navigator.of(context, rootNavigator: true).canPop()) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
       showAddBranchErrorSnackbar(
         context: context,
         failure: state.failure!,
@@ -222,32 +261,40 @@ class _AddBranchPageState extends State<AddBranchPage> {
     });
   }
 
-  // ── Build ──
-
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AddBranchBloc, AddBranchState>(
-      listener: _onBlocStateChanged,
-      child: Scaffold(
-        backgroundColor: context.appColors.surface,
-        body: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              AppNavBar(
-                title: '',
-                leading: AppCloseIcon(onTap: () => context.pop()),
-              ),
-              Expanded(child: _buildCurrentStep()),
-              AddBranchWizardFooter(
-                currentStep: _currentStep,
-                onNext: _onNextPressed,
-                onSubmit: _submit,
-                onAddCoverage: _openCoverageArea,
-                onAddServices: _openSelectServices,
-                onAddWorkers: _openSelectWorkers,
-              ),
-            ],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        if (await _handleCloseRequest()) {
+          if (context.mounted) context.pop();
+        }
+      },
+      child: BlocListener<AddBranchBloc, AddBranchState>(
+        listener: _onBlocStateChanged,
+        child: Scaffold(
+          backgroundColor: context.appColors.surface,
+          body: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AppNavBar(
+                  title: '',
+                  leading: AppCloseIcon(onTap: _onCloseTapped),
+                ),
+                Expanded(child: _buildCurrentStep()),
+                AddBranchWizardFooter(
+                  currentStep: _currentStep,
+                  totalSteps: _totalSteps,
+                  onNext: _onNextPressed,
+                  onSubmit: _submit,
+                  onAddCoverage: _openCoverageArea,
+                  onAddServices: _openSelectServices,
+                  onAddWorkers: _openSelectWorkers,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -263,6 +310,10 @@ class _AddBranchPageState extends State<AddBranchPage> {
         totalSteps: _totalSteps,
         furthestCompletedStep: _furthestStep,
         onStepTapped: _onStepTapped,
+        locationPermissionDenied: _locationPermissionDenied,
+        onOpenLocationSettings: _openLocationSettings,
+        onRetryLocation: _pickLocation,
+        showValidationErrors: _stepOneShowErrors,
       ),
       2 => AddBranchWizardStepShell(
         currentStep: _currentStep,
@@ -310,6 +361,9 @@ class _AddBranchPageState extends State<AddBranchPage> {
                 return AddBranchServicesStep(
                   selectedServices: services,
                   onAddServices: _openSelectServices,
+                  onRemoveService: (service) {
+                    context.read<AddBranchDraftCubit>().removeService(service);
+                  },
                 );
               },
             ),
@@ -336,6 +390,12 @@ class _AddBranchPageState extends State<AddBranchPage> {
                 );
               },
             ),
+      ),
+      5 => AddBranchReviewStep(
+        currentStep: _currentStep,
+        totalSteps: _totalSteps,
+        furthestCompletedStep: _furthestStep,
+        onStepTapped: _onStepTapped,
       ),
       _ => AddBranchWizardStepShell(
         currentStep: _currentStep,

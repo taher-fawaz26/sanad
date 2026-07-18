@@ -1,5 +1,6 @@
 import 'package:design_system/src/components/app_button.dart';
 import 'package:design_system/src/components/app_feature_icon.dart';
+import 'package:design_system/src/components/app_loading_indicator.dart';
 import 'package:design_system/src/components/app_text_field.dart';
 import 'package:design_system/src/spacing/responsive_spacing.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
@@ -22,6 +23,9 @@ enum AppPopoverActions {
 
   /// Text field + dual buttons (`40:10048`).
   textInput,
+
+  /// Loading spinner only — non-dismissible submit wait (`1517:9657`).
+  loading,
 }
 
 /// Figma `Views / Popovers` (`40:10028`) — centered alert-style modal.
@@ -42,6 +46,8 @@ class AppPopover extends StatelessWidget {
     this.primaryLabel,
     this.onPrimary,
     this.primaryDestructive = false,
+    this.primaryIsLoading = false,
+    this.secondaryAsTextLink = false,
     this.secondaryLabel,
     this.onSecondary,
     this.inputField,
@@ -73,6 +79,12 @@ class AppPopover extends StatelessWidget {
 
   /// When `true`, primary CTA uses the red/danger palette.
   final bool primaryDestructive;
+
+  /// Shows a loading spinner on the primary button.
+  final bool primaryIsLoading;
+
+  /// When `true`, secondary action renders as a text link (discard dialog).
+  final bool secondaryAsTextLink;
   final String? secondaryLabel;
   final VoidCallback? onSecondary;
   final Widget? inputField;
@@ -114,6 +126,12 @@ class AppPopover extends StatelessWidget {
           if (actions == AppPopoverActions.textInput) ...[
             SizedBox(height: spec.sectionGap),
             _buildInputField(context),
+          ],
+          if (actions == AppPopoverActions.loading) ...[
+            SizedBox(height: spec.sectionGap),
+            const Center(
+              child: AppLoadingIndicator(size: 80, strokeWidth: 6),
+            ),
           ],
           if (_hasActions) ...[
             SizedBox(height: spec.sectionGap),
@@ -284,17 +302,24 @@ class AppPopover extends StatelessWidget {
             label: primaryLabel!,
             onPressed: onPrimary,
             destructive: primaryDestructive,
+            isLoading: primaryIsLoading,
           ),
         if (actions == AppPopoverActions.dual ||
             actions == AppPopoverActions.textInput) ...[
           if (primaryLabel != null) SizedBox(height: AppSpacing.md),
           if (secondaryLabel != null)
-            _SecondaryAction(
-              label: secondaryLabel!,
-              onPressed: onSecondary,
-              backgroundColor: colors.palettes.sky.shade50,
-              foregroundColor: colors.textPrimary,
-            ),
+            secondaryAsTextLink
+                ? _TextLinkAction(
+                    label: secondaryLabel!,
+                    onPressed: onSecondary,
+                    color: colors.textSecondary,
+                  )
+                : _SecondaryAction(
+                    label: secondaryLabel!,
+                    onPressed: onSecondary,
+                    backgroundColor: colors.palettes.sky.shade50,
+                    foregroundColor: colors.textPrimary,
+                  ),
         ],
       ],
     );
@@ -304,6 +329,39 @@ class AppPopover extends StatelessWidget {
       actions == AppPopoverActions.single ||
       actions == AppPopoverActions.dual ||
       actions == AppPopoverActions.textInput;
+}
+
+/// Text-only secondary action — Figma discard "Keep editing".
+class _TextLinkAction extends StatelessWidget {
+  const _TextLinkAction({
+    required this.label,
+    required this.onPressed,
+    required this.color,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final typography = context.appTypography;
+
+    return TextButton(
+      onPressed: onPressed,
+      style: TextButton.styleFrom(
+        foregroundColor: color,
+        padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      ),
+      child: Text(
+        label,
+        style: typography.regularNormal.copyWith(
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+  }
 }
 
 /// Secondary popover action — soft sky fill (Figma cancel on confirm modals).
@@ -369,6 +427,8 @@ Future<T?> showAppPopover<T>({
   String? primaryLabel,
   VoidCallback? onPrimary,
   bool primaryDestructive = false,
+  bool primaryIsLoading = false,
+  bool secondaryAsTextLink = false,
   String? secondaryLabel,
   VoidCallback? onSecondary,
   Widget? inputField,
@@ -403,6 +463,8 @@ Future<T?> showAppPopover<T>({
           primaryLabel: primaryLabel,
           onPrimary: onPrimary ?? () => Navigator.of(dialogContext).pop(),
           primaryDestructive: primaryDestructive,
+          primaryIsLoading: primaryIsLoading,
+          secondaryAsTextLink: secondaryAsTextLink,
           secondaryLabel: secondaryLabel,
           onSecondary: onSecondary ?? () => Navigator.of(dialogContext).pop(),
           inputField: inputField,
@@ -435,6 +497,8 @@ Future<T?> showAppDialog<T>({
   String? primaryLabel,
   VoidCallback? onPrimary,
   bool primaryDestructive = false,
+  bool primaryIsLoading = false,
+  bool secondaryAsTextLink = false,
   String? secondaryLabel,
   VoidCallback? onSecondary,
   Widget? inputField,

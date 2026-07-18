@@ -54,8 +54,8 @@ class AppWizardStepIndicator extends StatelessWidget {
               ),
             _StepDot(
               step: step,
-              // Past and current steps are filled; upcoming stay inactive.
-              isActive: step <= currentStep,
+              isCompleted: step < currentStep,
+              isCurrent: step == currentStep,
               isTappable:
                   onStepTapped != null &&
                   furthestCompletedStep != null &&
@@ -74,17 +74,21 @@ class AppWizardStepIndicator extends StatelessWidget {
 class _StepDot extends StatelessWidget {
   const _StepDot({
     required this.step,
-    required this.isActive,
+    required this.isCompleted,
+    required this.isCurrent,
     required this.isTappable,
     required this.spec,
     this.onTap,
   });
 
   final int step;
-  final bool isActive;
+  final bool isCompleted;
+  final bool isCurrent;
   final bool isTappable;
   final ValueChanged<int>? onTap;
   final WizardStepStyleSpec spec;
+
+  bool get _isActive => isCompleted || isCurrent;
 
   @override
   Widget build(BuildContext context) {
@@ -92,16 +96,25 @@ class _StepDot extends StatelessWidget {
       width: spec.stepSize,
       height: spec.stepSize,
       decoration: BoxDecoration(
-        color: isActive ? spec.activeBackground : spec.inactiveBackground,
+        color: _isActive ? spec.activeBackground : spec.inactiveBackground,
         shape: BoxShape.circle,
       ),
       alignment: Alignment.center,
-      child: Text(
-        '$step',
-        style: spec.stepLabelStyle.copyWith(
-          color: isActive ? spec.activeForeground : spec.inactiveForeground,
-        ),
-      ),
+      child: isCompleted
+          ? Icon(
+              Icons.check,
+              size: spec.stepSize * 0.45,
+              color: spec.activeForeground,
+            )
+          : Text(
+              '$step',
+              style: spec.stepLabelStyle.copyWith(
+                color: _isActive
+                    ? spec.activeForeground
+                    : spec.inactiveForeground,
+                fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
+              ),
+            ),
     );
 
     if (!isTappable) return dot;

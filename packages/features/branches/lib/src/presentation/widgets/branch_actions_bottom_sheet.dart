@@ -1,5 +1,6 @@
 import 'package:app_assets/app_assets.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
+import 'package:branches/src/presentation/utils/branch_type_label.dart';
 import 'package:branches/src/presentation/bloc/branches/branches_bloc.dart';
 import 'package:branches/src/routes/branch_routes.dart';
 import 'package:design_system/design_system.dart';
@@ -262,7 +263,7 @@ class _BranchActionsHeader extends StatelessWidget {
               ),
               SizedBox(height: AppSpacing.xs),
               Text(
-                'branches.actions.service_center'.tr(),
+                branchTypeLabel(branch.branchType),
                 style: typography.smallNormal.copyWith(
                   color: colors.textSecondary,
                 ),

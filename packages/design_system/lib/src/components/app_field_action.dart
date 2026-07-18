@@ -17,6 +17,7 @@ class AppFieldAction extends StatelessWidget {
     this.onActionTap,
     this.onTap,
     this.enabled = true,
+    this.errorText,
   });
 
   final String label;
@@ -27,8 +28,10 @@ class AppFieldAction extends StatelessWidget {
   final VoidCallback? onActionTap;
   final VoidCallback? onTap;
   final bool enabled;
+  final String? errorText;
 
   bool get _hasValue => value != null && value!.isNotEmpty;
+  bool get _hasError => errorText != null && errorText!.isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +59,9 @@ class AppFieldAction extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: FieldTokens.borderRadiusAll(),
             side: BorderSide(
-              color: FieldTokens.borderDefault(colors, brightness),
+              color: _hasError
+                  ? colors.error
+                  : FieldTokens.borderDefault(colors, brightness),
               width: responsiveDimension(FieldTokens.borderWidthDefault),
             ),
           ),
@@ -101,6 +106,13 @@ class AppFieldAction extends StatelessWidget {
             ),
           ),
         ),
+        if (_hasError) ...[
+          SizedBox(height: responsiveDimension(FieldTokens.captionGap)),
+          Text(
+            errorText!,
+            style: FieldTokens.errorStyle(typography, colors, brightness),
+          ),
+        ],
       ],
     );
   }

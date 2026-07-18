@@ -1,5 +1,6 @@
 import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/presentation/bloc/branches/branches_bloc.dart';
+import 'package:branches/src/presentation/utils/branch_type_label.dart';
 import 'package:branches/src/presentation/widgets/branch_actions_bottom_sheet.dart';
 import 'package:branches/src/presentation/widgets/branch_empty_states.dart';
 import 'package:branches/src/routes/branch_routes.dart';
@@ -121,17 +122,24 @@ class _BranchesTab extends StatelessWidget {
 
           final branches = state.filteredBranches;
           final totalCount = state.branches.length;
+          final isZeroBranches = totalCount == 0 && state.isSuccess;
 
-          return Column(
+          return ColoredBox(
+            color: isZeroBranches
+                ? context.appColors.palettes.sky.shade50
+                : context.appColors.surface,
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              AppSection(
-                title: 'branches.count_label'.tr(),
-                size: AppSectionSize.compact,
-                trailing: AppSectionTrailing.custom,
-                trailingWidget: AppNotificationBadge(count: totalCount),
-              ),
-              SizedBox(height: AppSpacing.xs),
+              if (!isZeroBranches) ...[
+                AppSection(
+                  title: 'branches.count_label'.tr(),
+                  size: AppSectionSize.compact,
+                  trailing: AppSectionTrailing.custom,
+                  trailingWidget: AppNotificationBadge(count: totalCount),
+                ),
+                SizedBox(height: AppSpacing.xs),
+              ],
               Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: AppSpacing.lg,
@@ -144,27 +152,30 @@ class _BranchesTab extends StatelessWidget {
                   onPressed: () => context.push(BranchRoutes.add),
                 ),
               ),
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                  vertical: AppSpacing.sm,
-                ),
-                child: AppSearchField(
-                  hint: 'branches.search_hint'.tr(),
-                  showMicIcon: false, // hide mic by default for branch search
-                  onChanged: (value) => context.read<BranchesBloc>().add(
-                    BranchesSearchChangedEvent(value),
+              if (!isZeroBranches) ...[
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.sm,
+                  ),
+                  child: AppSearchField(
+                    hint: 'branches.search_hint'.tr(),
+                    showMicIcon: false,
+                    showClearWhenFilled: true,
+                    onChanged: (value) => context.read<BranchesBloc>().add(
+                      BranchesSearchChangedEvent(value),
+                    ),
                   ),
                 ),
-              ),
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                  vertical: AppSpacing.sm,
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.sm,
+                  ),
+                  child: _FilterRow(currentFilter: state.filter),
                 ),
-                child: _FilterRow(currentFilter: state.filter),
-              ),
-              SizedBox(height: AppSpacing.sm),
+                SizedBox(height: AppSpacing.sm),
+              ],
               Expanded(
                 child: AppRefreshIndicator(
                   onRefresh: () async {
@@ -184,11 +195,19 @@ class _BranchesTab extends StatelessWidget {
                       : branches.isEmpty
                       ? AppFillRemainingScrollable(
                           child: _EmptyState(
+                            totalCount: totalCount,
                             searchQuery: state.searchQuery,
+                            filter: state.filter,
                             onClearSearch: () =>
                                 context.read<BranchesBloc>().add(
                                   const BranchesSearchChangedEvent(''),
                                 ),
+                            onClearFilter: () => context.read<BranchesBloc>().add(
+                              const BranchesFilterChangedEvent(
+                                BranchFilter.all,
+                              ),
+                            ),
+                            onAddBranch: () => context.push(BranchRoutes.add),
                           ),
                         )
                       : ListView.builder(
@@ -201,6 +220,7 @@ class _BranchesTab extends StatelessWidget {
                 ),
               ),
             ],
+            ),
           );
         },
       ),
@@ -215,47 +235,57 @@ class _FilterRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: AppButton(
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _FilterChip(
             label: 'branches.filter_all'.tr(),
-            size: AppButtonSize.small,
-            type: currentFilter == BranchFilter.all
-                ? AppButtonType.secondary
-                : AppButtonType.outline,
-            onPressed: () => context.read<BranchesBloc>().add(
+            selected: currentFilter == BranchFilter.all,
+            onTap: () => context.read<BranchesBloc>().add(
               const BranchesFilterChangedEvent(BranchFilter.all),
             ),
           ),
-        ),
-        SizedBox(width: AppSpacing.md),
-        Expanded(
-          child: AppButton(
+          SizedBox(width: AppSpacing.sm),
+          _FilterChip(
             label: 'branches.filter_maintenance'.tr(),
-            size: AppButtonSize.small,
-            type: currentFilter == BranchFilter.maintenance
-                ? AppButtonType.secondary
-                : AppButtonType.outline,
-            onPressed: () => context.read<BranchesBloc>().add(
+            selected: currentFilter == BranchFilter.maintenance,
+            onTap: () => context.read<BranchesBloc>().add(
               const BranchesFilterChangedEvent(BranchFilter.maintenance),
             ),
           ),
-        ),
-        SizedBox(width: AppSpacing.md),
-        Expanded(
-          child: AppButton(
+          SizedBox(width: AppSpacing.sm),
+          _FilterChip(
             label: 'branches.filter_active'.tr(),
-            size: AppButtonSize.small,
-            type: currentFilter == BranchFilter.active
-                ? AppButtonType.secondary
-                : AppButtonType.outline,
-            onPressed: () => context.read<BranchesBloc>().add(
+            selected: currentFilter == BranchFilter.active,
+            onTap: () => context.read<BranchesBloc>().add(
               const BranchesFilterChangedEvent(BranchFilter.active),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppChip(
+      label: label,
+      selected: selected,
+      style: selected ? AppChipStyle.solid : AppChipStyle.outline,
+      onTap: onTap,
     );
   }
 }
@@ -280,7 +310,7 @@ class _BranchListItem extends StatelessWidget {
       ),
       child: AppListCard(
         title: branch.branchName,
-        caption: branch.displayAddress,
+        caption: branchTypeLabel(branch.branchType),
         leading: AppAvatar(
           initials: initial,
           backgroundColor: context.appColors.primary,
@@ -313,13 +343,30 @@ class _BranchListItem extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.searchQuery, this.onClearSearch});
+  const _EmptyState({
+    required this.totalCount,
+    required this.searchQuery,
+    required this.filter,
+    this.onClearSearch,
+    this.onClearFilter,
+    this.onAddBranch,
+  });
 
+  final int totalCount;
   final String searchQuery;
+  final BranchFilter filter;
   final VoidCallback? onClearSearch;
+  final VoidCallback? onClearFilter;
+  final VoidCallback? onAddBranch;
 
   @override
   Widget build(BuildContext context) {
+    if (totalCount == 0) {
+      return Center(
+        child: BranchesFirstEmptyState(onAddBranch: onAddBranch),
+      );
+    }
+
     if (searchQuery.trim().isNotEmpty) {
       return Center(
         child: BranchesSearchEmptyState(
@@ -328,12 +375,15 @@ class _EmptyState extends StatelessWidget {
         ),
       );
     }
+
+    if (filter != BranchFilter.all) {
+      return Center(
+        child: BranchesFilterEmptyState(onClearFilter: onClearFilter),
+      );
+    }
+
     return Center(
-      child: AppGenericEmptyState(
-        title: 'branches.empty_first_branch_title'.tr(),
-        description: 'branches.empty_first_branch_description'.tr(),
-        actionLabel: 'branches.empty_first_branch_action'.tr(),
-      ),
+      child: BranchesFilterEmptyState(onClearFilter: onClearFilter),
     );
   }
 }

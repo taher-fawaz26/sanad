@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 class AddBranchWizardFooter extends StatelessWidget {
   const AddBranchWizardFooter({
     required this.currentStep,
+    required this.totalSteps,
     required this.onNext,
     required this.onSubmit,
     required this.onAddCoverage,
@@ -18,6 +19,7 @@ class AddBranchWizardFooter extends StatelessWidget {
   });
 
   final int currentStep;
+  final int totalSteps;
   final VoidCallback onNext;
   final VoidCallback onSubmit;
   final VoidCallback onAddCoverage;
@@ -26,13 +28,7 @@ class AddBranchWizardFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.xl,
-        AppSpacing.sm,
-        AppSpacing.xl,
-        AppSpacing.sm,
-      ),
+    return AppBottomActionBar(
       child: switch (currentStep) {
         1 => _StepOneButton(onNext: onNext),
         2 => _StepTwoButton(
@@ -44,10 +40,11 @@ class AddBranchWizardFooter extends StatelessWidget {
           onAddServices: onAddServices,
         ),
         4 => _StepFourButton(
-          onSubmit: onSubmit,
+          onNext: onNext,
           onAddWorkers: onAddWorkers,
         ),
-        _ => _SubmitButton(onSubmit: onSubmit),
+        5 => _ReviewSubmitButton(onSubmit: onSubmit),
+        _ => _ReviewSubmitButton(onSubmit: onSubmit),
       },
     );
   }
@@ -146,11 +143,11 @@ class _StepThreeButton extends StatelessWidget {
 
 class _StepFourButton extends StatelessWidget {
   const _StepFourButton({
-    required this.onSubmit,
+    required this.onNext,
     required this.onAddWorkers,
   });
 
-  final VoidCallback onSubmit;
+  final VoidCallback onNext;
   final VoidCallback onAddWorkers;
 
   @override
@@ -164,23 +161,17 @@ class _StepFourButton extends StatelessWidget {
             onPressed: onAddWorkers,
           );
         }
-        return BlocSelector<AddBranchBloc, AddBranchState, bool>(
-          selector: (state) => state.isLoading,
-          builder: (context, isLoading) {
-            return AppButton(
-              label: 'branches.add_branch.save_button'.tr(),
-              isLoading: isLoading,
-              onPressed: isLoading ? null : onSubmit,
-            );
-          },
+        return AppButton(
+          label: 'branches.add_branch.review_button'.tr(),
+          onPressed: onNext,
         );
       },
     );
   }
 }
 
-class _SubmitButton extends StatelessWidget {
-  const _SubmitButton({required this.onSubmit});
+class _ReviewSubmitButton extends StatelessWidget {
+  const _ReviewSubmitButton({required this.onSubmit});
 
   final VoidCallback onSubmit;
 
@@ -190,7 +181,7 @@ class _SubmitButton extends StatelessWidget {
       selector: (state) => state.isLoading,
       builder: (context, isLoading) {
         return AppButton(
-          label: 'branches.add_branch.save_button'.tr(),
+          label: 'branches.add_branch.submit_button'.tr(),
           isLoading: isLoading,
           onPressed: isLoading ? null : onSubmit,
         );

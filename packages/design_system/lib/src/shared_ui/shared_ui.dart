@@ -7,3 +7,4 @@
 library;
 
 export 'app_empty_state.dart';
+export 'app_illustrated_empty_state.dart';

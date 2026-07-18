@@ -19,6 +19,7 @@ class AppPhoneField extends StatelessWidget {
     this.enabled = true,
     this.countryFlagAsset = AppSvgs.flagAe,
     this.onCountryTap,
+    this.errorText,
   });
 
   final String label;
@@ -28,6 +29,9 @@ class AppPhoneField extends StatelessWidget {
   final bool enabled;
   final String countryFlagAsset;
   final VoidCallback? onCountryTap;
+  final String? errorText;
+
+  bool get _hasError => errorText != null && errorText!.isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -108,9 +112,9 @@ class AppPhoneField extends StatelessWidget {
                 horizontal: responsiveDimension(FieldTokens.horizontalPadding),
                 vertical: responsiveDimension(FieldTokens.verticalPadding),
               ),
-              border: _border(colors, brightness, focused: false),
-              enabledBorder: _border(colors, brightness, focused: false),
-              focusedBorder: _border(colors, brightness, focused: true),
+              border: _border(colors, brightness, focused: false, errored: _hasError),
+              enabledBorder: _border(colors, brightness, focused: false, errored: _hasError),
+              focusedBorder: _border(colors, brightness, focused: true, errored: _hasError),
               disabledBorder: _border(
                 colors,
                 brightness,
@@ -120,6 +124,13 @@ class AppPhoneField extends StatelessWidget {
             ),
           ),
         ),
+        if (_hasError) ...[
+          SizedBox(height: responsiveDimension(FieldTokens.captionGap)),
+          Text(
+            errorText!,
+            style: FieldTokens.errorStyle(typography, colors, brightness),
+          ),
+        ],
       ],
     );
   }
@@ -129,12 +140,15 @@ class AppPhoneField extends StatelessWidget {
     Brightness brightness, {
     required bool focused,
     bool disabled = false,
+    bool errored = false,
   }) {
     final color = disabled
         ? FieldTokens.disabledBorder(colors, brightness)
-        : focused
-            ? FieldTokens.focusBorder(colors)
-            : FieldTokens.borderDefault(colors, brightness);
+        : errored
+            ? colors.error
+            : focused
+                ? FieldTokens.focusBorder(colors)
+                : FieldTokens.borderDefault(colors, brightness);
     final width = focused
         ? responsiveDimension(FieldTokens.borderWidthEmphasis)
         : responsiveDimension(FieldTokens.borderWidthDefault);

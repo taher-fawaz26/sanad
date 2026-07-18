@@ -10,6 +10,7 @@ export 'src/components/app_avatar_stack.dart';
 export 'src/components/app_backdrop.dart';
 export 'src/components/app_bottom_nav_bar.dart';
 export 'src/components/app_bottom_sheet.dart';
+export 'src/components/app_bottom_action_bar.dart';
 export 'src/components/app_button.dart';
 export 'src/components/app_button_group.dart';
 export 'src/components/app_calendar_day.dart';

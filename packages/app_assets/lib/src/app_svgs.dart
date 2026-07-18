@@ -87,4 +87,21 @@ abstract final class AppSvgs {
 
   /// Edit branch — pencil icon.
   static const String branchEdit = '$_base/branch_edit.svg';
+
+  // ── Branches / maps / pickers ─────────────────────────────────────────────
+
+  /// Map pin outline — location permission / location empty states.
+  static const String mapPinOutline = '$_base/map_pin_outline.svg';
+
+  /// Map pin with plus — coverage add-area chip.
+  static const String mapPinAdd = '$_base/map_pin_add.svg';
+
+  /// Users group — team search empty state.
+  static const String users2 = '$_base/users_2.svg';
+
+  /// Search with alert — service search empty state.
+  static const String searchAlert = '$_base/search_alert.svg';
+
+  /// Circle X — search field clear affordance.
+  static const String xCircle = '$_base/x_circle.svg';
 }

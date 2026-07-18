@@ -5,6 +5,7 @@ import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_cubit.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_state.dart';
 import 'package:branches/src/presentation/utils/branch_schedule_formatter.dart';
+import 'package:branches/src/presentation/widgets/branch_location_permission_empty.dart';
 import 'package:branches/src/presentation/widgets/branch_location_field.dart';
 import 'package:branches/src/presentation/widgets/branch_manager_picker_field.dart';
 import 'package:branches/src/presentation/widgets/branch_schedule_section.dart';
@@ -25,6 +26,10 @@ class AddBranchStepOne extends StatefulWidget {
     required this.totalSteps,
     this.furthestCompletedStep,
     this.onStepTapped,
+    this.locationPermissionDenied = false,
+    this.onOpenLocationSettings,
+    this.onRetryLocation,
+    this.showValidationErrors = false,
     super.key,
   });
 
@@ -34,6 +39,10 @@ class AddBranchStepOne extends StatefulWidget {
   final int totalSteps;
   final int? furthestCompletedStep;
   final ValueChanged<int>? onStepTapped;
+  final bool locationPermissionDenied;
+  final VoidCallback? onOpenLocationSettings;
+  final VoidCallback? onRetryLocation;
+  final bool showValidationErrors;
 
   @override
   State<AddBranchStepOne> createState() => _AddBranchStepOneState();
@@ -123,16 +132,27 @@ class _AddBranchStepOneState extends State<AddBranchStepOne> {
                   onStepTapped: widget.onStepTapped,
                 ),
               ),
-              _MainInfoSection(
-                branchNameController: _branchNameController,
-                onPickLocation: widget.onPickLocation,
-              ),
-              const AppDivider(thickness: AppDividerThickness.thick),
-              _ContactSection(phoneController: _phoneController),
-              const AppDivider(thickness: AppDividerThickness.thick),
-              _WorkingHoursSection(
-                onScheduleModeChanged: _onScheduleModeChanged,
-              ),
+              if (widget.locationPermissionDenied)
+                BranchLocationPermissionEmpty(
+                  onOpenSettings: widget.onOpenLocationSettings ?? () {},
+                  onRetry: widget.onRetryLocation,
+                )
+              else ...[
+                _MainInfoSection(
+                  branchNameController: _branchNameController,
+                  onPickLocation: widget.onPickLocation,
+                  showValidationErrors: widget.showValidationErrors,
+                ),
+                const AppDivider(thickness: AppDividerThickness.thick),
+                _ContactSection(
+                  phoneController: _phoneController,
+                  showValidationErrors: widget.showValidationErrors,
+                ),
+                const AppDivider(thickness: AppDividerThickness.thick),
+                _WorkingHoursSection(
+                  onScheduleModeChanged: _onScheduleModeChanged,
+                ),
+              ],
             ],
           ),
         ),
@@ -145,15 +165,23 @@ class _MainInfoSection extends StatelessWidget {
   const _MainInfoSection({
     required this.branchNameController,
     required this.onPickLocation,
+    required this.showValidationErrors,
   });
 
   final TextEditingController branchNameController;
   final VoidCallback onPickLocation;
+  final bool showValidationErrors;
+
+  String? _requiredError(bool isValid) =>
+      showValidationErrors && !isValid
+      ? ValidationMessageKeys.formRequired.tr()
+      : null;
 
   @override
   Widget build(BuildContext context) {
     final locale = Localizations.localeOf(context);
     final isArabic = locale.languageCode == 'ar';
+    final draft = context.watch<AddBranchDraftCubit>().state;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -213,6 +241,7 @@ class _MainInfoSection extends StatelessWidget {
                     onCitySelected: (city) {
                       context.read<AddBranchDraftCubit>().updateCity(city);
                     },
+                    errorText: _requiredError(draft.selectedCity != null),
                   );
                 },
               ),
@@ -226,6 +255,11 @@ class _MainInfoSection extends StatelessWidget {
                     hint: 'branches.add_branch.location_hint'.tr(),
                     actionLabel: 'branches.add_branch.location_set'.tr(),
                     onActionTap: onPickLocation,
+                    errorText: _requiredError(
+                      address != null &&
+                          address.isNotEmpty &&
+                          draft.pickedPosition != null,
+                    ),
                   );
                 },
               ),
@@ -238,12 +272,30 @@ class _MainInfoSection extends StatelessWidget {
 }
 
 class _ContactSection extends StatelessWidget {
-  const _ContactSection({required this.phoneController});
+  const _ContactSection({
+    required this.phoneController,
+    required this.showValidationErrors,
+  });
 
   final TextEditingController phoneController;
+  final bool showValidationErrors;
+
+  String? _phoneError(String phone) {
+    if (!showValidationErrors) return null;
+    if (phone.trim().isEmpty) {
+      return ValidationMessageKeys.formRequired.tr();
+    }
+    if (!UaePhoneValidator.isValid(phone)) {
+      return 'branches.add_branch.invalid_phone'.tr();
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final draft = context.watch<AddBranchDraftCubit>().state;
+    final phoneError = _phoneError(draft.phone);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -263,6 +315,7 @@ class _ContactSection extends StatelessWidget {
                 label: 'branches.add_branch.branch_phone'.tr(),
                 controller: phoneController,
                 hint: 'branches.add_branch.branch_phone_hint'.tr(),
+                errorText: phoneError,
               ),
               SizedBox(height: AppSpacing.md),
               BlocSelector<
@@ -274,6 +327,9 @@ class _ContactSection extends StatelessWidget {
                 builder: (context, selectedManager) {
                   return BranchManagerPickerField(
                     selectedManager: selectedManager,
+                    errorText: showValidationErrors && selectedManager == null
+                        ? ValidationMessageKeys.formRequired.tr()
+                        : null,
                     onManagerSelected: (manager) {
                       context.read<AddBranchDraftCubit>().updateManager(
                         manager,
