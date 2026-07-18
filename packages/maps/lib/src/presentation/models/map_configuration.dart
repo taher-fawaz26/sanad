@@ -70,15 +70,12 @@ class MapConfiguration {
       myLocationEnabled: myLocationEnabled ?? this.myLocationEnabled,
       myLocationButtonEnabled:
           myLocationButtonEnabled ?? this.myLocationButtonEnabled,
-      zoomControlsEnabled:
-          zoomControlsEnabled ?? this.zoomControlsEnabled,
+      zoomControlsEnabled: zoomControlsEnabled ?? this.zoomControlsEnabled,
       mapToolbarEnabled: mapToolbarEnabled ?? this.mapToolbarEnabled,
       scrollGesturesEnabled:
           scrollGesturesEnabled ?? this.scrollGesturesEnabled,
-      zoomGesturesEnabled:
-          zoomGesturesEnabled ?? this.zoomGesturesEnabled,
-      tiltGesturesEnabled:
-          tiltGesturesEnabled ?? this.tiltGesturesEnabled,
+      zoomGesturesEnabled: zoomGesturesEnabled ?? this.zoomGesturesEnabled,
+      tiltGesturesEnabled: tiltGesturesEnabled ?? this.tiltGesturesEnabled,
       rotateGesturesEnabled:
           rotateGesturesEnabled ?? this.rotateGesturesEnabled,
       padding: padding ?? this.padding,

@@ -58,8 +58,8 @@ class AppGoogleMap extends StatelessWidget {
   /// embedded inside a scrolling parent (bottom sheets, scroll views).
   static const eagerGestureRecognizers =
       <Factory<OneSequenceGestureRecognizer>>{
-    Factory<OneSequenceGestureRecognizer>(EagerGestureRecognizer.new),
-  };
+        Factory<OneSequenceGestureRecognizer>(EagerGestureRecognizer.new),
+      };
 
   @override
   Widget build(BuildContext context) {

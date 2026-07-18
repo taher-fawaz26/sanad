@@ -13,9 +13,9 @@ class BranchDetailsBloc extends Bloc<BranchDetailsEvent, BranchDetailsState> {
   BranchDetailsBloc({
     required GetBranchUseCase getBranchUseCase,
     required UpdateBranchStatusUseCase updateBranchStatusUseCase,
-  })  : _getBranchUseCase = getBranchUseCase,
-        _updateBranchStatusUseCase = updateBranchStatusUseCase,
-        super(const BranchDetailsState()) {
+  }) : _getBranchUseCase = getBranchUseCase,
+       _updateBranchStatusUseCase = updateBranchStatusUseCase,
+       super(const BranchDetailsState()) {
     on<BranchDetailsFetchEvent>(_onFetch);
     on<BranchDetailsRefreshEvent>(_onRefresh);
     on<BranchStatusToggleEvent>(_onStatusToggle);
@@ -56,7 +56,9 @@ class BranchDetailsBloc extends Bloc<BranchDetailsEvent, BranchDetailsState> {
     final branchId = state.branchId;
     if (branchId == null) return;
 
-    emit(state.copyWith(statusUpdateLoading: true, clearStatusUpdateFailure: true));
+    emit(
+      state.copyWith(statusUpdateLoading: true, clearStatusUpdateFailure: true),
+    );
 
     final result = await _updateBranchStatusUseCase(
       UpdateBranchStatusParams(id: branchId, isAvailable: event.isAvailable),

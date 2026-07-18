@@ -16,10 +16,10 @@ class BranchesBloc extends Bloc<BranchesEvent, BranchesState> {
     required GetBranchesUseCase getBranchesUseCase,
     required DeleteBranchUseCase deleteBranchUseCase,
     required UpdateBranchStatusUseCase updateBranchStatusUseCase,
-  })  : _getBranchesUseCase = getBranchesUseCase,
-        _deleteBranchUseCase = deleteBranchUseCase,
-        _updateBranchStatusUseCase = updateBranchStatusUseCase,
-        super(const BranchesState()) {
+  }) : _getBranchesUseCase = getBranchesUseCase,
+       _deleteBranchUseCase = deleteBranchUseCase,
+       _updateBranchStatusUseCase = updateBranchStatusUseCase,
+       super(const BranchesState()) {
     on<BranchesFetchEvent>(_onFetch);
     on<BranchesRefreshEvent>(_onRefresh);
     on<BranchesFilterChangedEvent>(_onFilterChanged);

@@ -21,10 +21,10 @@ final class LocationPickerStarted extends LocationPickerEvent {
 
   @override
   List<Object?> get props => [
-        initialPosition,
-        initialAddress,
-        localeIdentifier,
-      ];
+    initialPosition,
+    initialAddress,
+    localeIdentifier,
+  ];
 }
 
 final class LocationPickerCameraIdle extends LocationPickerEvent {

@@ -82,6 +82,7 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
       initialPosition: state.center,
       initialAddress: state.address,
       localeIdentifier: context.locale.toString(),
+      requirePlaceId: true,
       labels: MapAreaPickerLabels(
         title: 'branches.coverage_area.add_serving_area'.tr(),
         searchHint: 'branches.coverage_area.search_serving_area'.tr(),
@@ -91,10 +92,14 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
         addressHint: 'branches.location_picker.address_hint'.tr(),
         genericError: 'branches.location_picker.generic_error'.tr(),
         confirm: 'branches.coverage_area.done'.tr(),
+        placeIdRequiredHint: 'branches.coverage_area.select_from_search_hint'
+            .tr(),
       ),
     );
     if (!mounted || result == null) return;
-    bloc.add(CoverageAreaExtraAreaSet(servingAreaFromPickerResult(result)));
+    final area = servingAreaFromPickerResult(result);
+    if (area == null) return;
+    bloc.add(CoverageAreaExtraAreaSet(area));
   }
 
   void _confirm(CoverageAreaState state) {
@@ -107,7 +112,7 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
         position: center,
         address: address,
         radiusKm: state.radiusKm,
-        autoAreaNames: state.autoAreas,
+        autoAreas: state.autoAreas,
         extraAreas: state.extraAreas,
       ),
     );
@@ -120,19 +125,8 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
     );
   }
 
-  List<ServingArea> _autoAreasForDisplay(CoverageAreaState state) {
-    final center = state.center ?? BranchMapDefaults.position;
-    return state.autoAreas
-        .map(
-          (name) => ServingArea(
-            placeId: name,
-            name: name,
-            address: '',
-            latLng: center,
-          ),
-        )
-        .toList(growable: false);
-  }
+  List<ServingArea> _autoAreasForDisplay(CoverageAreaState state) =>
+      state.autoAreas;
 
   @override
   Widget build(BuildContext context) {

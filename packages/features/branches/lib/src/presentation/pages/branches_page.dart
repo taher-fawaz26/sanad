@@ -106,90 +106,90 @@ class _BranchesTab extends StatelessWidget {
         final title = message.isEmpty
             ? 'branches.actions.action_failed'.tr()
             : message.contains(' ')
-                ? message
-                : message.tr();
+            ? message
+            : message.tr();
         showAppSnackbar(context: context, title: title);
         context.read<BranchesBloc>().add(
-              const BranchActionFailureClearedEvent(),
-            );
+          const BranchActionFailureClearedEvent(),
+        );
       },
       child: BlocBuilder<BranchesBloc, BranchesState>(
         builder: (context, state) {
-        if (state.isLoading && state.branches.isEmpty) {
-          return const Center(child: CircularProgressIndicator());
-        }
+          if (state.isLoading && state.branches.isEmpty) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-        final branches = state.filteredBranches;
-        final totalCount = state.branches.length;
+          final branches = state.filteredBranches;
+          final totalCount = state.branches.length;
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AppSection(
-              title: 'branches.count_label'.tr(),
-              size: AppSectionSize.compact,
-              trailing: AppSectionTrailing.custom,
-              trailingWidget: AppNotificationBadge(count: totalCount),
-            ),
-            SizedBox(height: AppSpacing.xs),
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: AppSpacing.sm,
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AppSection(
+                title: 'branches.count_label'.tr(),
+                size: AppSectionSize.compact,
+                trailing: AppSectionTrailing.custom,
+                trailingWidget: AppNotificationBadge(count: totalCount),
               ),
-              child: AppButton(
-                label: 'branches.add_button'.tr(),
-                icon: const Icon(Icons.add_circle_outline),
-                iconPosition: AppButtonIconPosition.center,
-                onPressed: () => context.push(BranchRoutes.add),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: AppSpacing.sm,
-              ),
-              child: AppSearchField(
-                hint: 'branches.search_hint'.tr(),
-                showMicIcon: false, // hide mic by default for branch search
-                onChanged: (value) => context.read<BranchesBloc>().add(
-                  BranchesSearchChangedEvent(value),
+              SizedBox(height: AppSpacing.xs),
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.sm,
+                ),
+                child: AppButton(
+                  label: 'branches.add_button'.tr(),
+                  icon: const Icon(Icons.add_circle_outline),
+                  iconPosition: AppButtonIconPosition.center,
+                  onPressed: () => context.push(BranchRoutes.add),
                 ),
               ),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: AppSpacing.sm,
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.sm,
+                ),
+                child: AppSearchField(
+                  hint: 'branches.search_hint'.tr(),
+                  showMicIcon: false, // hide mic by default for branch search
+                  onChanged: (value) => context.read<BranchesBloc>().add(
+                    BranchesSearchChangedEvent(value),
+                  ),
+                ),
               ),
-              child: _FilterRow(currentFilter: state.filter),
-            ),
-            SizedBox(height: AppSpacing.sm),
-            Expanded(
-              child: state.hasError && state.branches.isEmpty
-                  ? _ErrorState(
-                      failure: state.failure,
-                      onRetry: () => context.read<BranchesBloc>().add(
-                        const BranchesRefreshEvent(),
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.sm,
+                ),
+                child: _FilterRow(currentFilter: state.filter),
+              ),
+              SizedBox(height: AppSpacing.sm),
+              Expanded(
+                child: state.hasError && state.branches.isEmpty
+                    ? _ErrorState(
+                        failure: state.failure,
+                        onRetry: () => context.read<BranchesBloc>().add(
+                          const BranchesRefreshEvent(),
+                        ),
+                      )
+                    : branches.isEmpty
+                    ? _EmptyState(
+                        searchQuery: state.searchQuery,
+                        onClearSearch: () => context.read<BranchesBloc>().add(
+                          const BranchesSearchChangedEvent(''),
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: EdgeInsets.only(bottom: AppSpacing.lg),
+                        itemCount: branches.length,
+                        itemBuilder: (context, index) =>
+                            _BranchListItem(branch: branches[index]),
                       ),
-                    )
-                  : branches.isEmpty
-                  ? _EmptyState(
-                      searchQuery: state.searchQuery,
-                      onClearSearch: () => context.read<BranchesBloc>().add(
-                        const BranchesSearchChangedEvent(''),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: EdgeInsets.only(bottom: AppSpacing.lg),
-                      itemCount: branches.length,
-                      itemBuilder: (context, index) =>
-                          _BranchListItem(branch: branches[index]),
-                    ),
-            ),
-          ],
-        );
-      },
+              ),
+            ],
+          );
+        },
       ),
     );
   }

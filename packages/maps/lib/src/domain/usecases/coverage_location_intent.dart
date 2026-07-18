@@ -12,12 +12,14 @@ class CoverageLocationIntent extends Equatable {
     required this.center,
     required this.radiusKm,
     this.localeIdentifier,
+    this.cityId,
   });
 
   final LatLng center;
   final double radiusKm;
   final String? localeIdentifier;
+  final String? cityId;
 
   @override
-  List<Object?> get props => [center, radiusKm, localeIdentifier];
+  List<Object?> get props => [center, radiusKm, localeIdentifier, cityId];
 }

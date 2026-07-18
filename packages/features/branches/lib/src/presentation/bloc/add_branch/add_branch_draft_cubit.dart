@@ -1,4 +1,5 @@
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
+import 'package:branches/src/domain/entities/branch_manager_entity.dart';
 import 'package:branches/src/domain/entities/branch_type.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_state.dart';
 import 'package:branches/src/presentation/widgets/branch_schedule_section.dart';
@@ -12,14 +13,18 @@ class AddBranchDraftCubit extends Cubit<AddBranchDraft> {
 
   void updateBasicInfo({
     String? branchName,
-    String? city,
     String? phone,
   }) {
-    emit(state.copyWith(
-      branchName: branchName,
-      city: city,
-      phone: phone,
-    ));
+    emit(
+      state.copyWith(
+        branchName: branchName,
+        phone: phone,
+      ),
+    );
+  }
+
+  void updateCity(CityEntity city) {
+    emit(state.copyWith(selectedCity: () => city));
   }
 
   void updateBranchType(BranchType type) {
@@ -30,14 +35,16 @@ class AddBranchDraftCubit extends Cubit<AddBranchDraft> {
     required String? address,
     required LatLng? position,
   }) {
-    emit(state.copyWith(
-      branchAddress: () => address,
-      pickedPosition: () => position,
-    ));
+    emit(
+      state.copyWith(
+        branchAddress: () => address,
+        pickedPosition: () => position,
+      ),
+    );
   }
 
-  void updateManager(String? managerId) {
-    emit(state.copyWith(selectedManagerId: () => managerId));
+  void updateManager(BranchManagerEntity? manager) {
+    emit(state.copyWith(selectedManager: () => manager));
   }
 
   void updateScheduleMode(BranchScheduleMode mode) {
@@ -59,12 +66,14 @@ class AddBranchDraftCubit extends Cubit<AddBranchDraft> {
     required double? radiusKm,
     required List<ServingArea> servingAreas,
   }) {
-    emit(state.copyWith(
-      branchAddress: () => address,
-      pickedPosition: () => position,
-      coverageRadiusKm: () => radiusKm,
-      servingAreas: servingAreas,
-    ));
+    emit(
+      state.copyWith(
+        branchAddress: () => address,
+        pickedPosition: () => position,
+        coverageRadiusKm: () => radiusKm,
+        servingAreas: servingAreas,
+      ),
+    );
   }
 
   void updateServices(List<ServiceEntity> services) {
@@ -76,9 +85,12 @@ class AddBranchDraftCubit extends Cubit<AddBranchDraft> {
   }
 
   void removeWorker(WorkerEntity worker) {
-    emit(state.copyWith(
-      selectedWorkers:
-          state.selectedWorkers.where((w) => w.id != worker.id).toList(),
-    ));
+    emit(
+      state.copyWith(
+        selectedWorkers: state.selectedWorkers
+            .where((w) => w.id != worker.id)
+            .toList(),
+      ),
+    );
   }
 }

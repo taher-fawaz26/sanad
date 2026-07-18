@@ -13,9 +13,10 @@ final class CoverageAreaStarted extends CoverageAreaEvent {
     this.initialCenter,
     this.initialAddress,
     this.initialRadiusKm,
-    this.initialAutoAreas = const [],
+    this.initialAutoAreas = const <ServingArea>[],
     this.initialExtraAreas = const [],
     this.localeIdentifier,
+    this.cityId,
   });
 
   final CoverageMode mode;
@@ -23,23 +24,25 @@ final class CoverageAreaStarted extends CoverageAreaEvent {
   final String? initialAddress;
   final double? initialRadiusKm;
 
-  /// Pre-existing area names to seed in [CoverageMode.edit]. The consuming
-  /// feature loads these (e.g. a branch's saved serving areas) and passes them
-  /// in; the maps platform never fetches them itself.
-  final List<String> initialAutoAreas;
+  /// Pre-existing areas to seed in [CoverageMode.edit]. The consuming feature
+  /// loads these (e.g. a branch's saved serving areas) and passes them in; the
+  /// maps platform never fetches them itself.
+  final List<ServingArea> initialAutoAreas;
   final List<ServingArea> initialExtraAreas;
   final String? localeIdentifier;
+  final String? cityId;
 
   @override
   List<Object?> get props => [
-        mode,
-        initialCenter,
-        initialAddress,
-        initialRadiusKm,
-        initialAutoAreas,
-        initialExtraAreas,
-        localeIdentifier,
-      ];
+    mode,
+    initialCenter,
+    initialAddress,
+    initialRadiusKm,
+    initialAutoAreas,
+    initialExtraAreas,
+    localeIdentifier,
+    cityId,
+  ];
 }
 
 final class CoverageAreaMapMoved extends CoverageAreaEvent {

@@ -35,4 +35,5 @@ export 'src/validators/emirates_id_validator.dart';
 export 'src/validators/password_validator.dart';
 export 'src/validators/person_name_validator.dart';
 export 'src/validators/phone_validator.dart';
+export 'src/validators/uae_phone_validator.dart';
 export 'src/validators/url_validator.dart';

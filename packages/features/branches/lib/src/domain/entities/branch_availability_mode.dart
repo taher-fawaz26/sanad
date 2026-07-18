@@ -4,15 +4,16 @@ enum BranchAvailabilityMode {
   coreHours,
 
   /// Branch uses its own custom schedule (`CUSTOM`).
-  custom;
+  custom
+  ;
 
   String toApiString() => switch (this) {
-        BranchAvailabilityMode.coreHours => 'CORE_HOURS',
-        BranchAvailabilityMode.custom => 'CUSTOM',
-      };
+    BranchAvailabilityMode.coreHours => 'CORE_HOURS',
+    BranchAvailabilityMode.custom => 'CUSTOM',
+  };
 
   static BranchAvailabilityMode fromApiString(String? value) =>
       value == 'CUSTOM'
-          ? BranchAvailabilityMode.custom
-          : BranchAvailabilityMode.coreHours;
+      ? BranchAvailabilityMode.custom
+      : BranchAvailabilityMode.coreHours;
 }

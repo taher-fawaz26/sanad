@@ -17,8 +17,7 @@ class ForwardGeocodeParams extends Equatable {
   List<Object?> get props => [address, localeIdentifier];
 }
 
-class ForwardGeocodeUseCase
-    implements UseCase<LatLng, ForwardGeocodeParams> {
+class ForwardGeocodeUseCase implements UseCase<LatLng, ForwardGeocodeParams> {
   const ForwardGeocodeUseCase(this._repository);
 
   final GeocodingRepository _repository;

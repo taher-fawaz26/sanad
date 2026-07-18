@@ -1,4 +1,5 @@
 import 'package:core/core.dart';
+import 'package:network/network.dart';
 import 'package:workers/src/data/datasources/worker_remote_data_source.dart';
 import 'package:workers/src/data/repositories/worker_repository_impl.dart';
 import 'package:workers/src/domain/repositories/worker_repository.dart';
@@ -10,7 +11,7 @@ abstract final class WorkersDI {
   static void init() {
     sl
       ..registerLazySingleton<WorkerRemoteDataSource>(
-        WorkerRemoteDataSourceImpl.new,
+        () => WorkerRemoteDataSourceImpl(sl<BaseApiClient>()),
       )
       ..registerLazySingleton<WorkerRepository>(
         () => WorkerRepositoryImpl(sl<WorkerRemoteDataSource>()),

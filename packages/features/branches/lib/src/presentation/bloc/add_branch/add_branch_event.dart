@@ -7,8 +7,7 @@ sealed class AddBranchEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-/// Loads the data the add-branch form depends on (company schedule + the
-/// list of assignable managers).
+/// Loads the company schedule used as the default branch availability.
 final class AddBranchStarted extends AddBranchEvent {
   const AddBranchStarted();
 }

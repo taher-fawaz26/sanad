@@ -24,9 +24,7 @@ class AddBranchCoverageStep extends StatelessWidget {
   final double? radiusKm;
 
   bool get _hasCoverage =>
-      radiusKm != null &&
-      pickedAddress != null &&
-      pickedAddress!.isNotEmpty;
+      radiusKm != null && pickedAddress != null && pickedAddress!.isNotEmpty;
 
   @override
   Widget build(BuildContext context) {

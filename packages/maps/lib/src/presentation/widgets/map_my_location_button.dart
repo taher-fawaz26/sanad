@@ -29,9 +29,11 @@ class _MapMyLocationButtonState extends State<MapMyLocationButton> {
     if (_loading) return;
     setState(() => _loading = true);
 
-    final result = await widget.getCurrentLocationUseCase(
-      const NoParams(),
-    ).run();
+    final result = await widget
+        .getCurrentLocationUseCase(
+          const NoParams(),
+        )
+        .run();
 
     if (!mounted) return;
     setState(() => _loading = false);

@@ -13,7 +13,7 @@ import 'package:maps/src/presentation/utils/latest_operation.dart';
 /// for any status emissions.
 class PlaceSearchRunner {
   PlaceSearchRunner({SearchPlacesUseCase? searchPlacesUseCase})
-      : _searchPlacesUseCase = searchPlacesUseCase;
+    : _searchPlacesUseCase = searchPlacesUseCase;
 
   final SearchPlacesUseCase? _searchPlacesUseCase;
   final LatestOperation _searchOp = LatestOperation();

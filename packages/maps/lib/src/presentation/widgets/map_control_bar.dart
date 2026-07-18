@@ -19,8 +19,7 @@ class MapControlBar extends StatelessWidget {
       child: Align(
         alignment: alignment,
         child: Padding(
-          padding: padding ??
-              EdgeInsets.all(AppSpacing.sm),
+          padding: padding ?? EdgeInsets.all(AppSpacing.sm),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

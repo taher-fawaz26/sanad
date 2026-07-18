@@ -58,42 +58,41 @@ class BranchesState extends Equatable {
       filter: newFilter,
       searchQuery: newQuery,
       failure: clearFailure ? null : (failure ?? this.failure),
-      actionFailure:
-          clearActionFailure ? null : (actionFailure ?? this.actionFailure),
+      actionFailure: clearActionFailure
+          ? null
+          : (actionFailure ?? this.actionFailure),
       meta: meta ?? this.meta,
     );
   }
 
   @override
   List<Object?> get props => [
-        status,
-        branches,
-        filteredBranches,
-        filter,
-        searchQuery,
-        failure,
-        actionFailure,
-        meta,
-      ];
+    status,
+    branches,
+    filteredBranches,
+    filter,
+    searchQuery,
+    failure,
+    actionFailure,
+    meta,
+  ];
 }
 
 List<BranchEntity> _applyFilter(
   List<BranchEntity> branches,
   BranchFilter filter,
   String searchQuery,
-) =>
-    branches.where((branch) {
-      final matchesSearch = searchQuery.isEmpty ||
-          branch.branchName
-              .toLowerCase()
-              .contains(searchQuery.toLowerCase()) ||
-          branch.city.toLowerCase().contains(searchQuery.toLowerCase());
+) => branches.where((branch) {
+  final matchesSearch =
+      searchQuery.isEmpty ||
+      branch.branchName.toLowerCase().contains(searchQuery.toLowerCase()) ||
+      branch.city.toLowerCase().contains(searchQuery.toLowerCase());
 
-      final matchesFilter = switch (filter) {
-        BranchFilter.all => true,
-        BranchFilter.active => branch.isAvailable,
-        BranchFilter.maintenance => !branch.isAvailable,
-      };
+  final matchesFilter = switch (filter) {
+    BranchFilter.all => true,
+    BranchFilter.active => branch.isAvailable,
+    BranchFilter.maintenance => !branch.isAvailable,
+  };
 
-      return matchesSearch && matchesFilter;
-    }).toList();
+  return matchesSearch && matchesFilter;
+}).toList();

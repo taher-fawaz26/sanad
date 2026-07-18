@@ -13,6 +13,5 @@ class MapsConfig {
   final String? placesApiKey;
   final PlacesProviderType placesProvider;
 
-  bool get placesEnabled =>
-      placesApiKey != null && placesApiKey!.isNotEmpty;
+  bool get placesEnabled => placesApiKey != null && placesApiKey!.isNotEmpty;
 }

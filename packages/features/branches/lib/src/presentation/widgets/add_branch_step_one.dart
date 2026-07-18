@@ -15,6 +15,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:localization/localization.dart';
+import 'package:maps/maps.dart';
 
 class AddBranchStepOne extends StatefulWidget {
   const AddBranchStepOne({
@@ -22,6 +23,8 @@ class AddBranchStepOne extends StatefulWidget {
     required this.onPickLocation,
     required this.currentStep,
     required this.totalSteps,
+    this.furthestCompletedStep,
+    this.onStepTapped,
     super.key,
   });
 
@@ -29,6 +32,8 @@ class AddBranchStepOne extends StatefulWidget {
   final VoidCallback onPickLocation;
   final int currentStep;
   final int totalSteps;
+  final int? furthestCompletedStep;
+  final ValueChanged<int>? onStepTapped;
 
   @override
   State<AddBranchStepOne> createState() => _AddBranchStepOneState();
@@ -36,7 +41,6 @@ class AddBranchStepOne extends StatefulWidget {
 
 class _AddBranchStepOneState extends State<AddBranchStepOne> {
   final _branchNameController = TextEditingController();
-  final _cityController = TextEditingController();
   final _phoneController = TextEditingController();
 
   bool _setupSeeded = false;
@@ -46,46 +50,33 @@ class _AddBranchStepOneState extends State<AddBranchStepOne> {
     super.initState();
     final draft = context.read<AddBranchDraftCubit>().state;
     _branchNameController.text = draft.branchName;
-    _cityController.text = draft.city;
     _phoneController.text = draft.phone;
 
     _branchNameController.addListener(_pushBasicInfoToDraft);
-    _cityController.addListener(_pushBasicInfoToDraft);
     _phoneController.addListener(_pushBasicInfoToDraft);
   }
 
   @override
   void dispose() {
     _branchNameController.dispose();
-    _cityController.dispose();
     _phoneController.dispose();
     super.dispose();
   }
 
   void _pushBasicInfoToDraft() {
     context.read<AddBranchDraftCubit>().updateBasicInfo(
-          branchName: _branchNameController.text,
-          city: _cityController.text,
-          phone: _phoneController.text,
-        );
+      branchName: _branchNameController.text,
+      phone: _phoneController.text,
+    );
   }
 
   void _seedFromSetup(AddBranchState state) {
     if (_setupSeeded || state.setupStatus != RequestStatus.success) return;
     _setupSeeded = true;
 
-    final draftCubit = context.read<AddBranchDraftCubit>();
-
-    // Initialize custom schedule from company schedule if not already set.
-    draftCubit.initializeCustomSchedule(
+    context.read<AddBranchDraftCubit>().initializeCustomSchedule(
       BranchScheduleFormatter.copyAvailability(state.companySchedule),
     );
-
-    // Auto-select first manager if none selected yet.
-    if (draftCubit.state.selectedManagerId == null &&
-        state.managers.isNotEmpty) {
-      draftCubit.updateManager(state.managers.first.id);
-    }
   }
 
   void _onScheduleModeChanged(BranchScheduleMode mode) {
@@ -94,8 +85,10 @@ class _AddBranchStepOneState extends State<AddBranchStepOne> {
 
     if (mode == BranchScheduleMode.custom &&
         draftCubit.state.customSchedule.isEmpty) {
-      final companySchedule =
-          context.read<AddBranchBloc>().state.companySchedule;
+      final companySchedule = context
+          .read<AddBranchBloc>()
+          .state
+          .companySchedule;
       if (companySchedule.isNotEmpty) {
         draftCubit.updateCustomSchedule(
           BranchScheduleFormatter.copyAvailability(companySchedule),
@@ -126,11 +119,12 @@ class _AddBranchStepOneState extends State<AddBranchStepOne> {
                 child: AppWizardStepIndicator(
                   currentStep: widget.currentStep,
                   totalSteps: widget.totalSteps,
+                  furthestCompletedStep: widget.furthestCompletedStep,
+                  onStepTapped: widget.onStepTapped,
                 ),
               ),
               _MainInfoSection(
                 branchNameController: _branchNameController,
-                cityController: _cityController,
                 onPickLocation: widget.onPickLocation,
               ),
               const AppDivider(thickness: AppDividerThickness.thick),
@@ -150,16 +144,17 @@ class _AddBranchStepOneState extends State<AddBranchStepOne> {
 class _MainInfoSection extends StatelessWidget {
   const _MainInfoSection({
     required this.branchNameController,
-    required this.cityController,
     required this.onPickLocation,
   });
 
   final TextEditingController branchNameController;
-  final TextEditingController cityController;
   final VoidCallback onPickLocation;
 
   @override
   Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
+    final isArabic = locale.languageCode == 'ar';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -193,21 +188,32 @@ class _MainInfoSection extends StatelessWidget {
                   return BranchTypeSelectField(
                     selectedType: selectedType,
                     onTypeSelected: (type) {
-                      context.read<AddBranchDraftCubit>().updateBranchType(type);
+                      context.read<AddBranchDraftCubit>().updateBranchType(
+                        type,
+                      );
                     },
                   );
                 },
               ),
               SizedBox(height: AppSpacing.md),
-              AppTextField(
-                controller: cityController,
-                label: 'branches.add_branch.city'.tr(),
-                hint: 'branches.add_branch.city_hint'.tr(),
-                validator: (value) {
-                  if (value?.trim().isEmpty ?? true) {
-                    return ValidationMessageKeys.formRequired;
-                  }
-                  return null;
+              BlocSelector<AddBranchDraftCubit, AddBranchDraft, CityEntity?>(
+                selector: (state) => state.selectedCity,
+                builder: (context, selectedCity) {
+                  return CitySelectField(
+                    label: 'branches.add_branch.city'.tr(),
+                    hint: 'branches.add_branch.city_select_hint'.tr(),
+                    pickerTitle: 'branches.add_branch.city'.tr(),
+                    searchHint: 'branches.add_branch.city_search_hint'.tr(),
+                    emptyLabel: 'branches.add_branch.city_empty'.tr(),
+                    retryLabel: 'branches.add_branch.cancel'.tr(),
+                    selectedCity: selectedCity,
+                    localizedName: isArabic
+                        ? (city) => city.nameAr
+                        : (city) => city.nameEn,
+                    onCitySelected: (city) {
+                      context.read<AddBranchDraftCubit>().updateCity(city);
+                    },
+                  );
                 },
               ),
               SizedBox(height: AppSpacing.md),
@@ -259,25 +265,18 @@ class _ContactSection extends StatelessWidget {
                 hint: 'branches.add_branch.branch_phone_hint'.tr(),
               ),
               SizedBox(height: AppSpacing.md),
-              BlocSelector<AddBranchBloc, AddBranchState,
-                  List<BranchManagerEntity>>(
-                selector: (state) => state.managers,
-                builder: (context, managers) {
-                  return BlocSelector<AddBranchDraftCubit, AddBranchDraft,
-                      String?>(
-                    selector: (state) => state.selectedManagerId,
-                    builder: (context, selectedManagerId) {
-                      final selectedManager = managers
-                          .where((m) => m.id == selectedManagerId)
-                          .firstOrNull;
-                      return BranchManagerPickerField(
-                        managers: managers,
-                        selectedManager: selectedManager,
-                        onManagerSelected: (manager) {
-                          context
-                              .read<AddBranchDraftCubit>()
-                              .updateManager(manager.id);
-                        },
+              BlocSelector<
+                AddBranchDraftCubit,
+                AddBranchDraft,
+                BranchManagerEntity?
+              >(
+                selector: (state) => state.selectedManager,
+                builder: (context, selectedManager) {
+                  return BranchManagerPickerField(
+                    selectedManager: selectedManager,
+                    onManagerSelected: (manager) {
+                      context.read<AddBranchDraftCubit>().updateManager(
+                        manager,
                       );
                     },
                   );
@@ -321,11 +320,14 @@ class _WorkingHoursSection extends StatelessWidget {
                 buildWhen: (prev, curr) =>
                     prev.companySchedule != curr.companySchedule,
                 builder: (context, blocState) {
-                  return BlocSelector<AddBranchDraftCubit, AddBranchDraft,
-                      ({
-                        BranchScheduleMode mode,
-                        List<BranchAvailabilityEntity> customSchedule,
-                      })>(
+                  return BlocSelector<
+                    AddBranchDraftCubit,
+                    AddBranchDraft,
+                    ({
+                      BranchScheduleMode mode,
+                      List<BranchAvailabilityEntity> customSchedule,
+                    })
+                  >(
                     selector: (state) => (
                       mode: state.scheduleMode,
                       customSchedule: state.customSchedule,

@@ -19,8 +19,13 @@ class BranchPaginationMeta extends Equatable {
   bool get hasMore => currentPage < totalPages;
 
   @override
-  List<Object?> get props =>
-      [totalItems, itemCount, itemsPerPage, totalPages, currentPage];
+  List<Object?> get props => [
+    totalItems,
+    itemCount,
+    itemsPerPage,
+    totalPages,
+    currentPage,
+  ];
 }
 
 class PaginatedBranchesEntity extends Equatable {

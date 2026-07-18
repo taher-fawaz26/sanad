@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "sanad-api": {
+      "command": "node",
+      "args": ["tools/sanad-mcp/src/index.mjs"],
+      "env": {}
+    }
+  }
+}

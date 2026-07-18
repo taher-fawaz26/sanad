@@ -82,11 +82,14 @@ class LocationPickerState extends Equatable {
       address: clearAddress ? null : (address ?? this.address),
       failure: clearFailure ? null : (failure ?? this.failure),
       cameraSource: cameraSource ?? this.cameraSource,
-      predictions:
-          clearPredictions ? const [] : (predictions ?? this.predictions),
-      searchStatus: searchStatus ??
+      predictions: clearPredictions
+          ? const []
+          : (predictions ?? this.predictions),
+      searchStatus:
+          searchStatus ??
           (clearPredictions ? PlaceSearchStatus.idle : this.searchStatus),
-      searchError: searchError ??
+      searchError:
+          searchError ??
           (clearSearchError || clearPredictions ? null : this.searchError),
       searchQuery: searchQuery ?? this.searchQuery,
     );
@@ -94,14 +97,14 @@ class LocationPickerState extends Equatable {
 
   @override
   List<Object?> get props => [
-        status,
-        position,
-        address,
-        failure,
-        cameraSource,
-        predictions,
-        searchStatus,
-        searchError,
-        searchQuery,
-      ];
+    status,
+    position,
+    address,
+    failure,
+    cameraSource,
+    predictions,
+    searchStatus,
+    searchError,
+    searchQuery,
+  ];
 }

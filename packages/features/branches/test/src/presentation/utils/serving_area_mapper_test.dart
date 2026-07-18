@@ -14,11 +14,12 @@ void main() {
         ),
       );
 
-      expect(area.placeId, 'ChIJ_real_place');
+      expect(area, isNotNull);
+      expect(area!.placeId, 'ChIJ_real_place');
       expect(area.name, 'Dubai Marina');
     });
 
-    test('derives id from coordinates (not address) when place id is null', () {
+    test('returns null when place id is absent', () {
       final area = servingAreaFromPickerResult(
         const MapAreaPickerResult(
           areaName: 'Dropped pin',
@@ -27,33 +28,28 @@ void main() {
         ),
       );
 
-      expect(area.placeId, isNot('Dubai Marina, Dubai'));
-      expect(area.placeId, contains('25.0'));
-      expect(area.placeId, contains('55.0'));
+      expect(area, isNull);
     });
 
-    test(
-      'two map-tapped picks with the same address but different coordinates '
-      'produce distinct ids (regression: BUG 1 dedup collision)',
-      () {
-        final first = servingAreaFromPickerResult(
-          const MapAreaPickerResult(
-            areaName: 'Dubai Marina',
-            address: 'Dubai Marina, Dubai',
-            position: LatLng(25.0, 55.0),
-          ),
-        );
-        final second = servingAreaFromPickerResult(
-          const MapAreaPickerResult(
-            areaName: 'Dubai Marina',
-            address: 'Dubai Marina, Dubai',
-            position: LatLng(25.05, 55.05),
-          ),
-        );
+    test('never generates synthetic latlng: ids', () {
+      final withId = servingAreaFromPickerResult(
+        const MapAreaPickerResult(
+          placeId: 'ChIJ_real',
+          areaName: 'Area',
+          address: 'Address',
+          position: LatLng(25.0, 55.0),
+        ),
+      );
+      final withoutId = servingAreaFromPickerResult(
+        const MapAreaPickerResult(
+          areaName: 'Area',
+          address: 'Address',
+          position: LatLng(25.0, 55.0),
+        ),
+      );
 
-        expect(first.placeId, isNot(second.placeId));
-        expect(first == second, isFalse);
-      },
-    );
+      expect(withId!.placeId.startsWith('latlng:'), isFalse);
+      expect(withoutId, isNull);
+    });
   });
 }

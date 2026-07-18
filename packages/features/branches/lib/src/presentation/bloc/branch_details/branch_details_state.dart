@@ -32,20 +32,24 @@ class BranchDetailsState extends Equatable {
     bool? statusUpdateLoading,
     Failure? statusUpdateFailure,
     bool clearStatusUpdateFailure = false,
-  }) =>
-      BranchDetailsState(
-        branchId: branchId ?? this.branchId,
-        status: status ?? this.status,
-        failure: clearFailure ? null : (failure ?? this.failure),
-        branch: branch ?? this.branch,
-        statusUpdateLoading:
-            statusUpdateLoading ?? this.statusUpdateLoading,
-        statusUpdateFailure: clearStatusUpdateFailure
-            ? null
-            : (statusUpdateFailure ?? this.statusUpdateFailure),
-      );
+  }) => BranchDetailsState(
+    branchId: branchId ?? this.branchId,
+    status: status ?? this.status,
+    failure: clearFailure ? null : (failure ?? this.failure),
+    branch: branch ?? this.branch,
+    statusUpdateLoading: statusUpdateLoading ?? this.statusUpdateLoading,
+    statusUpdateFailure: clearStatusUpdateFailure
+        ? null
+        : (statusUpdateFailure ?? this.statusUpdateFailure),
+  );
 
   @override
-  List<Object?> get props =>
-      [branchId, status, failure, branch, statusUpdateLoading, statusUpdateFailure];
+  List<Object?> get props => [
+    branchId,
+    status,
+    failure,
+    branch,
+    statusUpdateLoading,
+    statusUpdateFailure,
+  ];
 }

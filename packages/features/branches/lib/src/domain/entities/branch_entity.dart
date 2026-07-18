@@ -1,5 +1,6 @@
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
 import 'package:branches/src/domain/entities/branch_availability_mode.dart';
+import 'package:branches/src/domain/entities/branch_worker_entity.dart';
 import 'package:equatable/equatable.dart';
 
 class BranchEntity extends Equatable {
@@ -22,6 +23,7 @@ class BranchEntity extends Equatable {
     this.servingAreaPlaceIds,
     this.servingAreaNames,
     this.serviceNames,
+    this.workers = const [],
     this.createdAt,
   });
 
@@ -54,6 +56,9 @@ class BranchEntity extends Equatable {
   /// Service names assigned to this branch (e.g. ["Car Repair"]).
   final List<String>? serviceNames;
 
+  /// Workers assigned to this branch, as returned by GET /branches/{id}.
+  final List<BranchWorkerEntity> workers;
+
   final DateTime? createdAt;
 
   /// Convenience display: `"Address, City"`.
@@ -61,24 +66,25 @@ class BranchEntity extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        branchName,
-        branchAddress,
-        city,
-        branchPhone,
-        isAvailable,
-        availabilityMode,
-        branchManagerId,
-        branchManagerName,
-        lat,
-        lng,
-        radiusKm,
-        googleMapsLink,
-        socialMediaLink,
-        availability,
-        servingAreaPlaceIds,
-        servingAreaNames,
-        serviceNames,
-        createdAt,
-      ];
+    id,
+    branchName,
+    branchAddress,
+    city,
+    branchPhone,
+    isAvailable,
+    availabilityMode,
+    branchManagerId,
+    branchManagerName,
+    lat,
+    lng,
+    radiusKm,
+    googleMapsLink,
+    socialMediaLink,
+    availability,
+    servingAreaPlaceIds,
+    servingAreaNames,
+    serviceNames,
+    workers,
+    createdAt,
+  ];
 }

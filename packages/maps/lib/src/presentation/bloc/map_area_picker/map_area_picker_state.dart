@@ -82,35 +82,40 @@ class MapAreaPickerState extends Equatable {
       selectedPlaceId: clearSelectedPlace
           ? null
           : (selectedPlaceId ?? this.selectedPlaceId),
-      selectedTitle:
-          clearSelectedPlace ? null : (selectedTitle ?? this.selectedTitle),
+      selectedTitle: clearSelectedPlace
+          ? null
+          : (selectedTitle ?? this.selectedTitle),
       resolvedAreaName: resolvedAreaName ?? this.resolvedAreaName,
-      predictions:
-          clearPredictions ? const [] : (predictions ?? this.predictions),
-      searchStatus: searchStatus ??
+      predictions: clearPredictions
+          ? const []
+          : (predictions ?? this.predictions),
+      searchStatus:
+          searchStatus ??
           (clearPredictions ? PlaceSearchStatus.idle : this.searchStatus),
       searchQuery: searchQuery ?? this.searchQuery,
-      searchError: searchError ??
+      searchError:
+          searchError ??
           (clearSearchError || clearPredictions ? null : this.searchError),
-      pickedResult:
-          clearPickedResult ? null : (pickedResult ?? this.pickedResult),
+      pickedResult: clearPickedResult
+          ? null
+          : (pickedResult ?? this.pickedResult),
     );
   }
 
   @override
   List<Object?> get props => [
-        status,
-        position,
-        address,
-        failure,
-        cameraSource,
-        selectedPlaceId,
-        selectedTitle,
-        resolvedAreaName,
-        predictions,
-        searchStatus,
-        searchQuery,
-        searchError,
-        pickedResult,
-      ];
+    status,
+    position,
+    address,
+    failure,
+    cameraSource,
+    selectedPlaceId,
+    selectedTitle,
+    resolvedAreaName,
+    predictions,
+    searchStatus,
+    searchQuery,
+    searchError,
+    pickedResult,
+  ];
 }

@@ -262,11 +262,11 @@ class _SearchState extends Equatable {
 
   @override
   List<Object?> get props => [
-        predictions,
-        searchStatus,
-        searchQuery,
-        searchError,
-      ];
+    predictions,
+    searchStatus,
+    searchQuery,
+    searchError,
+  ];
 }
 
 class _MapState extends Equatable {
@@ -335,7 +335,8 @@ class _MapView extends StatelessWidget {
               rotateGesturesEnabled: false,
             ),
             IgnorePointer(
-              child: pinMarker ??
+              child:
+                  pinMarker ??
                   AppSvgPicture.asset(
                     AppSvgs.mapPinMarker,
                     width: responsiveDimension(48),

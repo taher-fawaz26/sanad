@@ -20,10 +20,10 @@ final class MapAreaPickerStarted extends MapAreaPickerEvent {
 
   @override
   List<Object?> get props => [
-        initialPosition,
-        initialAddress,
-        localeIdentifier,
-      ];
+    initialPosition,
+    initialAddress,
+    localeIdentifier,
+  ];
 }
 
 final class MapAreaPickerLocationChanged extends MapAreaPickerEvent {

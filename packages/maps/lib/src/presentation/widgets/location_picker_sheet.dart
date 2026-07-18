@@ -24,7 +24,7 @@ Future<LocationPickerResult?> showLocationPickerSheet(
         initialAddress: initialAddress,
         configuration: configuration,
         pinMarker: pinMarker,
-          onConfirmed: (result) => Navigator.of(sheetContext).pop(result),
+        onConfirmed: (result) => Navigator.of(sheetContext).pop(result),
       ),
     ),
   );

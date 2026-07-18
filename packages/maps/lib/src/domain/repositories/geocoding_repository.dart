@@ -2,6 +2,7 @@ import 'package:core/core.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:maps/src/domain/entities/geocoded_address.dart';
+import 'package:maps/src/domain/entities/serving_area.dart';
 
 /// Repository contract for geocoding operations.
 ///
@@ -18,7 +19,7 @@ abstract class GeocodingRepository {
     String? localeIdentifier,
   });
 
-  TaskEither<Failure, List<String>> nearbyAreaNames({
+  TaskEither<Failure, List<ServingArea>> nearbyAreaNames({
     required LatLng center,
     required double radiusKm,
     String? localeIdentifier,

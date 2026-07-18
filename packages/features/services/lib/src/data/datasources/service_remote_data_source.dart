@@ -8,44 +8,6 @@ abstract interface class ServiceRemoteDataSource {
   TaskEither<Failure, List<ServiceDto>> getServices();
 }
 
-/// Static services returned until the API is wired.
-const _kStaticServices = <ServiceDto>[
-  ServiceDto(id: 'svc-plumbing', name: 'Plumbing', category: 'Maintenance'),
-  ServiceDto(
-    id: 'svc-air-conditioning',
-    name: 'Air Conditioning',
-    category: 'Care',
-  ),
-  ServiceDto(id: 'svc-roofing', name: 'Roofing', category: 'Repair'),
-  ServiceDto(id: 'svc-oil-change', name: 'Oil Change', category: 'Maintenance'),
-  ServiceDto(
-    id: 'svc-battery-replacement',
-    name: 'Battery Replacement',
-    category: 'Repair',
-  ),
-  ServiceDto(id: 'svc-car-wash', name: 'Car Wash', category: 'Care'),
-  ServiceDto(
-    id: 'svc-engine-repair',
-    name: 'Engine Repair',
-    category: 'Repair',
-  ),
-  ServiceDto(
-    id: 'svc-tire-rotation',
-    name: 'Tire Rotation',
-    category: 'Maintenance',
-  ),
-  ServiceDto(
-    id: 'svc-brake-pad-replacement',
-    name: 'Brake Pad Replacement',
-    category: 'Repair',
-  ),
-  ServiceDto(
-    id: 'svc-transmission-fluid-check',
-    name: 'Transmission Fluid Check',
-    category: 'Maintenance',
-  ),
-];
-
 class ServiceRemoteDataSourceImpl implements ServiceRemoteDataSource {
   const ServiceRemoteDataSourceImpl(this._apiClient);
 
@@ -53,14 +15,30 @@ class ServiceRemoteDataSourceImpl implements ServiceRemoteDataSource {
 
   @override
   TaskEither<Failure, List<ServiceDto>> getServices() =>
-      TaskEither.right(_kStaticServices);
+      _apiClient.request<List<ServiceDto>>(
+        path: ServiceApiPaths.services,
+        method: RequestMethod.get,
+        parser: _parseGroupedServices,
+      );
 
-  // Future API integration:
-  // _apiClient.request<List<ServiceDto>>(
-  //   path: ServiceApiPaths.services,
-  //   method: RequestMethod.get,
-  //   parser: (data) => (data as List<dynamic>)
-  //       .map((e) => ServiceDto.fromJson(e as Map<String, dynamic>))
-  //       .toList(),
-  // );
+  static List<ServiceDto> _parseGroupedServices(dynamic raw) {
+    final json = raw as Map<String, dynamic>;
+    final groups = json['data'] as List<dynamic>;
+    final services = <ServiceDto>[];
+    for (final group in groups) {
+      final entry = group as Map<String, dynamic>;
+      final categoryJson = entry['category'] as Map<String, dynamic>;
+      final categoryName = categoryJson['name'] as String;
+      final items = entry['services'] as List<dynamic>;
+      for (final item in items) {
+        services.add(
+          ServiceDto.fromJsonWithCategory(
+            item as Map<String, dynamic>,
+            categoryName,
+          ),
+        );
+      }
+    }
+    return services;
+  }
 }

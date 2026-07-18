@@ -1,5 +1,6 @@
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
 import 'package:branches/src/domain/entities/branch_availability_mode.dart';
+import 'package:branches/src/domain/entities/branch_manager_entity.dart';
 import 'package:branches/src/domain/entities/branch_time_slot_entity.dart';
 import 'package:branches/src/domain/entities/branch_type.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_state.dart';
@@ -25,14 +26,21 @@ void main() {
     ),
   ];
 
+  const testCity = CityEntity(id: 'city-1', nameEn: 'Dubai', nameAr: 'دبي');
+  const testManager = BranchManagerEntity(
+    id: 'mgr-1',
+    fullName: 'Test Manager',
+    initials: 'TM',
+  );
+
   const completeDraft = AddBranchDraft(
     branchName: ' Test Branch ',
     branchType: BranchType.headquarters,
-    city: ' Dubai ',
+    selectedCity: testCity,
     phone: ' 0501234567 ',
     branchAddress: '123 Main St',
     pickedPosition: LatLng(25.0, 55.0),
-    selectedManagerId: 'mgr-1',
+    selectedManager: testManager,
     scheduleMode: BranchScheduleMode.company,
     customSchedule: customSchedule,
     coverageRadiusKm: 5.0,
@@ -66,17 +74,14 @@ void main() {
 
       expect(params.branchName, 'Test Branch');
       expect(params.branchType, BranchType.headquarters);
-      expect(params.city, 'Dubai');
-      expect(params.branchPhone, '0501234567');
+      expect(params.cityId, 'city-1');
+      expect(params.branchPhone, '+971501234567');
       expect(params.branchAddress, '123 Main St');
       expect(params.branchManagerId, 'mgr-1');
       expect(params.lat, 25.0);
       expect(params.lng, 55.0);
       expect(params.radiusKm, 5.0);
-      expect(
-        params.availabilityMode,
-        BranchAvailabilityMode.coreHours,
-      );
+      expect(params.availabilityMode, BranchAvailabilityMode.coreHours);
       expect(params.availability, companySchedule);
       expect(params.servingAreaPlaceIds, ['p1']);
       expect(params.serviceIds, ['s1']);
@@ -97,15 +102,14 @@ void main() {
       expect(params.availability, customSchedule);
     });
 
-    test('trims whitespace from text fields', () {
+    test('trims whitespace and normalizes phone', () {
       final params = AddBranchParamsMapper.toCreateParams(
         completeDraft,
         companySchedule: companySchedule,
       );
 
       expect(params.branchName, 'Test Branch');
-      expect(params.city, 'Dubai');
-      expect(params.branchPhone, '0501234567');
+      expect(params.branchPhone, '+971501234567');
     });
 
     test('handles null address gracefully', () {
@@ -119,25 +123,32 @@ void main() {
       expect(params.branchAddress, '');
     });
 
-    test('omits optional lists when empty', () {
-      const minimalDraft = AddBranchDraft(
-        branchName: 'Branch',
-        branchType: BranchType.mainBranch,
-        city: 'City',
-        phone: '050',
-        branchAddress: 'Addr',
-        pickedPosition: LatLng(25.0, 55.0),
-        selectedManagerId: 'mgr-1',
+    test('omits optional area and service lists when empty', () {
+      final draft = completeDraft.copyWith(
+        servingAreas: [],
+        selectedServices: [],
       );
 
       final params = AddBranchParamsMapper.toCreateParams(
-        minimalDraft,
+        draft,
         companySchedule: companySchedule,
       );
 
       expect(params.servingAreaPlaceIds, isNull);
       expect(params.serviceIds, isNull);
-      expect(params.workerIds, isNull);
+      expect(params.workerIds, ['w1']);
+    });
+
+    test('throws ArgumentError when workers is empty', () {
+      final draft = completeDraft.copyWith(selectedWorkers: []);
+
+      expect(
+        () => AddBranchParamsMapper.toCreateParams(
+          draft,
+          companySchedule: companySchedule,
+        ),
+        throwsArgumentError,
+      );
     });
 
     test('preserves BranchType through mapping', () {
@@ -156,16 +167,37 @@ void main() {
       expect(draft.branchType, BranchType.mainBranch);
     });
 
-    test('null position results in null lat/lng', () {
-      final draft = completeDraft.copyWith(pickedPosition: () => null);
+    test('servingAreaPlaceIds uses real placeIds, not synthetic latlng:', () {
+      final draft = completeDraft.copyWith(
+        servingAreas: const [
+          ServingArea(
+            placeId: 'ChIJ3QPOgqjK9T4R3KMk0f9ucsg',
+            name: 'Al Barsha',
+            address: '',
+            latLng: LatLng(25.0, 55.0),
+          ),
+          ServingArea(
+            placeId: 'ChIJRULP3yjK9T4RqYPvJA6bEHo',
+            name: 'Dubai Marina',
+            address: '',
+            latLng: LatLng(25.1, 55.1),
+          ),
+        ],
+      );
 
       final params = AddBranchParamsMapper.toCreateParams(
         draft,
         companySchedule: companySchedule,
       );
 
-      expect(params.lat, isNull);
-      expect(params.lng, isNull);
+      expect(params.servingAreaPlaceIds, isNotNull);
+      for (final id in params.servingAreaPlaceIds!) {
+        expect(id.startsWith('latlng:'), isFalse);
+      }
+      expect(params.servingAreaPlaceIds, [
+        'ChIJ3QPOgqjK9T4R3KMk0f9ucsg',
+        'ChIJRULP3yjK9T4RqYPvJA6bEHo',
+      ]);
     });
   });
 }

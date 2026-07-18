@@ -10,11 +10,15 @@ class AddBranchWizardStepShell extends StatelessWidget {
     required this.currentStep,
     required this.totalSteps,
     required this.child,
+    this.furthestCompletedStep,
+    this.onStepTapped,
     super.key,
   });
 
   final int currentStep;
   final int totalSteps;
+  final int? furthestCompletedStep;
+  final ValueChanged<int>? onStepTapped;
   final Widget child;
 
   @override
@@ -26,6 +30,8 @@ class AddBranchWizardStepShell extends StatelessWidget {
           return _Content(
             currentStep: currentStep,
             totalSteps: totalSteps,
+            furthestCompletedStep: furthestCompletedStep,
+            onStepTapped: onStepTapped,
             caption: hasCoverage
                 ? 'branches.add_branch.coverage_set_title'.tr()
                 : 'branches.add_branch.coverage_step_subtitle'.tr(),
@@ -38,6 +44,8 @@ class AddBranchWizardStepShell extends StatelessWidget {
     return _Content(
       currentStep: currentStep,
       totalSteps: totalSteps,
+      furthestCompletedStep: furthestCompletedStep,
+      onStepTapped: onStepTapped,
       caption: switch (currentStep) {
         3 => 'branches.add_branch.services_step_subtitle'.tr(),
         4 => 'branches.add_branch.workers_step_subtitle'.tr(),
@@ -54,10 +62,14 @@ class _Content extends StatelessWidget {
     required this.totalSteps,
     required this.caption,
     required this.child,
+    this.furthestCompletedStep,
+    this.onStepTapped,
   });
 
   final int currentStep;
   final int totalSteps;
+  final int? furthestCompletedStep;
+  final ValueChanged<int>? onStepTapped;
   final String caption;
   final Widget child;
 
@@ -76,6 +88,8 @@ class _Content extends StatelessWidget {
           child: AppWizardStepIndicator(
             currentStep: currentStep,
             totalSteps: totalSteps,
+            furthestCompletedStep: furthestCompletedStep,
+            onStepTapped: onStepTapped,
           ),
         ),
         Expanded(child: child),

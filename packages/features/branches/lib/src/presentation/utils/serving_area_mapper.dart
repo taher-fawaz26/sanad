@@ -2,24 +2,18 @@ import 'package:maps/maps.dart';
 
 /// Converts a generic [MapAreaPickerResult] into a branch [ServingArea].
 ///
-/// The chip label uses [MapAreaPickerResult.areaName] — a clean
-/// neighborhood/locality name — so manually added areas read the same as the
-/// auto-resolved coverage areas, not as raw street addresses. The full address
-/// is preserved on the entity for detail views.
+/// Only results with a real Google Place ID are accepted — the backend
+/// validates place IDs against its own area registry and rejects synthetic
+/// coordinate-based identifiers.
 ///
-/// When Maps returns no real Place ID (e.g. the user tapped the map instead of
-/// choosing an autocomplete prediction), we derive a stable id from the picked
-/// coordinates rather than the address. Keying on the address caused distinct
-/// picks that reverse-geocode to the same street/city to collapse into one
-/// identity, so a second manual area silently deduplicated against the first.
-ServingArea servingAreaFromPickerResult(MapAreaPickerResult result) {
+/// Returns `null` when the result carries no place ID (e.g. the user tapped
+/// the map rather than selecting an autocomplete prediction).
+ServingArea? servingAreaFromPickerResult(MapAreaPickerResult result) {
+  if (result.placeId == null) return null;
   return ServingArea(
-    placeId: result.placeId ?? _coordinateKey(result.position),
+    placeId: result.placeId!,
     name: result.areaName,
     address: result.address,
     latLng: result.position,
   );
 }
-
-String _coordinateKey(LatLng position) =>
-    'latlng:${position.latitude},${position.longitude}';

@@ -31,6 +31,7 @@ class MapAreaPicker extends StatefulWidget {
     this.pinMarker,
     this.mapHeight = 320,
     this.onConfirmed,
+    this.requirePlaceId = false,
     super.key,
   });
 
@@ -42,6 +43,10 @@ class MapAreaPicker extends StatefulWidget {
   final Widget? pinMarker;
   final double mapHeight;
   final ValueChanged<MapAreaPickerResult>? onConfirmed;
+
+  /// When true, the confirm button is disabled unless the current location
+  /// was selected from search results (i.e. has a real Google Place ID).
+  final bool requirePlaceId;
 
   @override
   State<MapAreaPicker> createState() => _MapAreaPickerState();
@@ -220,18 +225,46 @@ class _MapAreaPickerState extends State<MapAreaPicker> {
   }
 
   Widget _buildConfirmButton() {
-    return BlocSelector<MapAreaPickerBloc, MapAreaPickerState, bool>(
-      selector: (state) => state.canConfirm,
-      builder: (context, canConfirm) {
-        return AppButton(
-          label: widget.labels.confirm,
-          onPressed: canConfirm
-              ? () {
-                  context.read<MapAreaPickerBloc>().add(
-                    const MapAreaPickerConfirmed(),
-                  );
-                }
-              : null,
+    return BlocBuilder<MapAreaPickerBloc, MapAreaPickerState>(
+      buildWhen: (prev, curr) =>
+          prev.canConfirm != curr.canConfirm ||
+          prev.selectedPlaceId != curr.selectedPlaceId,
+      builder: (context, state) {
+        final hasPlaceId = state.selectedPlaceId != null;
+        final enabled =
+            state.canConfirm && (!widget.requirePlaceId || hasPlaceId);
+        final showHint =
+            widget.requirePlaceId &&
+            state.canConfirm &&
+            !hasPlaceId &&
+            widget.labels.placeIdRequiredHint != null;
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (showHint)
+              Padding(
+                padding: EdgeInsets.only(bottom: AppSpacing.sm),
+                child: Text(
+                  widget.labels.placeIdRequiredHint!,
+                  style: context.appTypography.smallNormal.copyWith(
+                    color: context.appColors.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            AppButton(
+              label: widget.labels.confirm,
+              onPressed: enabled
+                  ? () {
+                      context.read<MapAreaPickerBloc>().add(
+                        const MapAreaPickerConfirmed(),
+                      );
+                    }
+                  : null,
+            ),
+          ],
         );
       },
     );
@@ -253,11 +286,11 @@ class _SearchState extends Equatable {
 
   @override
   List<Object?> get props => [
-        predictions,
-        searchStatus,
-        searchQuery,
-        searchError,
-      ];
+    predictions,
+    searchStatus,
+    searchQuery,
+    searchError,
+  ];
 }
 
 class _MapState extends Equatable {
@@ -320,7 +353,8 @@ class _MapAreaPickerMapView extends StatelessWidget {
               rotateGesturesEnabled: false,
             ),
             IgnorePointer(
-              child: pinMarker ??
+              child:
+                  pinMarker ??
                   AppSvgPicture.asset(
                     AppSvgs.mapPinMarker,
                     width: responsiveDimension(48),
@@ -382,6 +416,7 @@ Future<MapAreaPickerResult?> showMapAreaPicker(
   String? localeIdentifier,
   MapConfiguration configuration = const MapConfiguration(),
   Widget? pinMarker,
+  bool requirePlaceId = false,
 }) {
   return showAppBottomSheet<MapAreaPickerResult>(
     context: context,
@@ -395,6 +430,7 @@ Future<MapAreaPickerResult?> showMapAreaPicker(
         localeIdentifier: localeIdentifier,
         configuration: configuration,
         pinMarker: pinMarker,
+        requirePlaceId: requirePlaceId,
         onConfirmed: (result) => Navigator.of(sheetContext).pop(result),
       ),
     ),

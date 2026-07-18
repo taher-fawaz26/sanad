@@ -86,7 +86,8 @@
       "action_delete": "Delete branch",
       "action_set_maintenance": "Set to Maintenance",
       "action_set_active": "Set to Active",
-      "status_update_error": "Failed to update branch status"
+      "status_update_error": "Failed to update branch status",
+      "no_team_members": "No team members assigned"
     },
     "add_branch": {
       "title": "Add branch",
@@ -104,6 +105,9 @@
       "branch_type_warehouse": "Warehouse",
       "city": "City",
       "city_hint": "e.g. Dubai",
+      "city_select_hint": "Select city",
+      "city_search_hint": "Search city",
+      "city_empty": "No cities found",
       "location": "Address",
       "location_hint": "e.g. Marina Plaza, Tower 2",
       "location_set": "set",
@@ -187,7 +191,8 @@
       "no_areas_found": "No areas found",
       "search_error": "Search failed. Please try again.",
       "done": "Done",
-      "confirm": "Confirm Coverage"
+      "confirm": "Confirm Coverage",
+      "select_from_search_hint": "Please select an area from the search results."
     }
   },
   "services": {

@@ -56,22 +56,21 @@ abstract final class BranchScheduleFormatter {
 
   static List<BranchAvailabilityEntity> copyAvailability(
     List<BranchAvailabilityEntity> source,
-  ) =>
-      source
-          .map(
-            (entry) => BranchAvailabilityEntity(
-              day: entry.day,
-              slots: entry.slots
-                  .map(
-                    (slot) => BranchTimeSlotEntity(
-                      from: slot.from,
-                      to: slot.to,
-                    ),
-                  )
-                  .toList(),
-            ),
-          )
-          .toList();
+  ) => source
+      .map(
+        (entry) => BranchAvailabilityEntity(
+          day: entry.day,
+          slots: entry.slots
+              .map(
+                (slot) => BranchTimeSlotEntity(
+                  from: slot.from,
+                  to: slot.to,
+                ),
+              )
+              .toList(),
+        ),
+      )
+      .toList();
 
   static TimeOfDay? _parseTime(String time24) {
     final parts = time24.split(':');

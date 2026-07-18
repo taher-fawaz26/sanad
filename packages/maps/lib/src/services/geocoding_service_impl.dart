@@ -5,6 +5,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:maps/src/domain/entities/geocoded_address.dart';
+import 'package:maps/src/domain/entities/serving_area.dart';
 import 'package:maps/src/services/geocoding_service.dart';
 import 'package:maps/src/services/location_failure_codes.dart';
 
@@ -99,7 +100,7 @@ class GeocodingServiceImpl implements GeocodingService {
   }
 
   @override
-  TaskEither<Failure, List<String>> nearbyAreaNames({
+  TaskEither<Failure, List<ServingArea>> nearbyAreaNames({
     required LatLng center,
     required double radiusKm,
     String? localeIdentifier,
@@ -127,14 +128,27 @@ class GeocodingServiceImpl implements GeocodingService {
 
         // Sample concurrently; individual failures are tolerated so a single
         // throttled lookup doesn't discard every other resolved area.
-        final resolved = await Future.wait(samplePoints.map(_areaNameAt));
+        final resolved = await Future.wait(samplePoints.map(_areaAt));
 
-        final names = <String>{
-          for (final name in resolved)
-            if (name != null && name.isNotEmpty) name,
-        };
+        // Deduplicate by name, keeping the first occurrence's coordinates so
+        // each ServingArea carries a stable coordinate-based place ID.
+        final seenNames = <String>{};
+        final areas = <ServingArea>[];
+        for (final entry in resolved) {
+          if (entry == null) continue;
+          final (point, name) = entry;
+          if (!seenNames.add(name)) continue;
+          areas.add(
+            ServingArea(
+              placeId: _coordinateKey(point),
+              name: name,
+              address: '',
+              latLng: point,
+            ),
+          );
+        }
 
-        return names.toList(growable: false);
+        return areas;
       },
       (error, _) => LocationFailure(
         message: error.toString(),
@@ -143,20 +157,26 @@ class GeocodingServiceImpl implements GeocodingService {
     );
   }
 
-  /// Reverse-geocodes a single [point] to an area name, swallowing errors so
-  /// callers can sample many points without one failure aborting the batch.
-  Future<String?> _areaNameAt(LatLng point) async {
+  /// Reverse-geocodes a single [point] to a (position, name) pair, swallowing
+  /// errors so callers can sample many points without one failure aborting the
+  /// batch. Returns null when no area name can be resolved for the point.
+  Future<(LatLng, String)?> _areaAt(LatLng point) async {
     try {
       final placemarks = await placemarkFromCoordinates(
         point.latitude,
         point.longitude,
       );
       if (placemarks.isEmpty) return null;
-      return _areaNameFromPlacemark(placemarks.first);
+      final name = _areaNameFromPlacemark(placemarks.first);
+      if (name == null || name.isEmpty) return null;
+      return (point, name);
     } on Exception {
       return null;
     }
   }
+
+  static String _coordinateKey(LatLng position) =>
+      'latlng:${position.latitude},${position.longitude}';
 
   /// Picks the best human-friendly area name from a placemark, preferring the
   /// most local, neighborhood-like value and falling back outward.
@@ -192,7 +212,8 @@ class GeocodingServiceImpl implements GeocodingService {
       math.sin(latRad) * math.cos(angularDistance) +
           math.cos(latRad) * math.sin(angularDistance) * math.cos(bearingRad),
     );
-    final newLng = lngRad +
+    final newLng =
+        lngRad +
         math.atan2(
           math.sin(bearingRad) * math.sin(angularDistance) * math.cos(latRad),
           math.cos(angularDistance) - math.sin(latRad) * math.sin(newLat),

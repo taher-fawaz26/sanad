@@ -1,7 +1,7 @@
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
-import 'package:branches/src/domain/entities/branch_manager_entity.dart';
 import 'package:branches/src/domain/entities/paginated_branches_entity.dart';
+import 'package:branches/src/domain/entities/paginated_managers_entity.dart';
 import 'package:branches/src/domain/usecases/branch_usecase_params.dart';
 import 'package:core/core.dart';
 import 'package:fpdart/fpdart.dart';
@@ -25,5 +25,7 @@ abstract interface class BranchRepository {
 
   TaskEither<Failure, List<BranchAvailabilityEntity>> getCompanySchedule();
 
-  TaskEither<Failure, List<BranchManagerEntity>> getBranchManagers();
+  TaskEither<Failure, PaginatedManagersEntity> getBranchManagers(
+    GetBranchManagersParams params,
+  );
 }

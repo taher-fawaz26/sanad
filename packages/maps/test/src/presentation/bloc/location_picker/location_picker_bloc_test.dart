@@ -57,15 +57,14 @@ void main() {
   late _MockSearchPlaces searchPlaces;
   late _MockGetPlaceDetails getPlaceDetails;
 
-  LocationPickerBloc buildBloc({bool withPlaces = false}) =>
-      LocationPickerBloc(
-        getCurrentLocationUseCase: getCurrentLocation,
-        reverseGeocodeUseCase: reverseGeocode,
-        forwardGeocodeUseCase: forwardGeocode,
-        openLocationSettingsUseCase: openSettings,
-        searchPlacesUseCase: withPlaces ? searchPlaces : null,
-        getPlaceDetailsUseCase: withPlaces ? getPlaceDetails : null,
-      );
+  LocationPickerBloc buildBloc({bool withPlaces = false}) => LocationPickerBloc(
+    getCurrentLocationUseCase: getCurrentLocation,
+    reverseGeocodeUseCase: reverseGeocode,
+    forwardGeocodeUseCase: forwardGeocode,
+    openLocationSettingsUseCase: openSettings,
+    searchPlacesUseCase: withPlaces ? searchPlaces : null,
+    getPlaceDetailsUseCase: withPlaces ? getPlaceDetails : null,
+  );
 
   setUpAll(() {
     registerFallbackValue(const NoParams());
@@ -122,8 +121,9 @@ void main() {
       blocTest<LocationPickerBloc, LocationPickerState>(
         'with initial position only -> geocodes address',
         build: () {
-          when(() => reverseGeocode(any()))
-              .thenReturn(TaskEither.right(_tGeocoded));
+          when(
+            () => reverseGeocode(any()),
+          ).thenReturn(TaskEither.right(_tGeocoded));
           return buildBloc();
         },
         act: (bloc) => bloc.add(
@@ -146,10 +146,12 @@ void main() {
       blocTest<LocationPickerBloc, LocationPickerState>(
         'without initial position -> gets current location',
         build: () {
-          when(() => getCurrentLocation(any()))
-              .thenReturn(TaskEither.right(_tPosition));
-          when(() => reverseGeocode(any()))
-              .thenReturn(TaskEither.right(_tGeocoded));
+          when(
+            () => getCurrentLocation(any()),
+          ).thenReturn(TaskEither.right(_tPosition));
+          when(
+            () => reverseGeocode(any()),
+          ).thenReturn(TaskEither.right(_tGeocoded));
           return buildBloc();
         },
         act: (bloc) => bloc.add(LocationPickerStarted()),
@@ -175,8 +177,9 @@ void main() {
       blocTest<LocationPickerBloc, LocationPickerState>(
         'permission denied -> permissionDenied status',
         build: () {
-          when(() => getCurrentLocation(any()))
-              .thenReturn(TaskEither.left(_tFailure));
+          when(
+            () => getCurrentLocation(any()),
+          ).thenReturn(TaskEither.left(_tFailure));
           return buildBloc();
         },
         act: (bloc) => bloc.add(LocationPickerStarted()),
@@ -199,14 +202,15 @@ void main() {
       blocTest<LocationPickerBloc, LocationPickerState>(
         'forward geocodes when Places is disabled',
         build: () {
-          when(() => forwardGeocode(any()))
-              .thenReturn(TaskEither.right(_tPosition));
-          when(() => reverseGeocode(any()))
-              .thenReturn(TaskEither.right(_tGeocoded));
+          when(
+            () => forwardGeocode(any()),
+          ).thenReturn(TaskEither.right(_tPosition));
+          when(
+            () => reverseGeocode(any()),
+          ).thenReturn(TaskEither.right(_tGeocoded));
           return buildBloc();
         },
-        act: (bloc) =>
-            bloc.add(LocationPickerSearchSubmitted('Dubai Marina')),
+        act: (bloc) => bloc.add(LocationPickerSearchSubmitted('Dubai Marina')),
         expect: () => [
           isA<LocationPickerState>().having(
             (s) => s.status,
@@ -220,8 +224,11 @@ void main() {
                 LocationPickerStatus.geocoding,
               )
               .having((s) => s.position, 'position', _tPosition),
-          isA<LocationPickerState>()
-              .having((s) => s.status, 'status', LocationPickerStatus.ready),
+          isA<LocationPickerState>().having(
+            (s) => s.status,
+            'status',
+            LocationPickerStatus.ready,
+          ),
         ],
       );
 
@@ -238,8 +245,7 @@ void main() {
         seed: () => LocationPickerState(
           predictions: [_tPrediction],
         ),
-        act: (bloc) =>
-            bloc.add(LocationPickerSearchSubmitted('Dubai Marina')),
+        act: (bloc) => bloc.add(LocationPickerSearchSubmitted('Dubai Marina')),
         expect: () => <LocationPickerState>[],
         verify: (_) {
           verifyNever(() => forwardGeocode(any()));
@@ -250,24 +256,31 @@ void main() {
       blocTest<LocationPickerBloc, LocationPickerState>(
         'forward geocodes when Places enabled but no predictions',
         build: () {
-          when(() => forwardGeocode(any()))
-              .thenReturn(TaskEither.right(_tPosition));
-          when(() => reverseGeocode(any()))
-              .thenReturn(TaskEither.right(_tGeocoded));
+          when(
+            () => forwardGeocode(any()),
+          ).thenReturn(TaskEither.right(_tPosition));
+          when(
+            () => reverseGeocode(any()),
+          ).thenReturn(TaskEither.right(_tGeocoded));
           return buildBloc(withPlaces: true);
         },
-        act: (bloc) =>
-            bloc.add(LocationPickerSearchSubmitted('Dubai Marina')),
+        act: (bloc) => bloc.add(LocationPickerSearchSubmitted('Dubai Marina')),
         expect: () => [
           isA<LocationPickerState>().having(
             (s) => s.status,
             'status',
             LocationPickerStatus.geocoding,
           ),
-          isA<LocationPickerState>()
-              .having((s) => s.position, 'position', _tPosition),
-          isA<LocationPickerState>()
-              .having((s) => s.status, 'status', LocationPickerStatus.ready),
+          isA<LocationPickerState>().having(
+            (s) => s.position,
+            'position',
+            _tPosition,
+          ),
+          isA<LocationPickerState>().having(
+            (s) => s.status,
+            'status',
+            LocationPickerStatus.ready,
+          ),
         ],
       );
     });
@@ -301,8 +314,9 @@ void main() {
       blocTest<LocationPickerBloc, LocationPickerState>(
         'returns predictions on valid query',
         build: () {
-          when(() => searchPlaces(any()))
-              .thenReturn(TaskEither.right([_tPrediction]));
+          when(
+            () => searchPlaces(any()),
+          ).thenReturn(TaskEither.right([_tPrediction]));
           return buildBloc(withPlaces: true);
         },
         act: (bloc) => bloc.add(LocationPickerQueryChanged('dubai')),
@@ -332,8 +346,7 @@ void main() {
       blocTest<LocationPickerBloc, LocationPickerState>(
         'emits empty status when no predictions found',
         build: () {
-          when(() => searchPlaces(any()))
-              .thenReturn(TaskEither.right([]));
+          when(() => searchPlaces(any())).thenReturn(TaskEither.right([]));
           return buildBloc(withPlaces: true);
         },
         act: (bloc) => bloc.add(LocationPickerQueryChanged('xyz')),
@@ -356,8 +369,9 @@ void main() {
       blocTest<LocationPickerBloc, LocationPickerState>(
         'emits failure status on search error',
         build: () {
-          when(() => searchPlaces(any()))
-              .thenReturn(TaskEither.left(_tFailure));
+          when(
+            () => searchPlaces(any()),
+          ).thenReturn(TaskEither.left(_tFailure));
           return buildBloc(withPlaces: true);
         },
         act: (bloc) => bloc.add(LocationPickerQueryChanged('xyz')),
@@ -380,16 +394,23 @@ void main() {
       blocTest<LocationPickerBloc, LocationPickerState>(
         'tracks searchQuery in state',
         build: () {
-          when(() => searchPlaces(any()))
-              .thenReturn(TaskEither.right([_tPrediction]));
+          when(
+            () => searchPlaces(any()),
+          ).thenReturn(TaskEither.right([_tPrediction]));
           return buildBloc(withPlaces: true);
         },
         act: (bloc) => bloc.add(LocationPickerQueryChanged('dubai')),
         expect: () => [
-          isA<LocationPickerState>()
-              .having((s) => s.searchQuery, 'searchQuery', 'dubai'),
-          isA<LocationPickerState>()
-              .having((s) => s.searchQuery, 'searchQuery', 'dubai'),
+          isA<LocationPickerState>().having(
+            (s) => s.searchQuery,
+            'searchQuery',
+            'dubai',
+          ),
+          isA<LocationPickerState>().having(
+            (s) => s.searchQuery,
+            'searchQuery',
+            'dubai',
+          ),
         ],
       );
     });
@@ -398,10 +419,12 @@ void main() {
       blocTest<LocationPickerBloc, LocationPickerState>(
         'uses place details when available',
         build: () {
-          when(() => getPlaceDetails(any()))
-              .thenReturn(TaskEither.right(_tPosition));
-          when(() => reverseGeocode(any()))
-              .thenReturn(TaskEither.right(_tGeocoded));
+          when(
+            () => getPlaceDetails(any()),
+          ).thenReturn(TaskEither.right(_tPosition));
+          when(
+            () => reverseGeocode(any()),
+          ).thenReturn(TaskEither.right(_tGeocoded));
           return buildBloc(withPlaces: true);
         },
         act: (bloc) => bloc.add(
@@ -415,10 +438,16 @@ void main() {
                 LocationPickerStatus.geocoding,
               )
               .having((s) => s.predictions, 'predictions', isEmpty),
-          isA<LocationPickerState>()
-              .having((s) => s.position, 'position', _tPosition),
-          isA<LocationPickerState>()
-              .having((s) => s.status, 'status', LocationPickerStatus.ready),
+          isA<LocationPickerState>().having(
+            (s) => s.position,
+            'position',
+            _tPosition,
+          ),
+          isA<LocationPickerState>().having(
+            (s) => s.status,
+            'status',
+            LocationPickerStatus.ready,
+          ),
         ],
       );
     });

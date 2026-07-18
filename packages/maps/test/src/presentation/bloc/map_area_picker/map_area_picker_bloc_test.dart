@@ -40,12 +40,11 @@ void main() {
   late _MockSearchPlaces searchPlaces;
   late _MockGetPlaceDetails getPlaceDetails;
 
-  MapAreaPickerBloc buildBloc({bool withPlaces = false}) =>
-      MapAreaPickerBloc(
-        reverseGeocodeUseCase: reverseGeocode,
-        searchPlacesUseCase: withPlaces ? searchPlaces : null,
-        getPlaceDetailsUseCase: withPlaces ? getPlaceDetails : null,
-      );
+  MapAreaPickerBloc buildBloc({bool withPlaces = false}) => MapAreaPickerBloc(
+    reverseGeocodeUseCase: reverseGeocode,
+    searchPlacesUseCase: withPlaces ? searchPlaces : null,
+    getPlaceDetailsUseCase: withPlaces ? getPlaceDetails : null,
+  );
 
   setUpAll(() {
     registerFallbackValue(
@@ -95,8 +94,9 @@ void main() {
       blocTest<MapAreaPickerBloc, MapAreaPickerState>(
         'with initial position only -> geocodes address',
         build: () {
-          when(() => reverseGeocode(any()))
-              .thenReturn(TaskEither.right(_tGeocoded));
+          when(
+            () => reverseGeocode(any()),
+          ).thenReturn(TaskEither.right(_tGeocoded));
           return buildBloc();
         },
         act: (bloc) => bloc.add(
@@ -121,8 +121,9 @@ void main() {
       blocTest<MapAreaPickerBloc, MapAreaPickerState>(
         'user move clears selected place and reverse geocodes',
         build: () {
-          when(() => reverseGeocode(any()))
-              .thenReturn(TaskEither.right(_tGeocoded));
+          when(
+            () => reverseGeocode(any()),
+          ).thenReturn(TaskEither.right(_tGeocoded));
           return buildBloc();
         },
         seed: () => const MapAreaPickerState(
@@ -163,18 +164,18 @@ void main() {
       blocTest<MapAreaPickerBloc, MapAreaPickerState>(
         'returns predictions on success',
         build: () {
-          when(() => searchPlaces(any()))
-              .thenReturn(TaskEither.right([_tPrediction]));
+          when(
+            () => searchPlaces(any()),
+          ).thenReturn(TaskEither.right([_tPrediction]));
           return buildBloc(withPlaces: true);
         },
         act: (bloc) => bloc.add(MapAreaPickerQueryChanged('dubai')),
         expect: () => [
-          isA<MapAreaPickerState>()
-              .having(
-                (s) => s.searchStatus,
-                'searchStatus',
-                PlaceSearchStatus.searching,
-              ),
+          isA<MapAreaPickerState>().having(
+            (s) => s.searchStatus,
+            'searchStatus',
+            PlaceSearchStatus.searching,
+          ),
           isA<MapAreaPickerState>()
               .having((s) => s.predictions, 'predictions', [_tPrediction])
               .having(
@@ -190,10 +191,12 @@ void main() {
       blocTest<MapAreaPickerBloc, MapAreaPickerState>(
         'resolves place details and reverse geocodes',
         build: () {
-          when(() => getPlaceDetails(any()))
-              .thenReturn(TaskEither.right(_tPosition));
-          when(() => reverseGeocode(any()))
-              .thenReturn(TaskEither.right(_tGeocoded));
+          when(
+            () => getPlaceDetails(any()),
+          ).thenReturn(TaskEither.right(_tPosition));
+          when(
+            () => reverseGeocode(any()),
+          ).thenReturn(TaskEither.right(_tGeocoded));
           return buildBloc(withPlaces: true);
         },
         act: (bloc) => bloc.add(
@@ -209,8 +212,11 @@ void main() {
               .having((s) => s.selectedPlaceId, 'selectedPlaceId', 'abc')
               .having((s) => s.selectedTitle, 'selectedTitle', 'Dubai Marina')
               .having((s) => s.predictions, 'predictions', isEmpty),
-          isA<MapAreaPickerState>()
-              .having((s) => s.position, 'position', _tPosition),
+          isA<MapAreaPickerState>().having(
+            (s) => s.position,
+            'position',
+            _tPosition,
+          ),
           isA<MapAreaPickerState>()
               .having((s) => s.status, 'status', MapAreaPickerStatus.ready)
               .having((s) => s.selectedPlaceId, 'selectedPlaceId', 'abc'),
@@ -269,7 +275,11 @@ void main() {
         expect: () => [
           isA<MapAreaPickerState>()
               .having((s) => s.pickedResult?.placeId, 'placeId', 'abc')
-              .having((s) => s.pickedResult?.areaName, 'areaName', 'Dubai Marina'),
+              .having(
+                (s) => s.pickedResult?.areaName,
+                'areaName',
+                'Dubai Marina',
+              ),
         ],
       );
     });

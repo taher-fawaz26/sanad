@@ -9,8 +9,8 @@ import 'package:maps/src/services/places_provider.dart';
 
 class GooglePlacesProvider implements PlacesProvider {
   GooglePlacesProvider({required String apiKey, required Dio dio})
-      : _apiKey = apiKey,
-        _dio = dio;
+    : _apiKey = apiKey,
+      _dio = dio;
 
   final String _apiKey;
   final Dio _dio;
@@ -97,8 +97,7 @@ class GooglePlacesProvider implements PlacesProvider {
 
   static void _throwOnStatus(String status, Map<String, dynamic> json) {
     if (status == 'OK') return;
-    final errorMsg =
-        json['error_message'] as String? ?? 'Places API: $status';
+    final errorMsg = json['error_message'] as String? ?? 'Places API: $status';
     throw switch (status) {
       'REQUEST_DENIED' => _PlacesApiKeyException(errorMsg),
       'OVER_QUERY_LIMIT' => _PlacesQuotaException(errorMsg),

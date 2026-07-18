@@ -50,9 +50,7 @@ class ServingAreaChips extends StatelessWidget {
                     color: context.appColors.primary,
                   )
                 : null,
-            onTap: onRemoved != null
-                ? () => onRemoved!(area)
-                : null,
+            onTap: onRemoved != null ? () => onRemoved!(area) : null,
           ),
       ],
     );

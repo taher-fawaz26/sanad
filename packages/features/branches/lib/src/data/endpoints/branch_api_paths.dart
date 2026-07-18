@@ -9,7 +9,7 @@ abstract final class BranchApiPaths {
   static String branchStatus(String id) => 'branches/$id/status';
 
   /// Company-wide working hours used as the default branch schedule.
-  static const String companySchedule = 'company/schedule';
+  static const String companySchedule = 'profile/availability';
 
   /// Workers eligible to be assigned as branch managers.
   static const String branchManagers = 'workers';

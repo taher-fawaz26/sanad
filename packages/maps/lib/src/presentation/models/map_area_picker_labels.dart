@@ -8,6 +8,7 @@ class MapAreaPickerLabels {
     required this.addressHint,
     required this.genericError,
     required this.confirm,
+    this.placeIdRequiredHint,
   });
 
   final String title;
@@ -18,4 +19,8 @@ class MapAreaPickerLabels {
   final String addressHint;
   final String genericError;
   final String confirm;
+
+  /// Shown below the address field when [MapAreaPicker.requirePlaceId] is true
+  /// and the current location was not selected from search results.
+  final String? placeIdRequiredHint;
 }

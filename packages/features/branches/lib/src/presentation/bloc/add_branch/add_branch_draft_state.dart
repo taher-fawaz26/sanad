@@ -1,4 +1,5 @@
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
+import 'package:branches/src/domain/entities/branch_manager_entity.dart';
 import 'package:branches/src/domain/entities/branch_type.dart';
 import 'package:branches/src/presentation/widgets/branch_schedule_section.dart';
 import 'package:equatable/equatable.dart';
@@ -10,11 +11,11 @@ class AddBranchDraft extends Equatable {
   const AddBranchDraft({
     this.branchName = '',
     this.branchType = BranchType.mainBranch,
-    this.city = '',
+    this.selectedCity,
     this.phone = '',
     this.branchAddress,
     this.pickedPosition,
-    this.selectedManagerId,
+    this.selectedManager,
     this.scheduleMode = BranchScheduleMode.company,
     this.customSchedule = const [],
     this.coverageRadiusKm,
@@ -25,11 +26,11 @@ class AddBranchDraft extends Equatable {
 
   final String branchName;
   final BranchType branchType;
-  final String city;
+  final CityEntity? selectedCity;
   final String phone;
   final String? branchAddress;
   final LatLng? pickedPosition;
-  final String? selectedManagerId;
+  final BranchManagerEntity? selectedManager;
   final BranchScheduleMode scheduleMode;
   final List<BranchAvailabilityEntity> customSchedule;
   final double? coverageRadiusKm;
@@ -39,11 +40,11 @@ class AddBranchDraft extends Equatable {
 
   bool get isStepOneComplete =>
       branchName.trim().isNotEmpty &&
-      city.trim().isNotEmpty &&
+      selectedCity != null &&
       phone.trim().isNotEmpty &&
       branchAddress != null &&
       pickedPosition != null &&
-      selectedManagerId != null;
+      selectedManager != null;
 
   bool get isStepTwoComplete =>
       coverageRadiusKm != null &&
@@ -57,54 +58,53 @@ class AddBranchDraft extends Equatable {
   AddBranchDraft copyWith({
     String? branchName,
     BranchType? branchType,
-    String? city,
+    CityEntity? Function()? selectedCity,
     String? phone,
     String? Function()? branchAddress,
     LatLng? Function()? pickedPosition,
-    String? Function()? selectedManagerId,
+    BranchManagerEntity? Function()? selectedManager,
     BranchScheduleMode? scheduleMode,
     List<BranchAvailabilityEntity>? customSchedule,
     double? Function()? coverageRadiusKm,
     List<ServingArea>? servingAreas,
     List<ServiceEntity>? selectedServices,
     List<WorkerEntity>? selectedWorkers,
-  }) =>
-      AddBranchDraft(
-        branchName: branchName ?? this.branchName,
-        branchType: branchType ?? this.branchType,
-        city: city ?? this.city,
-        phone: phone ?? this.phone,
-        branchAddress:
-            branchAddress != null ? branchAddress() : this.branchAddress,
-        pickedPosition:
-            pickedPosition != null ? pickedPosition() : this.pickedPosition,
-        selectedManagerId: selectedManagerId != null
-            ? selectedManagerId()
-            : this.selectedManagerId,
-        scheduleMode: scheduleMode ?? this.scheduleMode,
-        customSchedule: customSchedule ?? this.customSchedule,
-        coverageRadiusKm: coverageRadiusKm != null
-            ? coverageRadiusKm()
-            : this.coverageRadiusKm,
-        servingAreas: servingAreas ?? this.servingAreas,
-        selectedServices: selectedServices ?? this.selectedServices,
-        selectedWorkers: selectedWorkers ?? this.selectedWorkers,
-      );
+  }) => AddBranchDraft(
+    branchName: branchName ?? this.branchName,
+    branchType: branchType ?? this.branchType,
+    selectedCity: selectedCity != null ? selectedCity() : this.selectedCity,
+    phone: phone ?? this.phone,
+    branchAddress: branchAddress != null ? branchAddress() : this.branchAddress,
+    pickedPosition: pickedPosition != null
+        ? pickedPosition()
+        : this.pickedPosition,
+    selectedManager: selectedManager != null
+        ? selectedManager()
+        : this.selectedManager,
+    scheduleMode: scheduleMode ?? this.scheduleMode,
+    customSchedule: customSchedule ?? this.customSchedule,
+    coverageRadiusKm: coverageRadiusKm != null
+        ? coverageRadiusKm()
+        : this.coverageRadiusKm,
+    servingAreas: servingAreas ?? this.servingAreas,
+    selectedServices: selectedServices ?? this.selectedServices,
+    selectedWorkers: selectedWorkers ?? this.selectedWorkers,
+  );
 
   @override
   List<Object?> get props => [
-        branchName,
-        branchType,
-        city,
-        phone,
-        branchAddress,
-        pickedPosition,
-        selectedManagerId,
-        scheduleMode,
-        customSchedule,
-        coverageRadiusKm,
-        servingAreas,
-        selectedServices,
-        selectedWorkers,
-      ];
+    branchName,
+    branchType,
+    selectedCity,
+    phone,
+    branchAddress,
+    pickedPosition,
+    selectedManager,
+    scheduleMode,
+    customSchedule,
+    coverageRadiusKm,
+    servingAreas,
+    selectedServices,
+    selectedWorkers,
+  ];
 }

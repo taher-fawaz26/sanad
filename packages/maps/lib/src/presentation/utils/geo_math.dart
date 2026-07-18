@@ -23,17 +23,13 @@ abstract final class GeoMath {
 
     final newLat = math.asin(
       math.sin(latRad) * math.cos(angularDistance) +
-          math.cos(latRad) *
-              math.sin(angularDistance) *
-              math.cos(bearingRad),
+          math.cos(latRad) * math.sin(angularDistance) * math.cos(bearingRad),
     );
-    final newLng = lngRad +
+    final newLng =
+        lngRad +
         math.atan2(
-          math.sin(bearingRad) *
-              math.sin(angularDistance) *
-              math.cos(latRad),
-          math.cos(angularDistance) -
-              math.sin(latRad) * math.sin(newLat),
+          math.sin(bearingRad) * math.sin(angularDistance) * math.cos(latRad),
+          math.cos(angularDistance) - math.sin(latRad) * math.sin(newLat),
         );
 
     return LatLng(
@@ -64,7 +60,8 @@ abstract final class GeoMath {
     final aLat = a.latitude * math.pi / 180;
     final bLat = b.latitude * math.pi / 180;
 
-    final h = math.sin(dLat / 2) * math.sin(dLat / 2) +
+    final h =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
         math.cos(aLat) *
             math.cos(bLat) *
             math.sin(dLng / 2) *

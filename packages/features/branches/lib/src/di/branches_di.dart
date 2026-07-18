@@ -61,7 +61,6 @@ abstract final class BranchesDI {
         () => AddBranchBloc(
           createBranchUseCase: sl<CreateBranchUseCase>(),
           getCompanyScheduleUseCase: sl<GetCompanyScheduleUseCase>(),
-          getBranchManagersUseCase: sl<GetBranchManagersUseCase>(),
         ),
       )
       ..registerFactory(

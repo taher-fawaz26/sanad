@@ -13,8 +13,7 @@ class GetPlaceDetailsParams extends Equatable {
   List<Object?> get props => [placeId];
 }
 
-class GetPlaceDetailsUseCase
-    implements UseCase<LatLng, GetPlaceDetailsParams> {
+class GetPlaceDetailsUseCase implements UseCase<LatLng, GetPlaceDetailsParams> {
   const GetPlaceDetailsUseCase(this._repository);
 
   final PlacesRepository _repository;

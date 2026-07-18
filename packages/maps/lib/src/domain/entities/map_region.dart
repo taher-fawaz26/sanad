@@ -12,9 +12,9 @@ class MapRegion extends Equatable {
   final LatLng northeast;
 
   LatLng get center => LatLng(
-        (southwest.latitude + northeast.latitude) / 2,
-        (southwest.longitude + northeast.longitude) / 2,
-      );
+    (southwest.latitude + northeast.latitude) / 2,
+    (southwest.longitude + northeast.longitude) / 2,
+  );
 
   bool contains(LatLng point) {
     return point.latitude >= southwest.latitude &&

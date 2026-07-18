@@ -35,9 +35,7 @@ class MapZoomControls extends StatelessWidget {
               AppIconButton(
                 icon: Icons.add,
                 size: AppIconButtonSize.large,
-                onTap: zoom < maxZoom
-                    ? cameraController.zoomIn
-                    : null,
+                onTap: zoom < maxZoom ? cameraController.zoomIn : null,
               ),
               SizedBox(
                 width: responsiveDimension(32),
@@ -49,9 +47,7 @@ class MapZoomControls extends StatelessWidget {
               AppIconButton(
                 icon: Icons.remove,
                 size: AppIconButtonSize.large,
-                onTap: zoom > minZoom
-                    ? cameraController.zoomOut
-                    : null,
+                onTap: zoom > minZoom ? cameraController.zoomOut : null,
               ),
             ],
           ),

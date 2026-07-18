@@ -39,10 +39,45 @@ const _tAreaB = ServingArea(
   latLng: _tPosition,
 );
 
+const _tAutoAreaDubaiMarina = ServingArea(
+  placeId: 'latlng:25.0,55.0',
+  name: 'Dubai Marina',
+  address: '',
+  latLng: _tPosition,
+);
+
+const _tAutoAreaJbr = ServingArea(
+  placeId: 'latlng:25.1,55.1',
+  name: 'JBR',
+  address: '',
+  latLng: _tPosition2,
+);
+
+const _tAutoAreaNewArea = ServingArea(
+  placeId: 'latlng:25.1,55.1',
+  name: 'New Area',
+  address: '',
+  latLng: _tPosition2,
+);
+
+const _tSavedA = ServingArea(
+  placeId: 'latlng:0.0,0.0',
+  name: 'Saved A',
+  address: '',
+  latLng: LatLng(0, 0),
+);
+
+const _tSavedB = ServingArea(
+  placeId: 'latlng:1.0,1.0',
+  name: 'Saved B',
+  address: '',
+  latLng: LatLng(1, 1),
+);
+
 const _tCoverageLocation = CoverageLocation(
   center: _tPosition,
   address: _tAddress,
-  nearbyAreas: ['Dubai Marina', 'JBR'],
+  nearbyAreas: [_tAutoAreaDubaiMarina, _tAutoAreaJbr],
 );
 
 void main() {
@@ -50,9 +85,9 @@ void main() {
   late _MockGetCurrentLocation getCurrentLocation;
 
   CoverageAreaBloc buildBloc() => CoverageAreaBloc(
-        resolveCoverageLocationUseCase: resolveCoverageLocation,
-        getCurrentLocationUseCase: getCurrentLocation,
-      );
+    resolveCoverageLocationUseCase: resolveCoverageLocation,
+    getCurrentLocationUseCase: getCurrentLocation,
+  );
 
   setUpAll(() {
     registerFallbackValue(const NoParams());
@@ -84,8 +119,9 @@ void main() {
       blocTest<CoverageAreaBloc, CoverageAreaState>(
         'with initial center resolves location via use case',
         build: () {
-          when(() => resolveCoverageLocation(any()))
-              .thenReturn(TaskEither.right(_tCoverageLocation));
+          when(
+            () => resolveCoverageLocation(any()),
+          ).thenReturn(TaskEither.right(_tCoverageLocation));
           return buildBloc();
         },
         act: (bloc) => bloc.add(
@@ -99,7 +135,7 @@ void main() {
           expect(bloc.state.status, CoverageAreaStatus.ready);
           expect(bloc.state.center, _tPosition);
           expect(bloc.state.address, _tAddress);
-          expect(bloc.state.autoAreas, ['Dubai Marina', 'JBR']);
+          expect(bloc.state.autoAreas, [_tAutoAreaDubaiMarina, _tAutoAreaJbr]);
           expect(bloc.state.mode, CoverageMode.create);
         },
       );
@@ -107,8 +143,9 @@ void main() {
       blocTest<CoverageAreaBloc, CoverageAreaState>(
         'failure from getCurrentLocation -> failure status',
         build: () {
-          when(() => getCurrentLocation(any()))
-              .thenReturn(TaskEither.left(_tFailure));
+          when(
+            () => getCurrentLocation(any()),
+          ).thenReturn(TaskEither.left(_tFailure));
           return buildBloc();
         },
         act: (bloc) => bloc.add(
@@ -136,14 +173,14 @@ void main() {
             mode: CoverageMode.edit,
             initialCenter: _tPosition,
             initialAddress: _tAddress,
-            initialAutoAreas: ['Saved A', 'Saved B'],
+            initialAutoAreas: [_tSavedA, _tSavedB],
           ),
         ),
         wait: const Duration(milliseconds: 50),
         verify: (bloc) {
           expect(bloc.state.status, CoverageAreaStatus.ready);
           expect(bloc.state.mode, CoverageMode.edit);
-          expect(bloc.state.autoAreas, ['Saved A', 'Saved B']);
+          expect(bloc.state.autoAreas, [_tSavedA, _tSavedB]);
           verifyNever(() => resolveCoverageLocation(any()));
         },
       );
@@ -156,7 +193,7 @@ void main() {
               const CoverageLocation(
                 center: _tPosition2,
                 address: 'New Address',
-                nearbyAreas: ['New Area'],
+                nearbyAreas: [_tAutoAreaNewArea],
               ),
             ),
           );
@@ -168,7 +205,7 @@ void main() {
               mode: CoverageMode.edit,
               initialCenter: _tPosition,
               initialAddress: _tAddress,
-              initialAutoAreas: ['Saved A', 'Saved B'],
+              initialAutoAreas: [_tSavedA, _tSavedB],
             ),
           );
           await Future<void>.delayed(const Duration(milliseconds: 20));
@@ -177,7 +214,7 @@ void main() {
         wait: const Duration(milliseconds: 80),
         verify: (bloc) {
           expect(bloc.state.mode, CoverageMode.recalculate);
-          expect(bloc.state.autoAreas, ['New Area']);
+          expect(bloc.state.autoAreas, [_tAutoAreaNewArea]);
         },
       );
     });
@@ -186,8 +223,9 @@ void main() {
       blocTest<CoverageAreaBloc, CoverageAreaState>(
         'skips redundant resolve for same center',
         build: () {
-          when(() => resolveCoverageLocation(any()))
-              .thenReturn(TaskEither.right(_tCoverageLocation));
+          when(
+            () => resolveCoverageLocation(any()),
+          ).thenReturn(TaskEither.right(_tCoverageLocation));
           return buildBloc();
         },
         seed: () => const CoverageAreaState(
@@ -258,24 +296,28 @@ void main() {
       blocTest<CoverageAreaBloc, CoverageAreaState>(
         'removes auto area by name',
         build: buildBloc,
-        seed: () => const CoverageAreaState(
+        seed: () => CoverageAreaState(
           status: CoverageAreaStatus.ready,
-          autoAreas: ['Dubai Marina', 'JBR'],
+          autoAreas: [_tAutoAreaDubaiMarina, _tAutoAreaJbr],
         ),
         act: (bloc) {
-          bloc.autoAreasController.replace(['Dubai Marina', 'JBR']);
+          bloc.autoAreasController.replace([
+            _tAutoAreaDubaiMarina,
+            _tAutoAreaJbr,
+          ]);
           bloc.add(const CoverageAreaAutoAreaRemoved('Dubai Marina'));
         },
         verify: (bloc) {
-          expect(bloc.state.autoAreas, ['JBR']);
+          expect(bloc.state.autoAreas, [_tAutoAreaJbr]);
         },
       );
 
       blocTest<CoverageAreaBloc, CoverageAreaState>(
         'removed auto area is not resurrected by a later recompute',
         build: () {
-          when(() => resolveCoverageLocation(any()))
-              .thenReturn(TaskEither.right(_tCoverageLocation));
+          when(
+            () => resolveCoverageLocation(any()),
+          ).thenReturn(TaskEither.right(_tCoverageLocation));
           return buildBloc();
         },
         act: (bloc) async {
@@ -293,7 +335,7 @@ void main() {
         },
         wait: const Duration(milliseconds: 80),
         verify: (bloc) {
-          expect(bloc.state.autoAreas, ['JBR']);
+          expect(bloc.state.autoAreas, [_tAutoAreaJbr]);
         },
       );
     });
@@ -302,8 +344,9 @@ void main() {
       blocTest<CoverageAreaBloc, CoverageAreaState>(
         'updates radius and resolves nearby areas',
         build: () {
-          when(() => resolveCoverageLocation(any()))
-              .thenReturn(TaskEither.right(_tCoverageLocation));
+          when(
+            () => resolveCoverageLocation(any()),
+          ).thenReturn(TaskEither.right(_tCoverageLocation));
           return buildBloc();
         },
         seed: () => const CoverageAreaState(

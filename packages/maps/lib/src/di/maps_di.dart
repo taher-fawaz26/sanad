@@ -4,11 +4,14 @@ import 'package:maps/src/config/maps_config.dart';
 import 'package:maps/src/data/cache/geocoding_cache.dart';
 import 'package:maps/src/data/repositories/geocoding_repository_impl.dart';
 import 'package:maps/src/data/repositories/location_repository_impl.dart';
+import 'package:maps/src/data/repositories/locations_repository_impl.dart';
 import 'package:maps/src/data/repositories/places_repository_impl.dart';
 import 'package:maps/src/domain/repositories/geocoding_repository.dart';
 import 'package:maps/src/domain/repositories/location_repository.dart';
+import 'package:maps/src/domain/repositories/locations_repository.dart';
 import 'package:maps/src/domain/repositories/places_repository.dart';
 import 'package:maps/src/domain/usecases/forward_geocode_usecase.dart';
+import 'package:maps/src/domain/usecases/get_cities_usecase.dart';
 import 'package:maps/src/domain/usecases/get_current_location_usecase.dart';
 import 'package:maps/src/domain/usecases/get_place_details_usecase.dart';
 import 'package:maps/src/domain/usecases/open_location_settings_usecase.dart';
@@ -25,12 +28,19 @@ import 'package:maps/src/services/google_places_provider.dart';
 import 'package:maps/src/services/location_service.dart';
 import 'package:maps/src/services/osm_places_provider.dart';
 import 'package:maps/src/services/places_provider.dart';
+import 'package:network/network.dart';
 
 abstract final class MapsDI {
   MapsDI._();
 
   static void init({MapsConfig config = const MapsConfig()}) {
     sl
+      ..registerLazySingleton<LocationsRepository>(
+        () => LocationsRepositoryImpl(sl<BaseApiClient>()),
+      )
+      ..registerLazySingleton(
+        () => GetCitiesUseCase(sl<LocationsRepository>()),
+      )
       ..registerLazySingleton<GeocodingCache>(GeocodingCache.new)
       ..registerLazySingleton<GeocodingRepository>(
         () => GeocodingRepositoryImpl(
@@ -48,7 +58,7 @@ abstract final class MapsDI {
         () => ForwardGeocodeUseCase(sl<GeocodingRepository>()),
       )
       ..registerLazySingleton(
-        () => ResolveNearbyAreasUseCase(sl<GeocodingRepository>()),
+        () => ResolveNearbyAreasUseCase(sl<LocationsRepository>()),
       )
       ..registerLazySingleton(
         () => ResolveCoverageLocationUseCase(
@@ -92,19 +102,23 @@ abstract final class MapsDI {
           reverseGeocodeUseCase: sl<ReverseGeocodeUseCase>(),
           forwardGeocodeUseCase: sl<ForwardGeocodeUseCase>(),
           openLocationSettingsUseCase: sl<OpenLocationSettingsUseCase>(),
-          searchPlacesUseCase:
-              config.placesEnabled ? sl<SearchPlacesUseCase>() : null,
-          getPlaceDetailsUseCase:
-              config.placesEnabled ? sl<GetPlaceDetailsUseCase>() : null,
+          searchPlacesUseCase: config.placesEnabled
+              ? sl<SearchPlacesUseCase>()
+              : null,
+          getPlaceDetailsUseCase: config.placesEnabled
+              ? sl<GetPlaceDetailsUseCase>()
+              : null,
         ),
       )
       ..registerFactory(
         () => MapAreaPickerBloc(
           reverseGeocodeUseCase: sl<ReverseGeocodeUseCase>(),
-          searchPlacesUseCase:
-              config.placesEnabled ? sl<SearchPlacesUseCase>() : null,
-          getPlaceDetailsUseCase:
-              config.placesEnabled ? sl<GetPlaceDetailsUseCase>() : null,
+          searchPlacesUseCase: config.placesEnabled
+              ? sl<SearchPlacesUseCase>()
+              : null,
+          getPlaceDetailsUseCase: config.placesEnabled
+              ? sl<GetPlaceDetailsUseCase>()
+              : null,
         ),
       );
   }
@@ -112,9 +126,9 @@ abstract final class MapsDI {
   static PlacesProvider _createPlacesProvider(MapsConfig config) {
     return switch (config.placesProvider) {
       PlacesProviderType.google => GooglePlacesProvider(
-          apiKey: config.placesApiKey!,
-          dio: _createPlacesDio(),
-        ),
+        apiKey: config.placesApiKey!,
+        dio: _createPlacesDio(),
+      ),
       PlacesProviderType.backend => const BackendPlacesProvider(),
       PlacesProviderType.openStreetMap => const OsmPlacesProvider(),
     };

@@ -17,11 +17,11 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
   CoverageAreaBloc({
     required ResolveCoverageLocationUseCase resolveCoverageLocationUseCase,
     required GetCurrentLocationUseCase getCurrentLocationUseCase,
-  })  : _resolveCoverageLocationUseCase = resolveCoverageLocationUseCase,
-        _getCurrentLocationUseCase = getCurrentLocationUseCase,
-        _autoAreasController = ServingAreaController<String>(),
-        _extraAreasController = ServingAreaController<ServingArea>(),
-        super(const CoverageAreaState()) {
+  }) : _resolveCoverageLocationUseCase = resolveCoverageLocationUseCase,
+       _getCurrentLocationUseCase = getCurrentLocationUseCase,
+       _autoAreasController = ServingAreaController<ServingArea>(),
+       _extraAreasController = ServingAreaController<ServingArea>(),
+       super(const CoverageAreaState()) {
     on<CoverageAreaStarted>(_onStarted);
     on<CoverageAreaMapMoved>(_onMapMoved);
     on<CoverageAreaCurrentLocationRequested>(_onCurrentLocationRequested);
@@ -33,7 +33,7 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
 
   final ResolveCoverageLocationUseCase _resolveCoverageLocationUseCase;
   final GetCurrentLocationUseCase _getCurrentLocationUseCase;
-  final ServingAreaController<String> _autoAreasController;
+  final ServingAreaController<ServingArea> _autoAreasController;
   final ServingAreaController<ServingArea> _extraAreasController;
 
   /// Auto-area names the user has explicitly removed. Persisted for the life
@@ -41,15 +41,18 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
   final Set<String> _removedAutoAreaNames = {};
 
   String? _localeIdentifier;
+  String? _cityId;
   final LatestOperation _locationOp = LatestOperation();
 
-  ServingAreaController<String> get autoAreasController => _autoAreasController;
+  ServingAreaController<ServingArea> get autoAreasController =>
+      _autoAreasController;
 
   Future<void> _onStarted(
     CoverageAreaStarted event,
     Emitter<CoverageAreaState> emit,
   ) async {
     _localeIdentifier = event.localeIdentifier;
+    _cityId = event.cityId;
 
     if (event.initialExtraAreas.isNotEmpty) {
       _extraAreasController.replace(event.initialExtraAreas);
@@ -159,7 +162,12 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
     Emitter<CoverageAreaState> emit,
   ) {
     _removedAutoAreaNames.add(event.name);
-    _autoAreasController.remove(event.name);
+    for (final area
+        in _autoAreasController.items
+            .where((a) => a.name == event.name)
+            .toList(growable: false)) {
+      _autoAreasController.remove(area);
+    }
     emit(state.copyWith(autoAreas: _autoAreasController.items));
   }
 
@@ -238,6 +246,7 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
       center: center,
       radiusKm: resolvedRadius,
       localeIdentifier: _localeIdentifier,
+      cityId: _cityId,
     );
 
     final result = await _resolveCoverageLocationUseCase(intent).run();
@@ -254,7 +263,7 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
       },
       (location) {
         final areas = location.nearbyAreas
-            .where((name) => !_removedAutoAreaNames.contains(name))
+            .where((area) => !_removedAutoAreaNames.contains(area.name))
             .toList(growable: false);
         _autoAreasController.replace(areas);
         emit(

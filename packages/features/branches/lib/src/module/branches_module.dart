@@ -30,70 +30,66 @@ class BranchesModule extends FeatureModule {
 
   @override
   List<RouteBase> routes(FeatureRouteContext ctx) => [
-        GoRoute(
-          path: BranchRoutes.list,
-          builder: (context, state) => BlocProvider(
-            create: (_) => sl<BranchesBloc>(),
-            child: const ProviderBranchesPage(),
+    GoRoute(
+      path: BranchRoutes.list,
+      builder: (context, state) => BlocProvider(
+        create: (_) => sl<BranchesBloc>(),
+        child: const ProviderBranchesPage(),
+      ),
+    ),
+    GoRoute(
+      path: BranchRoutes.add,
+      builder: (context, state) => MultiBlocProvider(
+        providers: [
+          BlocProvider(
+            create: (_) => sl<AddBranchBloc>()..add(const AddBranchStarted()),
           ),
-        ),
-        GoRoute(
-          path: BranchRoutes.add,
-          builder: (context, state) => MultiBlocProvider(
-            providers: [
-              BlocProvider(
-                create: (_) =>
-                    sl<AddBranchBloc>()..add(const AddBranchStarted()),
-              ),
-              BlocProvider(create: (_) => AddBranchDraftCubit()),
-            ],
-            child: const AddBranchPage(),
-          ),
-        ),
-        GoRoute(
-          path: BranchRoutes.coverage,
-          builder: (context, state) {
-            final args = state.extra is CoverageAreaArgs
-                ? state.extra! as CoverageAreaArgs
-                : null;
-            final locale = context.locale.toString();
-            return MultiBlocProvider(
-              providers: [
-                BlocProvider(
-                  create: (_) => sl<CoverageAreaBloc>()
-                    ..add(
-                      CoverageAreaStarted(
-                        mode: args?.mode ?? CoverageMode.create,
-                        initialCenter: args?.position,
-                        initialAddress: args?.address,
-                        initialRadiusKm: args?.radiusKm,
-                        // Seed previously-saved areas (edit mode). The maps
-                        // package never loads them itself.
-                        initialAutoAreas: (args?.servingAreas ?? const [])
-                            .map((area) => area.name)
-                            .toList(growable: false),
-                        localeIdentifier: locale,
-                      ),
-                    ),
+          BlocProvider(create: (_) => AddBranchDraftCubit()),
+        ],
+        child: const AddBranchPage(),
+      ),
+    ),
+    GoRoute(
+      path: BranchRoutes.coverage,
+      builder: (context, state) {
+        final args = state.extra is CoverageAreaArgs
+            ? state.extra! as CoverageAreaArgs
+            : null;
+        final locale = context.locale.toString();
+        return MultiBlocProvider(
+          providers: [
+            BlocProvider(
+              create: (_) => sl<CoverageAreaBloc>()
+                ..add(
+                  CoverageAreaStarted(
+                    mode: args?.mode ?? CoverageMode.create,
+                    initialCenter: args?.position,
+                    initialAddress: args?.address,
+                    initialRadiusKm: args?.radiusKm,
+                    initialAutoAreas: args?.servingAreas ?? const [],
+                    localeIdentifier: locale,
+                    cityId: args?.cityId,
+                  ),
                 ),
-                BlocProvider(
-                  create: (_) => sl<LocationPickerBloc>(),
-                ),
-              ],
-              child: const CoverageAreaPage(),
-            );
-          },
-        ),
-        GoRoute(
-          path: BranchRoutes.details,
-          builder: (context, state) {
-            final branchId = state.pathParameters['id']!;
-            return BlocProvider(
-              create: (_) => sl<BranchDetailsBloc>()
-                ..add(BranchDetailsFetchEvent(branchId)),
-              child: BranchDetailsPage(branchId: branchId),
-            );
-          },
-        ),
-      ];
+            ),
+            BlocProvider(
+              create: (_) => sl<LocationPickerBloc>(),
+            ),
+          ],
+          child: const CoverageAreaPage(),
+        );
+      },
+    ),
+    GoRoute(
+      path: BranchRoutes.details,
+      builder: (context, state) {
+        final branchId = state.pathParameters['id']!;
+        return BlocProvider(
+          create: (_) =>
+              sl<BranchDetailsBloc>()..add(BranchDetailsFetchEvent(branchId)),
+          child: BranchDetailsPage(branchId: branchId),
+        );
+      },
+    ),
+  ];
 }

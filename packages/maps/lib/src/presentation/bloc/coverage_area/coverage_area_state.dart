@@ -32,7 +32,7 @@ class CoverageAreaState extends Equatable {
   final String? address;
   final double radiusKm;
   final CoverageMode mode;
-  final List<String> autoAreas;
+  final List<ServingArea> autoAreas;
   final List<ServingArea> extraAreas;
   final Failure? failure;
   final CoverageAreaCameraSource cameraSource;
@@ -47,17 +47,7 @@ class CoverageAreaState extends Equatable {
 
   int get totalAreaCount => autoAreas.length + extraAreas.length;
 
-  List<ServingArea> get allServingAreas => [
-        ...autoAreas.map(
-          (name) => ServingArea(
-            placeId: name,
-            name: name,
-            address: '',
-            latLng: center ?? const LatLng(0, 0),
-          ),
-        ),
-        ...extraAreas,
-      ];
+  List<ServingArea> get allServingAreas => [...autoAreas, ...extraAreas];
 
   CoverageAreaState copyWith({
     CoverageAreaStatus? status,
@@ -65,7 +55,7 @@ class CoverageAreaState extends Equatable {
     String? address,
     double? radiusKm,
     CoverageMode? mode,
-    List<String>? autoAreas,
+    List<ServingArea>? autoAreas,
     List<ServingArea>? extraAreas,
     Failure? failure,
     CoverageAreaCameraSource? cameraSource,
@@ -87,14 +77,14 @@ class CoverageAreaState extends Equatable {
 
   @override
   List<Object?> get props => [
-        status,
-        center,
-        address,
-        radiusKm,
-        mode,
-        autoAreas,
-        extraAreas,
-        failure,
-        cameraSource,
-      ];
+    status,
+    center,
+    address,
+    radiusKm,
+    mode,
+    autoAreas,
+    extraAreas,
+    failure,
+    cameraSource,
+  ];
 }

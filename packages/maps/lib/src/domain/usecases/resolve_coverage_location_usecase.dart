@@ -18,19 +18,35 @@ class ResolveCoverageLocationUseCase
   @override
   TaskEither<Failure, CoverageLocation> call(
     CoverageLocationIntent intent,
-  ) =>
-      _reverseGeocode(
-        ReverseGeocodeParams(
-          position: intent.center,
-          localeIdentifier: intent.localeIdentifier,
-        ),
-      ).flatMap(
-        (geocoded) => _resolveNearbyAreas(intent).map(
-          (nearbyAreas) => CoverageLocation(
-            center: intent.center,
-            address: geocoded.formattedAddress,
-            nearbyAreas: nearbyAreas,
-          ),
+  ) {
+    final geocodeTask = _reverseGeocode(
+      ReverseGeocodeParams(
+        position: intent.center,
+        localeIdentifier: intent.localeIdentifier,
+      ),
+    );
+
+    if (intent.cityId == null) {
+      return geocodeTask.map(
+        (geocoded) => CoverageLocation(
+          center: intent.center,
+          address: geocoded.formattedAddress,
+          nearbyAreas: const [],
         ),
       );
+    }
+
+    return geocodeTask.flatMap(
+      (geocoded) =>
+          _resolveNearbyAreas(
+            ResolveNearbyAreasParams(intent: intent, cityId: intent.cityId!),
+          ).map(
+            (nearbyAreas) => CoverageLocation(
+              center: intent.center,
+              address: geocoded.formattedAddress,
+              nearbyAreas: nearbyAreas,
+            ),
+          ),
+    );
+  }
 }

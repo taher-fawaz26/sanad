@@ -13,6 +13,5 @@ class GetBranchesUseCase
   @override
   TaskEither<Failure, PaginatedBranchesEntity> call(
     GetBranchesParams params,
-  ) =>
-      _repository.getBranches(params);
+  ) => _repository.getBranches(params);
 }

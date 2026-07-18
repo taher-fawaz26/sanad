@@ -1,5 +1,6 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
+import 'package:branches/src/domain/entities/branch_manager_entity.dart';
 import 'package:branches/src/domain/entities/branch_time_slot_entity.dart';
 import 'package:branches/src/domain/entities/branch_type.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_cubit.dart';
@@ -11,6 +12,13 @@ import 'package:services/services.dart';
 import 'package:workers/workers.dart';
 
 void main() {
+  const testCity = CityEntity(id: 'city-1', nameEn: 'Dubai', nameAr: 'دبي');
+  const testManager = BranchManagerEntity(
+    id: 'mgr-1',
+    fullName: 'Test Manager',
+    initials: 'TM',
+  );
+
   group('AddBranchDraftCubit', () {
     late AddBranchDraftCubit cubit;
 
@@ -24,11 +32,11 @@ void main() {
       expect(cubit.state, const AddBranchDraft());
       expect(cubit.state.branchType, BranchType.mainBranch);
       expect(cubit.state.branchName, '');
-      expect(cubit.state.city, '');
+      expect(cubit.state.selectedCity, isNull);
       expect(cubit.state.phone, '');
       expect(cubit.state.branchAddress, isNull);
       expect(cubit.state.pickedPosition, isNull);
-      expect(cubit.state.selectedManagerId, isNull);
+      expect(cubit.state.selectedManager, isNull);
       expect(cubit.state.scheduleMode, BranchScheduleMode.company);
       expect(cubit.state.customSchedule, isEmpty);
       expect(cubit.state.coverageRadiusKm, isNull);
@@ -52,17 +60,15 @@ void main() {
       );
 
       blocTest<AddBranchDraftCubit, AddBranchDraft>(
-        'updates multiple fields at once',
+        'updates name and phone together',
         build: () => cubit,
         act: (c) => c.updateBasicInfo(
           branchName: 'Branch',
-          city: 'Dubai',
           phone: '0501234567',
         ),
         expect: () => [
           isA<AddBranchDraft>()
               .having((d) => d.branchName, 'branchName', 'Branch')
-              .having((d) => d.city, 'city', 'Dubai')
               .having((d) => d.phone, 'phone', '0501234567'),
         ],
       );
@@ -70,12 +76,47 @@ void main() {
       blocTest<AddBranchDraftCubit, AddBranchDraft>(
         'preserves unmentioned fields',
         build: () => cubit,
-        seed: () => const AddBranchDraft(city: 'Abu Dhabi'),
+        seed: () => const AddBranchDraft(selectedCity: testCity),
         act: (c) => c.updateBasicInfo(branchName: 'New'),
         expect: () => [
           isA<AddBranchDraft>()
               .having((d) => d.branchName, 'branchName', 'New')
-              .having((d) => d.city, 'city', 'Abu Dhabi'),
+              .having((d) => d.selectedCity, 'city', testCity),
+        ],
+      );
+    });
+
+    group('updateCity', () {
+      blocTest<AddBranchDraftCubit, AddBranchDraft>(
+        'sets selected city entity',
+        build: () => cubit,
+        act: (c) => c.updateCity(testCity),
+        expect: () => [
+          isA<AddBranchDraft>().having(
+            (d) => d.selectedCity,
+            'selectedCity',
+            testCity,
+          ),
+        ],
+      );
+
+      blocTest<AddBranchDraftCubit, AddBranchDraft>(
+        'replaces previous city',
+        build: () => cubit,
+        seed: () => const AddBranchDraft(selectedCity: testCity),
+        act: (c) => c.updateCity(
+          const CityEntity(
+            id: 'city-2',
+            nameEn: 'Abu Dhabi',
+            nameAr: 'أبو ظبي',
+          ),
+        ),
+        expect: () => [
+          isA<AddBranchDraft>().having(
+            (d) => d.selectedCity?.id,
+            'cityId',
+            'city-2',
+          ),
         ],
       );
     });
@@ -125,14 +166,28 @@ void main() {
 
     group('updateManager', () {
       blocTest<AddBranchDraftCubit, AddBranchDraft>(
-        'sets manager id',
+        'sets selected manager entity',
         build: () => cubit,
-        act: (c) => c.updateManager('mgr-1'),
+        act: (c) => c.updateManager(testManager),
         expect: () => [
           isA<AddBranchDraft>().having(
-            (d) => d.selectedManagerId,
-            'managerId',
-            'mgr-1',
+            (d) => d.selectedManager,
+            'selectedManager',
+            testManager,
+          ),
+        ],
+      );
+
+      blocTest<AddBranchDraftCubit, AddBranchDraft>(
+        'clears manager when null',
+        build: () => cubit,
+        seed: () => const AddBranchDraft(selectedManager: testManager),
+        act: (c) => c.updateManager(null),
+        expect: () => [
+          isA<AddBranchDraft>().having(
+            (d) => d.selectedManager,
+            'selectedManager',
+            isNull,
           ),
         ],
       );
@@ -182,7 +237,7 @@ void main() {
             slots: [BranchTimeSlotEntity(from: '08:00', to: '16:00')],
           ),
         ]),
-        expect: () => [],
+        expect: () => <AddBranchDraft>[],
       );
 
       blocTest<AddBranchDraftCubit, AddBranchDraft>(
@@ -245,7 +300,12 @@ void main() {
         'updateWorkers sets worker list',
         build: () => cubit,
         act: (c) => c.updateWorkers(const [
-          WorkerEntity(id: 'w1', fullName: 'John', role: 'Barber', initials: 'J'),
+          WorkerEntity(
+            id: 'w1',
+            fullName: 'John',
+            role: 'Barber',
+            initials: 'J',
+          ),
         ]),
         expect: () => [
           isA<AddBranchDraft>().having(
@@ -259,12 +319,30 @@ void main() {
       blocTest<AddBranchDraftCubit, AddBranchDraft>(
         'removeWorker removes by id',
         build: () => cubit,
-        seed: () => const AddBranchDraft(selectedWorkers: [
-          WorkerEntity(id: 'w1', fullName: 'John', role: 'Barber', initials: 'J'),
-          WorkerEntity(id: 'w2', fullName: 'Jane', role: 'Stylist', initials: 'J'),
-        ]),
-        act: (c) =>
-            c.removeWorker(const WorkerEntity(id: 'w1', fullName: 'John', role: 'Barber', initials: 'J')),
+        seed: () => const AddBranchDraft(
+          selectedWorkers: [
+            WorkerEntity(
+              id: 'w1',
+              fullName: 'John',
+              role: 'Barber',
+              initials: 'J',
+            ),
+            WorkerEntity(
+              id: 'w2',
+              fullName: 'Jane',
+              role: 'Stylist',
+              initials: 'J',
+            ),
+          ],
+        ),
+        act: (c) => c.removeWorker(
+          const WorkerEntity(
+            id: 'w1',
+            fullName: 'John',
+            role: 'Barber',
+            initials: 'J',
+          ),
+        ),
         expect: () => [
           isA<AddBranchDraft>()
               .having((d) => d.selectedWorkers.length, 'count', 1)
@@ -284,11 +362,11 @@ void main() {
 
         const complete = AddBranchDraft(
           branchName: 'Branch',
-          city: 'Dubai',
+          selectedCity: testCity,
           phone: '0501234567',
           branchAddress: '123 Main St',
           pickedPosition: LatLng(25.0, 55.0),
-          selectedManagerId: 'mgr-1',
+          selectedManager: testManager,
         );
         expect(complete.isStepOneComplete, isTrue);
       });
@@ -296,11 +374,33 @@ void main() {
       test('isStepOneComplete fails with empty trimmed name', () {
         const draft = AddBranchDraft(
           branchName: '   ',
-          city: 'Dubai',
+          selectedCity: testCity,
           phone: '0501234567',
           branchAddress: '123 Main St',
           pickedPosition: LatLng(25.0, 55.0),
-          selectedManagerId: 'mgr-1',
+          selectedManager: testManager,
+        );
+        expect(draft.isStepOneComplete, isFalse);
+      });
+
+      test('isStepOneComplete fails without selected city', () {
+        const draft = AddBranchDraft(
+          branchName: 'Branch',
+          phone: '0501234567',
+          branchAddress: '123 Main St',
+          pickedPosition: LatLng(25.0, 55.0),
+          selectedManager: testManager,
+        );
+        expect(draft.isStepOneComplete, isFalse);
+      });
+
+      test('isStepOneComplete fails without selected manager', () {
+        const draft = AddBranchDraft(
+          branchName: 'Branch',
+          selectedCity: testCity,
+          phone: '0501234567',
+          branchAddress: '123 Main St',
+          pickedPosition: LatLng(25.0, 55.0),
         );
         expect(draft.isStepOneComplete, isFalse);
       });
@@ -320,7 +420,9 @@ void main() {
         expect(const AddBranchDraft().isStepThreeComplete, isFalse);
         expect(
           const AddBranchDraft(
-            selectedServices: [ServiceEntity(id: 's1', name: 'Cut', category: 'Hair')],
+            selectedServices: [
+              ServiceEntity(id: 's1', name: 'Cut', category: 'Hair'),
+            ],
           ).isStepThreeComplete,
           isTrue,
         );
@@ -330,7 +432,14 @@ void main() {
         expect(const AddBranchDraft().isStepFourComplete, isFalse);
         expect(
           const AddBranchDraft(
-            selectedWorkers: [WorkerEntity(id: 'w1', fullName: 'John', role: 'Barber', initials: 'J')],
+            selectedWorkers: [
+              WorkerEntity(
+                id: 'w1',
+                fullName: 'John',
+                role: 'Barber',
+                initials: 'J',
+              ),
+            ],
           ).isStepFourComplete,
           isTrue,
         );
@@ -339,17 +448,14 @@ void main() {
 
     group('data survives step transitions', () {
       test('all draft fields persist across cubit lifetime', () {
-        cubit.updateBasicInfo(
-          branchName: 'Branch',
-          city: 'Dubai',
-          phone: '050',
-        );
+        cubit.updateBasicInfo(branchName: 'Branch', phone: '050');
+        cubit.updateCity(testCity);
         cubit.updateBranchType(BranchType.headquarters);
         cubit.updateLocation(
           address: 'Addr',
           position: const LatLng(25.0, 55.0),
         );
-        cubit.updateManager('mgr-1');
+        cubit.updateManager(testManager);
         cubit.updateScheduleMode(BranchScheduleMode.custom);
         cubit.updateCustomSchedule(const [
           BranchAvailabilityEntity(
@@ -374,17 +480,22 @@ void main() {
           ServiceEntity(id: 's1', name: 'Cut', category: 'Hair'),
         ]);
         cubit.updateWorkers(const [
-          WorkerEntity(id: 'w1', fullName: 'John', role: 'Barber', initials: 'J'),
+          WorkerEntity(
+            id: 'w1',
+            fullName: 'John',
+            role: 'Barber',
+            initials: 'J',
+          ),
         ]);
 
         final draft = cubit.state;
         expect(draft.branchName, 'Branch');
         expect(draft.branchType, BranchType.headquarters);
-        expect(draft.city, 'Dubai');
+        expect(draft.selectedCity, testCity);
         expect(draft.phone, '050');
         expect(draft.branchAddress, 'Coverage Addr');
         expect(draft.pickedPosition, const LatLng(25.1, 55.1));
-        expect(draft.selectedManagerId, 'mgr-1');
+        expect(draft.selectedManager, testManager);
         expect(draft.scheduleMode, BranchScheduleMode.custom);
         expect(draft.customSchedule.length, 1);
         expect(draft.coverageRadiusKm, 10.0);

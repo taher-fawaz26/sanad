@@ -2,7 +2,6 @@ import 'package:branches/src/domain/entities/branch_availability_entity.dart';
 import 'package:branches/src/domain/entities/branch_availability_mode.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/presentation/bloc/branch_details/branch_details_bloc.dart';
-import 'package:branches/src/presentation/data/branch_details_static_data.dart';
 import 'package:branches/src/presentation/utils/branch_maps_launcher.dart';
 import 'package:branches/src/presentation/utils/branch_schedule_formatter.dart';
 import 'package:core/core.dart';
@@ -149,7 +148,8 @@ class _BranchDetailsContent extends StatelessWidget {
     final services = branch.serviceNames ?? const <String>[];
     final visibleServices = services.take(_visibleServiceCount).toList();
     final hiddenServiceCount = services.length - visibleServices.length;
-    final teamCount = BranchDetailsStaticData.teamInitials.length;
+    final workers = branch.workers;
+    final teamCount = workers.length;
     final overflowTeamCount = teamCount - _visibleTeamCount;
 
     return Scaffold(
@@ -228,10 +228,14 @@ class _BranchDetailsContent extends StatelessWidget {
                     AppSection(
                       title: 'branches.details.section_working_hours'.tr(),
                       size: AppSectionSize.compact,
-                      trailing: branch.availabilityMode == BranchAvailabilityMode.custom
+                      trailing:
+                          branch.availabilityMode ==
+                              BranchAvailabilityMode.custom
                           ? AppSectionTrailing.custom
                           : AppSectionTrailing.none,
-                      trailingWidget: branch.availabilityMode == BranchAvailabilityMode.custom
+                      trailingWidget:
+                          branch.availabilityMode ==
+                              BranchAvailabilityMode.custom
                           ? AppStatusBadge(
                               label: 'branches.details.schedule_custom'.tr(),
                               type: AppStatusBadgeType.info,
@@ -314,51 +318,58 @@ class _BranchDetailsContent extends StatelessWidget {
                       title: 'branches.details.section_team'.tr(),
                       size: AppSectionSize.compact,
                       trailing: AppSectionTrailing.custom,
-                      trailingWidget: GestureDetector(
-                        onTap: () => _showComingSoon(
-                          context,
-                          'branches.details.manage_team_coming_soon'.tr(),
-                        ),
-                        child: Text(
-                          'branches.details.view_all_workers'.tr(
-                            namedArgs: {'count': '$teamCount'},
-                          ),
-                          style: context.appTypography.regularNormal.copyWith(
-                            color: colors.primary,
-                          ),
-                        ),
-                      ),
+                      trailingWidget: workers.isEmpty
+                          ? const SizedBox.shrink()
+                          : GestureDetector(
+                              onTap: () => _showComingSoon(
+                                context,
+                                'branches.details.manage_team_coming_soon'.tr(),
+                              ),
+                              child: Text(
+                                'branches.details.view_all_workers'.tr(
+                                  namedArgs: {'count': '$teamCount'},
+                                ),
+                                style: context.appTypography.regularNormal
+                                    .copyWith(color: colors.primary),
+                              ),
+                            ),
                     ),
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                      child: Row(
-                        children: [
-                          AppAvatarStack(
-                            avatars: [
-                              for (final initials
-                                  in BranchDetailsStaticData.teamInitials.take(
-                                    _visibleTeamCount,
-                                  ))
-                                AppAvatar(
-                                  initials: initials,
-                                  backgroundColor: colors.primary,
+                      child: workers.isEmpty
+                          ? Text(
+                              'branches.details.no_team_members'.tr(),
+                              style: context.appTypography.regularNormal
+                                  .copyWith(color: colors.textSecondary),
+                            )
+                          : Row(
+                              children: [
+                                AppAvatarStack(
+                                  avatars: [
+                                    for (final worker in workers.take(
+                                      _visibleTeamCount,
+                                    ))
+                                      AppAvatar(
+                                        initials: worker.initials,
+                                        backgroundColor: colors.primary,
+                                      ),
+                                  ],
+                                  overflowCount: overflowTeamCount > 0
+                                      ? overflowTeamCount
+                                      : 0,
                                 ),
-                            ],
-                            overflowCount: overflowTeamCount > 0
-                                ? overflowTeamCount
-                                : 0,
-                          ),
-                          const Spacer(),
-                          AppButtonPresets.outline(
-                            label: 'branches.details.manage_team'.tr(),
-                            size: AppButtonSize.small,
-                            onPressed: () => _showComingSoon(
-                              context,
-                              'branches.details.manage_team_coming_soon'.tr(),
+                                const Spacer(),
+                                AppButtonPresets.outline(
+                                  label: 'branches.details.manage_team'.tr(),
+                                  size: AppButtonSize.small,
+                                  onPressed: () => _showComingSoon(
+                                    context,
+                                    'branches.details.manage_team_coming_soon'
+                                        .tr(),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
-                      ),
                     ),
                   ],
                 ),

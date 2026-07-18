@@ -99,10 +99,10 @@ class _BranchActionsSheetBodyState extends State<_BranchActionsSheetBody> {
               onSwitchChanged: isUpdatingStatus
                   ? null
                   : (value) => _onMaintenanceToggled(
-                        context: context,
-                        branch: branch,
-                        setUnderMaintenance: value,
-                      ),
+                      context: context,
+                      branch: branch,
+                      setUnderMaintenance: value,
+                    ),
             ),
             AppTableRow(
               title: 'branches.actions.edit_branch'.tr(),
@@ -170,11 +170,11 @@ class _BranchActionsSheetBodyState extends State<_BranchActionsSheetBody> {
 
     if (confirmed == true && widget.pageContext.mounted) {
       widget.pageContext.read<BranchesBloc>().add(
-            BranchStatusChangedEvent(
-              branchId: branch.id,
-              isAvailable: false,
-            ),
-          );
+        BranchStatusChangedEvent(
+          branchId: branch.id,
+          isAvailable: false,
+        ),
+      );
     }
   }
 
@@ -206,8 +206,8 @@ class _BranchActionsSheetBodyState extends State<_BranchActionsSheetBody> {
 
     if (confirmed == true && widget.pageContext.mounted) {
       widget.pageContext.read<BranchesBloc>().add(
-            BranchDeletedEvent(branch.id),
-          );
+        BranchDeletedEvent(branch.id),
+      );
     }
   }
 

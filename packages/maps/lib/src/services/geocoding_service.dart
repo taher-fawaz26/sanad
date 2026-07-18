@@ -2,6 +2,7 @@ import 'package:core/core.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:maps/src/domain/entities/geocoded_address.dart';
+import 'package:maps/src/domain/entities/serving_area.dart';
 
 /// Contract for forward and reverse geocoding.
 abstract class GeocodingService {
@@ -26,7 +27,7 @@ abstract class GeocodingService {
   ///
   /// Uses reverse geocoding of the center and sample points on the coverage
   /// circle (Google / Apple platform geocoders).
-  TaskEither<Failure, List<String>> nearbyAreaNames({
+  TaskEither<Failure, List<ServingArea>> nearbyAreaNames({
     required LatLng center,
     required double radiusKm,
     String? localeIdentifier,

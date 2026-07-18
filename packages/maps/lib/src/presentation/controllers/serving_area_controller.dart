@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 
 class ServingAreaController<T> extends ChangeNotifier {
   ServingAreaController({List<T> initial = const []})
-      : _items = List.of(initial);
+    : _items = List.of(initial);
 
   List<T> _items;
 

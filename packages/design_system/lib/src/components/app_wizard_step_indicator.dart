@@ -12,10 +12,19 @@ class AppWizardStepIndicator extends StatelessWidget {
     required this.currentStep,
     required this.totalSteps,
     super.key,
+    this.furthestCompletedStep,
+    this.onStepTapped,
   });
 
   final int currentStep;
   final int totalSteps;
+
+  /// The highest step the user has reached. Steps up to this value are
+  /// tappable. When null, no steps are tappable.
+  final int? furthestCompletedStep;
+
+  /// Called when the user taps a completed step.
+  final ValueChanged<int>? onStepTapped;
 
   @override
   Widget build(BuildContext context) {
@@ -47,6 +56,12 @@ class AppWizardStepIndicator extends StatelessWidget {
               step: step,
               // Past and current steps are filled; upcoming stay inactive.
               isActive: step <= currentStep,
+              isTappable:
+                  onStepTapped != null &&
+                  furthestCompletedStep != null &&
+                  step <= furthestCompletedStep! &&
+                  step != currentStep,
+              onTap: onStepTapped,
               spec: spec,
             ),
           ],
@@ -60,16 +75,20 @@ class _StepDot extends StatelessWidget {
   const _StepDot({
     required this.step,
     required this.isActive,
+    required this.isTappable,
     required this.spec,
+    this.onTap,
   });
 
   final int step;
   final bool isActive;
+  final bool isTappable;
+  final ValueChanged<int>? onTap;
   final WizardStepStyleSpec spec;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final dot = Container(
       width: spec.stepSize,
       height: spec.stepSize,
       decoration: BoxDecoration(
@@ -83,6 +102,14 @@ class _StepDot extends StatelessWidget {
           color: isActive ? spec.activeForeground : spec.inactiveForeground,
         ),
       ),
+    );
+
+    if (!isTappable) return dot;
+
+    return GestureDetector(
+      onTap: () => onTap?.call(step),
+      behavior: HitTestBehavior.opaque,
+      child: dot,
     );
   }
 }

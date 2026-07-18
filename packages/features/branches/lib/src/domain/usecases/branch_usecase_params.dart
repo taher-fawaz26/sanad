@@ -22,81 +22,88 @@ class GetBranchParams extends Equatable {
   List<Object?> get props => [id];
 }
 
+/// Validated submission command for creating a branch.
+///
+/// All fields required by [CreateBranchDto] are non-nullable here.
+/// [workerIds] must be non-empty (OpenAPI minItems: 1).
 class CreateBranchParams extends Equatable {
   const CreateBranchParams({
     required this.branchName,
     required this.branchType,
     required this.branchAddress,
-    required this.city,
+    required this.cityId,
     required this.branchPhone,
-    this.branchManagerId,
-    this.lat,
-    this.lng,
-    this.radiusKm,
+    required this.branchManagerId,
+    required this.lat,
+    required this.lng,
+    required this.radiusKm,
+    required this.workerIds,
     this.googleMapsLink,
     this.socialMediaLink,
-    this.isAvailable = true,
     this.availabilityMode = BranchAvailabilityMode.coreHours,
     this.availability,
     this.serviceIds,
     this.servingAreaPlaceIds,
-    this.workerIds,
   });
 
   final String branchName;
   final BranchType branchType;
   final String branchAddress;
-  final String city;
+  final String cityId;
   final String branchPhone;
-  final String? branchManagerId;
-  final double? lat;
-  final double? lng;
-  final double? radiusKm;
+  final String branchManagerId;
+  final double lat;
+  final double lng;
+  final double radiusKm;
+
+  /// At least one worker ID is required by the API (minItems: 1).
+  final List<String> workerIds;
+
   final String? googleMapsLink;
   final String? socialMediaLink;
-  final bool isAvailable;
   final BranchAvailabilityMode availabilityMode;
   final List<BranchAvailabilityEntity>? availability;
   final List<String>? serviceIds;
   final List<String>? servingAreaPlaceIds;
-  final List<String>? workerIds;
 
   @override
   List<Object?> get props => [
-        branchName,
-        branchType,
-        branchAddress,
-        city,
-        branchPhone,
-        branchManagerId,
-        lat,
-        lng,
-        radiusKm,
-        googleMapsLink,
-        socialMediaLink,
-        isAvailable,
-        availabilityMode,
-        availability,
-        serviceIds,
-        servingAreaPlaceIds,
-        workerIds,
-      ];
+    branchName,
+    branchType,
+    branchAddress,
+    cityId,
+    branchPhone,
+    branchManagerId,
+    lat,
+    lng,
+    radiusKm,
+    workerIds,
+    googleMapsLink,
+    socialMediaLink,
+    availabilityMode,
+    availability,
+    serviceIds,
+    servingAreaPlaceIds,
+  ];
 }
 
+/// PATCH parameters for updating a branch.
+///
+/// All fields are optional (PATCH semantics). Status changes go through
+/// [UpdateBranchStatusParams] / [PATCH /branches/{id}/status].
 class UpdateBranchParams extends Equatable {
   const UpdateBranchParams({
     required this.id,
     required this.branchName,
     required this.branchAddress,
-    required this.city,
     required this.branchPhone,
+    this.cityId,
     this.branchManagerId,
     this.lat,
     this.lng,
     this.radiusKm,
     this.googleMapsLink,
     this.socialMediaLink,
-    this.isAvailable,
     this.availabilityMode,
     this.availability,
     this.serviceIds,
@@ -106,15 +113,17 @@ class UpdateBranchParams extends Equatable {
   final String id;
   final String branchName;
   final String branchAddress;
-  final String city;
   final String branchPhone;
+
+  /// Optional during PATCH. Provide only when changing the branch city.
+  final String? cityId;
+
   final String? branchManagerId;
   final double? lat;
   final double? lng;
   final double? radiusKm;
   final String? googleMapsLink;
   final String? socialMediaLink;
-  final bool? isAvailable;
   final BranchAvailabilityMode? availabilityMode;
   final List<BranchAvailabilityEntity>? availability;
   final List<String>? serviceIds;
@@ -122,23 +131,22 @@ class UpdateBranchParams extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        branchName,
-        branchAddress,
-        city,
-        branchPhone,
-        branchManagerId,
-        lat,
-        lng,
-        radiusKm,
-        googleMapsLink,
-        socialMediaLink,
-        isAvailable,
-        availabilityMode,
-        availability,
-        serviceIds,
-        servingAreaPlaceIds,
-      ];
+    id,
+    branchName,
+    branchAddress,
+    branchPhone,
+    cityId,
+    branchManagerId,
+    lat,
+    lng,
+    radiusKm,
+    googleMapsLink,
+    socialMediaLink,
+    availabilityMode,
+    availability,
+    serviceIds,
+    servingAreaPlaceIds,
+  ];
 }
 
 class UpdateBranchStatusParams extends Equatable {
@@ -153,6 +161,22 @@ class UpdateBranchStatusParams extends Equatable {
 
   @override
   List<Object?> get props => [id, isAvailable];
+}
+
+class GetBranchManagersParams extends Equatable {
+  const GetBranchManagersParams({
+    this.query,
+    this.page = 1,
+    this.limit = 20,
+  });
+
+  /// Optional search query — `null` means no filter.
+  final String? query;
+  final int page;
+  final int limit;
+
+  @override
+  List<Object?> get props => [query, page, limit];
 }
 
 class DeleteBranchParams extends Equatable {

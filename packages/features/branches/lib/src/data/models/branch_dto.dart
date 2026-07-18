@@ -1,4 +1,5 @@
 import 'package:branches/src/data/models/branch_availability_dto.dart';
+import 'package:branches/src/data/models/branch_worker_dto.dart';
 import 'package:branches/src/domain/entities/branch_availability_mode.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
 
@@ -22,6 +23,7 @@ class BranchDto {
     this.servingAreaPlaceIds,
     this.servingAreaNames,
     this.serviceNames,
+    this.workers = const [],
     this.createdAt,
   });
 
@@ -34,7 +36,8 @@ class BranchDto {
       managerId = manager['id'] as String?;
       // API returns `name`; older shapes had `fullName` or nested `workerInfo`.
       final workerInfo = manager['workerInfo'] as Map<String, dynamic>?;
-      managerName = workerInfo?['fullName'] as String? ??
+      managerName =
+          workerInfo?['fullName'] as String? ??
           manager['fullName'] as String? ??
           manager['name'] as String?;
     }
@@ -76,8 +79,10 @@ class BranchDto {
     List<String>? serviceNames;
     if (servicesJson is List && servicesJson.isNotEmpty) {
       serviceNames = servicesJson
-          .map((e) =>
-              (e as Map<String, dynamic>)['serviceNameEn'] as String? ?? '')
+          .map(
+            (e) =>
+                (e as Map<String, dynamic>)['serviceNameEn'] as String? ?? '',
+          )
           .where((n) => n.isNotEmpty)
           .toList();
     }
@@ -104,6 +109,17 @@ class BranchDto {
       isAvailable = json['isAvailable'] as bool? ?? true;
     }
 
+    // --- Workers ---
+    final workersJson = json['workers'];
+    final List<BranchWorkerDto> workers;
+    if (workersJson is List) {
+      workers = workersJson
+          .map((e) => BranchWorkerDto.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } else {
+      workers = const [];
+    }
+
     return BranchDto(
       id: json['id'] as String,
       branchName: json['branchName'] as String,
@@ -125,6 +141,7 @@ class BranchDto {
       servingAreaPlaceIds: servingAreaPlaceIds,
       servingAreaNames: servingAreaNames,
       serviceNames: serviceNames,
+      workers: workers,
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'] as String)
           : null,
@@ -149,29 +166,31 @@ class BranchDto {
   final List<String>? servingAreaPlaceIds;
   final List<String>? servingAreaNames;
   final List<String>? serviceNames;
+  final List<BranchWorkerDto> workers;
   final DateTime? createdAt;
 
   BranchEntity toDomain() => BranchEntity(
-        id: id,
-        branchName: branchName,
-        branchAddress: branchAddress,
-        city: city,
-        branchPhone: branchPhone,
-        isAvailable: isAvailable,
-        availabilityMode: availabilityMode,
-        branchManagerId: branchManagerId,
-        branchManagerName: branchManagerName,
-        lat: lat,
-        lng: lng,
-        radiusKm: radiusKm,
-        googleMapsLink: googleMapsLink,
-        socialMediaLink: socialMediaLink,
-        availability: availability?.map((a) => a.toDomain()).toList(),
-        servingAreaPlaceIds: servingAreaPlaceIds,
-        servingAreaNames: servingAreaNames,
-        serviceNames: serviceNames,
-        createdAt: createdAt,
-      );
+    id: id,
+    branchName: branchName,
+    branchAddress: branchAddress,
+    city: city,
+    branchPhone: branchPhone,
+    isAvailable: isAvailable,
+    availabilityMode: availabilityMode,
+    branchManagerId: branchManagerId,
+    branchManagerName: branchManagerName,
+    lat: lat,
+    lng: lng,
+    radiusKm: radiusKm,
+    googleMapsLink: googleMapsLink,
+    socialMediaLink: socialMediaLink,
+    availability: availability?.map((a) => a.toDomain()).toList(),
+    servingAreaPlaceIds: servingAreaPlaceIds,
+    servingAreaNames: servingAreaNames,
+    serviceNames: serviceNames,
+    workers: workers.map((w) => w.toDomain()).toList(),
+    createdAt: createdAt,
+  );
 }
 
 /// Parses a numeric field that the API may send as a [num] or as a [String].

@@ -86,7 +86,8 @@
       "action_delete": "حذف الفرع",
       "action_set_maintenance": "تعيين للصيانة",
       "action_set_active": "تعيين كنشط",
-      "status_update_error": "فشل تحديث حالة الفرع"
+      "status_update_error": "فشل تحديث حالة الفرع",
+      "no_team_members": "لا يوجد أعضاء في الفريق"
     },
     "add_branch": {
       "title": "إضافة فرع",
@@ -104,6 +105,9 @@
       "branch_type_warehouse": "المستودع",
       "city": "المدينة",
       "city_hint": "مثال: دبي",
+      "city_select_hint": "اختر المدينة",
+      "city_search_hint": "ابحث عن مدينة",
+      "city_empty": "لا توجد مدن",
       "location": "العنوان",
       "location_hint": "مثال: مارينا بلازا، البرج 2",
       "location_set": "تعيين",
@@ -187,7 +191,8 @@
       "no_areas_found": "لم يتم العثور على مناطق",
       "search_error": "فشل البحث. يرجى المحاولة مرة أخرى.",
       "done": "تم",
-      "confirm": "تأكيد التغطية"
+      "confirm": "تأكيد التغطية",
+      "select_from_search_hint": "يرجى اختيار منطقة من نتائج البحث."
     }
   },
   "services": {

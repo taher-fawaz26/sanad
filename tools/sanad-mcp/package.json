@@ -1,0 +1,19 @@
+{
+  "name": "sanad-mcp",
+  "version": "1.0.0",
+  "description": "Development-only authenticated MCP server for SANAD backend API",
+  "type": "module",
+  "main": "src/index.mjs",
+  "private": true,
+  "scripts": {
+    "start": "node src/index.mjs",
+    "dev": "node --watch src/index.mjs"
+  },
+  "dependencies": {
+    "@ivotoby/openapi-mcp-server": "latest",
+    "dotenv": "^16.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

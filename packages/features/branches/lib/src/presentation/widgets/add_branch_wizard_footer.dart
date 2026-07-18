@@ -36,17 +36,17 @@ class AddBranchWizardFooter extends StatelessWidget {
       child: switch (currentStep) {
         1 => _StepOneButton(onNext: onNext),
         2 => _StepTwoButton(
-            onNext: onNext,
-            onAddCoverage: onAddCoverage,
-          ),
+          onNext: onNext,
+          onAddCoverage: onAddCoverage,
+        ),
         3 => _StepThreeButton(
-            onNext: onNext,
-            onAddServices: onAddServices,
-          ),
+          onNext: onNext,
+          onAddServices: onAddServices,
+        ),
         4 => _StepFourButton(
-            onSubmit: onSubmit,
-            onAddWorkers: onAddWorkers,
-          ),
+          onSubmit: onSubmit,
+          onAddWorkers: onAddWorkers,
+        ),
         _ => _SubmitButton(onSubmit: onSubmit),
       },
     );
@@ -63,8 +63,11 @@ class _StepOneButton extends StatelessWidget {
     return BlocSelector<AddBranchDraftCubit, AddBranchDraft, bool>(
       selector: (state) => state.isStepOneComplete,
       builder: (context, canProceed) {
-        return BlocSelector<AddBranchBloc, AddBranchState,
-            ({bool isLoading, bool isLoadingSetup})>(
+        return BlocSelector<
+          AddBranchBloc,
+          AddBranchState,
+          ({bool isLoading, bool isLoadingSetup})
+        >(
           selector: (state) => (
             isLoading: state.isLoading,
             isLoadingSetup: state.isLoadingSetup,

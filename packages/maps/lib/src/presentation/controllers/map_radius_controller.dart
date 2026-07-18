@@ -9,8 +9,8 @@ class MapRadiusController extends ChangeNotifier {
   MapRadiusController({
     LatLng? center,
     double radiusKm = 5.0,
-  })  : _center = center,
-        _radiusKm = radiusKm;
+  }) : _center = center,
+       _radiusKm = radiusKm;
 
   static const _metersPerKm = 1000.0;
 

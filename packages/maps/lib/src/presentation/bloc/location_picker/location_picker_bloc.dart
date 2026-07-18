@@ -26,14 +26,15 @@ class LocationPickerBloc
     required OpenLocationSettingsUseCase openLocationSettingsUseCase,
     SearchPlacesUseCase? searchPlacesUseCase,
     GetPlaceDetailsUseCase? getPlaceDetailsUseCase,
-  })  : _getCurrentLocationUseCase = getCurrentLocationUseCase,
-        _reverseGeocodeUseCase = reverseGeocodeUseCase,
-        _forwardGeocodeUseCase = forwardGeocodeUseCase,
-        _openLocationSettingsUseCase = openLocationSettingsUseCase,
-        _getPlaceDetailsUseCase = getPlaceDetailsUseCase,
-        _searchRunner =
-            PlaceSearchRunner(searchPlacesUseCase: searchPlacesUseCase),
-        super(const LocationPickerState()) {
+  }) : _getCurrentLocationUseCase = getCurrentLocationUseCase,
+       _reverseGeocodeUseCase = reverseGeocodeUseCase,
+       _forwardGeocodeUseCase = forwardGeocodeUseCase,
+       _openLocationSettingsUseCase = openLocationSettingsUseCase,
+       _getPlaceDetailsUseCase = getPlaceDetailsUseCase,
+       _searchRunner = PlaceSearchRunner(
+         searchPlacesUseCase: searchPlacesUseCase,
+       ),
+       super(const LocationPickerState()) {
     on<LocationPickerStarted>(_onStarted);
     on<LocationPickerCameraIdle>(_onCameraIdle);
     on<LocationPickerSearchSubmitted>(_onSearchSubmitted);

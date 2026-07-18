@@ -15,17 +15,17 @@ part 'map_area_picker_event.dart';
 part 'map_area_picker_state.dart';
 
 /// Dedicated bloc for the map area picker widget.
-class MapAreaPickerBloc
-    extends Bloc<MapAreaPickerEvent, MapAreaPickerState> {
+class MapAreaPickerBloc extends Bloc<MapAreaPickerEvent, MapAreaPickerState> {
   MapAreaPickerBloc({
     required ReverseGeocodeUseCase reverseGeocodeUseCase,
     SearchPlacesUseCase? searchPlacesUseCase,
     GetPlaceDetailsUseCase? getPlaceDetailsUseCase,
-  })  : _reverseGeocodeUseCase = reverseGeocodeUseCase,
-        _getPlaceDetailsUseCase = getPlaceDetailsUseCase,
-        _searchRunner =
-            PlaceSearchRunner(searchPlacesUseCase: searchPlacesUseCase),
-        super(const MapAreaPickerState()) {
+  }) : _reverseGeocodeUseCase = reverseGeocodeUseCase,
+       _getPlaceDetailsUseCase = getPlaceDetailsUseCase,
+       _searchRunner = PlaceSearchRunner(
+         searchPlacesUseCase: searchPlacesUseCase,
+       ),
+       super(const MapAreaPickerState()) {
     on<MapAreaPickerStarted>(_onStarted);
     on<MapAreaPickerLocationChanged>(_onLocationChanged);
     on<MapAreaPickerQueryChanged>(_onQueryChanged);

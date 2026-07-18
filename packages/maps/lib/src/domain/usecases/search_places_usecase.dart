@@ -29,10 +29,9 @@ class SearchPlacesUseCase
   @override
   TaskEither<Failure, List<PlacePrediction>> call(
     SearchPlacesParams params,
-  ) =>
-      _repository.searchPlaces(
-        query: params.query,
-        language: params.language,
-        biasLocation: params.biasLocation,
-      );
+  ) => _repository.searchPlaces(
+    query: params.query,
+    language: params.language,
+    biasLocation: params.biasLocation,
+  );
 }

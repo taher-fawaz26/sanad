@@ -30,10 +30,19 @@ export 'src/config/maps_config.dart';
 export 'src/di/maps_di.dart';
 
 // Domain entities (public value objects)
+export 'src/domain/entities/area_entity.dart';
+export 'src/domain/entities/city_entity.dart';
+export 'src/domain/entities/country_entity.dart';
 export 'src/domain/entities/coverage_mode.dart';
 export 'src/domain/entities/map_area_picker_result.dart';
 export 'src/domain/entities/place_prediction.dart';
 export 'src/domain/entities/serving_area.dart';
+
+// Domain failures (public surface for callers to pattern-match)
+export 'src/domain/failures/locations_failure.dart';
+
+// Domain use cases (locations)
+export 'src/domain/usecases/get_cities_usecase.dart';
 
 // Presentation — BLoCs consumed by features
 export 'src/presentation/bloc/coverage_area/coverage_area_bloc.dart';
@@ -54,6 +63,7 @@ export 'src/presentation/models/radius_overlay_style.dart';
 export 'src/presentation/utils/radius_format.dart';
 
 // Presentation — reusable widgets & sheets
+export 'src/presentation/widgets/city_select_field.dart';
 export 'src/presentation/widgets/location_picker_sheet.dart';
 export 'src/presentation/widgets/map_area_picker.dart';
 export 'src/presentation/widgets/place_search_bar.dart';

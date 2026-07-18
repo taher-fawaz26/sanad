@@ -9,62 +9,60 @@ class CreateBranchRequest extends Equatable {
     required this.branchName,
     required this.branchType,
     required this.branchAddress,
-    required this.city,
+    required this.cityId,
     required this.branchPhone,
-    this.branchManagerId,
-    this.lat,
-    this.lng,
-    this.radiusKm,
+    required this.branchManagerId,
+    required this.lat,
+    required this.lng,
+    required this.radiusKm,
+    required this.workerIds,
     this.googleMapsLink,
     this.socialMediaLink,
-    this.isAvailable = true,
     this.availabilityMode = BranchAvailabilityMode.coreHours,
     this.availability,
     this.serviceIds,
     this.servingAreaPlaceIds,
-    this.workerIds,
   });
 
   final String branchName;
   final BranchType branchType;
   final String branchAddress;
-  final String city;
+  final String cityId;
   final String branchPhone;
-  final String? branchManagerId;
-  final double? lat;
-  final double? lng;
-  final double? radiusKm;
+  final String branchManagerId;
+  final double lat;
+  final double lng;
+  final double radiusKm;
+  final List<String> workerIds;
   final String? googleMapsLink;
   final String? socialMediaLink;
-  final bool isAvailable;
   final BranchAvailabilityMode availabilityMode;
   final List<BranchAvailabilityEntity>? availability;
   final List<String>? serviceIds;
   final List<String>? servingAreaPlaceIds;
-  final List<String>? workerIds;
 
   Map<String, dynamic> toMap() {
     final body = <String, dynamic>{
       'branchName': branchName,
       'type': branchType.toApiString(),
       'branchAddress': branchAddress,
-      'city': city,
+      'cityId': cityId,
       'branchPhone': branchPhone,
-      'isAvailable': isAvailable,
+      'branchManagerId': branchManagerId,
+      'lat': lat,
+      'lng': lng,
+      'radiusKm': radiusKm,
+      'workerIds': workerIds,
       'availabilityMode': availabilityMode.toApiString(),
     };
-    if (branchManagerId != null) body['branchManagerId'] = branchManagerId;
-    if (lat != null) body['lat'] = lat;
-    if (lng != null) body['lng'] = lng;
-    if (radiusKm != null) body['radiusKm'] = radiusKm;
     if (googleMapsLink != null) body['googleMapsLink'] = googleMapsLink;
     if (socialMediaLink != null) body['socialMediaLink'] = socialMediaLink;
     if (availability != null) {
-      body['availability'] =
-          availability!.map(BranchAvailabilityDto.entityToMap).toList();
+      body['availability'] = availability!
+          .map(BranchAvailabilityDto.entityToMap)
+          .toList();
     }
     if (serviceIds != null) body['serviceIds'] = serviceIds;
-    if (workerIds != null) body['workerIds'] = workerIds;
     if (servingAreaPlaceIds != null && servingAreaPlaceIds!.isNotEmpty) {
       body['servingAreaPlaceIds'] = servingAreaPlaceIds;
     }
@@ -73,22 +71,21 @@ class CreateBranchRequest extends Equatable {
 
   @override
   List<Object?> get props => [
-        branchName,
-        branchType,
-        branchAddress,
-        city,
-        branchPhone,
-        branchManagerId,
-        lat,
-        lng,
-        radiusKm,
-        googleMapsLink,
-        socialMediaLink,
-        isAvailable,
-        availabilityMode,
-        availability,
-        serviceIds,
-        servingAreaPlaceIds,
-        workerIds,
-      ];
+    branchName,
+    branchType,
+    branchAddress,
+    cityId,
+    branchPhone,
+    branchManagerId,
+    lat,
+    lng,
+    radiusKm,
+    workerIds,
+    googleMapsLink,
+    socialMediaLink,
+    availabilityMode,
+    availability,
+    serviceIds,
+    servingAreaPlaceIds,
+  ];
 }

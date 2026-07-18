@@ -18,21 +18,19 @@ class BranchAvailabilityDto {
   final List<BranchTimeSlotDto> slots;
 
   Map<String, dynamic> toMap() => {
-        'day': day,
-        'slots': slots.map((s) => s.toMap()).toList(),
-      };
+    'day': day,
+    'slots': slots.map((s) => s.toMap()).toList(),
+  };
 
   BranchAvailabilityEntity toDomain() => BranchAvailabilityEntity(
-        day: day,
-        slots: slots.map((s) => s.toDomain()).toList(),
-      );
+    day: day,
+    slots: slots.map((s) => s.toDomain()).toList(),
+  );
 
   /// Serializes a domain [BranchAvailabilityEntity] to a request map.
   /// Use this in request objects so serialization stays in one place.
   static Map<String, dynamic> entityToMap(BranchAvailabilityEntity entity) => {
-        'day': entity.day,
-        'slots': entity.slots
-            .map((s) => {'from': s.from, 'to': s.to})
-            .toList(),
-      };
+    'day': entity.day,
+    'slots': entity.slots.map((s) => {'from': s.from, 'to': s.to}).toList(),
+  };
 }
