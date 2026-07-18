@@ -1,4 +1,5 @@
 import 'package:auth/src/presentation/bloc/auth/auth_bloc.dart';
+import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -39,7 +40,7 @@ class _SplashPageState extends State<SplashPage> {
         }
       },
       child: const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(child: AppLoadingIndicator()),
       ),
     );
   }

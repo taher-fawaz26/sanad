@@ -108,6 +108,7 @@ export 'tokens/notification_badge_tokens.dart'
 export 'tokens/overlay_tokens.dart' show OverlayTokens;
 export 'tokens/page_indicator_tokens.dart'
     show PageIndicatorStyleSpec, PageIndicatorTokens;
+export 'tokens/loading_indicator_tokens.dart' show LoadingIndicatorTokens;
 export 'tokens/progress_tokens.dart' show ProgressStyleSpec, ProgressTokens;
 export 'tokens/radio_tokens.dart' show RadioStyleSpec, RadioTokens;
 export 'tokens/search_bar_tokens.dart'

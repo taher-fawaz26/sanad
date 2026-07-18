@@ -1,3 +1,4 @@
+import 'package:design_system/src/components/app_loading_indicator.dart';
 import 'package:design_system/src/spacing/responsive_spacing.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
 import 'package:design_system/src/theme/tokens/button_tokens.dart';
@@ -116,13 +117,10 @@ class _AppButtonState extends State<AppButton> {
   Widget _buildContent(TextStyle textStyle) {
     if (widget.isLoading) {
       return Center(
-        child: SizedBox(
-          width: ButtonTokens.iconBoxSize(),
-          height: ButtonTokens.iconBoxSize(),
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: textStyle.color,
-          ),
+        child: AppLoadingIndicator(
+          size: ButtonTokens.iconBoxSize(),
+          strokeWidth: 2,
+          color: textStyle.color,
         ),
       );
     }

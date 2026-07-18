@@ -56,13 +56,10 @@ class _PlaceSearchFieldState extends State<PlaceSearchField> {
 
     Widget trailing;
     if (widget.isLoading) {
-      trailing = SizedBox(
-        width: spec.iconSize,
-        height: spec.iconSize,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          color: spec.iconColor,
-        ),
+      trailing = AppLoadingIndicator(
+        size: spec.iconSize,
+        strokeWidth: 2,
+        color: spec.iconColor,
       );
     } else if (_hasText) {
       trailing = GestureDetector(

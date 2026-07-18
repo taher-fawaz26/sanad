@@ -163,7 +163,7 @@ class _SelectServiceActionSheetState extends State<_SelectServiceActionSheet> {
 
   Widget _buildListBody() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: AppLoadingIndicator());
     }
 
     if (_failure != null) {

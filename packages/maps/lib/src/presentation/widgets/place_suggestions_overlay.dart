@@ -29,7 +29,7 @@ class PlaceSuggestionsOverlay extends StatelessWidget {
 
     Widget content;
     if (searchStatus == PlaceSearchStatus.searching && predictions.isEmpty) {
-      content = _buildLoading(colors);
+      content = _buildLoading();
     } else if (errorMessage != null && predictions.isEmpty) {
       content = _buildError(colors, typography);
     } else if (predictions.isEmpty) {
@@ -65,18 +65,11 @@ class PlaceSuggestionsOverlay extends StatelessWidget {
     );
   }
 
-  Widget _buildLoading(AppColors colors) {
+  Widget _buildLoading() {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
-      child: Center(
-        child: SizedBox(
-          width: responsiveDimension(24),
-          height: responsiveDimension(24),
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: colors.primary,
-          ),
-        ),
+      child: const Center(
+        child: AppLoadingIndicator(size: 24, strokeWidth: 2),
       ),
     );
   }

@@ -357,21 +357,14 @@ class _MapView extends StatelessWidget {
               Positioned.fill(
                 child: ColoredBox(
                   color: colors.surface.withValues(alpha: 0.6),
-                  child: const Center(child: CircularProgressIndicator()),
+                  child: const Center(child: AppLoadingIndicator()),
                 ),
               ),
             if (isGeocoding && !isLoadingMap)
               Positioned(
                 top: AppSpacing.sm,
                 left: AppSpacing.sm,
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: colors.primary,
-                  ),
-                ),
+                child: const AppLoadingIndicator(size: 20, strokeWidth: 2),
               ),
           ],
         ),

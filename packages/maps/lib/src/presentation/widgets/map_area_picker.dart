@@ -370,14 +370,7 @@ class _MapAreaPickerMapView extends StatelessWidget {
               Positioned(
                 top: AppSpacing.sm,
                 left: AppSpacing.sm,
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: colors.primary,
-                  ),
-                ),
+                child: const AppLoadingIndicator(size: 20, strokeWidth: 2),
               ),
           ],
         ),

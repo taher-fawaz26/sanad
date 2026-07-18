@@ -180,7 +180,7 @@ class _CityPickerSheetState extends State<_CityPickerSheet> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: AppLoadingIndicator());
     }
 
     if (_failure != null) {

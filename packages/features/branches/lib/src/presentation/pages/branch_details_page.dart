@@ -34,7 +34,7 @@ class BranchDetailsPage extends StatelessWidget {
       builder: (context, state) {
         if (state.isLoading && state.branch == null) {
           return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+            body: Center(child: AppLoadingIndicator()),
           );
         }
 

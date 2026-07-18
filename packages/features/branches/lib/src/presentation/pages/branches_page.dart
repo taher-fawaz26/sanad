@@ -116,7 +116,7 @@ class _BranchesTab extends StatelessWidget {
       child: BlocBuilder<BranchesBloc, BranchesState>(
         builder: (context, state) {
           if (state.isLoading && state.branches.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: AppLoadingIndicator());
           }
 
           final branches = state.filteredBranches;

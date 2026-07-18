@@ -64,14 +64,7 @@ class _MapMyLocationButtonState extends State<MapMyLocationButton> {
         boxShadow: AppShadows.small,
       ),
       child: _loading
-          ? SizedBox(
-              width: responsiveDimension(40),
-              height: responsiveDimension(40),
-              child: const Padding(
-                padding: EdgeInsets.all(10),
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            )
+          ? const AppLoadingIndicator(size: 40, strokeWidth: 2)
           : AppIconButton(
               icon: Icons.my_location,
               size: AppIconButtonSize.large,

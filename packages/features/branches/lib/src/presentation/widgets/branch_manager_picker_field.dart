@@ -189,7 +189,7 @@ class _ManagerPickerSheetState extends State<_ManagerPickerSheet> {
               maxHeight: MediaQuery.sizeOf(context).height * 0.5,
             ),
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: AppLoadingIndicator())
                 : ListView.builder(
                     shrinkWrap: true,
                     itemCount:
@@ -200,7 +200,7 @@ class _ManagerPickerSheetState extends State<_ManagerPickerSheet> {
                           child: _isLoadingMore
                               ? const Padding(
                                   padding: EdgeInsets.all(16),
-                                  child: CircularProgressIndicator(),
+                                  child: AppLoadingIndicator(),
                                 )
                               : TextButton(
                                   onPressed: () => _loadManagers(

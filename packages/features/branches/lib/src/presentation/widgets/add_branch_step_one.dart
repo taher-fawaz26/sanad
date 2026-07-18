@@ -314,7 +314,7 @@ class _WorkingHoursSection extends StatelessWidget {
             selector: (state) => state.isLoadingSetup,
             builder: (context, isLoadingSetup) {
               if (isLoadingSetup) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: AppLoadingIndicator());
               }
               return BlocBuilder<AddBranchBloc, AddBranchState>(
                 buildWhen: (prev, curr) =>

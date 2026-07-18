@@ -607,7 +607,7 @@ class ${p}Page extends HookWidget {
         return Scaffold(
           appBar: AppNavBar(title: '$s.title'.tr()),
           body: switch (state) {
-            ${p}LoadingState() => const Center(child: CircularProgressIndicator()),
+            ${p}LoadingState() => const Center(child: AppLoadingIndicator()),
             ${p}FailureState(:final message) => Center(child: Text(message)),
             ${p}SuccessState(:final items) => ListView.builder(
                 itemCount: items.length,

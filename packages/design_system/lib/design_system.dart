@@ -28,6 +28,7 @@ export 'src/components/app_modal_sheet.dart';
 export 'src/components/app_notification_icon.dart';
 export 'src/components/app_phone_field.dart';
 export 'src/components/app_fill_remaining_scrollable.dart';
+export 'src/components/app_loading_indicator.dart';
 export 'src/components/app_radio_tile.dart';
 export 'src/components/app_refresh_indicator.dart';
 export 'src/components/app_select_field.dart';

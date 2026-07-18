@@ -341,7 +341,7 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
                     alpha: _mapOverlayAlpha,
                   ),
                   child: const Center(
-                    child: CircularProgressIndicator(),
+                    child: AppLoadingIndicator(),
                   ),
                 ),
             ],
