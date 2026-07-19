@@ -11,6 +11,15 @@ abstract final class BranchMapsLauncher {
     return launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
+  /// Opens raw coordinates in the device maps app. Used by the add-branch
+  /// review screen, where no saved [BranchEntity] exists yet.
+  static Future<bool> openCoordinates(double lat, double lng) {
+    return launchUrl(
+      Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng'),
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
   static Uri? _resolveUri(BranchEntity branch) {
     final googleMapsLink = branch.googleMapsLink?.trim();
     if (googleMapsLink != null && googleMapsLink.isNotEmpty) {

@@ -1,5 +1,6 @@
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
 import 'package:branches/src/domain/entities/branch_availability_mode.dart';
+import 'package:branches/src/domain/entities/branch_type.dart';
 import 'package:branches/src/domain/entities/branch_worker_entity.dart';
 import 'package:equatable/equatable.dart';
 
@@ -12,6 +13,7 @@ class BranchEntity extends Equatable {
     required this.branchPhone,
     required this.isAvailable,
     required this.availabilityMode,
+    this.branchType = BranchType.mainBranch,
     this.branchManagerId,
     this.branchManagerName,
     this.lat,
@@ -37,6 +39,8 @@ class BranchEntity extends Equatable {
   final bool isAvailable;
 
   final BranchAvailabilityMode availabilityMode;
+
+  final BranchType branchType;
 
   final String? branchManagerId;
   final String? branchManagerName;
@@ -73,6 +77,7 @@ class BranchEntity extends Equatable {
     branchPhone,
     isAvailable,
     availabilityMode,
+    branchType,
     branchManagerId,
     branchManagerName,
     lat,

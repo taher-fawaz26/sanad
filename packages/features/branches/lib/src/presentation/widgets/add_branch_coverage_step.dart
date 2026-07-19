@@ -7,7 +7,8 @@ import 'package:maps/maps.dart';
 /// Add branch — Step 2 coverage.
 ///
 /// Empty: Figma `347:13772`.
-/// Filled: Figma `972:9206`.
+/// Filled: Figma `1514:7822` — a "Coverage area" section with green area
+/// chips. Editing happens through the map picker only.
 class AddBranchCoverageStep extends StatelessWidget {
   const AddBranchCoverageStep({
     required this.onEditCoverage,
@@ -17,7 +18,7 @@ class AddBranchCoverageStep extends StatelessWidget {
     super.key,
   });
 
-  /// Opens the coverage area screen to add or edit coverage.
+  /// Opens the coverage area map picker to add or edit coverage.
   final VoidCallback onEditCoverage;
   final String? pickedAddress;
   final List<ServingArea> servingAreas;
@@ -29,10 +30,8 @@ class AddBranchCoverageStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (_hasCoverage) {
-      return _CoverageSetContent(
-        address: pickedAddress!,
+      return _CoverageAreasContent(
         servingAreas: servingAreas,
-        radiusKm: radiusKm!,
         onEditCoverage: onEditCoverage,
       );
     }
@@ -51,89 +50,62 @@ class AddBranchCoverageStep extends StatelessWidget {
   }
 }
 
-/// Figma success visual after coverage is confirmed (`972:9206`).
-class _CoverageSetContent extends StatelessWidget {
-  const _CoverageSetContent({
-    required this.address,
+/// Selected coverage rendered as a "Coverage area" section with green area
+/// chips (Figma `1514:7822`). Tapping re-opens the map picker to edit.
+class _CoverageAreasContent extends StatelessWidget {
+  const _CoverageAreasContent({
     required this.servingAreas,
-    required this.radiusKm,
     required this.onEditCoverage,
   });
 
-  final String address;
   final List<ServingArea> servingAreas;
-  final double radiusKm;
   final VoidCallback onEditCoverage;
-
-  String get _areaLabel {
-    if (servingAreas.isNotEmpty) return servingAreas.first.name;
-    final firstPart = address.split(',').first.trim();
-    return firstPart.isNotEmpty ? firstPart : address;
-  }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final typography = context.appTypography;
 
     return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.xxxl,
-        AppSpacing.xxxl,
-        AppSpacing.xxxl,
-        AppSpacing.lg,
-      ),
-      child: Column(
-        children: [
-          GestureDetector(
-            onTap: onEditCoverage,
-            behavior: HitTestBehavior.opaque,
-            child: Column(
-              children: [
-                Container(
-                  width: responsiveDimension(80),
-                  height: responsiveDimension(80),
-                  decoration: BoxDecoration(
-                    color: colors.success100,
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: AppSvgPicture.asset(
-                    AppSvgs.mapPinMarker,
-                    width: responsiveDimension(36),
-                    height: responsiveDimension(48),
-                  ),
-                ),
-                SizedBox(height: AppSpacing.xxl),
-                Text(
-                  'branches.add_branch.coverage_set_title'.tr(),
-                  textAlign: TextAlign.center,
-                  style: typography.title3.copyWith(
-                    color: colors.textPrimary,
-                  ),
-                ),
-                SizedBox(height: AppSpacing.sm),
-                Text(
-                  'branches.add_branch.coverage_set_description'.tr(
-                    namedArgs: {
-                      'area': _areaLabel,
-                      'radius': formatRadiusKm(radiusKm),
-                      'count': '${servingAreas.length}',
-                    },
-                  ),
-                  textAlign: TextAlign.center,
-                  style: typography.regularNormal.copyWith(
-                    color: colors.textSecondary,
-                  ),
-                ),
-              ],
+      padding: EdgeInsets.only(bottom: AppSpacing.lg),
+      child: GestureDetector(
+        onTap: onEditCoverage,
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AppSection(
+              title: 'branches.details.section_coverage'.tr(),
+              size: AppSectionSize.compact,
             ),
-          ),
-          if (servingAreas.isNotEmpty) ...[
-            SizedBox(height: AppSpacing.xxxl),
-            ServingAreaChips(areas: servingAreas),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: servingAreas.isEmpty
+                  ? Text(
+                      'branches.details.no_serving_areas'.tr(),
+                      style: context.appTypography.smallNormal.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    )
+                  : Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
+                      children: [
+                        for (final area in servingAreas)
+                          AppChip(
+                            label: area.name,
+                            tone: AppChipTone.softSuccess,
+                            icon: Icon(
+                              Icons.location_on_outlined,
+                              size: 16,
+                              color: colors.palettes.main.shade700,
+                            ),
+                            iconPosition: AppChipIconPosition.left,
+                          ),
+                      ],
+                    ),
+            ),
           ],
-        ],
+        ),
       ),
     );
   }

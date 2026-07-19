@@ -193,11 +193,30 @@ class _SelectServiceActionSheetState extends State<_SelectServiceActionSheet> {
 
     final services = _filteredServices;
     if (services.isEmpty) {
+      // Figma `No services found` search-empty state (`1513:7799`).
       return Center(
-        child: Text(
-          'services.select_service.empty'.tr(),
-          style: context.appTypography.regularNormal.copyWith(
-            color: context.appColors.textSecondary,
+        child: Padding(
+          padding: EdgeInsets.all(AppSpacing.xl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'services.select_service.empty'.tr(),
+                textAlign: TextAlign.center,
+                style: context.appTypography.regularNormal.copyWith(
+                  color: context.appColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              SizedBox(height: AppSpacing.xs),
+              Text(
+                'services.select_service.empty_description'.tr(),
+                textAlign: TextAlign.center,
+                style: context.appTypography.smallNormal.copyWith(
+                  color: context.appColors.textSecondary,
+                ),
+              ),
+            ],
           ),
         ),
       );

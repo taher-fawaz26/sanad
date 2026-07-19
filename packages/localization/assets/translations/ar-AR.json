@@ -23,11 +23,7 @@
   },
   "branches": {
     "title": "الفروع",
-    "subtitle": "إدارة معلومات شركتك",
     "company_name": "مركز غبور للخدمات",
-    "tab_branches": "الفروع",
-    "tab_company_profile": "ملف الشركة",
-    "company_profile_placeholder": "ملف الشركة قادم قريباً",
     "count_label": "عدد الفروع الحالية",
     "add_button": "إضافة فروع",
     "search_hint": "بحث",
@@ -36,12 +32,12 @@
     "filter_active": "نشط",
     "status_active": "نشط",
     "status_maintenance": "صيانة",
-    "empty_first_branch_title": "أضف فرعك الأول",
-    "empty_first_branch_description": "أنشئ موقعاً لإدارة التغطية والخدمات والفريق.",
+    "empty_first_branch_title": "لا توجد فروع بعد",
+    "empty_first_branch_description": "أضف فرعك الأول لبدء إدارة خدماتك وفريقك.",
     "empty_first_branch_action": "إضافة فرع",
     "empty_search_title": "لم يتم العثور على فروع",
     "empty_search_description": "لا توجد نتائج لـ \"{query}\". جرّب اسماً آخر أو امسح البحث.",
-    "empty_search_action": "مسح البحث",
+    "empty_search_action": "إلغاء",
     "empty_workers_title": "لا يوجد عمال معيّنون",
     "empty_workers_description": "عيّن عمالاً ليتم جدولتهم في المهام.",
     "empty_workers_action": "تعيين عامل",
@@ -87,7 +83,8 @@
       "action_set_maintenance": "تعيين للصيانة",
       "action_set_active": "تعيين كنشط",
       "status_update_error": "فشل تحديث حالة الفرع",
-      "no_team_members": "لا يوجد أعضاء في الفريق"
+      "no_team_members": "لا يوجد أعضاء في الفريق",
+      "no_serving_areas": "لم تتم إضافة مناطق تغطية"
     },
     "add_branch": {
       "title": "إضافة فرع",
@@ -111,7 +108,7 @@
       "location": "العنوان",
       "location_hint": "مثال: مارينا بلازا، البرج 2",
       "location_set": "تعيين",
-      "location_required": "يرجى تحديد عنوان الفرع",
+      "location_required": "الموقع مطلوب",
       "branch_phone": "هاتف الفرع",
       "branch_phone_hint": "+971 4 123 4567",
       "branch_manager": "مدير الفرع",
@@ -163,7 +160,19 @@
         "wednesday": "الأربعاء",
         "thursday": "الخميس",
         "friday": "الجمعة"
-      }
+      },
+      "branch_name_required": "اسم الفرع مطلوب",
+      "city_required": "يرجى اختيار مدينة",
+      "invalid_phone": "أدخل رقم هاتف صالحاً",
+      "submitting_title": "جارٍ إضافة فرعك...",
+      "submitting_description": "يرجى الانتظار بينما نقوم بإعداد فرعك.",
+      "discard_title": "تجاهل التغييرات؟",
+      "discard_description": "لديك تغييرات غير محفوظة. إذا غادرت الآن، سيتم فقدان تقدمك.",
+      "discard_confirm": "تجاهل",
+      "discard_cancel": "متابعة التعديل",
+      "location_access_title": "يلزم الوصول إلى الموقع",
+      "location_access_description": "لتحديد منطقة تغطية فرعك، يرجى السماح بالوصول إلى الموقع من إعدادات جهازك.",
+      "open_settings_button": "فتح الإعدادات"
     },
     "location_picker": {
       "search_hint": "ابحث عن موقع",
@@ -174,7 +183,9 @@
       "permission_permanently_denied": "تم رفض إذن الموقع بشكل دائم. افتح الإعدادات لتفعيله.",
       "open_settings": "فتح الإعدادات",
       "service_disabled": "فعّل خدمات الموقع على الجهاز لتحديد موقع الفرع.",
-      "generic_error": "تعذّر تحميل الموقع. يرجى المحاولة مرة أخرى."
+      "generic_error": "تعذّر تحميل الموقع. يرجى المحاولة مرة أخرى.",
+      "title": "موقع الفرع",
+      "subtitle": "حرّك الدبوس لتحديد موقع الفرع على الخريطة"
     },
     "coverage_area": {
       "title": "منطقة التغطية",
@@ -193,6 +204,16 @@
       "done": "تم",
       "confirm": "تأكيد التغطية",
       "select_from_search_hint": "يرجى اختيار منطقة من نتائج البحث."
+    },
+    "load_error_title": "تعذر تحميل الفروع",
+    "load_error_description": "تحقق من اتصالك وحاول مرة أخرى.",
+    "load_error_action": "حاول مرة أخرى",
+    "review": {
+      "submit": "إرسال",
+      "manager": "المدير",
+      "view_all": "عرض الكل {count}",
+      "workers_count": "{count} موظف",
+      "no_services": "لم تتم إضافة خدمات"
     }
   },
   "services": {
@@ -201,21 +222,58 @@
       "search_hint": "بحث",
       "confirm": "تأكيد",
       "retry": "إعادة المحاولة",
-      "empty": "لا توجد خدمات"
+      "empty": "لا توجد خدمات",
+      "empty_description": "جرّب البحث بكلمة مختلفة"
     }
   },
   "workers": {
-    "title": "العمال",
+    "title": "الفريق",
     "empty_title": "لا يوجد عمال بعد",
-    "empty_description": "سيظهر عمالك هنا",
+    "empty_description": "ابدأ بإضافة أول عامل لإدارة فريقك الميداني.",
     "select_worker": {
       "title": "أضف فريقك",
       "search_hint": "بحث",
       "confirm": "تأكيد",
       "retry": "إعادة المحاولة",
-      "empty": "لا يوجد عمال"
+      "empty": "لا يوجد عمال",
+      "empty_description": "جرّب البحث باسم مختلف"
     },
-    "remove_worker": "إزالة العامل"
+    "remove_worker": "إزالة العامل",
+    "subtitle": "إدارة فريق شركتك",
+    "add_team": "إضافة فريق",
+    "search_hint": "البحث عن العمال...",
+    "search_empty_title": "لا يوجد عمال",
+    "search_empty_description": "جرّب البحث باسم مختلف",
+    "clear_search": "مسح",
+    "status_active": "نشط",
+    "status_pending": "معلّق",
+    "status_suspended": "موقوف",
+    "more_actions": "المزيد من الإجراءات",
+    "action_view_details": "عرض التفاصيل",
+    "action_edit": "تعديل المعلومات",
+    "action_resend_invitation": "إعادة إرسال الدعوة",
+    "action_suspend": "إيقاف العامل",
+    "action_unsuspend": "رفع الإيقاف",
+    "action_delete": "حذف العامل",
+    "details_title": "التفاصيل",
+    "contact_details": "تفاصيل الاتصال",
+    "contact_phone": "الهاتف",
+    "contact_email": "البريد الإلكتروني",
+    "contact_type": "النوع",
+    "contact_branches": "الفروع",
+    "edit_profile": "تعديل الملف الشخصي",
+    "delete_title": "حذف العامل؟",
+    "delete_description": "هل أنت متأكد من حذف {name} من فريقك؟ لا يمكن التراجع عن هذا الإجراء.",
+    "delete_action": "حذف",
+    "suspend_title": "إيقاف العامل؟",
+    "suspend_description": "هل أنت متأكد من إيقاف {name}؟ لن يتمكن من الوصول إلى النظام حتى رفع الإيقاف.",
+    "suspend_action": "إيقاف",
+    "unsuspend_title": "رفع إيقاف العامل؟",
+    "unsuspend_description": "هل أنت متأكد من رفع إيقاف {name}؟ سيستعيد الوصول إلى النظام.",
+    "unsuspend_action": "رفع الإيقاف",
+    "cancel": "إلغاء",
+    "action_failed": "فشل الإجراء",
+    "coming_soon": "قريباً"
   },
   "auth": {
     "login_title": "مرحباً بعودتك",

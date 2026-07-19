@@ -7,6 +7,16 @@ import 'package:design_system/src/theme/tokens/empty_state_tokens.dart';
 import 'package:design_system/src/theme/typography/app_typography.dart';
 import 'package:flutter/material.dart';
 
+/// Visual treatment for [AppEmptyState]'s action.
+enum AppEmptyStateActionStyle {
+  /// Full-width filled pill (default).
+  button,
+
+  /// Plain centered text link (Figma `branches-empty-state` search variant,
+  /// `1514:7861` — "Cancel").
+  link,
+}
+
 /// Package-aware raster illustration for [AppEmptyState].
 class AppEmptyStateImage extends StatelessWidget {
   const AppEmptyStateImage({
@@ -48,6 +58,7 @@ class AppEmptyState extends StatelessWidget {
     this.onAction,
     this.actionIcon,
     this.actionIconPosition = AppButtonIconPosition.none,
+    this.actionStyle = AppEmptyStateActionStyle.button,
   });
 
   final Widget illustration;
@@ -57,6 +68,7 @@ class AppEmptyState extends StatelessWidget {
   final VoidCallback? onAction;
   final Widget? actionIcon;
   final AppButtonIconPosition actionIconPosition;
+  final AppEmptyStateActionStyle actionStyle;
 
   @override
   Widget build(BuildContext context) {
@@ -97,15 +109,27 @@ class AppEmptyState extends StatelessWidget {
           ),
           if (actionLabel != null && onAction != null) ...[
             SizedBox(height: spec.sectionGap),
-            SizedBox(
-              width: spec.contentWidth,
-              child: AppButton(
-                label: actionLabel!,
-                onPressed: onAction,
-                icon: actionIcon,
-                iconPosition: actionIconPosition,
+            switch (actionStyle) {
+              AppEmptyStateActionStyle.button => SizedBox(
+                width: spec.contentWidth,
+                child: AppButton(
+                  label: actionLabel!,
+                  onPressed: onAction,
+                  icon: actionIcon,
+                  iconPosition: actionIconPosition,
+                ),
               ),
-            ),
+              AppEmptyStateActionStyle.link => GestureDetector(
+                onTap: onAction,
+                behavior: HitTestBehavior.opaque,
+                child: Text(
+                  actionLabel!,
+                  style: context.appTypography.regularNormal.copyWith(
+                    color: context.appColors.link,
+                  ),
+                ),
+              ),
+            },
           ],
         ],
       ),

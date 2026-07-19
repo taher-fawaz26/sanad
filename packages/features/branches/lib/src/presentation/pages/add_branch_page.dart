@@ -1,5 +1,4 @@
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
-import 'package:core/core.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_cubit.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_state.dart';
 import 'package:branches/src/presentation/models/coverage_area_args.dart';
@@ -7,12 +6,15 @@ import 'package:branches/src/presentation/models/coverage_area_result.dart';
 import 'package:branches/src/presentation/utils/add_branch_error_snackbar.dart';
 import 'package:branches/src/presentation/utils/add_branch_params_mapper.dart';
 import 'package:branches/src/presentation/widgets/add_branch_coverage_step.dart';
+import 'package:branches/src/presentation/widgets/add_branch_location_permission_body.dart';
 import 'package:branches/src/presentation/widgets/add_branch_services_step.dart';
 import 'package:branches/src/presentation/widgets/add_branch_step_one.dart';
 import 'package:branches/src/presentation/widgets/add_branch_wizard_footer.dart';
 import 'package:branches/src/presentation/widgets/add_branch_wizard_step_shell.dart';
 import 'package:branches/src/presentation/widgets/add_branch_workers_step.dart';
+import 'package:branches/src/presentation/widgets/branch_review_body.dart';
 import 'package:branches/src/routes/branch_routes.dart';
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -32,9 +34,15 @@ class AddBranchPage extends StatefulWidget {
 class _AddBranchPageState extends State<AddBranchPage> {
   static const _totalSteps = 4;
 
+  /// Pre-submit review screen (`365:14892`), shown after the 4 wizard steps.
+  static const _reviewStep = 5;
+
   final _stepOneFormKey = GlobalKey<FormState>();
   int _currentStep = 1;
   int _furthestStep = 1;
+  bool _showStepOneErrors = false;
+  bool _submittingDialogVisible = false;
+  bool _coverageAccessDenied = false;
 
   // ── Navigation ──
 
@@ -54,18 +62,13 @@ class _AddBranchPageState extends State<AddBranchPage> {
   void _onNextPressed() {
     if (_currentStep == 1) {
       final formValid = _stepOneFormKey.currentState?.validate() ?? false;
-      if (!formValid) return;
       final draft = context.read<AddBranchDraftCubit>().state;
-      if (!draft.isStepOneComplete) return;
-      if (draft.phone.trim().isNotEmpty &&
-          !UaePhoneValidator.isValid(draft.phone)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'branches.add_branch.invalid_phone'.tr(),
-            ),
-          ),
-        );
+      final phoneValid =
+          draft.phone.trim().isNotEmpty &&
+          UaePhoneValidator.isValid(draft.phone);
+      if (!formValid || !draft.isStepOneComplete || !phoneValid) {
+        // Surface the Figma inline field errors (`1513:7801` error frame).
+        setState(() => _showStepOneErrors = true);
         return;
       }
       _advanceTo(2);
@@ -81,6 +84,11 @@ class _AddBranchPageState extends State<AddBranchPage> {
 
     if (_currentStep == 3 && draft.isStepThreeComplete) {
       _advanceTo(4);
+      return;
+    }
+
+    if (_currentStep == 4 && draft.isStepFourComplete) {
+      _advanceTo(_reviewStep);
     }
   }
 
@@ -105,6 +113,8 @@ class _AddBranchPageState extends State<AddBranchPage> {
     final result = await showLocationPickerSheet(
       context,
       labels: LocationPickerLabels(
+        title: 'branches.location_picker.title'.tr(),
+        subtitle: 'branches.location_picker.subtitle'.tr(),
         searchHint: 'branches.location_picker.search_hint'.tr(),
         confirm: 'branches.location_picker.confirm'.tr(),
         specifiedLocation: 'branches.location_picker.specified_location'.tr(),
@@ -130,6 +140,22 @@ class _AddBranchPageState extends State<AddBranchPage> {
   }
 
   Future<void> _openCoverageArea() async {
+    // Figma `location-permission-denied` (`1517:9804`): if the user has
+    // hard-blocked location access, surface the "Location access needed"
+    // screen instead of the coverage map.
+    final status = await sl<LocationService>().checkPermission();
+    if (!mounted) return;
+    final denied =
+        status == LocationPermissionStatus.permanentlyDenied ||
+        status == LocationPermissionStatus.serviceDisabled;
+    if (denied) {
+      setState(() => _coverageAccessDenied = true);
+      return;
+    }
+    if (_coverageAccessDenied) {
+      setState(() => _coverageAccessDenied = false);
+    }
+
     final draft = context.read<AddBranchDraftCubit>().state;
     final result = await context.push<CoverageAreaResult>(
       BranchRoutes.coverage,
@@ -174,6 +200,12 @@ class _AddBranchPageState extends State<AddBranchPage> {
   // ── Bloc side effects ──
 
   void _onBlocStateChanged(BuildContext context, AddBranchState state) {
+    if (state.isLoading) {
+      _showSubmittingDialog();
+      return;
+    }
+    _dismissSubmittingDialog();
+
     if (state.isSuccess) {
       _showBranchCreatedSuccessPopover();
     } else if (state.hasError && state.failure != null) {
@@ -187,6 +219,63 @@ class _AddBranchPageState extends State<AddBranchPage> {
         failure: state.setupFailure!,
       );
     }
+  }
+
+  /// Figma `Adding your branch…` loading card shown while the create
+  /// request is in flight.
+  void _showSubmittingDialog() {
+    if (_submittingDialogVisible) return;
+    _submittingDialogVisible = true;
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        final colors = dialogContext.appColors;
+        final typography = dialogContext.appTypography;
+        return PopScope(
+          canPop: false,
+          child: Dialog(
+            backgroundColor: colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: EdgeInsets.all(AppSpacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(),
+                  SizedBox(height: AppSpacing.lg),
+                  Text(
+                    'branches.add_branch.submitting_title'.tr(),
+                    textAlign: TextAlign.center,
+                    style: typography.title3.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'branches.add_branch.submitting_description'.tr(),
+                    textAlign: TextAlign.center,
+                    style: typography.regularNormal.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    ).then((_) => _submittingDialogVisible = false);
+  }
+
+  void _dismissSubmittingDialog() {
+    if (!_submittingDialogVisible) return;
+    _submittingDialogVisible = false;
+    Navigator.of(context, rootNavigator: true).pop();
   }
 
   void _showBranchCreatedSuccessPopover() {
@@ -222,36 +311,113 @@ class _AddBranchPageState extends State<AddBranchPage> {
     });
   }
 
+  // ── Discard guard ──
+
+  /// Figma `Discard changes?` confirmation shown when leaving with
+  /// unsaved draft changes.
+  Future<void> _handleClose() async {
+    final draft = context.read<AddBranchDraftCubit>().state;
+    if (!draft.hasChanges) {
+      context.pop();
+      return;
+    }
+
+    final discard = await showAppPopover<bool>(
+      context: context,
+      title: 'branches.add_branch.discard_title'.tr(),
+      description: 'branches.add_branch.discard_description'.tr(),
+      imageLayout: AppDialogImageLayout.iconSmall,
+      featureIconColor: AppFeatureIconColor.warning,
+      primaryLabel: 'branches.add_branch.discard_confirm'.tr(),
+      primaryDestructive: true,
+      secondaryLabel: 'branches.add_branch.discard_cancel'.tr(),
+      onPrimary: () => Navigator.of(context, rootNavigator: true).pop(true),
+      onSecondary: () => Navigator.of(context, rootNavigator: true).pop(false),
+    );
+
+    if ((discard ?? false) && mounted) context.pop();
+  }
+
   // ── Build ──
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<AddBranchBloc, AddBranchState>(
       listener: _onBlocStateChanged,
-      child: Scaffold(
-        backgroundColor: context.appColors.surface,
-        body: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              AppNavBar(
-                title: '',
-                leading: AppCloseIcon(onTap: () => context.pop()),
-              ),
-              Expanded(child: _buildCurrentStep()),
-              AddBranchWizardFooter(
-                currentStep: _currentStep,
-                onNext: _onNextPressed,
-                onSubmit: _submit,
-                onAddCoverage: _openCoverageArea,
-                onAddServices: _openSelectServices,
-                onAddWorkers: _openSelectWorkers,
-              ),
-            ],
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) _handleClose();
+        },
+        child: Scaffold(
+          backgroundColor: context.appColors.surface,
+          body: SafeArea(
+            child: _currentStep == _reviewStep
+                ? _buildReviewScreen()
+                : _buildWizardScreen(),
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildWizardScreen() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppNavBar(
+          title: '',
+          leading: AppCloseIcon(onTap: _handleClose),
+        ),
+        Expanded(child: _buildCurrentStep()),
+        AddBranchWizardFooter(
+          currentStep: _currentStep,
+          onNext: _onNextPressed,
+          onSubmit: _submit,
+          onAddCoverage: _openCoverageArea,
+          onAddServices: _openSelectServices,
+          onAddWorkers: _openSelectWorkers,
+          coverageAccessDenied: _coverageAccessDenied,
+          onOpenLocationSettings: _openLocationSettings,
+        ),
+      ],
+    );
+  }
+
+  /// Figma `review` (`365:14892`) — pre-submit summary with a submit button.
+  Widget _buildReviewScreen() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppNavBar(
+          title: '',
+          leading: AppCloseIcon(onTap: _handleClose),
+        ),
+        const Expanded(child: BranchReviewBody()),
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            AppSpacing.sm,
+            AppSpacing.xl,
+            AppSpacing.sm,
+          ),
+          child: BlocSelector<AddBranchBloc, AddBranchState, bool>(
+            selector: (state) => state.isLoading,
+            builder: (context, isLoading) {
+              return AppButton(
+                label: 'branches.review.submit'.tr(),
+                isLoading: isLoading,
+                onPressed: isLoading ? null : _submit,
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _openLocationSettings() async {
+    await sl<LocationService>().openAppSettings();
   }
 
   Widget _buildCurrentStep() {
@@ -263,6 +429,14 @@ class _AddBranchPageState extends State<AddBranchPage> {
         totalSteps: _totalSteps,
         furthestCompletedStep: _furthestStep,
         onStepTapped: _onStepTapped,
+        showValidationErrors: _showStepOneErrors,
+      ),
+      2 when _coverageAccessDenied => AddBranchWizardStepShell(
+        currentStep: _currentStep,
+        totalSteps: _totalSteps,
+        furthestCompletedStep: _furthestStep,
+        onStepTapped: _onStepTapped,
+        child: const AddBranchLocationPermissionBody(),
       ),
       2 => AddBranchWizardStepShell(
         currentStep: _currentStep,

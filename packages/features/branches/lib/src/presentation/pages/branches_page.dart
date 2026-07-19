@@ -1,7 +1,7 @@
-import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/presentation/bloc/branches/branches_bloc.dart';
-import 'package:branches/src/presentation/widgets/branch_actions_bottom_sheet.dart';
 import 'package:branches/src/presentation/widgets/branch_empty_states.dart';
+import 'package:branches/src/presentation/widgets/branch_list_item.dart';
+import 'package:branches/src/presentation/widgets/branch_search_sheet.dart';
 import 'package:branches/src/routes/branch_routes.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
@@ -10,7 +10,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-/// Figma Branches screen (`73:2902`).
+/// Figma Branches screen (`1563:10956`), collapsing header.
+///
+/// Company row and title collapse away on scroll; search bar stays pinned.
+/// Filter chips and branch cards scroll below. "Add Branches" button sits
+/// at the bottom of the scrollable content.
 class ProviderBranchesPage extends StatefulWidget {
   const ProviderBranchesPage({super.key});
 
@@ -19,8 +23,6 @@ class ProviderBranchesPage extends StatefulWidget {
 }
 
 class _ProviderBranchesPageState extends State<ProviderBranchesPage> {
-  int _segmentIndex = 0;
-
   @override
   void initState() {
     super.initState();
@@ -31,70 +33,25 @@ class _ProviderBranchesPageState extends State<ProviderBranchesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.appColors.surface,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AppTableRow(
-              title: 'branches.company_name'.tr(),
-              trailing: AppTableTrailing.icon,
-              leading: AppTableLeading.avatar,
-              leadingAvatar: AppAvatar(
-                initials: 'G',
-                backgroundColor: context.appColors.primary,
-                showStatusDot: true,
-              ),
-              trailingIcon: AppNotificationIcon(
-                hasUnread: true,
-                onTap: () {},
-              ),
-            ),
-            AppSection(
-              title: 'branches.title'.tr(),
-              caption: 'branches.subtitle'.tr(),
-              size: AppSectionSize.large,
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: AppSpacing.md,
-              ),
-              child: AppSegmentedControl(
-                segments: [
-                  'branches.tab_branches'.tr(),
-                  'branches.tab_company_profile'.tr(),
-                ],
-                selectedIndex: _segmentIndex,
-                onChanged: (index) => setState(() => _segmentIndex = index),
-              ),
-            ),
-            Expanded(
-              child: _segmentIndex == 0
-                  ? _BranchesTab()
-                  : _CompanyProfilePlaceholder(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CompanyProfilePlaceholder extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text(
-        'branches.company_profile_placeholder'.tr(),
-        style: context.appTypography.regularNormal.copyWith(
-          color: context.appColors.textSecondary,
-        ),
-      ),
+      body: const SafeArea(child: _BranchesTab()),
     );
   }
 }
 
 class _BranchesTab extends StatelessWidget {
+  const _BranchesTab();
+
+  static const _titleSectionHeight = 60.0;
+  static const _headerSafetyMargin = 20.0;
+
+  double _bottomBarHeight() => AppSpacing.sm * 2 + AppDimension.fieldHeightMd;
+
+  double _expandedHeaderHeight() {
+    final flexibleSpaceContent =
+        AppDimension.tableRowHeight + _titleSectionHeight;
+    return flexibleSpaceContent + _bottomBarHeight() + _headerSafetyMargin;
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<BranchesBloc, BranchesState>(
@@ -120,90 +77,138 @@ class _BranchesTab extends StatelessWidget {
           }
 
           final branches = state.filteredBranches;
-          final totalCount = state.branches.length;
+          final colors = context.appColors;
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              AppSection(
-                title: 'branches.count_label'.tr(),
-                size: AppSectionSize.compact,
-                trailing: AppSectionTrailing.custom,
-                trailingWidget: AppNotificationBadge(count: totalCount),
-              ),
-              SizedBox(height: AppSpacing.xs),
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                  vertical: AppSpacing.sm,
-                ),
-                child: AppButton(
-                  label: 'branches.add_button'.tr(),
-                  icon: const Icon(Icons.add_circle_outline),
-                  iconPosition: AppButtonIconPosition.center,
-                  onPressed: () => context.push(BranchRoutes.add),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                  vertical: AppSpacing.sm,
-                ),
-                child: AppSearchField(
-                  hint: 'branches.search_hint'.tr(),
-                  showMicIcon: false, // hide mic by default for branch search
-                  onChanged: (value) => context.read<BranchesBloc>().add(
-                    BranchesSearchChangedEvent(value),
+          return AppRefreshIndicator(
+            onRefresh: () async {
+              context.read<BranchesBloc>().add(const BranchesRefreshEvent());
+            },
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverAppBar(
+                  pinned: true,
+                  toolbarHeight: 0,
+                  automaticallyImplyLeading: false,
+                  backgroundColor: colors.surface,
+                  surfaceTintColor: Colors.transparent,
+                  scrolledUnderElevation: 0,
+                  elevation: 0,
+                  expandedHeight: _expandedHeaderHeight(),
+                  flexibleSpace: FlexibleSpaceBar(
+                    background: SingleChildScrollView(
+                      physics: const NeverScrollableScrollPhysics(),
+                      child: _CollapsingHeader(),
+                    ),
+                  ),
+                  bottom: PreferredSize(
+                    preferredSize: Size.fromHeight(_bottomBarHeight()),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg,
+                        vertical: AppSpacing.sm,
+                      ),
+                      child: AppSearchField(
+                        variant: AppSearchFieldVariant.bordered,
+                        hint: 'branches.search_hint'.tr(),
+                        showMicIcon: false,
+                        readOnly: true,
+                        onTap: () => showBranchSearchSheet(context),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                  vertical: AppSpacing.sm,
+                // Filter chips — scroll with content, below the pinned search.
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                      vertical: AppSpacing.sm,
+                    ),
+                    child: _FilterRow(currentFilter: state.filter),
+                  ),
                 ),
-                child: _FilterRow(currentFilter: state.filter),
-              ),
-              SizedBox(height: AppSpacing.sm),
-              Expanded(
-                child: AppRefreshIndicator(
-                  onRefresh: () async {
-                    context.read<BranchesBloc>().add(
-                      const BranchesRefreshEvent(),
-                    );
-                  },
-                  child: state.hasError && state.branches.isEmpty
-                      ? AppFillRemainingScrollable(
-                          child: _ErrorState(
-                            failure: state.failure,
-                            onRetry: () => context.read<BranchesBloc>().add(
-                              const BranchesRefreshEvent(),
-                            ),
-                          ),
-                        )
-                      : branches.isEmpty
-                      ? AppFillRemainingScrollable(
-                          child: _EmptyState(
-                            searchQuery: state.searchQuery,
-                            onClearSearch: () =>
-                                context.read<BranchesBloc>().add(
-                                  const BranchesSearchChangedEvent(''),
-                                ),
-                          ),
-                        )
-                      : ListView.builder(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: EdgeInsets.only(bottom: AppSpacing.lg),
-                          itemCount: branches.length,
-                          itemBuilder: (context, index) =>
-                              _BranchListItem(branch: branches[index]),
-                        ),
-                ),
-              ),
-            ],
+                if (state.hasError && state.branches.isEmpty)
+                  AppSliverFillRemaining(
+                    child: _ErrorState(
+                      failure: state.failure,
+                      onRetry: () => context.read<BranchesBloc>().add(
+                        const BranchesRefreshEvent(),
+                      ),
+                    ),
+                  )
+                else if (branches.isEmpty)
+                  AppSliverFillRemaining(
+                    child: _EmptyState(
+                      searchQuery: state.searchQuery,
+                      onClearSearch: () => context.read<BranchesBloc>().add(
+                        const BranchesSearchChangedEvent(''),
+                      ),
+                    ),
+                  )
+                else ...[
+                  SliverList.builder(
+                    itemCount: branches.length,
+                    itemBuilder: (context, index) => Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        AppSpacing.lg,
+                        AppSpacing.sm,
+                        AppSpacing.lg,
+                        0,
+                      ),
+                      child: BranchListItem(branch: branches[index]),
+                    ),
+                  ),
+                  // "Add Branches" button at the bottom of the list.
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg,
+                        vertical: AppSpacing.lg,
+                      ),
+                      child: AppButton(
+                        label: 'branches.add_button'.tr(),
+                        icon: const Icon(Icons.add_circle_outline),
+                        iconPosition: AppButtonIconPosition.center,
+                        onPressed: () => context.push(BranchRoutes.add),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           );
         },
       ),
+    );
+  }
+}
+
+/// Company row and title — collapses away on scroll.
+class _CollapsingHeader extends StatelessWidget {
+  const _CollapsingHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppTableRow(
+          title: 'branches.company_name'.tr(),
+          trailing: AppTableTrailing.icon,
+          leading: AppTableLeading.avatar,
+          leadingAvatar: AppAvatar(
+            initials: 'G',
+            backgroundColor: context.appColors.primary,
+            showStatusDot: true,
+          ),
+          trailingIcon: AppNotificationIcon(
+            hasUnread: true,
+            onTap: () {},
+          ),
+        ),
+        AppSection(title: 'branches.title'.tr()),
+      ],
     );
   }
 }
@@ -260,58 +265,6 @@ class _FilterRow extends StatelessWidget {
   }
 }
 
-class _BranchListItem extends StatelessWidget {
-  const _BranchListItem({required this.branch});
-
-  final BranchEntity branch;
-
-  @override
-  Widget build(BuildContext context) {
-    final initial = branch.branchName.isNotEmpty
-        ? branch.branchName[0].toUpperCase()
-        : '?';
-
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.sm,
-        AppSpacing.lg,
-        0,
-      ),
-      child: AppListCard(
-        title: branch.branchName,
-        caption: branch.displayAddress,
-        leading: AppAvatar(
-          initials: initial,
-          backgroundColor: context.appColors.primary,
-          showStatusDot: true,
-        ),
-        badge: AppStatusBadge(
-          label: branch.isAvailable
-              ? 'branches.status_active'.tr()
-              : 'branches.status_maintenance'.tr(),
-          type: branch.isAvailable
-              ? AppStatusBadgeType.success
-              : AppStatusBadgeType.warning,
-          size: AppStatusBadgeSize.compact,
-        ),
-        trailing: Semantics(
-          label: 'branches.more_actions'.tr(),
-          child: AppIconButton(
-            icon: Icons.more_vert,
-            iconColor: context.appColors.textPrimary,
-            onTap: () => showBranchActionsBottomSheet(
-              context: context,
-              branch: branch,
-            ),
-          ),
-        ),
-        onTap: () => context.push(BranchRoutes.detailsFor(branch.id)),
-      ),
-    );
-  }
-}
-
 class _EmptyState extends StatelessWidget {
   const _EmptyState({required this.searchQuery, this.onClearSearch});
 
@@ -323,7 +276,7 @@ class _EmptyState extends StatelessWidget {
     if (searchQuery.trim().isNotEmpty) {
       return Center(
         child: BranchesSearchEmptyState(
-          query: searchQuery.trim(),
+          query: searchQuery,
           onClearSearch: onClearSearch,
         ),
       );
@@ -333,6 +286,7 @@ class _EmptyState extends StatelessWidget {
         title: 'branches.empty_first_branch_title'.tr(),
         description: 'branches.empty_first_branch_description'.tr(),
         actionLabel: 'branches.empty_first_branch_action'.tr(),
+        onAction: () => context.push(BranchRoutes.add),
       ),
     );
   }
@@ -371,19 +325,15 @@ class _ErrorState extends StatelessWidget {
       );
     }
 
-    // ServerFailure, UnknownFailure, or any other mapped failure.
-    // Show the actual server message when available so users get
-    // meaningful feedback (e.g. "Profile not found. Please start the
-    // setup process.") instead of a generic fallback.
     final description = (f != null && f.message.isNotEmpty)
         ? f.message.tr()
-        : 'empty_states.server_error_description'.tr();
+        : 'branches.load_error_description'.tr();
 
     return Center(
       child: AppGenericEmptyState(
-        title: 'empty_states.server_error_title'.tr(),
+        title: 'branches.load_error_title'.tr(),
         description: description,
-        actionLabel: retryLabel,
+        actionLabel: 'branches.load_error_action'.tr(),
         onAction: onRetry,
       ),
     );

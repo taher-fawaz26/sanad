@@ -19,6 +19,7 @@ class AppPhoneField extends StatelessWidget {
     this.enabled = true,
     this.countryFlagAsset = AppSvgs.flagAe,
     this.onCountryTap,
+    this.errorText,
   });
 
   final String label;
@@ -29,6 +30,10 @@ class AppPhoneField extends StatelessWidget {
   final String countryFlagAsset;
   final VoidCallback? onCountryTap;
 
+  /// When non-null, the field renders with an error border and this
+  /// message below it (Figma field error state).
+  final String? errorText;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
@@ -37,6 +42,7 @@ class AppPhoneField extends StatelessWidget {
     final fieldHeight = responsiveDimension(FieldTokens.fieldHeight);
     final labelGap = responsiveDimension(FieldTokens.labelGap);
     final iconSize = AppDimension.iconLg;
+    final hasError = errorText != null && errorText!.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -92,7 +98,8 @@ class AppPhoneField extends StatelessWidget {
                 ),
               ),
               prefixIconConstraints: BoxConstraints(
-                minWidth: responsiveDimension(FieldTokens.horizontalPadding) +
+                minWidth:
+                    responsiveDimension(FieldTokens.horizontalPadding) +
                     iconSize +
                     AppSpacing.sm,
                 minHeight: fieldHeight,
@@ -108,9 +115,24 @@ class AppPhoneField extends StatelessWidget {
                 horizontal: responsiveDimension(FieldTokens.horizontalPadding),
                 vertical: responsiveDimension(FieldTokens.verticalPadding),
               ),
-              border: _border(colors, brightness, focused: false),
-              enabledBorder: _border(colors, brightness, focused: false),
-              focusedBorder: _border(colors, brightness, focused: true),
+              border: _border(
+                colors,
+                brightness,
+                focused: false,
+                error: hasError,
+              ),
+              enabledBorder: _border(
+                colors,
+                brightness,
+                focused: false,
+                error: hasError,
+              ),
+              focusedBorder: _border(
+                colors,
+                brightness,
+                focused: true,
+                error: hasError,
+              ),
               disabledBorder: _border(
                 colors,
                 brightness,
@@ -120,6 +142,13 @@ class AppPhoneField extends StatelessWidget {
             ),
           ),
         ),
+        if (hasError) ...[
+          SizedBox(height: labelGap),
+          Text(
+            errorText!,
+            style: FieldTokens.errorStyle(typography, colors, brightness),
+          ),
+        ],
       ],
     );
   }
@@ -129,12 +158,15 @@ class AppPhoneField extends StatelessWidget {
     Brightness brightness, {
     required bool focused,
     bool disabled = false,
+    bool error = false,
   }) {
     final color = disabled
         ? FieldTokens.disabledBorder(colors, brightness)
+        : error
+        ? FieldTokens.errorBorder(colors, brightness)
         : focused
-            ? FieldTokens.focusBorder(colors)
-            : FieldTokens.borderDefault(colors, brightness);
+        ? FieldTokens.focusBorder(colors)
+        : FieldTokens.borderDefault(colors, brightness);
     final width = focused
         ? responsiveDimension(FieldTokens.borderWidthEmphasis)
         : responsiveDimension(FieldTokens.borderWidthDefault);

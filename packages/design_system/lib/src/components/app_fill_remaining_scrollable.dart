@@ -42,18 +42,35 @@ class AppFillRemainingScrollable extends StatelessWidget {
   Widget build(BuildContext context) {
     return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
-      slivers: [
-        SliverLayoutBuilder(
-          builder: (context, constraints) => SliverToBoxAdapter(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: constraints.remainingPaintExtent,
-              ),
-              child: Center(child: child),
-            ),
+      slivers: [AppSliverFillRemaining(child: child)],
+    );
+  }
+}
+
+/// Sliver form of [AppFillRemainingScrollable] — use this directly inside an
+/// existing [CustomScrollView] (e.g. alongside a [SliverAppBar] and a
+/// [SliverList]) instead of nesting a second scroll view, which slivers
+/// cannot do.
+///
+/// Same intrinsic-sizing fix as [AppFillRemainingScrollable]: reads
+/// `remainingPaintExtent` from the sliver protocol via [SliverLayoutBuilder]
+/// so intrinsic-unfriendly widgets like [LayoutBuilder] still work.
+class AppSliverFillRemaining extends StatelessWidget {
+  const AppSliverFillRemaining({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverLayoutBuilder(
+      builder: (context, constraints) => SliverToBoxAdapter(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: constraints.remainingPaintExtent,
           ),
+          child: Center(child: child),
         ),
-      ],
+      ),
     );
   }
 }

@@ -1,7 +1,21 @@
 import 'package:app_assets/app_assets.dart';
+import 'package:design_system/src/dimensions/responsive_dimension.dart';
+import 'package:design_system/src/theme/colors/app_colors.dart';
+import 'package:design_system/src/theme/colors/field_tokens.dart';
 import 'package:design_system/src/theme/tokens/search_bar_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+
+/// Visual treatment for [AppSearchField].
+enum AppSearchFieldVariant {
+  /// Flat `Sky/Lighter` fill, no border — the default/pinned scroll-state
+  /// bar (`73:2915` / `40:7016`).
+  flat,
+
+  /// White fill with a `field/border-default` border and a larger icon —
+  /// the unscrolled list header and search-sheet field (`1597:8241`).
+  bordered,
+}
 
 /// Figma `Bars / Search Bars` — Branches instance (`73:2915` / Default `40:7016`).
 ///
@@ -21,6 +35,9 @@ class AppSearchField extends StatefulWidget {
     this.showMicIcon = true,
     this.showCancelOnFocus = false,
     this.autofocus = false,
+    this.variant = AppSearchFieldVariant.flat,
+    this.readOnly = false,
+    this.onTap,
   });
 
   final TextEditingController? controller;
@@ -34,6 +51,12 @@ class AppSearchField extends StatefulWidget {
   final bool showMicIcon;
   final bool showCancelOnFocus;
   final bool autofocus;
+  final AppSearchFieldVariant variant;
+
+  /// When true, the field never accepts direct input — [onTap] fires
+  /// instead (used as a tap-to-open trigger for the search bottom sheet).
+  final bool readOnly;
+  final VoidCallback? onTap;
 
   @override
   State<AppSearchField> createState() => _AppSearchFieldState();
@@ -92,12 +115,12 @@ class _AppSearchFieldState extends State<AppSearchField> {
     widget.onChanged?.call('');
   }
 
-  Widget _svgIcon(String asset, SearchBarStyleSpec spec) {
+  Widget _svgIcon(String asset, SearchBarStyleSpec spec, double size) {
     return SvgPicture.asset(
       asset,
       package: AppAssets.package,
-      width: spec.iconSize,
-      height: spec.iconSize,
+      width: size,
+      height: size,
       colorFilter: ColorFilter.mode(spec.iconColor, BlendMode.srcIn),
       fit: BoxFit.contain,
     );
@@ -106,6 +129,17 @@ class _AppSearchFieldState extends State<AppSearchField> {
   @override
   Widget build(BuildContext context) {
     final spec = context.appSearchBarTheme.spec;
+    final isBordered = widget.variant == AppSearchFieldVariant.bordered;
+    final colors = context.appColors;
+    final brightness = Theme.of(context).brightness;
+
+    final backgroundColor = isBordered
+        ? FieldTokens.background(colors, brightness, enabled: true)
+        : spec.backgroundColor;
+    final border = isBordered
+        ? Border.all(color: FieldTokens.borderDefault(colors, brightness))
+        : null;
+    final iconSize = isBordered ? AppDimension.iconLg : spec.iconSize;
 
     Widget? trailing;
     if (_showClear) {
@@ -114,7 +148,7 @@ class _AppSearchFieldState extends State<AppSearchField> {
         behavior: HitTestBehavior.opaque,
         child: Icon(
           Icons.close,
-          size: spec.iconSize,
+          size: iconSize,
           color: spec.iconColor,
         ),
       );
@@ -122,7 +156,7 @@ class _AppSearchFieldState extends State<AppSearchField> {
       trailing = GestureDetector(
         onTap: widget.onMicTap,
         behavior: HitTestBehavior.opaque,
-        child: _svgIcon(AppSvgs.mic, spec),
+        child: _svgIcon(AppSvgs.mic, spec, iconSize),
       );
     }
 
@@ -139,21 +173,24 @@ class _AppSearchFieldState extends State<AppSearchField> {
                 end: _showCancel ? spec.cancelGap : 0,
               ),
               decoration: BoxDecoration(
-                color: spec.backgroundColor,
+                color: backgroundColor,
                 borderRadius: spec.borderRadius,
+                border: border,
               ),
               clipBehavior: Clip.antiAlias,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   SizedBox(width: spec.iconPadding),
-                  _svgIcon(AppSvgs.search, spec),
+                  _svgIcon(AppSvgs.search, spec, iconSize),
                   SizedBox(width: spec.iconGap),
                   Expanded(
                     child: TextField(
                       controller: _controller,
                       focusNode: _focusNode,
                       autofocus: widget.autofocus,
+                      readOnly: widget.readOnly,
+                      onTap: widget.onTap,
                       style: spec.valueStyle,
                       cursorColor: spec.cursorColor,
                       textAlignVertical: TextAlignVertical.center,

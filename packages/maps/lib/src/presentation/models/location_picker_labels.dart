@@ -9,7 +9,15 @@ class LocationPickerLabels {
     required this.serviceDisabled,
     required this.genericError,
     required this.openSettings,
+    this.title,
+    this.subtitle,
   });
+
+  /// Optional sheet header title (e.g. "Branch location").
+  final String? title;
+
+  /// Optional sheet header subtitle (e.g. "Move the pin to locate…").
+  final String? subtitle;
 
   final String searchHint;
   final String confirm;

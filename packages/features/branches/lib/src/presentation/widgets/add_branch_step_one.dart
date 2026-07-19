@@ -14,7 +14,6 @@ import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:localization/localization.dart';
 import 'package:maps/maps.dart';
 
 class AddBranchStepOne extends StatefulWidget {
@@ -25,6 +24,7 @@ class AddBranchStepOne extends StatefulWidget {
     required this.totalSteps,
     this.furthestCompletedStep,
     this.onStepTapped,
+    this.showValidationErrors = false,
     super.key,
   });
 
@@ -34,6 +34,10 @@ class AddBranchStepOne extends StatefulWidget {
   final int totalSteps;
   final int? furthestCompletedStep;
   final ValueChanged<int>? onStepTapped;
+
+  /// When true, incomplete fields show the Figma inline error state
+  /// (`1513:7801` error frame). Set after a failed Next attempt.
+  final bool showValidationErrors;
 
   @override
   State<AddBranchStepOne> createState() => _AddBranchStepOneState();
@@ -106,6 +110,9 @@ class _AddBranchStepOneState extends State<AddBranchStepOne> {
         padding: EdgeInsets.only(bottom: AppSpacing.lg),
         child: Form(
           key: widget.formKey,
+          autovalidateMode: widget.showValidationErrors
+              ? AutovalidateMode.always
+              : AutovalidateMode.disabled,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -126,9 +133,13 @@ class _AddBranchStepOneState extends State<AddBranchStepOne> {
               _MainInfoSection(
                 branchNameController: _branchNameController,
                 onPickLocation: widget.onPickLocation,
+                showErrors: widget.showValidationErrors,
               ),
               const AppDivider(thickness: AppDividerThickness.thick),
-              _ContactSection(phoneController: _phoneController),
+              _ContactSection(
+                phoneController: _phoneController,
+                showErrors: widget.showValidationErrors,
+              ),
               const AppDivider(thickness: AppDividerThickness.thick),
               _WorkingHoursSection(
                 onScheduleModeChanged: _onScheduleModeChanged,
@@ -145,10 +156,12 @@ class _MainInfoSection extends StatelessWidget {
   const _MainInfoSection({
     required this.branchNameController,
     required this.onPickLocation,
+    required this.showErrors,
   });
 
   final TextEditingController branchNameController;
   final VoidCallback onPickLocation;
+  final bool showErrors;
 
   @override
   Widget build(BuildContext context) {
@@ -176,7 +189,7 @@ class _MainInfoSection extends StatelessWidget {
                 hint: 'branches.add_branch.branch_name_hint'.tr(),
                 validator: (value) {
                   if (value?.trim().isEmpty ?? true) {
-                    return ValidationMessageKeys.formRequired;
+                    return 'branches.add_branch.branch_name_required'.tr();
                   }
                   return null;
                 },
@@ -210,6 +223,9 @@ class _MainInfoSection extends StatelessWidget {
                     localizedName: isArabic
                         ? (city) => city.nameAr
                         : (city) => city.nameEn,
+                    errorText: showErrors && selectedCity == null
+                        ? 'branches.add_branch.city_required'.tr()
+                        : null,
                     onCitySelected: (city) {
                       context.read<AddBranchDraftCubit>().updateCity(city);
                     },
@@ -225,6 +241,10 @@ class _MainInfoSection extends StatelessWidget {
                     value: address,
                     hint: 'branches.add_branch.location_hint'.tr(),
                     actionLabel: 'branches.add_branch.location_set'.tr(),
+                    errorText:
+                        showErrors && (address == null || address.isEmpty)
+                        ? 'branches.add_branch.location_required'.tr()
+                        : null,
                     onActionTap: onPickLocation,
                   );
                 },
@@ -238,9 +258,22 @@ class _MainInfoSection extends StatelessWidget {
 }
 
 class _ContactSection extends StatelessWidget {
-  const _ContactSection({required this.phoneController});
+  const _ContactSection({
+    required this.phoneController,
+    required this.showErrors,
+  });
 
   final TextEditingController phoneController;
+  final bool showErrors;
+
+  String? _phoneError(String phone) {
+    if (!showErrors) return null;
+    final trimmed = phone.trim();
+    if (trimmed.isEmpty || !UaePhoneValidator.isValid(trimmed)) {
+      return 'branches.add_branch.invalid_phone'.tr();
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -259,10 +292,16 @@ class _ContactSection extends StatelessWidget {
           ),
           child: Column(
             children: [
-              AppPhoneField(
-                label: 'branches.add_branch.branch_phone'.tr(),
-                controller: phoneController,
-                hint: 'branches.add_branch.branch_phone_hint'.tr(),
+              BlocSelector<AddBranchDraftCubit, AddBranchDraft, String>(
+                selector: (state) => state.phone,
+                builder: (context, phone) {
+                  return AppPhoneField(
+                    label: 'branches.add_branch.branch_phone'.tr(),
+                    controller: phoneController,
+                    hint: 'branches.add_branch.branch_phone_hint'.tr(),
+                    errorText: _phoneError(phone),
+                  );
+                },
               ),
               SizedBox(height: AppSpacing.md),
               BlocSelector<

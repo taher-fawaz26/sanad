@@ -2,6 +2,7 @@ import 'package:branches/src/data/models/branch_availability_dto.dart';
 import 'package:branches/src/data/models/branch_worker_dto.dart';
 import 'package:branches/src/domain/entities/branch_availability_mode.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
+import 'package:branches/src/domain/entities/branch_type.dart';
 
 class BranchDto {
   const BranchDto({
@@ -12,6 +13,7 @@ class BranchDto {
     required this.branchPhone,
     required this.isAvailable,
     required this.availabilityMode,
+    this.branchType = BranchType.mainBranch,
     this.branchManagerId,
     this.branchManagerName,
     this.lat,
@@ -130,6 +132,7 @@ class BranchDto {
       availabilityMode: BranchAvailabilityMode.fromApiString(
         json['availabilityMode'] as String?,
       ),
+      branchType: BranchType.fromApiString(json['type'] as String?),
       branchManagerId: managerId,
       branchManagerName: managerName,
       lat: _numericField(json['lat']),
@@ -155,6 +158,7 @@ class BranchDto {
   final String branchPhone;
   final bool isAvailable;
   final BranchAvailabilityMode availabilityMode;
+  final BranchType branchType;
   final String? branchManagerId;
   final String? branchManagerName;
   final double? lat;
@@ -177,6 +181,7 @@ class BranchDto {
     branchPhone: branchPhone,
     isAvailable: isAvailable,
     availabilityMode: availabilityMode,
+    branchType: branchType,
     branchManagerId: branchManagerId,
     branchManagerName: branchManagerName,
     lat: lat,

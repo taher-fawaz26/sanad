@@ -23,11 +23,7 @@
   },
   "branches": {
     "title": "Branches",
-    "subtitle": "Managing your company's information",
     "company_name": "Ghabbour Service Centre",
-    "tab_branches": "Branches",
-    "tab_company_profile": "Company profile",
-    "company_profile_placeholder": "Company profile is coming soon",
     "count_label": "Number of current branches",
     "add_button": "Add Branches",
     "search_hint": "Search",
@@ -36,12 +32,12 @@
     "filter_active": "Active",
     "status_active": "Active",
     "status_maintenance": "Maintenance",
-    "empty_first_branch_title": "Add your first branch",
-    "empty_first_branch_description": "Set up a location to manage its coverage, services, and team.",
-    "empty_first_branch_action": "add branch",
-    "empty_search_title": "No branches found",
+    "empty_first_branch_title": "No branches yet",
+    "empty_first_branch_description": "Add your first branch to start managing your services and team.",
+    "empty_first_branch_action": "Add Branch",
+    "empty_search_title": "No Branches Found",
     "empty_search_description": "Nothing matches \"{query}\". Try another name or clear the search.",
-    "empty_search_action": "clear search",
+    "empty_search_action": "Cancel",
     "empty_workers_title": "No workers assigned",
     "empty_workers_description": "Assign workers so they can be scheduled for jobs.",
     "empty_workers_action": "assign worker",
@@ -87,7 +83,8 @@
       "action_set_maintenance": "Set to Maintenance",
       "action_set_active": "Set to Active",
       "status_update_error": "Failed to update branch status",
-      "no_team_members": "No team members assigned"
+      "no_team_members": "No team members assigned",
+      "no_serving_areas": "No coverage areas added"
     },
     "add_branch": {
       "title": "Add branch",
@@ -111,7 +108,7 @@
       "location": "Address",
       "location_hint": "e.g. Marina Plaza, Tower 2",
       "location_set": "set",
-      "location_required": "Please set a branch address",
+      "location_required": "Location is required",
       "branch_phone": "Branch phone",
       "branch_phone_hint": "+971 4 123 4567",
       "branch_manager": "Branch manager",
@@ -163,7 +160,19 @@
         "wednesday": "Wednesday",
         "thursday": "Thursday",
         "friday": "Friday"
-      }
+      },
+      "branch_name_required": "Branch name is required",
+      "city_required": "Please select a city",
+      "invalid_phone": "Enter a valid phone number",
+      "submitting_title": "Adding your branch...",
+      "submitting_description": "Please wait while we set up your branch.",
+      "discard_title": "Discard changes?",
+      "discard_description": "You have unsaved changes. If you leave now, your progress will be lost.",
+      "discard_confirm": "Discard",
+      "discard_cancel": "Keep editing",
+      "location_access_title": "Location access needed",
+      "location_access_description": "To set your branch coverage area, please allow location access in your device settings.",
+      "open_settings_button": "Open Settings"
     },
     "location_picker": {
       "search_hint": "Search location",
@@ -174,7 +183,9 @@
       "permission_permanently_denied": "Location permission is permanently denied. Open settings to enable it.",
       "open_settings": "Open settings",
       "service_disabled": "Turn on device location services to pick a branch location.",
-      "generic_error": "Couldn't load the location. Please try again."
+      "generic_error": "Couldn't load the location. Please try again.",
+      "title": "Branch location",
+      "subtitle": "Move the pin to locate the branch on the map"
     },
     "coverage_area": {
       "title": "Coverage area",
@@ -193,6 +204,16 @@
       "done": "Done",
       "confirm": "Confirm Coverage",
       "select_from_search_hint": "Please select an area from the search results."
+    },
+    "load_error_title": "Couldn't load your branches",
+    "load_error_description": "Check your connection and try again.",
+    "load_error_action": "Try again",
+    "review": {
+      "submit": "Submit",
+      "manager": "Manager",
+      "view_all": "View all {count}",
+      "workers_count": "{count} workers",
+      "no_services": "No services added"
     }
   },
   "services": {
@@ -201,21 +222,58 @@
       "search_hint": "Search",
       "confirm": "Confirm",
       "retry": "Retry",
-      "empty": "No services found"
+      "empty": "No services found",
+      "empty_description": "Try searching with a different keyword"
     }
   },
   "workers": {
-    "title": "Workers",
+    "title": "Team",
     "empty_title": "No workers yet",
-    "empty_description": "Your workers will appear here",
+    "empty_description": "Start by adding your first worker to manage your field team.",
     "select_worker": {
       "title": "Add your team",
       "search_hint": "Search",
       "confirm": "Confirm",
       "retry": "Retry",
-      "empty": "No workers found"
+      "empty": "No workers found",
+      "empty_description": "Try searching with a different name"
     },
-    "remove_worker": "Remove worker"
+    "remove_worker": "Remove worker",
+    "subtitle": "Managing your company's Team",
+    "add_team": "Add Team",
+    "search_hint": "Search workers...",
+    "search_empty_title": "No workers found",
+    "search_empty_description": "Try searching with a different name",
+    "clear_search": "Clear",
+    "status_active": "Active",
+    "status_pending": "Pending",
+    "status_suspended": "Suspended",
+    "more_actions": "More actions",
+    "action_view_details": "View Details",
+    "action_edit": "edit information",
+    "action_resend_invitation": "Resend Invitation",
+    "action_suspend": "Suspend Worker",
+    "action_unsuspend": "Unsuspend Worker",
+    "action_delete": "Delete Worker",
+    "details_title": "Details",
+    "contact_details": "Contact Details",
+    "contact_phone": "Phone",
+    "contact_email": "Email",
+    "contact_type": "type",
+    "contact_branches": "branches",
+    "edit_profile": "Edit Profile",
+    "delete_title": "Delete Worker?",
+    "delete_description": "Are you sure you want to delete {name} from your team? This action cannot be undone.",
+    "delete_action": "Delete",
+    "suspend_title": "Suspend Worker?",
+    "suspend_description": "Are you sure you want to suspend {name}? They will not be able to access the system until unsuspended.",
+    "suspend_action": "Suspend",
+    "unsuspend_title": "Unsuspend Worker?",
+    "unsuspend_description": "Are you sure you want to unsuspend {name}? They will regain access to the system.",
+    "unsuspend_action": "Unsuspend",
+    "cancel": "Cancel",
+    "action_failed": "Action failed",
+    "coming_soon": "Coming soon"
   },
   "auth": {
     "login_title": "Welcome Back",

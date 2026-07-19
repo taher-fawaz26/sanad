@@ -19,13 +19,38 @@ Future<LocationPickerResult?> showLocationPickerSheet(
     child: Builder(
       builder: (sheetContext) => Padding(
         padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        child: MapLocationPicker(
-          labels: labels,
-          initialPosition: initialPosition,
-          initialAddress: initialAddress,
-          configuration: configuration,
-          pinMarker: pinMarker,
-          onConfirmed: (result) => Navigator.of(sheetContext).pop(result),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (labels.title != null) ...[
+              Text(
+                labels.title!,
+                style: sheetContext.appTypography.title2.copyWith(
+                  color: sheetContext.appColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (labels.subtitle != null) ...[
+                SizedBox(height: AppSpacing.xs),
+                Text(
+                  labels.subtitle!,
+                  style: sheetContext.appTypography.regularNormal.copyWith(
+                    color: sheetContext.appColors.textSecondary,
+                  ),
+                ),
+              ],
+              SizedBox(height: AppSpacing.md),
+            ],
+            MapLocationPicker(
+              labels: labels,
+              initialPosition: initialPosition,
+              initialAddress: initialAddress,
+              configuration: configuration,
+              pinMarker: pinMarker,
+              onConfirmed: (result) => Navigator.of(sheetContext).pop(result),
+            ),
+          ],
         ),
       ),
     ),

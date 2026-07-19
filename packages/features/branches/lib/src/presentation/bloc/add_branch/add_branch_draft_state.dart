@@ -38,6 +38,25 @@ class AddBranchDraft extends Equatable {
   final List<ServiceEntity> selectedServices;
   final List<WorkerEntity> selectedWorkers;
 
+  /// Whether the user has entered anything worth guarding with a
+  /// discard-changes confirmation (Figma `Discard changes?` popover).
+  ///
+  /// Checks user-entered fields only — [customSchedule] is excluded because
+  /// it is auto-seeded from the company schedule without user input.
+  bool get hasChanges =>
+      branchName.trim().isNotEmpty ||
+      branchType != BranchType.mainBranch ||
+      selectedCity != null ||
+      phone.trim().isNotEmpty ||
+      branchAddress != null ||
+      pickedPosition != null ||
+      selectedManager != null ||
+      scheduleMode != BranchScheduleMode.company ||
+      coverageRadiusKm != null ||
+      servingAreas.isNotEmpty ||
+      selectedServices.isNotEmpty ||
+      selectedWorkers.isNotEmpty;
+
   bool get isStepOneComplete =>
       branchName.trim().isNotEmpty &&
       selectedCity != null &&

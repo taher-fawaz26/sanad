@@ -17,6 +17,7 @@ class AppFieldAction extends StatelessWidget {
     this.onActionTap,
     this.onTap,
     this.enabled = true,
+    this.errorText,
   });
 
   final String label;
@@ -27,6 +28,10 @@ class AppFieldAction extends StatelessWidget {
   final VoidCallback? onActionTap;
   final VoidCallback? onTap;
   final bool enabled;
+
+  /// When non-null, the field renders with an error border and this
+  /// message below it (Figma field error state).
+  final String? errorText;
 
   bool get _hasValue => value != null && value!.isNotEmpty;
 
@@ -39,8 +44,23 @@ class AppFieldAction extends StatelessWidget {
     final labelGap = responsiveDimension(FieldTokens.labelGap);
 
     final displayStyle = _hasValue
-        ? FieldTokens.valueStyle(typography, colors, brightness, enabled: enabled)
-        : FieldTokens.hintStyle(typography, colors, brightness, enabled: enabled);
+        ? FieldTokens.valueStyle(
+            typography,
+            colors,
+            brightness,
+            enabled: enabled,
+          )
+        : FieldTokens.hintStyle(
+            typography,
+            colors,
+            brightness,
+            enabled: enabled,
+          );
+
+    final hasError = errorText != null && errorText!.isNotEmpty;
+    final borderColor = hasError
+        ? FieldTokens.errorBorder(colors, brightness)
+        : FieldTokens.borderDefault(colors, brightness);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -56,7 +76,7 @@ class AppFieldAction extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: FieldTokens.borderRadiusAll(),
             side: BorderSide(
-              color: FieldTokens.borderDefault(colors, brightness),
+              color: borderColor,
               width: responsiveDimension(FieldTokens.borderWidthDefault),
             ),
           ),
@@ -67,7 +87,9 @@ class AppFieldAction extends StatelessWidget {
               height: fieldHeight,
               child: Padding(
                 padding: EdgeInsets.symmetric(
-                  horizontal: responsiveDimension(FieldTokens.horizontalPadding),
+                  horizontal: responsiveDimension(
+                    FieldTokens.horizontalPadding,
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -101,6 +123,13 @@ class AppFieldAction extends StatelessWidget {
             ),
           ),
         ),
+        if (hasError) ...[
+          SizedBox(height: labelGap),
+          Text(
+            errorText!,
+            style: FieldTokens.errorStyle(typography, colors, brightness),
+          ),
+        ],
       ],
     );
   }

@@ -14,6 +14,8 @@ class AddBranchWizardFooter extends StatelessWidget {
     required this.onAddCoverage,
     required this.onAddServices,
     required this.onAddWorkers,
+    this.coverageAccessDenied = false,
+    this.onOpenLocationSettings,
     super.key,
   });
 
@@ -23,6 +25,8 @@ class AddBranchWizardFooter extends StatelessWidget {
   final VoidCallback onAddCoverage;
   final VoidCallback onAddServices;
   final VoidCallback onAddWorkers;
+  final bool coverageAccessDenied;
+  final VoidCallback? onOpenLocationSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +39,10 @@ class AddBranchWizardFooter extends StatelessWidget {
       ),
       child: switch (currentStep) {
         1 => _StepOneButton(onNext: onNext),
+        2 when coverageAccessDenied => AppButton(
+          label: 'branches.add_branch.open_settings_button'.tr(),
+          onPressed: onOpenLocationSettings,
+        ),
         2 => _StepTwoButton(
           onNext: onNext,
           onAddCoverage: onAddCoverage,
@@ -44,7 +52,7 @@ class AddBranchWizardFooter extends StatelessWidget {
           onAddServices: onAddServices,
         ),
         4 => _StepFourButton(
-          onSubmit: onSubmit,
+          onNext: onNext,
           onAddWorkers: onAddWorkers,
         ),
         _ => _SubmitButton(onSubmit: onSubmit),
@@ -146,11 +154,11 @@ class _StepThreeButton extends StatelessWidget {
 
 class _StepFourButton extends StatelessWidget {
   const _StepFourButton({
-    required this.onSubmit,
+    required this.onNext,
     required this.onAddWorkers,
   });
 
-  final VoidCallback onSubmit;
+  final VoidCallback onNext;
   final VoidCallback onAddWorkers;
 
   @override
@@ -164,15 +172,10 @@ class _StepFourButton extends StatelessWidget {
             onPressed: onAddWorkers,
           );
         }
-        return BlocSelector<AddBranchBloc, AddBranchState, bool>(
-          selector: (state) => state.isLoading,
-          builder: (context, isLoading) {
-            return AppButton(
-              label: 'branches.add_branch.save_button'.tr(),
-              isLoading: isLoading,
-              onPressed: isLoading ? null : onSubmit,
-            );
-          },
+        // Advance to the review screen (`365:14892`) before submitting.
+        return AppButton(
+          label: 'branches.add_branch.next_button'.tr(),
+          onPressed: onNext,
         );
       },
     );

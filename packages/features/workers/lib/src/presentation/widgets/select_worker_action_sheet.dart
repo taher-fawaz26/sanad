@@ -193,11 +193,30 @@ class _SelectWorkerActionSheetState extends State<_SelectWorkerActionSheet> {
 
     final workers = _filteredWorkers;
     if (workers.isEmpty) {
+      // Figma `No workers found` search-empty state (`1513:7798`).
       return Center(
-        child: Text(
-          'workers.select_worker.empty'.tr(),
-          style: context.appTypography.regularNormal.copyWith(
-            color: context.appColors.textSecondary,
+        child: Padding(
+          padding: EdgeInsets.all(AppSpacing.xl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'workers.select_worker.empty'.tr(),
+                textAlign: TextAlign.center,
+                style: context.appTypography.regularNormal.copyWith(
+                  color: context.appColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              SizedBox(height: AppSpacing.xs),
+              Text(
+                'workers.select_worker.empty_description'.tr(),
+                textAlign: TextAlign.center,
+                style: context.appTypography.smallNormal.copyWith(
+                  color: context.appColors.textSecondary,
+                ),
+              ),
+            ],
           ),
         ),
       );

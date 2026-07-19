@@ -2,6 +2,7 @@ import 'package:core/core.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:workers/src/data/datasources/worker_remote_data_source.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
+import 'package:workers/src/domain/entities/worker_status.dart';
 import 'package:workers/src/domain/repositories/worker_repository.dart';
 
 class WorkerRepositoryImpl implements WorkerRepository {
@@ -12,6 +13,19 @@ class WorkerRepositoryImpl implements WorkerRepository {
   @override
   TaskEither<Failure, List<WorkerEntity>> getWorkers() =>
       _remoteDataSource.getWorkers().map(
-            (dtos) => dtos.map((dto) => dto.toEntity()).toList(),
-          );
+        (dtos) => dtos.map((dto) => dto.toEntity()).toList(),
+      );
+
+  @override
+  TaskEither<Failure, Unit> deleteWorker(String id) =>
+      _remoteDataSource.deleteWorker(id);
+
+  @override
+  TaskEither<Failure, WorkerEntity> updateWorkerStatus(
+    String id,
+    WorkerStatus status,
+  ) =>
+      _remoteDataSource
+          .updateWorkerStatus(id, status)
+          .map((dto) => dto.toEntity());
 }

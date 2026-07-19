@@ -1,0 +1,64 @@
+import 'package:branches/src/domain/entities/branch_entity.dart';
+import 'package:branches/src/presentation/utils/branch_type_formatter.dart';
+import 'package:branches/src/presentation/widgets/branch_actions_bottom_sheet.dart';
+import 'package:branches/src/routes/branch_routes.dart';
+import 'package:design_system/design_system.dart';
+import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+/// A single branch row — Figma branch card (`347:14378`).
+///
+/// Shared by the main branches list and the search bottom sheet so both
+/// stay visually identical.
+class BranchListItem extends StatelessWidget {
+  const BranchListItem({required this.branch, super.key, this.onTap});
+
+  final BranchEntity branch;
+
+  /// Overrides the default "open branch details" navigation — used by the
+  /// search sheet to close itself before navigating.
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final initial = branch.branchName.isNotEmpty
+        ? branch.branchName[0].toUpperCase()
+        : '?';
+
+    return AppListCard(
+      title: branch.branchName,
+      caption: BranchTypeFormatter.localizedLabel(branch.branchType),
+      captionStyle: context.appTypography.smallNormal.copyWith(
+        color: colors.primary,
+      ),
+      leading: AppAvatar(
+        initials: initial,
+        backgroundColor: colors.primary,
+        showStatusDot: true,
+      ),
+      badge: AppStatusBadge(
+        label: branch.isAvailable
+            ? 'branches.status_active'.tr()
+            : 'branches.status_maintenance'.tr(),
+        type: branch.isAvailable
+            ? AppStatusBadgeType.success
+            : AppStatusBadgeType.warning,
+        size: AppStatusBadgeSize.compact,
+      ),
+      trailing: Semantics(
+        label: 'branches.more_actions'.tr(),
+        child: AppIconButton(
+          icon: Icons.more_vert,
+          iconColor: context.appColors.textPrimary,
+          onTap: () => showBranchActionsBottomSheet(
+            context: context,
+            branch: branch,
+          ),
+        ),
+      ),
+      onTap: onTap ?? () => context.push(BranchRoutes.detailsFor(branch.id)),
+    );
+  }
+}

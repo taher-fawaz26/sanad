@@ -19,6 +19,7 @@ class CitySelectField extends StatelessWidget {
     required this.onCitySelected,
     this.selectedCity,
     this.localizedName,
+    this.errorText,
     super.key,
   });
 
@@ -29,6 +30,9 @@ class CitySelectField extends StatelessWidget {
   final String emptyLabel;
   final String retryLabel;
   final CityEntity? selectedCity;
+
+  /// Inline error message shown below the field (injected string).
+  final String? errorText;
 
   /// Resolves the display name for a given city. Defaults to [CityEntity.nameEn]
   /// when null.
@@ -44,6 +48,7 @@ class CitySelectField extends StatelessWidget {
       label: label,
       value: displayName,
       hint: hint,
+      errorText: errorText,
       onTap: () => _openPicker(context),
     );
   }
