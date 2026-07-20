@@ -15,6 +15,10 @@ final class WorkersRefreshEvent extends WorkersEvent {
   const WorkersRefreshEvent();
 }
 
+final class WorkersLoadMoreEvent extends WorkersEvent {
+  const WorkersLoadMoreEvent();
+}
+
 final class WorkersSearchChangedEvent extends WorkersEvent {
   const WorkersSearchChangedEvent(this.query);
 
@@ -65,6 +69,10 @@ final class InvitationsFetchEvent extends WorkersEvent {
 
 final class InvitationsRefreshEvent extends WorkersEvent {
   const InvitationsRefreshEvent();
+}
+
+final class InvitationsLoadMoreEvent extends WorkersEvent {
+  const InvitationsLoadMoreEvent();
 }
 
 final class InvitationResendEvent extends WorkersEvent {

@@ -4,27 +4,37 @@ class WorkersState extends Equatable {
   const WorkersState({
     this.status = RequestStatus.initial,
     this.workers = const [],
-    this.filteredWorkers = const [],
     this.searchQuery = '',
     this.failure,
     this.actionFailure,
     this.selectedTab = 0,
     this.invitations = const [],
-    this.filteredInvitations = const [],
     this.invitationsStatus = RequestStatus.initial,
+    this.workersPage = 1,
+    this.workersTotalPages = 1,
+    this.workersLoadingMore = false,
+    this.invitationsPage = 1,
+    this.invitationsTotalPages = 1,
+    this.invitationsLoadingMore = false,
   });
 
   final RequestStatus status;
   final List<WorkerEntity> workers;
-  final List<WorkerEntity> filteredWorkers;
   final String searchQuery;
   final Failure? failure;
   final Failure? actionFailure;
 
   final int selectedTab;
   final List<InvitationEntity> invitations;
-  final List<InvitationEntity> filteredInvitations;
   final RequestStatus invitationsStatus;
+
+  // Offset-pagination cursors (server-side).
+  final int workersPage;
+  final int workersTotalPages;
+  final bool workersLoadingMore;
+  final int invitationsPage;
+  final int invitationsTotalPages;
+  final bool invitationsLoadingMore;
 
   bool get isLoading => status == RequestStatus.loading;
   bool get isSuccess => status == RequestStatus.success;
@@ -32,6 +42,14 @@ class WorkersState extends Equatable {
 
   bool get isTeamTab => selectedTab == 0;
   bool get isInvitationsTab => selectedTab == 1;
+
+  bool get workersHasMore => workersPage < workersTotalPages;
+  bool get invitationsHasMore => invitationsPage < invitationsTotalPages;
+
+  /// Lists are filtered server-side; these aliases keep the page widgets
+  /// unchanged.
+  List<WorkerEntity> get filteredWorkers => workers;
+  List<InvitationEntity> get filteredInvitations => invitations;
 
   WorkersState copyWith({
     RequestStatus? status,
@@ -44,24 +62,32 @@ class WorkersState extends Equatable {
     int? selectedTab,
     List<InvitationEntity>? invitations,
     RequestStatus? invitationsStatus,
+    int? workersPage,
+    int? workersTotalPages,
+    bool? workersLoadingMore,
+    int? invitationsPage,
+    int? invitationsTotalPages,
+    bool? invitationsLoadingMore,
   }) {
-    final newWorkers = workers ?? this.workers;
-    final newInvitations = invitations ?? this.invitations;
-    final newQuery = searchQuery ?? this.searchQuery;
-
     return WorkersState(
       status: status ?? this.status,
-      workers: newWorkers,
-      filteredWorkers: _applySearch(newWorkers, newQuery),
-      searchQuery: newQuery,
+      workers: workers ?? this.workers,
+      searchQuery: searchQuery ?? this.searchQuery,
       failure: clearFailure ? null : (failure ?? this.failure),
       actionFailure: clearActionFailure
           ? null
           : (actionFailure ?? this.actionFailure),
       selectedTab: selectedTab ?? this.selectedTab,
-      invitations: newInvitations,
-      filteredInvitations: _applyInvitationSearch(newInvitations, newQuery),
+      invitations: invitations ?? this.invitations,
       invitationsStatus: invitationsStatus ?? this.invitationsStatus,
+      workersPage: workersPage ?? this.workersPage,
+      workersTotalPages: workersTotalPages ?? this.workersTotalPages,
+      workersLoadingMore: workersLoadingMore ?? this.workersLoadingMore,
+      invitationsPage: invitationsPage ?? this.invitationsPage,
+      invitationsTotalPages:
+          invitationsTotalPages ?? this.invitationsTotalPages,
+      invitationsLoadingMore:
+          invitationsLoadingMore ?? this.invitationsLoadingMore,
     );
   }
 
@@ -69,43 +95,17 @@ class WorkersState extends Equatable {
   List<Object?> get props => [
     status,
     workers,
-    filteredWorkers,
     searchQuery,
     failure,
     actionFailure,
     selectedTab,
     invitations,
-    filteredInvitations,
     invitationsStatus,
+    workersPage,
+    workersTotalPages,
+    workersLoadingMore,
+    invitationsPage,
+    invitationsTotalPages,
+    invitationsLoadingMore,
   ];
 }
-
-List<WorkerEntity> _applySearch(
-  List<WorkerEntity> workers,
-  String searchQuery,
-) => searchQuery.isEmpty
-    ? workers
-    : workers
-          .where(
-            (w) =>
-                w.fullName.toLowerCase().contains(
-                  searchQuery.toLowerCase(),
-                ) ||
-                w.role.toLowerCase().contains(searchQuery.toLowerCase()),
-          )
-          .toList();
-
-List<InvitationEntity> _applyInvitationSearch(
-  List<InvitationEntity> invitations,
-  String searchQuery,
-) => searchQuery.isEmpty
-    ? invitations
-    : invitations
-          .where(
-            (i) =>
-                i.fullName.toLowerCase().contains(
-                  searchQuery.toLowerCase(),
-                ) ||
-                i.role.toLowerCase().contains(searchQuery.toLowerCase()),
-          )
-          .toList();

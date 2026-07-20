@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:workers/src/domain/entities/worker_assigned_branch.dart';
 import 'package:workers/src/domain/entities/worker_status.dart';
 
 class WorkerEntity extends Equatable {
@@ -7,11 +8,12 @@ class WorkerEntity extends Equatable {
     required this.fullName,
     required this.role,
     required this.initials,
-    this.status = WorkerStatus.pending,
+    this.status = WorkerStatus.inactive,
     this.phone,
     this.email,
     this.jobTitle,
-    this.branches,
+    this.profilePicUrl,
+    this.assignedBranches = const [],
   });
 
   final String id;
@@ -24,7 +26,12 @@ class WorkerEntity extends Equatable {
   final String? phone;
   final String? email;
   final String? jobTitle;
-  final String? branches;
+
+  /// Public URL of the worker's profile picture, when set.
+  final String? profilePicUrl;
+
+  /// Branches this worker is assigned to.
+  final List<WorkerAssignedBranch> assignedBranches;
 
   @override
   List<Object?> get props => [
@@ -36,6 +43,7 @@ class WorkerEntity extends Equatable {
     phone,
     email,
     jobTitle,
-    branches,
+    profilePicUrl,
+    assignedBranches,
   ];
 }

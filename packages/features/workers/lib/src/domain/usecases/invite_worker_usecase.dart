@@ -9,20 +9,22 @@ class InviteWorkerParams extends Equatable {
     required this.fullName,
     required this.jobTitle,
     required this.type,
-    this.email,
-    this.phone,
-    this.branchId,
+    required this.email,
+    required this.phone,
   });
 
   final String fullName;
   final String jobTitle;
   final WorkerType type;
-  final String? email;
-  final String? phone;
-  final String? branchId;
+
+  /// Required by the backend `CreateInvitationDto`.
+  final String email;
+
+  /// Required by the backend `CreateInvitationDto` (E.164, `+971…`).
+  final String phone;
 
   @override
-  List<Object?> get props => [fullName, jobTitle, type, email, phone, branchId];
+  List<Object?> get props => [fullName, jobTitle, type, email, phone];
 }
 
 class InviteWorkerUseCase implements UseCase<Unit, InviteWorkerParams> {

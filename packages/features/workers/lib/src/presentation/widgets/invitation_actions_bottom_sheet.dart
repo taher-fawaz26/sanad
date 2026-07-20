@@ -2,18 +2,21 @@ import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:workers/src/domain/entities/invitation_entity.dart';
 import 'package:workers/src/presentation/bloc/workers/workers_bloc.dart';
 import 'package:workers/src/presentation/widgets/action_confirmation_sheet.dart';
 
+const ({AppButtonType type, bool destructive}) _resendButton = (
+  type: AppButtonType.warning,
+  destructive: false,
+);
 const ({AppButtonType type, bool destructive}) _cancelButton = (
   type: AppButtonType.primary,
   destructive: true,
 );
 
-/// Invitation actions bottom sheet: copy link, resend, cancel.
+/// Figma invitation actions bottom sheet (`1607:12699`).
 Future<void> showInvitationActionsBottomSheet({
   required BuildContext context,
   required InvitationEntity invitation,
@@ -54,30 +57,31 @@ class _InvitationActionsSheetBody extends StatelessWidget {
         AppTableRow(
           title: 'workers.invitation_action_copy_link'.tr(),
           leading: AppTableLeading.icon,
-          leadingIcon: Icon(
-            Icons.link,
-            size: 24,
-            color: colors.textPrimary,
+          leadingIcon: AppSvgPicture.asset(
+            AppSvgs.invitationCopy,
+            width: 24,
+            height: 24,
+            colorFilter: ColorFilter.mode(colors.textPrimary, BlendMode.srcIn),
           ),
-          onTap: () async {
+          onTap: () {
             Navigator.of(context).pop();
-            await Clipboard.setData(
-              ClipboardData(text: _invitationLink(invitation)),
-            );
             if (!pageContext.mounted) return;
+            // Backend does not expose an invitation link yet — surface it as
+            // an explicit "coming soon" rather than fabricating a URL.
             showAppSnackbar(
               context: pageContext,
-              title: 'workers.invitation_link_copied'.tr(),
+              title: 'workers.invitation_copy_coming_soon'.tr(),
             );
           },
         ),
         AppTableRow(
           title: 'workers.invitation_action_resend'.tr(),
           leading: AppTableLeading.icon,
-          leadingIcon: Icon(
-            Icons.forward_to_inbox_outlined,
-            size: 24,
-            color: colors.textPrimary,
+          leadingIcon: AppSvgPicture.asset(
+            AppSvgs.invitationResend,
+            width: 24,
+            height: 24,
+            colorFilter: ColorFilter.mode(colors.textPrimary, BlendMode.srcIn),
           ),
           onTap: () async {
             Navigator.of(context).pop();
@@ -100,9 +104,6 @@ class _InvitationActionsSheetBody extends StatelessWidget {
     );
   }
 
-  String _invitationLink(InvitationEntity invitation) =>
-      'https://sanad.app/invite/${invitation.id}';
-
   Future<void> _showResendConfirmation({required BuildContext context}) async {
     final confirmed = await showWorkerConfirmationSheet(
       context: context,
@@ -111,6 +112,8 @@ class _InvitationActionsSheetBody extends StatelessWidget {
         namedArgs: {'name': invitation.fullName},
       ),
       actionLabel: 'workers.invitation_resend_action'.tr(),
+      actionType: _resendButton.type,
+      destructive: _resendButton.destructive,
       cancelLabel: 'workers.cancel'.tr(),
     );
 

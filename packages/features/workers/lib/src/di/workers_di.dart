@@ -1,12 +1,12 @@
 import 'package:core/core.dart';
 import 'package:network/network.dart';
-import 'package:workers/src/data/datasources/branch_option_remote_data_source.dart';
 import 'package:workers/src/data/datasources/worker_remote_data_source.dart';
 import 'package:workers/src/data/repositories/worker_repository_impl.dart';
 import 'package:workers/src/domain/repositories/worker_repository.dart';
 import 'package:workers/src/domain/usecases/cancel_invitation_usecase.dart';
 import 'package:workers/src/domain/usecases/delete_worker_usecase.dart';
 import 'package:workers/src/domain/usecases/get_invitations_usecase.dart';
+import 'package:workers/src/domain/usecases/get_worker_usecase.dart';
 import 'package:workers/src/domain/usecases/get_workers_usecase.dart';
 import 'package:workers/src/domain/usecases/invite_worker_usecase.dart';
 import 'package:workers/src/domain/usecases/resend_invitation_usecase.dart';
@@ -31,6 +31,9 @@ abstract final class WorkersDI {
         () => GetWorkersUseCase(sl<WorkerRepository>()),
       )
       ..registerLazySingleton(
+        () => GetWorkerUseCase(sl<WorkerRepository>()),
+      )
+      ..registerLazySingleton(
         () => DeleteWorkerUseCase(sl<WorkerRepository>()),
       )
       ..registerLazySingleton(
@@ -50,9 +53,6 @@ abstract final class WorkersDI {
       )
       ..registerLazySingleton(
         () => UpdateWorkerUseCase(sl<WorkerRepository>()),
-      )
-      ..registerLazySingleton<BranchOptionRemoteDataSource>(
-        () => BranchOptionRemoteDataSourceImpl(sl<BaseApiClient>()),
       )
       ..registerFactory(
         () => WorkersBloc(

@@ -1,4 +1,4 @@
-﻿import 'package:core/core.dart';
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +6,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
+import 'package:network/network.dart';
+import 'package:sanad_provider/src/routing/app_routes.dart';
 import 'package:sanad_provider/src/routing/provider_router.dart';
 
 /// The root widget of the sanad_provider application.
@@ -19,11 +21,13 @@ class SanadProviderApp extends StatefulWidget {
 
 class _SanadProviderAppState extends State<SanadProviderApp> {
   late final GoRouter _router;
+  late final ConnectivityController _connectivity;
 
   @override
   void initState() {
     super.initState();
     _router = buildProviderRouter();
+    _connectivity = sl<ConnectivityController>();
   }
 
   @override
@@ -34,14 +38,21 @@ class _SanadProviderAppState extends State<SanadProviderApp> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => primaryFocus?.unfocus(),
-      child: MultiBlocProvider(
-        providers: [
-          BlocProvider(create: (_) => sl<ThemeBloc>()),
-          BlocProvider(create: (_) => sl<TranslateBloc>()),
-        ],
-        child: BlocBuilder<ThemeBloc, ThemeState>(
+    return ConnectivityOfflineGate(
+      controller: _connectivity,
+      router: _router,
+      // Pass the app's own route constant rather than leaning on the gate's
+      // default string, so the two never drift apart.
+      // ignore: avoid_redundant_argument_values
+      offlinePath: AppRoutes.offline,
+      child: GestureDetector(
+        onTap: () => primaryFocus?.unfocus(),
+        child: MultiBlocProvider(
+          providers: [
+            BlocProvider(create: (_) => sl<ThemeBloc>()),
+            BlocProvider(create: (_) => sl<TranslateBloc>()),
+          ],
+          child: BlocBuilder<ThemeBloc, ThemeState>(
             builder: (context, themeState) {
               return Builder(
                 builder: (context) {
@@ -58,7 +69,7 @@ class _SanadProviderAppState extends State<SanadProviderApp> {
                       useInheritedMediaQuery: true,
                       minTextAdapt: true,
                       splitScreenMode: true,
-                      builder: (_, __) {
+                      builder: (_, _) {
                         return MaterialApp.router(
                           debugShowCheckedModeBanner: false,
                           localizationsDelegates: context.localizationDelegates,
@@ -77,12 +88,13 @@ class _SanadProviderAppState extends State<SanadProviderApp> {
             },
           ),
         ),
-      );
+      ),
+    );
   }
 
   ThemeMode _resolveThemeMode(ThemeState state) => switch (state.mode) {
-        AppThemeMode.dark => ThemeMode.dark,
-        AppThemeMode.light => ThemeMode.light,
-        AppThemeMode.system => ThemeMode.system,
-      };
+    AppThemeMode.dark => ThemeMode.dark,
+    AppThemeMode.light => ThemeMode.light,
+    AppThemeMode.system => ThemeMode.system,
+  };
 }

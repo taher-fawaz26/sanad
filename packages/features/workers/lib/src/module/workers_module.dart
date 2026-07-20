@@ -44,11 +44,10 @@ class WorkersModule extends FeatureModule {
         ),
         GoRoute(
           path: ':id',
-          builder: (context, state) {
-            final worker = state.extra as WorkerEntity?;
-            if (worker == null) return const SizedBox.shrink();
-            return WorkerDetailsPage(worker: worker);
-          },
+          builder: (context, state) => WorkerDetailsPage(
+            workerId: state.pathParameters['id']!,
+            initialWorker: state.extra as WorkerEntity?,
+          ),
           routes: [
             GoRoute(
               path: 'edit',

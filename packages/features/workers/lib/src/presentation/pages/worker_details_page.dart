@@ -1,4 +1,5 @@
 import 'package:app_assets/app_assets.dart';
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -6,21 +7,68 @@ import 'package:go_router/go_router.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
 import 'package:workers/src/domain/entities/worker_status.dart';
 import 'package:workers/src/domain/entities/worker_type.dart';
+import 'package:workers/src/domain/usecases/get_worker_usecase.dart';
 import 'package:workers/src/routes/worker_routes.dart';
 
+const _avatarSize = 96.0;
+const _statusDotSize = 24.0;
+const _cardRadius = 16.0;
+
 /// Figma `worker-details` (`1526:11216`).
-class WorkerDetailsPage extends StatelessWidget {
-  const WorkerDetailsPage({required this.worker, super.key});
+///
+/// Receives [initialWorker] when navigated from the list (instant render),
+/// and falls back to fetching by [workerId] for deep-links / refresh.
+class WorkerDetailsPage extends StatefulWidget {
+  const WorkerDetailsPage({
+    required this.workerId,
+    this.initialWorker,
+    super.key,
+  });
 
-  final WorkerEntity worker;
+  final String workerId;
+  final WorkerEntity? initialWorker;
 
-  static const _avatarSize = 96.0;
-  static const _statusDotSize = 24.0;
-  static const _cardRadius = 16.0;
+  @override
+  State<WorkerDetailsPage> createState() => _WorkerDetailsPageState();
+}
+
+class _WorkerDetailsPageState extends State<WorkerDetailsPage> {
+  WorkerEntity? _worker;
+  Failure? _failure;
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _worker = widget.initialWorker;
+    if (_worker == null) _fetch();
+  }
+
+  Future<void> _fetch() async {
+    setState(() {
+      _loading = true;
+      _failure = null;
+    });
+    final result = await sl<GetWorkerUseCase>()
+        .call(GetWorkerParams(widget.workerId))
+        .run();
+    if (!mounted) return;
+    result.match(
+      (failure) => setState(() {
+        _failure = failure;
+        _loading = false;
+      }),
+      (worker) => setState(() {
+        _worker = worker;
+        _loading = false;
+      }),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final worker = _worker;
 
     return Scaffold(
       backgroundColor: colors.surface,
@@ -34,36 +82,66 @@ class WorkerDetailsPage extends StatelessWidget {
               trailing: AppNotificationIcon(onTap: () {}),
             ),
             Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xxl,
-                  vertical: AppSpacing.lg,
+              child: switch ((worker, _loading, _failure)) {
+                (final WorkerEntity w, _, _) => _DetailsBody(worker: w),
+                (_, true, _) => const Center(child: AppLoadingIndicator()),
+                (_, _, final Failure _) => Center(
+                  child: AppNetworkFailureState(
+                    title: 'empty_states.network_title'.tr(),
+                    description: 'empty_states.network_description'.tr(),
+                    retryLabel: 'empty_states.retry'.tr(),
+                    onRetry: _fetch,
+                  ),
                 ),
-                child: Column(
-                  children: [
-                    _ProfileHeader(worker: worker),
-                    SizedBox(height: AppSpacing.xxl),
-                    _ContactDetailsCard(worker: worker),
-                  ],
-                ),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppSpacing.xxl,
-                vertical: AppSpacing.sm,
-              ),
-              child: AppButton(
-                label: 'workers.edit_profile'.tr(),
-                onPressed: () => context.push(
-                  WorkerRoutes.editWorkerFor(worker.id),
-                  extra: worker,
-                ),
-              ),
+                _ => const SizedBox.shrink(),
+              },
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _DetailsBody extends StatelessWidget {
+  const _DetailsBody({required this.worker});
+
+  final WorkerEntity worker;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.xxl,
+              vertical: AppSpacing.lg,
+            ),
+            child: Column(
+              children: [
+                _ProfileHeader(worker: worker),
+                SizedBox(height: AppSpacing.xxl),
+                _ContactDetailsCard(worker: worker),
+              ],
+            ),
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.xxl,
+            vertical: AppSpacing.sm,
+          ),
+          child: AppButton(
+            label: 'workers.edit_profile'.tr(),
+            onPressed: () => context.push(
+              WorkerRoutes.editWorkerFor(worker.id),
+              extra: worker,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -82,18 +160,15 @@ class _ProfileHeader extends StatelessWidget {
     return Column(
       children: [
         SizedBox(
-          width: responsiveDimension(WorkerDetailsPage._avatarSize),
-          height: responsiveDimension(WorkerDetailsPage._avatarSize),
+          width: responsiveDimension(_avatarSize),
+          height: responsiveDimension(_avatarSize),
           child: Stack(
             clipBehavior: Clip.none,
             children: [
               ClipOval(
-                child: Image.asset(
-                  AppImages.addWorkers,
-                  package: AppAssets.package,
-                  width: responsiveDimension(WorkerDetailsPage._avatarSize),
-                  height: responsiveDimension(WorkerDetailsPage._avatarSize),
-                  fit: BoxFit.cover,
+                child: _AvatarImage(
+                  url: worker.profilePicUrl,
+                  size: responsiveDimension(_avatarSize),
                 ),
               ),
               if (worker.status == WorkerStatus.active)
@@ -102,10 +177,10 @@ class _ProfileHeader extends StatelessWidget {
                   bottom: 0,
                   child: Container(
                     width: responsiveDimension(
-                      WorkerDetailsPage._statusDotSize,
+                      _statusDotSize,
                     ),
                     height: responsiveDimension(
-                      WorkerDetailsPage._statusDotSize,
+                      _statusDotSize,
                     ),
                     decoration: BoxDecoration(
                       color: colors.success,
@@ -146,6 +221,35 @@ class _ProfileHeader extends StatelessWidget {
   }
 }
 
+class _AvatarImage extends StatelessWidget {
+  const _AvatarImage({required this.url, required this.size});
+
+  final String? url;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final placeholder = Image.asset(
+      AppImages.addWorkers,
+      package: AppAssets.package,
+      width: size,
+      height: size,
+      fit: BoxFit.cover,
+    );
+
+    final imageUrl = url;
+    if (imageUrl == null || imageUrl.isEmpty) return placeholder;
+
+    return Image.network(
+      imageUrl,
+      width: size,
+      height: size,
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => placeholder,
+    );
+  }
+}
+
 class _ContactDetailsCard extends StatelessWidget {
   const _ContactDetailsCard({required this.worker});
 
@@ -182,10 +286,10 @@ class _ContactDetailsCard extends StatelessWidget {
           label: 'workers.contact_title'.tr(),
           value: worker.jobTitle!.trim(),
         ),
-      if (worker.branches != null && worker.branches!.trim().isNotEmpty)
+      if (worker.assignedBranches.isNotEmpty)
         _ContactDetailRow(
           label: 'workers.contact_branches'.tr(),
-          value: worker.branches!.trim(),
+          value: worker.assignedBranches.map((b) => b.branchName).join(', '),
           labelColor: colors.textSecondary,
         ),
     ];
@@ -196,7 +300,7 @@ class _ContactDetailsCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: dark.shade50,
         borderRadius: BorderRadius.circular(
-          responsiveDimension(WorkerDetailsPage._cardRadius),
+          responsiveDimension(_cardRadius),
         ),
         border: Border.all(color: dark.shade200),
       ),

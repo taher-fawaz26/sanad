@@ -1,4 +1,5 @@
 import 'package:app_assets/app_assets.dart';
+import 'package:core/core.dart';
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/spacing/responsive_spacing.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
@@ -8,8 +9,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-/// Figma phone field — country flag prefix + phone number input.
-class AppPhoneField extends StatelessWidget {
+/// Figma phone field (`1616:12907`) — flag + country code prefix + number.
+///
+/// The dial code is rendered in the prefix only. Any E.164 / `971…` value
+/// passed via [controller] is stripped to national digits so the code is
+/// never shown twice.
+class AppPhoneField extends StatefulWidget {
   const AppPhoneField({
     required this.label,
     super.key,
@@ -18,6 +23,7 @@ class AppPhoneField extends StatelessWidget {
     this.onChanged,
     this.enabled = true,
     this.countryFlagAsset = AppSvgs.flagAe,
+    this.countryCode = '+971',
     this.onCountryTap,
     this.errorText,
   });
@@ -28,11 +34,65 @@ class AppPhoneField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final bool enabled;
   final String countryFlagAsset;
+
+  /// Dial code shown after the flag (Figma `+971`).
+  final String countryCode;
+
   final VoidCallback? onCountryTap;
 
   /// When non-null, the field renders with an error border and this
   /// message below it (Figma field error state).
   final String? errorText;
+
+  /// Gap between flag and country-code group — Figma `gap-[14px]`.
+  static const double _prefixGap = 14;
+
+  @override
+  State<AppPhoneField> createState() => _AppPhoneFieldState();
+}
+
+class _AppPhoneFieldState extends State<AppPhoneField> {
+  TextEditingController? _ownedController;
+  TextEditingController get _controller =>
+      widget.controller ?? _ownedController!;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.controller == null) {
+      _ownedController = TextEditingController();
+    }
+    _stripDialCodeFromController();
+  }
+
+  @override
+  void didUpdateWidget(AppPhoneField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      if (widget.controller == null) {
+        _ownedController ??= TextEditingController();
+      } else {
+        _ownedController?.dispose();
+        _ownedController = null;
+      }
+    }
+    _stripDialCodeFromController();
+  }
+
+  @override
+  void dispose() {
+    _ownedController?.dispose();
+    super.dispose();
+  }
+
+  void _stripDialCodeFromController() {
+    final national = UaePhoneValidator.toNationalInput(_controller.text);
+    if (national == _controller.text) return;
+    _controller.value = TextEditingValue(
+      text: national,
+      selection: TextSelection.collapsed(offset: national.length),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,42 +102,43 @@ class AppPhoneField extends StatelessWidget {
     final fieldHeight = responsiveDimension(FieldTokens.fieldHeight);
     final labelGap = responsiveDimension(FieldTokens.labelGap);
     final iconSize = AppDimension.iconLg;
-    final hasError = errorText != null && errorText!.isNotEmpty;
+    final hasError = widget.errorText != null && widget.errorText!.isNotEmpty;
+    final dark = colors.palettes.dark;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          label,
+          widget.label,
           style: FieldTokens.labelStyle(typography, colors, brightness),
         ),
         SizedBox(height: labelGap),
         SizedBox(
           height: fieldHeight,
           child: TextField(
-            controller: controller,
-            enabled: enabled,
+            controller: _controller,
+            enabled: widget.enabled,
             keyboardType: TextInputType.phone,
             textInputAction: TextInputAction.next,
-            onChanged: onChanged,
+            onChanged: widget.onChanged,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             style: FieldTokens.valueStyle(
               typography,
               colors,
               brightness,
-              enabled: enabled,
+              enabled: widget.enabled,
             ),
             decoration: InputDecoration(
-              hintText: hint,
+              hintText: widget.hint,
               hintStyle: FieldTokens.hintStyle(
                 typography,
                 colors,
                 brightness,
-                enabled: enabled,
+                enabled: widget.enabled,
               ),
               prefixIcon: GestureDetector(
-                onTap: enabled ? onCountryTap : null,
+                onTap: widget.enabled ? widget.onCountryTap : null,
                 behavior: HitTestBehavior.opaque,
                 child: Padding(
                   padding: EdgeInsets.only(
@@ -88,10 +149,26 @@ class AppPhoneField extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       SvgPicture.asset(
-                        countryFlagAsset,
+                        widget.countryFlagAsset,
                         package: AppAssets.package,
                         width: iconSize,
                         height: iconSize,
+                      ),
+                      SizedBox(
+                        width: responsiveSpacing(AppPhoneField._prefixGap),
+                      ),
+                      Text(
+                        widget.countryCode,
+                        style: typography.regularNone.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: widget.enabled
+                              ? dark.shade900
+                              : FieldTokens.valueColor(
+                                  colors,
+                                  brightness,
+                                  enabled: false,
+                                ),
+                        ),
                       ),
                     ],
                   ),
@@ -101,6 +178,8 @@ class AppPhoneField extends StatelessWidget {
                 minWidth:
                     responsiveDimension(FieldTokens.horizontalPadding) +
                     iconSize +
+                    responsiveSpacing(AppPhoneField._prefixGap) +
+                    responsiveDimension(40) +
                     AppSpacing.sm,
                 minHeight: fieldHeight,
               ),
@@ -108,7 +187,7 @@ class AppPhoneField extends StatelessWidget {
               fillColor: FieldTokens.background(
                 colors,
                 brightness,
-                enabled: enabled,
+                enabled: widget.enabled,
               ),
               isDense: true,
               contentPadding: EdgeInsets.symmetric(
@@ -145,7 +224,7 @@ class AppPhoneField extends StatelessWidget {
         if (hasError) ...[
           SizedBox(height: labelGap),
           Text(
-            errorText!,
+            widget.errorText!,
             style: FieldTokens.errorStyle(typography, colors, brightness),
           ),
         ],

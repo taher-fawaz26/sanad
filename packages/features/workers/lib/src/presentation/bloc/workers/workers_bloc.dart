@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -13,6 +15,9 @@ import 'package:workers/src/domain/usecases/update_worker_status_usecase.dart';
 
 part 'workers_event.dart';
 part 'workers_state.dart';
+
+/// Debounce applied to search keystrokes before hitting the server.
+const _searchDebounce = Duration(milliseconds: 350);
 
 class WorkersBloc extends Bloc<WorkersEvent, WorkersState> {
   WorkersBloc({
@@ -31,6 +36,7 @@ class WorkersBloc extends Bloc<WorkersEvent, WorkersState> {
        super(const WorkersState()) {
     on<WorkersFetchEvent>(_onFetch);
     on<WorkersRefreshEvent>(_onRefresh);
+    on<WorkersLoadMoreEvent>(_onWorkersLoadMore);
     on<WorkersSearchChangedEvent>(_onSearchChanged);
     on<WorkerDeletedEvent>(_onWorkerDeleted);
     on<WorkerStatusChangedEvent>(_onWorkerStatusChanged);
@@ -38,6 +44,7 @@ class WorkersBloc extends Bloc<WorkersEvent, WorkersState> {
     on<WorkersTabChangedEvent>(_onTabChanged);
     on<InvitationsFetchEvent>(_onInvitationsFetch);
     on<InvitationsRefreshEvent>(_onInvitationsRefresh);
+    on<InvitationsLoadMoreEvent>(_onInvitationsLoadMore);
     on<InvitationResendEvent>(_onInvitationResend);
     on<InvitationCancelledEvent>(_onInvitationCancelled);
   }
@@ -49,12 +56,23 @@ class WorkersBloc extends Bloc<WorkersEvent, WorkersState> {
   final ResendInvitationUseCase _resendInvitationUseCase;
   final CancelInvitationUseCase _cancelInvitationUseCase;
 
+  Timer? _searchTimer;
+
+  String? get _search =>
+      state.searchQuery.trim().isEmpty ? null : state.searchQuery.trim();
+
+  @override
+  Future<void> close() {
+    _searchTimer?.cancel();
+    return super.close();
+  }
+
   Future<void> _onFetch(
     WorkersFetchEvent event,
     Emitter<WorkersState> emit,
   ) async {
     emit(state.copyWith(status: RequestStatus.loading, clearFailure: true));
-    await _loadWorkers(emit);
+    await _fetchWorkers(emit, page: 1, append: false);
   }
 
   Future<void> _onRefresh(
@@ -62,7 +80,16 @@ class WorkersBloc extends Bloc<WorkersEvent, WorkersState> {
     Emitter<WorkersState> emit,
   ) async {
     emit(state.copyWith(status: RequestStatus.loading, clearFailure: true));
-    await _loadWorkers(emit);
+    await _fetchWorkers(emit, page: 1, append: false);
+  }
+
+  Future<void> _onWorkersLoadMore(
+    WorkersLoadMoreEvent event,
+    Emitter<WorkersState> emit,
+  ) async {
+    if (state.workersLoadingMore || !state.workersHasMore) return;
+    emit(state.copyWith(workersLoadingMore: true));
+    await _fetchWorkers(emit, page: state.workersPage + 1, append: true);
   }
 
   void _onSearchChanged(
@@ -70,6 +97,15 @@ class WorkersBloc extends Bloc<WorkersEvent, WorkersState> {
     Emitter<WorkersState> emit,
   ) {
     emit(state.copyWith(searchQuery: event.query));
+    _searchTimer?.cancel();
+    _searchTimer = Timer(_searchDebounce, () {
+      if (isClosed) return;
+      add(
+        state.isInvitationsTab
+            ? const InvitationsFetchEvent()
+            : const WorkersFetchEvent(),
+      );
+    });
   }
 
   Future<void> _onWorkerDeleted(
@@ -138,7 +174,7 @@ class WorkersBloc extends Bloc<WorkersEvent, WorkersState> {
         clearFailure: true,
       ),
     );
-    await _loadInvitations(emit);
+    await _fetchInvitations(emit, page: 1, append: false);
   }
 
   Future<void> _onInvitationsRefresh(
@@ -151,7 +187,20 @@ class WorkersBloc extends Bloc<WorkersEvent, WorkersState> {
         clearFailure: true,
       ),
     );
-    await _loadInvitations(emit);
+    await _fetchInvitations(emit, page: 1, append: false);
+  }
+
+  Future<void> _onInvitationsLoadMore(
+    InvitationsLoadMoreEvent event,
+    Emitter<WorkersState> emit,
+  ) async {
+    if (state.invitationsLoadingMore || !state.invitationsHasMore) return;
+    emit(state.copyWith(invitationsLoadingMore: true));
+    await _fetchInvitations(
+      emit,
+      page: state.invitationsPage + 1,
+      append: true,
+    );
   }
 
   Future<void> _onInvitationResend(
@@ -192,33 +241,60 @@ class WorkersBloc extends Bloc<WorkersEvent, WorkersState> {
     );
   }
 
-  Future<void> _loadWorkers(Emitter<WorkersState> emit) async {
-    final result = await _getWorkersUseCase(const NoParams()).run();
+  Future<void> _fetchWorkers(
+    Emitter<WorkersState> emit, {
+    required int page,
+    required bool append,
+  }) async {
+    final result = await _getWorkersUseCase(
+      GetWorkersParams(page: page, search: _search),
+    ).run();
 
     result.fold(
       (failure) => emit(
-        state.copyWith(status: RequestStatus.failure, failure: failure),
+        append
+            ? state.copyWith(workersLoadingMore: false)
+            : state.copyWith(status: RequestStatus.failure, failure: failure),
       ),
-      (workers) => emit(
-        state.copyWith(status: RequestStatus.success, workers: workers),
+      (paged) => emit(
+        state.copyWith(
+          status: RequestStatus.success,
+          workers: append ? [...state.workers, ...paged.items] : paged.items,
+          workersPage: paged.currentPage,
+          workersTotalPages: paged.totalPages,
+          workersLoadingMore: false,
+        ),
       ),
     );
   }
 
-  Future<void> _loadInvitations(Emitter<WorkersState> emit) async {
-    final result = await _getInvitationsUseCase(const NoParams()).run();
+  Future<void> _fetchInvitations(
+    Emitter<WorkersState> emit, {
+    required int page,
+    required bool append,
+  }) async {
+    final result = await _getInvitationsUseCase(
+      GetInvitationsParams(page: page, search: _search),
+    ).run();
 
     result.fold(
       (failure) => emit(
-        state.copyWith(
-          invitationsStatus: RequestStatus.failure,
-          failure: failure,
-        ),
+        append
+            ? state.copyWith(invitationsLoadingMore: false)
+            : state.copyWith(
+                invitationsStatus: RequestStatus.failure,
+                failure: failure,
+              ),
       ),
-      (invitations) => emit(
+      (paged) => emit(
         state.copyWith(
           invitationsStatus: RequestStatus.success,
-          invitations: invitations,
+          invitations: append
+              ? [...state.invitations, ...paged.items]
+              : paged.items,
+          invitationsPage: paged.currentPage,
+          invitationsTotalPages: paged.totalPages,
+          invitationsLoadingMore: false,
         ),
       ),
     );

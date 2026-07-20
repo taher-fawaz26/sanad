@@ -5,15 +5,15 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:workers/src/domain/entities/worker_entity.dart';
-import 'package:workers/src/domain/entities/worker_status.dart';
 import 'package:workers/src/presentation/bloc/workers/workers_bloc.dart';
 import 'package:workers/src/presentation/widgets/invitations_content.dart';
-import 'package:workers/src/presentation/widgets/worker_actions_bottom_sheet.dart';
+import 'package:workers/src/presentation/widgets/worker_empty_states.dart';
+import 'package:workers/src/presentation/widgets/worker_list_item.dart';
+import 'package:workers/src/presentation/widgets/worker_search_sheet.dart';
 import 'package:workers/src/routes/worker_routes.dart';
 
-/// Figma `team` / `team-empty-state` / `loading-state-workers-list`
-/// (`1526:12186`, `1526:12093`, `1528:9929`).
+/// Figma `team` / `team-empty-state` / search sheet (`1526:12186`,
+/// `1526:12093`, `1526:12837`).
 class WorkersPage extends StatefulWidget {
   const WorkersPage({super.key});
 
@@ -99,7 +99,7 @@ class _WorkersContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (state.isLoading) {
-      return const _LoadingSkeleton();
+      return const ShimmerListSkeleton();
     }
 
     return Column(
@@ -113,8 +113,10 @@ class _WorkersContent extends StatelessWidget {
           child: AppSearchField(
             hint: 'workers.search_hint'.tr(),
             showMicIcon: false,
-            onChanged: (value) => context.read<WorkersBloc>().add(
-              WorkersSearchChangedEvent(value),
+            readOnly: true,
+            onTap: () => showWorkerSearchSheet(
+              context,
+              scope: WorkerSearchScope.team,
             ),
           ),
         ),
@@ -134,89 +136,50 @@ class _WorkersContent extends StatelessWidget {
                   )
                 : state.filteredWorkers.isEmpty
                 ? AppFillRemainingScrollable(
-                    child: _EmptyState(
-                      searchQuery: state.searchQuery,
-                      onClearSearch: state.searchQuery.isNotEmpty
-                          ? () => context.read<WorkersBloc>().add(
-                              const WorkersSearchChangedEvent(''),
-                            )
-                          : null,
-                    ),
+                    child: _EmptyState(),
                   )
-                : ListView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.only(
-                      left: AppSpacing.lg,
-                      right: AppSpacing.lg,
-                      bottom: AppSpacing.lg,
+                : NotificationListener<ScrollNotification>(
+                    onNotification: (notification) {
+                      if (notification.metrics.pixels >=
+                              notification.metrics.maxScrollExtent - 200 &&
+                          state.workersHasMore &&
+                          !state.workersLoadingMore) {
+                        context.read<WorkersBloc>().add(
+                          const WorkersLoadMoreEvent(),
+                        );
+                      }
+                      return false;
+                    },
+                    child: ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: EdgeInsets.only(
+                        left: AppSpacing.lg,
+                        right: AppSpacing.lg,
+                        bottom: AppSpacing.lg,
+                      ),
+                      itemCount:
+                          state.filteredWorkers.length +
+                          (state.workersLoadingMore ? 1 : 0),
+                      separatorBuilder: (_, _) =>
+                          SizedBox(height: AppSpacing.sm),
+                      itemBuilder: (context, index) {
+                        if (index >= state.filteredWorkers.length) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: Center(child: AppLoadingIndicator()),
+                          );
+                        }
+                        return WorkerListItem(
+                          worker: state.filteredWorkers[index],
+                        );
+                      },
                     ),
-                    itemCount: state.filteredWorkers.length,
-                    itemBuilder: (context, index) =>
-                        _WorkerListItem(worker: state.filteredWorkers[index]),
                   ),
           ),
         ),
       ],
     );
   }
-}
-
-class _WorkerListItem extends StatelessWidget {
-  const _WorkerListItem({required this.worker});
-
-  final WorkerEntity worker;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: AppSpacing.sm),
-      child: AppListCard(
-        title: worker.fullName,
-        caption: worker.role,
-        leading: AppAvatar(
-          initials: worker.initials,
-          backgroundColor: colors.primary,
-          showStatusDot: worker.status == WorkerStatus.active,
-        ),
-        badge: _statusBadge(worker.status),
-        trailing: Semantics(
-          label: 'workers.more_actions'.tr(),
-          child: AppIconButton(
-            icon: Icons.more_vert,
-            iconColor: colors.textPrimary,
-            onTap: () => showWorkerActionsBottomSheet(
-              context: context,
-              worker: worker,
-            ),
-          ),
-        ),
-        onTap: () => context.push(
-          WorkerRoutes.detailsFor(worker.id),
-          extra: worker,
-        ),
-      ),
-    );
-  }
-
-  AppStatusBadge _statusBadge(WorkerStatus status) => switch (status) {
-    WorkerStatus.active => AppStatusBadge(
-      label: 'workers.status_active'.tr(),
-      type: AppStatusBadgeType.success,
-      size: AppStatusBadgeSize.compact,
-    ),
-    WorkerStatus.pending => AppStatusBadge(
-      label: 'workers.status_pending'.tr(),
-      type: AppStatusBadgeType.warning,
-      size: AppStatusBadgeSize.compact,
-    ),
-    WorkerStatus.suspended => AppStatusBadge(
-      label: 'workers.status_suspended'.tr(),
-      type: AppStatusBadgeType.alert,
-      size: AppStatusBadgeSize.compact,
-    ),
-  };
 }
 
 class _FooterButton extends StatelessWidget {
@@ -242,23 +205,8 @@ class _FooterButton extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.searchQuery, this.onClearSearch});
-
-  final String searchQuery;
-  final VoidCallback? onClearSearch;
-
   @override
   Widget build(BuildContext context) {
-    if (searchQuery.trim().isNotEmpty) {
-      return Center(
-        child: AppGenericEmptyState(
-          title: 'workers.search_empty_title'.tr(),
-          description: 'workers.search_empty_description'.tr(),
-          actionLabel: 'workers.clear_search'.tr(),
-          onAction: onClearSearch,
-        ),
-      );
-    }
     return Center(
       child: AppEmptyState(
         illustration: AppSvgPicture.asset(
@@ -326,15 +274,5 @@ class _ErrorState extends StatelessWidget {
         onAction: onRetry,
       ),
     );
-  }
-}
-
-// Figma loading state (`1528:9929`) — animated shimmer skeleton.
-class _LoadingSkeleton extends StatelessWidget {
-  const _LoadingSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return const ShimmerListSkeleton();
   }
 }

@@ -11,6 +11,7 @@ class InvitationEntity extends Equatable {
     this.phone,
     this.email,
     this.invitedAt,
+    this.expiresAt,
   });
 
   final String id;
@@ -21,6 +22,7 @@ class InvitationEntity extends Equatable {
   final String? phone;
   final String? email;
   final DateTime? invitedAt;
+  final DateTime? expiresAt;
 
   @override
   List<Object?> get props => [
@@ -32,5 +34,6 @@ class InvitationEntity extends Equatable {
     phone,
     email,
     invitedAt,
+    expiresAt,
   ];
 }

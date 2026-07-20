@@ -2,6 +2,7 @@ import 'package:core/core.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:workers/src/data/datasources/worker_remote_data_source.dart';
 import 'package:workers/src/domain/entities/invitation_entity.dart';
+import 'package:workers/src/domain/entities/paged_result.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
 import 'package:workers/src/domain/entities/worker_status.dart';
 import 'package:workers/src/domain/repositories/worker_repository.dart';
@@ -14,10 +15,23 @@ class WorkerRepositoryImpl implements WorkerRepository {
   final WorkerRemoteDataSource _remoteDataSource;
 
   @override
-  TaskEither<Failure, List<WorkerEntity>> getWorkers() =>
-      _remoteDataSource.getWorkers().map(
-        (dtos) => dtos.map((dto) => dto.toEntity()).toList(),
+  TaskEither<Failure, PagedResult<WorkerEntity>> getWorkers({
+    required int page,
+    required int limit,
+    String? search,
+  }) => _remoteDataSource
+      .getWorkers(page: page, limit: limit, search: search)
+      .map(
+        (paged) => PagedResult(
+          items: paged.items.map((dto) => dto.toEntity()).toList(),
+          currentPage: paged.currentPage,
+          totalPages: paged.totalPages,
+        ),
       );
+
+  @override
+  TaskEither<Failure, WorkerEntity> getWorker(String id) =>
+      _remoteDataSource.getWorker(id).map((dto) => dto.toEntity());
 
   @override
   TaskEither<Failure, Unit> deleteWorker(String id) =>
@@ -32,9 +46,18 @@ class WorkerRepositoryImpl implements WorkerRepository {
       .map((dto) => dto.toEntity());
 
   @override
-  TaskEither<Failure, List<InvitationEntity>> getInvitations() =>
-      _remoteDataSource.getInvitations().map(
-        (dtos) => dtos.map((dto) => dto.toEntity()).toList(),
+  TaskEither<Failure, PagedResult<InvitationEntity>> getInvitations({
+    required int page,
+    required int limit,
+    String? search,
+  }) => _remoteDataSource
+      .getInvitations(page: page, limit: limit, search: search)
+      .map(
+        (paged) => PagedResult(
+          items: paged.items.map((dto) => dto.toEntity()).toList(),
+          currentPage: paged.currentPage,
+          totalPages: paged.totalPages,
+        ),
       );
 
   @override

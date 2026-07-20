@@ -11,29 +11,20 @@ class UpdateWorkerParams extends Equatable {
     required this.fullName,
     required this.jobTitle,
     required this.type,
-    this.email,
     this.phone,
-    this.branchId,
   });
 
   final String id;
   final String fullName;
   final String jobTitle;
   final WorkerType type;
-  final String? email;
+
+  /// Optional in the backend `UpdateWorkerDto`. Email is not server-editable,
+  /// so it is intentionally absent here.
   final String? phone;
-  final String? branchId;
 
   @override
-  List<Object?> get props => [
-    id,
-    fullName,
-    jobTitle,
-    type,
-    email,
-    phone,
-    branchId,
-  ];
+  List<Object?> get props => [id, fullName, jobTitle, type, phone];
 }
 
 class UpdateWorkerUseCase implements UseCase<WorkerEntity, UpdateWorkerParams> {

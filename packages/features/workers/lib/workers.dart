@@ -4,9 +4,10 @@ library;
 // DI
 export 'src/di/workers_di.dart';
 // Domain — entities
-export 'src/domain/entities/branch_option_entity.dart';
 export 'src/domain/entities/invitation_entity.dart';
 export 'src/domain/entities/invitation_status.dart';
+export 'src/domain/entities/paged_result.dart';
+export 'src/domain/entities/worker_assigned_branch.dart';
 export 'src/domain/entities/worker_entity.dart';
 export 'src/domain/entities/worker_status.dart';
 export 'src/domain/entities/worker_type.dart';
@@ -16,6 +17,7 @@ export 'src/domain/repositories/worker_repository.dart';
 export 'src/domain/usecases/cancel_invitation_usecase.dart';
 export 'src/domain/usecases/delete_worker_usecase.dart';
 export 'src/domain/usecases/get_invitations_usecase.dart';
+export 'src/domain/usecases/get_worker_usecase.dart';
 export 'src/domain/usecases/get_workers_usecase.dart';
 export 'src/domain/usecases/invite_worker_usecase.dart';
 export 'src/domain/usecases/resend_invitation_usecase.dart';
@@ -35,7 +37,6 @@ export 'src/presentation/pages/worker_details_page.dart';
 export 'src/presentation/pages/workers_page.dart';
 // Presentation — widgets
 export 'src/presentation/widgets/action_confirmation_sheet.dart';
-export 'src/presentation/widgets/branch_select_field.dart';
 export 'src/presentation/widgets/invitation_actions_bottom_sheet.dart';
 export 'src/presentation/widgets/invitations_content.dart';
 export 'src/presentation/widgets/select_worker_action_sheet.dart';

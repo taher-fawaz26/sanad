@@ -56,7 +56,7 @@ class _WorkerActionsSheetBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final isSuspended = worker.status == WorkerStatus.suspended;
+    final isSuspended = worker.status == WorkerStatus.inactive;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -107,7 +107,12 @@ class _WorkerActionsSheetBody extends StatelessWidget {
           ),
           onTap: () {
             Navigator.of(context).pop();
-            // TODO(team): wire reset-password API when endpoint is available
+            if (!pageContext.mounted) return;
+            // No provider reset-password endpoint exists yet.
+            showAppSnackbar(
+              context: pageContext,
+              title: 'workers.reset_password_coming_soon'.tr(),
+            );
           },
         ),
         const AppDivider(),
@@ -176,7 +181,7 @@ class _WorkerActionsSheetBody extends StatelessWidget {
       context.read<WorkersBloc>().add(
         WorkerStatusChangedEvent(
           workerId: worker.id,
-          status: isSuspending ? WorkerStatus.suspended : WorkerStatus.active,
+          status: isSuspending ? WorkerStatus.inactive : WorkerStatus.active,
         ),
       );
     }

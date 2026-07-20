@@ -209,6 +209,8 @@ result.fold(
 
 Wrap repository calls in `NetworkGuard.execute()` to check connectivity before API calls.
 
+Apps also register `ConnectivityController` + wrap the root with `ConnectivityOfflineBinder` to push `/offline` (`AppNetworkErrorPage`) when the device goes offline. The route is **pushed** (not replaced) so Back pops to the previous screen; the screen can be shown again on the next offline transition or via `context.push('/offline')`. Retry calls `ConnectivityController.check()` and pops when online.
+
 ---
 
 ## Error Messages

@@ -51,10 +51,12 @@ void main() {
         }
 
         if (relFile.contains('lib/src/domain/')) {
-          _checkLayer(pkg.name, relFile, i + 1, importPath, layerRules['domain'], violations);
+          _checkLayer(pkg.name, relFile, i + 1, importPath,
+              layerRules['domain'] as YamlMap?, violations);
         }
         if (relFile.contains('lib/src/data/')) {
-          _checkLayer(pkg.name, relFile, i + 1, importPath, layerRules['data'], violations);
+          _checkLayer(pkg.name, relFile, i + 1, importPath,
+              layerRules['data'] as YamlMap?, violations);
         }
       }
     }

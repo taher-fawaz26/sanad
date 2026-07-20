@@ -116,7 +116,7 @@ List<String> topologicalSort(Map<String, Set<String>> graph) {
     }
     if (visited.contains(node)) return;
     stack.add(node);
-    for (final dep in graph[node] ?? {}) {
+    for (final dep in graph[node] ?? <String>{}) {
       visit(dep);
       if (cycleNode != null) return;
     }

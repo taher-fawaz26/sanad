@@ -1,13 +1,17 @@
 ﻿import 'package:auth/auth.dart';
 import 'package:core/core.dart';
+import 'package:design_system/design_system.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:forgot_password/forgot_password.dart';
 import 'package:go_router/go_router.dart';
+import 'package:network/network.dart';
 import 'package:otp/otp.dart';
 import 'package:sanad_client/src/di/app_di.dart';
 import 'package:sanad_client/src/features/home/home_page.dart';
 
 const _clientHome = '/home';
+const _clientOffline = '/offline';
 
 /// sanad_client top-level router, independent from sanad_provider.
 GoRouter buildClientRouter() {
@@ -82,6 +86,23 @@ GoRouter buildClientRouter() {
       GoRoute(
         path: _clientHome,
         builder: (context, state) => const ClientHomePage(),
+      ),
+      GoRoute(
+        path: _clientOffline,
+        builder: (context, state) {
+          final navTitle = state.extra is String ? state.extra! as String : '';
+          return AppNetworkErrorPage(
+            navTitle: navTitle,
+            title: 'empty_states.network_title'.tr(),
+            description: 'empty_states.network_description'.tr(),
+            retryLabel: 'empty_states.retry'.tr(),
+            onBack: () => context.pop(),
+            onRetry: () async {
+              final online = await sl<ConnectivityController>().check();
+              if (online && context.mounted) context.pop();
+            },
+          );
+        },
       ),
     ],
   );

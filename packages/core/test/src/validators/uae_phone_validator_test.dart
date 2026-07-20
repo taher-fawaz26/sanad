@@ -9,6 +9,11 @@ void main() {
         expect(UaePhoneValidator.isValid('0551234567'), isTrue);
       });
 
+      test('accepts national mobile numbers (5XXXXXXXX)', () {
+        expect(UaePhoneValidator.isValid('501234567'), isTrue);
+        expect(UaePhoneValidator.isValid('551234567'), isTrue);
+      });
+
       test('accepts international mobile numbers (9715XXXXXXXX)', () {
         expect(UaePhoneValidator.isValid('971501234567'), isTrue);
         expect(UaePhoneValidator.isValid('971551234567'), isTrue);
@@ -17,6 +22,11 @@ void main() {
       test('accepts local landline numbers (0[2-9]XXXXXXX)', () {
         expect(UaePhoneValidator.isValid('021234567'), isTrue);
         expect(UaePhoneValidator.isValid('041234567'), isTrue);
+      });
+
+      test('accepts national landline numbers ([2-9]XXXXXXX)', () {
+        expect(UaePhoneValidator.isValid('21234567'), isTrue);
+        expect(UaePhoneValidator.isValid('41234567'), isTrue);
       });
 
       test('accepts international landline numbers (971[2-9]XXXXXXX)', () {
@@ -65,6 +75,32 @@ void main() {
       });
     });
 
+    group('toNationalInput', () {
+      test('strips +971 / 971 / trunk 0 for AppPhoneField', () {
+        expect(
+          UaePhoneValidator.toNationalInput('+971500000006'),
+          equals('500000006'),
+        );
+        expect(
+          UaePhoneValidator.toNationalInput('971501234567'),
+          equals('501234567'),
+        );
+        expect(
+          UaePhoneValidator.toNationalInput('0501234567'),
+          equals('501234567'),
+        );
+        expect(
+          UaePhoneValidator.toNationalInput('501234567'),
+          equals('501234567'),
+        );
+      });
+
+      test('returns empty for null or blank', () {
+        expect(UaePhoneValidator.toNationalInput(null), isEmpty);
+        expect(UaePhoneValidator.toNationalInput('   '), isEmpty);
+      });
+    });
+
     group('normalize', () {
       test('prepends + to international format (971...)', () {
         expect(
@@ -76,6 +112,13 @@ void main() {
       test('converts local format (0...) to international', () {
         expect(
           UaePhoneValidator.normalize('0501234567'),
+          equals('+971501234567'),
+        );
+      });
+
+      test('converts national format (5...) to international', () {
+        expect(
+          UaePhoneValidator.normalize('501234567'),
           equals('+971501234567'),
         );
       });

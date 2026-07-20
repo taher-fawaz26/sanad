@@ -92,7 +92,7 @@ export 'tokens/grouped_key_value_list_tokens.dart'
 export 'tokens/key_value_card_tokens.dart'
     show KeyValueCardStyleSpec, KeyValueCardTokens;
 export 'tokens/list_card_tokens.dart'
-    show ListCardStyleSpec, ListCardTokens;
+    show AppEntityListItemStyle, ListCardStyleSpec, ListCardTokens;
 export 'tokens/map_link_card_tokens.dart'
     show MapLinkCardStyleSpec, MapLinkCardTokens;
 export 'tokens/nav_bar_tokens.dart'

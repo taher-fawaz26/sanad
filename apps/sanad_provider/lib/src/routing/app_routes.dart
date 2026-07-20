@@ -11,6 +11,10 @@ abstract final class AppRoutes {
   static const String messages = '/messages';
   static const String settings = '/settings';
 
+  /// Full-screen offline page — Figma `1528:10165`. Pushed (not replaced)
+  /// so the user can pop back and open it again.
+  static const String offline = '/offline';
+
   /// Routes that require an authenticated session.
   ///
   /// Feature-owned protected routes (e.g. [BranchRoutes.protectedRoutes])

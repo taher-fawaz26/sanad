@@ -63,6 +63,9 @@ Future<void> configureDependencies() async {
     ..registerLazySingleton(() => SessionManager(sl<TokenManager>()))
     // ── Connectivity ─────────────────────────────────────────────────────────
     ..registerLazySingleton<ConnectivityService>(ConnectivityServiceImpl.new)
+    ..registerLazySingleton(
+      () => ConnectivityController(sl<ConnectivityService>()),
+    )
     ..registerLazySingleton(() => NetworkGuard(sl<ConnectivityService>()))
     // ── Authenticated Dio (with AuthInterceptor) ─────────────────────────────
     ..registerLazySingleton<Dio>(

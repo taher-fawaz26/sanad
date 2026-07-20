@@ -79,7 +79,9 @@ class _SelectWorkerActionSheetState extends State<_SelectWorkerActionSheet> {
       _failure = null;
     });
 
-    final result = await sl<GetWorkersUseCase>()(const NoParams()).run();
+    final result = await sl<GetWorkersUseCase>()(
+      const GetWorkersParams(limit: 100),
+    ).run();
 
     if (!mounted) return;
 
@@ -88,9 +90,9 @@ class _SelectWorkerActionSheetState extends State<_SelectWorkerActionSheet> {
         _isLoading = false;
         _failure = failure;
       }),
-      (workers) => setState(() {
+      (paged) => setState(() {
         _isLoading = false;
-        _workers = workers;
+        _workers = paged.items;
       }),
     );
   }

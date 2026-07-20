@@ -3,10 +3,10 @@ import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:workers/src/domain/entities/invitation_entity.dart';
-import 'package:workers/src/domain/entities/invitation_status.dart';
 import 'package:workers/src/presentation/bloc/workers/workers_bloc.dart';
-import 'package:workers/src/presentation/widgets/invitation_actions_bottom_sheet.dart';
+import 'package:workers/src/presentation/widgets/invitation_list_item.dart';
+import 'package:workers/src/presentation/widgets/worker_empty_states.dart';
+import 'package:workers/src/presentation/widgets/worker_search_sheet.dart';
 
 /// Invitations tab content — mirrors `_WorkersContent` in `workers_page.dart`.
 class InvitationsContent extends StatelessWidget {
@@ -17,7 +17,7 @@ class InvitationsContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (state.invitationsStatus == RequestStatus.loading) {
-      return const _InvitationsLoadingSkeleton();
+      return const ShimmerListSkeleton();
     }
 
     return Column(
@@ -29,10 +29,12 @@ class InvitationsContent extends StatelessWidget {
             vertical: AppSpacing.sm,
           ),
           child: AppSearchField(
-            hint: 'workers.search_hint'.tr(),
+            hint: 'workers.invitations_search_hint'.tr(),
             showMicIcon: false,
-            onChanged: (value) => context.read<WorkersBloc>().add(
-              WorkersSearchChangedEvent(value),
+            readOnly: true,
+            onTap: () => showWorkerSearchSheet(
+              context,
+              scope: WorkerSearchScope.invitations,
             ),
           ),
         ),
@@ -55,26 +57,44 @@ class InvitationsContent extends StatelessWidget {
                     ),
                   )
                 : state.filteredInvitations.isEmpty
-                ? AppFillRemainingScrollable(
-                    child: _EmptyState(
-                      searchQuery: state.searchQuery,
-                      onClearSearch: state.searchQuery.isNotEmpty
-                          ? () => context.read<WorkersBloc>().add(
-                              const WorkersSearchChangedEvent(''),
-                            )
-                          : null,
-                    ),
+                ? const AppFillRemainingScrollable(
+                    child: _EmptyState(),
                   )
-                : ListView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.only(
-                      left: AppSpacing.lg,
-                      right: AppSpacing.lg,
-                      bottom: AppSpacing.lg,
-                    ),
-                    itemCount: state.filteredInvitations.length,
-                    itemBuilder: (context, index) => _InvitationListItem(
-                      invitation: state.filteredInvitations[index],
+                : NotificationListener<ScrollNotification>(
+                    onNotification: (notification) {
+                      if (notification.metrics.pixels >=
+                              notification.metrics.maxScrollExtent - 200 &&
+                          state.invitationsHasMore &&
+                          !state.invitationsLoadingMore) {
+                        context.read<WorkersBloc>().add(
+                          const InvitationsLoadMoreEvent(),
+                        );
+                      }
+                      return false;
+                    },
+                    child: ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: EdgeInsets.only(
+                        left: AppSpacing.lg,
+                        right: AppSpacing.lg,
+                        bottom: AppSpacing.lg,
+                      ),
+                      itemCount:
+                          state.filteredInvitations.length +
+                          (state.invitationsLoadingMore ? 1 : 0),
+                      separatorBuilder: (_, _) =>
+                          SizedBox(height: AppSpacing.sm),
+                      itemBuilder: (context, index) {
+                        if (index >= state.filteredInvitations.length) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: Center(child: AppLoadingIndicator()),
+                          );
+                        }
+                        return InvitationListItem(
+                          invitation: state.filteredInvitations[index],
+                        );
+                      },
                     ),
                   ),
           ),
@@ -84,77 +104,11 @@ class InvitationsContent extends StatelessWidget {
   }
 }
 
-class _InvitationListItem extends StatelessWidget {
-  const _InvitationListItem({required this.invitation});
-
-  final InvitationEntity invitation;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: AppSpacing.sm),
-      child: AppListCard(
-        title: invitation.fullName,
-        caption: invitation.role,
-        leading: AppAvatar(
-          initials: invitation.initials,
-          backgroundColor: colors.primary,
-        ),
-        badge: _statusBadge(invitation.status),
-        trailing: Semantics(
-          label: 'workers.more_actions'.tr(),
-          child: AppIconButton(
-            icon: Icons.more_vert,
-            iconColor: colors.textPrimary,
-            onTap: () => showInvitationActionsBottomSheet(
-              context: context,
-              invitation: invitation,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  AppStatusBadge _statusBadge(InvitationStatus status) => switch (status) {
-    InvitationStatus.pending => AppStatusBadge(
-      label: 'workers.invitation_status_pending'.tr(),
-      type: AppStatusBadgeType.warning,
-      size: AppStatusBadgeSize.compact,
-    ),
-    InvitationStatus.accepted => AppStatusBadge(
-      label: 'workers.invitation_status_accepted'.tr(),
-      type: AppStatusBadgeType.success,
-      size: AppStatusBadgeSize.compact,
-    ),
-    InvitationStatus.expired => AppStatusBadge(
-      label: 'workers.invitation_status_expired'.tr(),
-      type: AppStatusBadgeType.alert,
-      size: AppStatusBadgeSize.compact,
-    ),
-  };
-}
-
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.searchQuery, this.onClearSearch});
-
-  final String searchQuery;
-  final VoidCallback? onClearSearch;
+  const _EmptyState();
 
   @override
   Widget build(BuildContext context) {
-    if (searchQuery.trim().isNotEmpty) {
-      return Center(
-        child: AppGenericEmptyState(
-          title: 'workers.search_empty_title'.tr(),
-          description: 'workers.search_empty_description'.tr(),
-          actionLabel: 'workers.clear_search'.tr(),
-          onAction: onClearSearch,
-        ),
-      );
-    }
     return Center(
       child: AppGenericEmptyState(
         title: 'workers.invitations_empty_title'.tr(),
@@ -209,14 +163,5 @@ class _ErrorState extends StatelessWidget {
         onAction: onRetry,
       ),
     );
-  }
-}
-
-class _InvitationsLoadingSkeleton extends StatelessWidget {
-  const _InvitationsLoadingSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return const ShimmerListSkeleton();
   }
 }

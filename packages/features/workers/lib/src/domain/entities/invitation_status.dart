@@ -1,7 +1,8 @@
 enum InvitationStatus {
   pending,
   accepted,
-  expired
+  expired,
+  cancelled
   ;
 
   static InvitationStatus fromString(String? value) =>
@@ -9,6 +10,7 @@ enum InvitationStatus {
         'pending' => InvitationStatus.pending,
         'accepted' => InvitationStatus.accepted,
         'expired' => InvitationStatus.expired,
+        'cancelled' => InvitationStatus.cancelled,
         _ => InvitationStatus.pending,
       };
 }

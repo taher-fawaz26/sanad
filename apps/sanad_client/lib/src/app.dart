@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
+import 'package:network/network.dart';
 import 'package:sanad_client/src/routing/client_router.dart';
 
 /// The root widget of the sanad_client application.
@@ -19,11 +20,13 @@ class SanadClientApp extends StatefulWidget {
 
 class _SanadClientAppState extends State<SanadClientApp> {
   late final GoRouter _router;
+  late final ConnectivityController _connectivity;
 
   @override
   void initState() {
     super.initState();
     _router = buildClientRouter();
+    _connectivity = sl<ConnectivityController>();
   }
 
   @override
@@ -34,14 +37,17 @@ class _SanadClientAppState extends State<SanadClientApp> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => primaryFocus?.unfocus(),
-      child: MultiBlocProvider(
-        providers: [
-          BlocProvider(create: (_) => sl<ThemeBloc>()),
-          BlocProvider(create: (_) => sl<TranslateBloc>()),
-        ],
-        child: BlocBuilder<ThemeBloc, ThemeState>(
+    return ConnectivityOfflineGate(
+      controller: _connectivity,
+      router: _router,
+      child: GestureDetector(
+        onTap: () => primaryFocus?.unfocus(),
+        child: MultiBlocProvider(
+          providers: [
+            BlocProvider(create: (_) => sl<ThemeBloc>()),
+            BlocProvider(create: (_) => sl<TranslateBloc>()),
+          ],
+          child: BlocBuilder<ThemeBloc, ThemeState>(
             builder: (context, themeState) {
               return Builder(
                 builder: (context) {
@@ -78,12 +84,13 @@ class _SanadClientAppState extends State<SanadClientApp> {
             },
           ),
         ),
-      );
+      ),
+    );
   }
 
   ThemeMode _resolveThemeMode(ThemeState state) => switch (state.mode) {
-        AppThemeMode.light => ThemeMode.light,
-        AppThemeMode.dark => ThemeMode.dark,
-        AppThemeMode.system => ThemeMode.system,
-      };
+    AppThemeMode.light => ThemeMode.light,
+    AppThemeMode.dark => ThemeMode.dark,
+    AppThemeMode.system => ThemeMode.system,
+  };
 }

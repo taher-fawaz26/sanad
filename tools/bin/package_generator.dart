@@ -40,7 +40,6 @@ void main(List<String> args) {
     stdout.write(result.stdout);
     stderr.write(result.stderr);
     exit(result.exitCode);
-    return;
   }
 
   final names = _PackageNames(name);

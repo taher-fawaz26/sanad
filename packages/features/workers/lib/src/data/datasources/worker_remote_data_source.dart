@@ -3,19 +3,30 @@ import 'package:fpdart/fpdart.dart';
 import 'package:network/network.dart';
 import 'package:workers/src/data/endpoints/worker_api_paths.dart';
 import 'package:workers/src/data/models/invitation_dto.dart';
+import 'package:workers/src/data/models/sanad_page.dart';
 import 'package:workers/src/data/models/worker_dto.dart';
+import 'package:workers/src/domain/entities/paged_result.dart';
 import 'package:workers/src/domain/entities/worker_status.dart';
 import 'package:workers/src/domain/usecases/invite_worker_usecase.dart';
 import 'package:workers/src/domain/usecases/update_worker_usecase.dart';
 
 abstract interface class WorkerRemoteDataSource {
-  TaskEither<Failure, List<WorkerDto>> getWorkers();
+  TaskEither<Failure, PagedResult<WorkerDto>> getWorkers({
+    required int page,
+    required int limit,
+    String? search,
+  });
+  TaskEither<Failure, WorkerDto> getWorker(String id);
   TaskEither<Failure, Unit> deleteWorker(String id);
   TaskEither<Failure, WorkerDto> updateWorkerStatus(
     String id,
     WorkerStatus status,
   );
-  TaskEither<Failure, List<InvitationDto>> getInvitations();
+  TaskEither<Failure, PagedResult<InvitationDto>> getInvitations({
+    required int page,
+    required int limit,
+    String? search,
+  });
   TaskEither<Failure, Unit> inviteWorker(InviteWorkerParams params);
   TaskEither<Failure, Unit> resendInvitation(String id);
   TaskEither<Failure, Unit> cancelInvitation(String id);
@@ -27,21 +38,42 @@ class WorkerRemoteDataSourceImpl implements WorkerRemoteDataSource {
 
   final BaseApiClient _apiClient;
 
+  /// Single-worker responses (`WorkerProfileResponseDto`) may be returned bare
+  /// or wrapped in a `{data: {...}}` envelope; handle both.
+  static WorkerDto _parseWorker(dynamic data) {
+    final map = data as Map<String, dynamic>;
+    final payload = map['data'] as Map<String, dynamic>? ?? map;
+    return WorkerDto.fromJson(payload);
+  }
+
   @override
-  TaskEither<Failure, List<WorkerDto>> getWorkers() =>
-      _apiClient.request<List<WorkerDto>>(
-        path: WorkerApiPaths.workers,
+  TaskEither<Failure, PagedResult<WorkerDto>> getWorkers({
+    required int page,
+    required int limit,
+    String? search,
+  }) => _apiClient.request<PagedResult<WorkerDto>>(
+    path: WorkerApiPaths.workers,
+    method: RequestMethod.get,
+    query: {
+      'type': 'worker',
+      'page': page,
+      'limit': limit,
+      if (search != null && search.isNotEmpty) 'search': search,
+    },
+    parser: (data) => parseSanadPage(data, WorkerDto.fromJson),
+  );
+
+  @override
+  TaskEither<Failure, WorkerDto> getWorker(String id) =>
+      _apiClient.request<WorkerDto>(
+        path: WorkerApiPaths.worker(id),
         method: RequestMethod.get,
-        query: const {'type': 'worker'},
-        parser: (data) =>
-            ((data as Map<String, dynamic>)['data'] as List<dynamic>)
-                .map((e) => WorkerDto.fromJson(e as Map<String, dynamic>))
-                .toList(),
+        parser: _parseWorker,
       );
 
   @override
   TaskEither<Failure, Unit> deleteWorker(String id) => _apiClient.request<Unit>(
-    path: '${WorkerApiPaths.workers}/$id',
+    path: WorkerApiPaths.worker(id),
     method: RequestMethod.delete,
     parser: (_) => unit,
   );
@@ -51,90 +83,70 @@ class WorkerRemoteDataSourceImpl implements WorkerRemoteDataSource {
     String id,
     WorkerStatus status,
   ) => _apiClient.request<WorkerDto>(
-    path: '${WorkerApiPaths.workers}/$id',
+    path: WorkerApiPaths.workerStatus(id),
     method: RequestMethod.patch,
-    body: {'status': status.name},
-    parser: (data) => WorkerDto.fromJson(
-      (data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    ),
+    body: {'status': status.toApiValue()},
+    parser: _parseWorker,
   );
 
   @override
-  TaskEither<Failure, List<InvitationDto>> getInvitations() =>
-      _apiClient.request<List<InvitationDto>>(
-        path: WorkerApiPaths.invitations,
-        method: RequestMethod.get,
-        parser: (data) =>
-            ((data as Map<String, dynamic>)['data'] as List<dynamic>)
-                .map(
-                  (e) => InvitationDto.fromJson(e as Map<String, dynamic>),
-                )
-                .toList(),
-      );
+  TaskEither<Failure, PagedResult<InvitationDto>> getInvitations({
+    required int page,
+    required int limit,
+    String? search,
+  }) => _apiClient.request<PagedResult<InvitationDto>>(
+    path: WorkerApiPaths.invitations,
+    method: RequestMethod.get,
+    query: {
+      'page': page,
+      'limit': limit,
+      if (search != null && search.isNotEmpty) 'search': search,
+    },
+    parser: (data) => parseSanadPage(data, InvitationDto.fromJson),
+  );
 
-  // TODO(sanad-api): No invite-worker endpoint exists in the sanad-api spec
-  // yet (only GET lst-workers-v-1 / lst-invitations-v-1 are registered).
-  // Stubbed to unblock UI work; replace with a real _apiClient.request call
-  // once the backend exposes this endpoint.
   @override
   TaskEither<Failure, Unit> inviteWorker(InviteWorkerParams params) =>
-      TaskEither.tryCatch(
-        () async {
-          await Future<void>.delayed(const Duration(milliseconds: 800));
-          return unit;
+      _apiClient.request<Unit>(
+        path: WorkerApiPaths.invitations,
+        method: RequestMethod.post,
+        body: {
+          'name': params.fullName,
+          'email': params.email,
+          'phone': params.phone,
+          if (params.jobTitle.isNotEmpty) 'jobTitle': params.jobTitle,
+          'type': params.type.toApiString(),
         },
-        (_, _) => const UnknownFailure(message: 'Unknown error'),
+        parser: (_) => unit,
       );
 
-  // TODO(sanad-api): No resend-invitation endpoint exists in the spec yet.
-  // Stubbed to unblock UI work.
   @override
-  TaskEither<Failure, Unit> resendInvitation(String id) => TaskEither.tryCatch(
-    () async {
-      await Future<void>.delayed(const Duration(milliseconds: 500));
-      return unit;
-    },
-    (_, _) => const UnknownFailure(message: 'Unknown error'),
-  );
+  TaskEither<Failure, Unit> resendInvitation(String id) =>
+      _apiClient.request<Unit>(
+        path: WorkerApiPaths.resendInvitation(id),
+        method: RequestMethod.post,
+        parser: (_) => unit,
+      );
 
-  // TODO(sanad-api): No cancel-invitation endpoint exists in the spec yet.
-  // Stubbed to unblock UI work.
   @override
-  TaskEither<Failure, Unit> cancelInvitation(String id) => TaskEither.tryCatch(
-    () async {
-      await Future<void>.delayed(const Duration(milliseconds: 500));
-      return unit;
-    },
-    (_, _) => const UnknownFailure(message: 'Unknown error'),
-  );
+  TaskEither<Failure, Unit> cancelInvitation(String id) =>
+      _apiClient.request<Unit>(
+        path: WorkerApiPaths.cancelInvitation(id),
+        method: RequestMethod.post,
+        parser: (_) => unit,
+      );
 
-  // TODO(sanad-api): No update-worker endpoint exists in the spec yet.
-  // Stubbed to unblock UI work; returns the input echoed back as a WorkerDto.
   @override
   TaskEither<Failure, WorkerDto> updateWorker(UpdateWorkerParams params) =>
-      TaskEither.tryCatch(
-        () async {
-          await Future<void>.delayed(const Duration(milliseconds: 800));
-          return WorkerDto(
-            id: params.id,
-            fullName: params.fullName,
-            role: params.type.toApiString(),
-            initials: _stubInitials(params.fullName),
-            phone: params.phone,
-            email: params.email,
-            jobTitle: params.jobTitle,
-            branches: params.branchId,
-          );
+      _apiClient.request<WorkerDto>(
+        path: WorkerApiPaths.worker(params.id),
+        method: RequestMethod.patch,
+        body: {
+          'name': params.fullName,
+          if (params.phone != null) 'phone': params.phone,
+          if (params.jobTitle.isNotEmpty) 'jobTitle': params.jobTitle,
+          'type': params.type.toApiString(),
         },
-        (_, _) => const UnknownFailure(message: 'Unknown error'),
+        parser: _parseWorker,
       );
-
-  static String _stubInitials(String name) {
-    final words = name.trim().split(RegExp(r'\s+'));
-    return words
-        .where((w) => w.isNotEmpty)
-        .take(2)
-        .map((w) => w[0].toUpperCase())
-        .join();
-  }
 }

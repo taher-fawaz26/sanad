@@ -7,7 +7,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-/// A single branch row — Figma branch card (`347:14378`).
+/// A single branch row — Figma branch card (`347:14361`).
 ///
 /// Shared by the main branches list and the search bottom sheet so both
 /// stay visually identical.
@@ -36,12 +36,10 @@ class BranchListItem extends StatelessWidget {
         ? branch.branchName[0].toUpperCase()
         : '?';
 
-    return AppListCard(
+    return AppEntityListItem(
+      style: AppEntityListItemStyle.compact,
       title: branch.branchName,
       caption: BranchTypeFormatter.localizedLabel(branch.branchType),
-      captionStyle: context.appTypography.smallNormal.copyWith(
-        color: colors.primary,
-      ),
       leading: AppAvatar(
         initials: initial,
         backgroundColor: _avatarColor(colors, branch.id),
@@ -60,7 +58,7 @@ class BranchListItem extends StatelessWidget {
         label: 'branches.more_actions'.tr(),
         child: AppIconButton(
           icon: Icons.more_vert,
-          iconColor: context.appColors.textPrimary,
+          iconColor: colors.textPrimary,
           onTap: () => showBranchActionsBottomSheet(
             context: context,
             branch: branch,

@@ -102,8 +102,9 @@ Fonts are the one exception: they are a **Design Language / Typography System** 
 | Tier | Owner | Examples |
 |------|-------|----------|
 | Design Tokens | `design_system/lib/src/theme/tokens/` | `AppSpacing`, `AppRadius`, `AppShadows`, `ButtonTokens`, `OverlayTokens` |
-| Primitive Components | `design_system/lib/src/components/` | `AppButton`, `AppTextField`, `AppAvatar`, `AppSvgPicture`, `AppCloseIcon`, `AppListCard`, `AppNotificationIcon` |
-| Higher-Level Shared UI | `design_system/lib/src/shared_ui/` | `AppEmptyState`, `AppNetworkFailureState`, `AppGenericEmptyState` — composed from primitives + tokens, still domain-agnostic |
+| Primitive Components | `design_system/lib/src/components/` | `AppButton`, `AppTextField`, `AppAvatar`, `AppSvgPicture`, `AppCloseIcon`, `AppNotificationIcon` |
+| Shared UI | `design_system/lib/src/shared_ui/` | `AppEntityListItem`, `AppEmptyState`, `AppConfirmationContent`, `AppSuccessPopover`, `AppProgressDialog` |
+| Higher-Level Shared UI | `design_system/lib/src/shared_ui/` | `AppEmptyState`, `AppNetworkFailureState`, `AppNetworkErrorPage`, `AppSuccessPopover` / `showAppSuccessPopover`, `AppProgressDialog` / `showAppProgressDialog`, `AppGenericEmptyState` — composed from primitives + tokens, still domain-agnostic |
 | Feature Widgets | `packages/features/<feature>/lib/src/presentation/widgets/` or `apps/<app>/lib/src/features/<feature>/widgets/` | `AppOtpField` (`packages/features/otp`), branch widgets (`packages/features/branches`) |
 
 Feature widgets must **never** live inside `design_system` — even if they're built entirely from design-system primitives. The test: if the widget encodes knowledge of a specific feature/domain (OTP length, branch location, person selection), it belongs to that feature, not to `design_system`.

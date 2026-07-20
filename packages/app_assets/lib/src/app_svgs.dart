@@ -21,6 +21,9 @@ abstract final class AppSvgs {
   /// Check circle — featured icon success default.
   static const String checkCircle = '$_base/check_circle.svg';
 
+  /// Globe + pointer — network error featured icon (`1528:10165`).
+  static const String internet = '$_base/internet.svg';
+
   /// Solid dark-green circle + light-green checkmark — add-branch success
   /// popover illustration (`194:5419` / `365:15054`). Baked-in Figma colors
   /// (`#085D3A` / `#75E0A7`) — not part of the `main` palette scale, so
@@ -113,6 +116,14 @@ abstract final class AppSvgs {
 
   /// Chat bubble with send arrow — Reset Password action row (`1526:12619`).
   static const String workerResetPassword = '$_base/worker_reset_password.svg';
+
+  // ── Invitation actions bottom sheet ────────────────────────────────────────
+
+  /// Overlapping squares — Copy Invitation Link (`1607:12705`).
+  static const String invitationCopy = '$_base/invitation_copy.svg';
+
+  /// Envelope + send arrow — Resend Invitation (`1607:12706`).
+  static const String invitationResend = '$_base/invitation_resend.svg';
 
   // ── Organization settings stat cards ───────────────────────────────────────
 

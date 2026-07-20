@@ -1,4 +1,3 @@
-import 'package:app_assets/app_assets.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_cubit.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_state.dart';
@@ -230,73 +229,31 @@ class _AddBranchPageState extends State<AddBranchPage> {
     }
   }
 
-  /// Figma `Adding your branch…` loading card shown while the create
-  /// request is in flight.
+  /// Figma loading-state dialog (`1546:8536`) while the create request
+  /// is in flight.
   void _showSubmittingDialog() {
     if (_submittingDialogVisible) return;
     _submittingDialogVisible = true;
 
-    showDialog<void>(
+    showAppProgressDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        final colors = dialogContext.appColors;
-        final typography = dialogContext.appTypography;
-        return PopScope(
-          canPop: false,
-          child: Dialog(
-            backgroundColor: colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Padding(
-              padding: EdgeInsets.all(AppSpacing.xl),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const CircularProgressIndicator(),
-                  SizedBox(height: AppSpacing.lg),
-                  Text(
-                    'branches.add_branch.submitting_title'.tr(),
-                    textAlign: TextAlign.center,
-                    style: typography.title3.copyWith(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  SizedBox(height: AppSpacing.sm),
-                  Text(
-                    'branches.add_branch.submitting_description'.tr(),
-                    textAlign: TextAlign.center,
-                    style: typography.regularNormal.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+      title: 'branches.add_branch.submitting_title'.tr(),
+      description: 'branches.add_branch.submitting_description'.tr(),
     ).then((_) => _submittingDialogVisible = false);
   }
 
   void _dismissSubmittingDialog() {
     if (!_submittingDialogVisible) return;
     _submittingDialogVisible = false;
-    Navigator.of(context, rootNavigator: true).pop();
+    dismissAppProgressDialog(context);
   }
 
   void _showBranchCreatedSuccessPopover() {
-    final colors = context.appColors;
-    final spec = context.appDialogTheme.spec;
-    // Figma `194:5419`: the whole title is `main/600` (== colors.primary),
-    // not just a highlighted lead-in — only the copy is split across two
-    // translation keys.
-    final titleStyle = spec.titleStyle.copyWith(color: colors.primary);
-    final iconSize = responsiveDimension(60);
+    // Copy is split across two keys; chrome comes from [showAppSuccessPopover]
+    // (Figma `1546:8473`).
+    final titleStyle = AppSuccessPopover.titleStyleOf(context);
 
-    showAppPopover<void>(
+    showAppSuccessPopover<void>(
       context: context,
       title: '',
       titleWidget: Text.rich(
@@ -315,30 +272,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
         textAlign: TextAlign.center,
       ),
       description: 'branches.add_branch.success_dialog_description'.tr(),
-      imageLayout: AppDialogImageLayout.iconSmall,
-      // Custom two-tone illustration (`365:15054`) instead of the generic
-      // featured icon — its dark-green/light-green pair isn't part of the
-      // `main` palette scale, so `featureIconColor` is left unset.
-      image: DecoratedBox(
-        decoration: BoxDecoration(
-          color: colors.successContainer,
-          shape: BoxShape.circle,
-        ),
-        child: SizedBox(
-          width: spec.featureIconOuterSize,
-          height: spec.featureIconOuterSize,
-          child: Center(
-            child: AppSvgPicture.asset(
-              AppSvgs.successCheck,
-              width: iconSize,
-              height: iconSize,
-            ),
-          ),
-        ),
-      ),
-      actions: AppPopoverActions.single,
       primaryLabel: 'branches.add_branch.success_dialog_okay'.tr(),
-      barrierDismissible: false,
     ).then((_) {
       if (mounted) context.pop();
     });

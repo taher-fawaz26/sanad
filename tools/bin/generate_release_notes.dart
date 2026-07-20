@@ -1,4 +1,4 @@
-# Release notes automation — extracts top CHANGELOG section for GitHub Release.
+// Release notes automation — extracts top CHANGELOG section for GitHub Release.
 
 // ignore_for_file: avoid_print
 

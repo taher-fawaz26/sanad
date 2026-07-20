@@ -1,4 +1,5 @@
 import 'package:core/core.dart';
+import 'package:workers/src/domain/entities/worker_assigned_branch.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
 import 'package:workers/src/domain/entities/worker_status.dart';
 
@@ -12,11 +13,24 @@ class WorkerDto extends WorkerEntity implements EntityConverter<WorkerEntity> {
     super.phone,
     super.email,
     super.jobTitle,
-    super.branches,
+    super.profilePicUrl,
+    super.assignedBranches,
   });
 
   factory WorkerDto.fromJson(Map<String, dynamic> json) {
     final name = json['name'] as String? ?? '';
+    final profilePic = json['profilePic'] as Map<String, dynamic>?;
+    final branches = (json['assignedBranches'] as List<dynamic>? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map(
+          (b) => WorkerAssignedBranch(
+            id: b['id'] as String? ?? '',
+            branchName: b['branchName'] as String? ?? '',
+            role: b['role'] as String? ?? 'worker',
+          ),
+        )
+        .toList();
+
     return WorkerDto(
       id: json['id'] as String,
       fullName: name,
@@ -25,8 +39,9 @@ class WorkerDto extends WorkerEntity implements EntityConverter<WorkerEntity> {
       status: WorkerStatus.fromString(json['status'] as String?),
       phone: json['phone'] as String?,
       email: json['email'] as String?,
-      jobTitle: json['jobTitle'] as String? ?? json['title'] as String?,
-      branches: json['branches'] as String?,
+      jobTitle: json['jobTitle'] as String?,
+      profilePicUrl: profilePic?['url'] as String?,
+      assignedBranches: branches,
     );
   }
 
@@ -42,7 +57,8 @@ class WorkerDto extends WorkerEntity implements EntityConverter<WorkerEntity> {
     phone: phone,
     email: email,
     jobTitle: jobTitle,
-    branches: branches,
+    profilePicUrl: profilePicUrl,
+    assignedBranches: assignedBranches,
   );
 
   static String _initials(String name) {

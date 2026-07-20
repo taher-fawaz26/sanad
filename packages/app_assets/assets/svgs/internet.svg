@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+  <!-- Figma featured-icon / internet (`1597:8229`)  globe + pointer -->
+  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20.25 12A8.25 8.25 0 1 0 12 20.25"/>
+  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13.5 3.75s2.25 3.75 2.25 8.25-2.25 8.25-2.25 8.25"/>
+  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.5 20.25S8.25 16.5 8.25 12 10.5 3.75 10.5 3.75"/>
+  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.5 9.75h9.75"/>
+  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.5 14.25h15"/>
+  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m14.5 15.25 4.75 2.9a.4.4 0 0 1-.05.72l-2.35.27-1.05 2.1a.4.4 0 0 1-.75-.1l-1.15-5.55a.4.4 0 0 1 .6-.34Z"/>
+</svg>

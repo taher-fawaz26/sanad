@@ -2,14 +2,16 @@ import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:workers/src/domain/entities/branch_option_entity.dart';
 import 'package:workers/src/domain/entities/worker_type.dart';
-import 'package:workers/src/presentation/widgets/branch_select_field.dart';
 import 'package:workers/src/presentation/widgets/worker_type_select_field.dart';
 
 /// Shared form body for Add Member and Edit Member — both screens are
 /// >80% identical UI, so the fields live here; the pages own only initial
 /// values, submit action, page title, and success/failure behavior.
+///
+/// The backend `CreateInvitationDto` requires both email and phone, while
+/// `UpdateWorkerDto` cannot change email at all — hence [requireContact]
+/// (Add) and [emailReadOnly] (Edit).
 class WorkerFormBody extends StatefulWidget {
   const WorkerFormBody({
     required this.formKey,
@@ -19,7 +21,8 @@ class WorkerFormBody extends StatefulWidget {
     this.initialPhone,
     this.initialJobTitle,
     this.initialType,
-    this.initialBranch,
+    this.requireContact = true,
+    this.emailReadOnly = false,
     super.key,
   });
 
@@ -30,7 +33,12 @@ class WorkerFormBody extends StatefulWidget {
   final String? initialPhone;
   final String? initialJobTitle;
   final WorkerType? initialType;
-  final BranchOptionEntity? initialBranch;
+
+  /// When true (Add), email and phone are mandatory.
+  final bool requireContact;
+
+  /// When true (Edit), email is shown but cannot be changed server-side.
+  final bool emailReadOnly;
 
   @override
   State<WorkerFormBody> createState() => WorkerFormBodyState();
@@ -44,22 +52,33 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
     text: widget.initialEmail,
   );
   late final phoneController = TextEditingController(
-    text: widget.initialPhone,
+    // Dial code is shown by [AppPhoneField]; keep national digits only.
+    text: UaePhoneValidator.toNationalInput(widget.initialPhone),
   );
   late final jobTitleController = TextEditingController(
     text: widget.initialJobTitle,
   );
 
   late WorkerType? type = widget.initialType;
-  late BranchOptionEntity? branch = widget.initialBranch;
 
   bool get isTypeValid => type != null;
 
+  /// Phone is valid when contact is optional, or when it normalizes to a
+  /// valid UAE number.
+  bool get isPhoneValid => !widget.requireContact || phone != null;
+
   String get fullName => fullNameController.text.trim();
+
   String? get email =>
       emailController.text.trim().isEmpty ? null : emailController.text.trim();
-  String? get phone =>
-      phoneController.text.trim().isEmpty ? null : phoneController.text.trim();
+
+  /// Normalized E.164 (`+971…`) for API payloads, or null when empty/invalid.
+  String? get phone {
+    final raw = phoneController.text.trim();
+    if (raw.isEmpty) return null;
+    return UaePhoneValidator.normalize(raw);
+  }
+
   String get jobTitle => jobTitleController.text.trim();
 
   @override
@@ -69,6 +88,24 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
     phoneController.dispose();
     jobTitleController.dispose();
     super.dispose();
+  }
+
+  String? _validateEmail(String? value) {
+    if (widget.emailReadOnly) return null;
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return widget.requireContact
+          ? 'workers.add_worker.validation_required'.tr()
+          : null;
+    }
+    return EmailValidator.isValid(trimmed)
+        ? null
+        : 'workers.add_worker.validation_email'.tr();
+  }
+
+  String? get _phoneErrorText {
+    if (!widget.showValidationErrors || !widget.requireContact) return null;
+    return isPhoneValid ? null : 'workers.add_worker.validation_required'.tr();
   }
 
   @override
@@ -95,19 +132,16 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
             label: 'workers.add_worker.email_label'.tr(),
             hint: 'workers.add_worker.email_hint'.tr(),
             keyboardType: TextInputType.emailAddress,
-            validator: (value) {
-              final trimmed = value?.trim() ?? '';
-              if (trimmed.isEmpty) return null;
-              return EmailValidator.isValid(trimmed)
-                  ? null
-                  : 'workers.add_worker.validation_email'.tr();
-            },
+            readOnly: widget.emailReadOnly,
+            enabled: !widget.emailReadOnly,
+            validator: _validateEmail,
           ),
           SizedBox(height: AppSpacing.md),
           AppPhoneField(
             label: 'workers.add_worker.phone_label'.tr(),
             controller: phoneController,
             hint: 'workers.add_worker.phone_hint'.tr(),
+            errorText: _phoneErrorText,
           ),
           SizedBox(height: AppSpacing.md),
           AppTextField(
@@ -125,11 +159,6 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
             errorText: widget.showValidationErrors && type == null
                 ? 'workers.add_worker.validation_required'.tr()
                 : null,
-          ),
-          SizedBox(height: AppSpacing.md),
-          BranchSelectField(
-            selectedBranch: branch,
-            onBranchSelected: (value) => setState(() => branch = value),
           ),
         ],
       ),

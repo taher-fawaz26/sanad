@@ -1,4 +1,3 @@
-import 'package:app_assets/app_assets.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -57,6 +56,9 @@ class _EditWorkerPageState extends State<EditWorkerPage> {
                     initialPhone: widget.worker.phone,
                     initialJobTitle: widget.worker.jobTitle,
                     initialType: WorkerType.fromApiString(widget.worker.role),
+                    // Edit: contact optional; email not server-editable.
+                    requireContact: false,
+                    emailReadOnly: true,
                   ),
                 ),
               ),
@@ -94,9 +96,7 @@ class _EditWorkerPageState extends State<EditWorkerPage> {
           fullName: formBody.fullName,
           jobTitle: formBody.jobTitle,
           type: formBody.type!,
-          email: formBody.email,
           phone: formBody.phone,
-          branchId: formBody.branch?.id,
         ),
       ),
     );
@@ -120,76 +120,25 @@ class _EditWorkerPageState extends State<EditWorkerPage> {
     if (_submittingDialogVisible) return;
     _submittingDialogVisible = true;
 
-    showDialog<void>(
+    showAppProgressDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        final colors = dialogContext.appColors;
-        final typography = dialogContext.appTypography;
-        return PopScope(
-          canPop: false,
-          child: Dialog(
-            backgroundColor: colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Padding(
-              padding: EdgeInsets.all(AppSpacing.xl),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const CircularProgressIndicator(),
-                  SizedBox(height: AppSpacing.lg),
-                  Text(
-                    'workers.edit_worker.submitting_title'.tr(),
-                    style: typography.title2,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+      title: 'workers.edit_worker.submitting_title'.tr(),
+      description: 'workers.edit_worker.submitting_description'.tr(),
     ).then((_) => _submittingDialogVisible = false);
   }
 
   void _dismissSubmittingDialog() {
     if (!_submittingDialogVisible) return;
     _submittingDialogVisible = false;
-    Navigator.of(context, rootNavigator: true).pop();
+    dismissAppProgressDialog(context);
   }
 
   void _showSuccessPopover(WorkerEntity? updatedWorker) {
-    final colors = context.appColors;
-    final spec = context.appDialogTheme.spec;
-    final iconSize = responsiveDimension(60);
-
-    showAppPopover<void>(
+    showAppSuccessPopover<void>(
       context: context,
       title: 'workers.edit_worker.success_title'.tr(),
       description: 'workers.edit_worker.success_description'.tr(),
-      imageLayout: AppDialogImageLayout.iconSmall,
-      image: DecoratedBox(
-        decoration: BoxDecoration(
-          color: colors.successContainer,
-          shape: BoxShape.circle,
-        ),
-        child: SizedBox(
-          width: spec.featureIconOuterSize,
-          height: spec.featureIconOuterSize,
-          child: Center(
-            child: AppSvgPicture.asset(
-              AppSvgs.successCheck,
-              width: iconSize,
-              height: iconSize,
-            ),
-          ),
-        ),
-      ),
-      actions: AppPopoverActions.single,
       primaryLabel: 'workers.edit_worker.success_okay'.tr(),
-      barrierDismissible: false,
     ).then((_) {
       if (mounted) context.pop(updatedWorker);
     });

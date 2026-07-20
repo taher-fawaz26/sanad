@@ -141,13 +141,52 @@ List<WidgetbookNode> buildCatalogDirectories() => [
         name: 'Cards & Layout',
         children: [
           WidgetbookComponent(
-            name: 'AppListCard',
+            name: 'AppEntityListItem',
             useCases: [
               WidgetbookUseCase(
-                name: 'Default',
-                builder: (context) => AppListCard(
-                  title: 'Branch name',
-                  caption: 'Dubai Marina',
+                name: 'Branch (compact)',
+                builder: (context) => AppEntityListItem(
+                  style: AppEntityListItemStyle.compact,
+                  title: 'Dubai Marina',
+                  caption: 'Main Branch',
+                  leading: AppAvatar(
+                    initials: 'D',
+                    backgroundColor: context.appColors.palettes.sky.shade400,
+                    showStatusDot: true,
+                  ),
+                  badge: const AppStatusBadge(
+                    label: 'Active',
+                    type: AppStatusBadgeType.success,
+                    size: AppStatusBadgeSize.compact,
+                  ),
+                  trailing: AppIconButton(
+                    icon: Icons.more_vert,
+                    onTap: _noop,
+                  ),
+                  onTap: _noop,
+                ),
+              ),
+              WidgetbookUseCase(
+                name: 'Worker (standard)',
+                builder: (context) => AppEntityListItem(
+                  style: AppEntityListItemStyle.standard,
+                  title: 'Mohamed Ali',
+                  caption: 'Worker',
+                  leading: AppAvatar(
+                    initials: 'M',
+                    backgroundColor: context.appColors.primary,
+                    showStatusDot: true,
+                  ),
+                  badge: const AppStatusBadge(
+                    label: 'Active',
+                    type: AppStatusBadgeType.success,
+                    size: AppStatusBadgeSize.dense,
+                    outlined: true,
+                  ),
+                  trailing: AppIconButton(
+                    icon: Icons.more_vert,
+                    onTap: _noop,
+                  ),
                   onTap: _noop,
                 ),
               ),
