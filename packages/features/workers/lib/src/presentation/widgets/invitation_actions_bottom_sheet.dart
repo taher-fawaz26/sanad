@@ -104,18 +104,14 @@ class _InvitationActionsSheetBody extends StatelessWidget {
       'https://sanad.app/invite/${invitation.id}';
 
   Future<void> _showResendConfirmation({required BuildContext context}) async {
-    final confirmed = await showAppModalSheet<bool>(
+    final confirmed = await showWorkerConfirmationSheet(
       context: context,
-      child: ActionConfirmationSheet(
-        title: 'workers.invitation_resend_title'.tr(),
-        description: 'workers.invitation_resend_description'.tr(
-          namedArgs: {'name': invitation.fullName},
-        ),
-        actionLabel: 'workers.invitation_resend_action'.tr(),
-        buttonType: AppButtonType.primary,
-        destructive: false,
-        cancelLabel: 'workers.cancel'.tr(),
+      title: 'workers.invitation_resend_title'.tr(),
+      description: 'workers.invitation_resend_description'.tr(
+        namedArgs: {'name': invitation.fullName},
       ),
+      actionLabel: 'workers.invitation_resend_action'.tr(),
+      cancelLabel: 'workers.cancel'.tr(),
     );
 
     if ((confirmed ?? false) && context.mounted) {
@@ -124,18 +120,16 @@ class _InvitationActionsSheetBody extends StatelessWidget {
   }
 
   Future<void> _showCancelConfirmation({required BuildContext context}) async {
-    final confirmed = await showAppModalSheet<bool>(
+    final confirmed = await showWorkerConfirmationSheet(
       context: context,
-      child: ActionConfirmationSheet(
-        title: 'workers.invitation_cancel_title'.tr(),
-        description: 'workers.invitation_cancel_description'.tr(
-          namedArgs: {'name': invitation.fullName},
-        ),
-        actionLabel: 'workers.invitation_cancel_action'.tr(),
-        buttonType: _cancelButton.type,
-        destructive: _cancelButton.destructive,
-        cancelLabel: 'workers.cancel'.tr(),
+      title: 'workers.invitation_cancel_title'.tr(),
+      description: 'workers.invitation_cancel_description'.tr(
+        namedArgs: {'name': invitation.fullName},
       ),
+      actionLabel: 'workers.invitation_cancel_action'.tr(),
+      actionType: _cancelButton.type,
+      destructive: _cancelButton.destructive,
+      cancelLabel: 'workers.cancel'.tr(),
     );
 
     if ((confirmed ?? false) && context.mounted) {

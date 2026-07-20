@@ -1,3 +1,4 @@
+import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
@@ -7,7 +8,7 @@ class ProviderMessagesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('nav.messages'.tr())),
+      appBar: AppNavBar(title: 'nav.messages'.tr()),
       body: const Center(child: Text('Messages')),
     );
   }

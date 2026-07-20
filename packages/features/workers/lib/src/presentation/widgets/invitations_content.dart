@@ -16,8 +16,7 @@ class InvitationsContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (state.invitationsStatus == RequestStatus.loading &&
-        state.invitations.isEmpty) {
+    if (state.invitationsStatus == RequestStatus.loading) {
       return const _InvitationsLoadingSkeleton();
     }
 
@@ -218,90 +217,6 @@ class _InvitationsLoadingSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final shimmer = colors.surface;
-    final shimmerDark = colors.surfaceVariant;
-
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(height: AppSpacing.sm),
-          Container(
-            height: 48,
-            decoration: BoxDecoration(
-              color: shimmer,
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          SizedBox(height: AppSpacing.md),
-          ...List.generate(
-            6,
-            (_) => Padding(
-              padding: EdgeInsets.only(bottom: AppSpacing.sm),
-              child: Container(
-                height: 64,
-                decoration: BoxDecoration(
-                  color: colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: shimmer),
-                ),
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.md,
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: shimmer,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            height: 14,
-                            width: 120,
-                            decoration: BoxDecoration(
-                              color: shimmerDark,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                          SizedBox(height: AppSpacing.xs),
-                          Container(
-                            height: 11,
-                            width: 80,
-                            decoration: BoxDecoration(
-                              color: shimmer,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      width: 50,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        color: shimmer,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    return const ShimmerListSkeleton();
   }
 }

@@ -48,8 +48,9 @@ void main() {
       expect(find.byType(AppLoadingIndicator), findsOneWidget);
     });
 
-    testWidgets('renders a CustomPaint with correct outer size (default)',
-        (tester) async {
+    testWidgets('renders a CustomPaint with correct outer size (default)', (
+      tester,
+    ) async {
       await _pump(tester, const AppLoadingIndicator());
       final sizedBox = tester.widget<SizedBox>(
         find.descendant(
@@ -123,26 +124,11 @@ void main() {
       expect(painter.arcColor, Colors.red);
     });
 
-    testWidgets('uses custom background color when provided', (tester) async {
-      await _pump(
-        tester,
-        const AppLoadingIndicator(backgroundColor: Colors.blue),
-      );
-      final customPaint = tester.widget<CustomPaint>(
-        find.descendant(
-          of: find.byType(AppLoadingIndicator),
-          matching: find.byType(CustomPaint),
-        ),
-      );
-      final painter = customPaint.painter! as LoadingIndicatorPainter;
-      expect(painter.trackColor, Colors.blue);
-    });
-
-    testWidgets('uses theme primary color as arc color by default',
-        (tester) async {
+    testWidgets('uses theme primary color as arc color by default', (
+      tester,
+    ) async {
       await _pump(tester, const AppLoadingIndicator());
-      final context =
-          tester.element(find.byType(AppLoadingIndicator));
+      final context = tester.element(find.byType(AppLoadingIndicator));
       final appColors = Theme.of(context).extension<AppColors>()!;
 
       final customPaint = tester.widget<CustomPaint>(
@@ -192,8 +178,9 @@ void main() {
 
     // ── Accessibility: reduce motion ─────────────────────────────────────────
 
-    testWidgets('renders a static arc when disableAnimations is true',
-        (tester) async {
+    testWidgets('renders a static arc when disableAnimations is true', (
+      tester,
+    ) async {
       await _pumpWithDisabledAnimations(
         tester,
         const AppLoadingIndicator(),
@@ -220,15 +207,17 @@ void main() {
         matching: find.byType(CustomPaint),
       );
 
-      final painterBefore = tester.widget<CustomPaint>(customPaintFinder).painter!
-          as LoadingIndicatorPainter;
+      final painterBefore =
+          tester.widget<CustomPaint>(customPaintFinder).painter!
+              as LoadingIndicatorPainter;
       final rotationBefore = painterBefore.rotationAnimation.value;
 
       // Advance time so the rotation controller ticks.
       await tester.pump(const Duration(milliseconds: 200));
 
-      final painterAfter = tester.widget<CustomPaint>(customPaintFinder).painter!
-          as LoadingIndicatorPainter;
+      final painterAfter =
+          tester.widget<CustomPaint>(customPaintFinder).painter!
+              as LoadingIndicatorPainter;
       final rotationAfter = painterAfter.rotationAnimation.value;
 
       // The rotation value must have advanced.
@@ -237,8 +226,9 @@ void main() {
 
     // ── didUpdateWidget ───────────────────────────────────────────────────────
 
-    testWidgets('updates strokeController duration on duration change',
-        (tester) async {
+    testWidgets('updates strokeController duration on duration change', (
+      tester,
+    ) async {
       const initialDuration = Duration(milliseconds: 1500);
       const newDuration = Duration(milliseconds: 800);
 
@@ -271,10 +261,94 @@ void main() {
 
     // ── No CircularProgressIndicator dependency ───────────────────────────────
 
-    testWidgets('does not use CircularProgressIndicator internally',
-        (tester) async {
+    testWidgets('does not use CircularProgressIndicator internally', (
+      tester,
+    ) async {
       await _pump(tester, const AppLoadingIndicator());
       expect(find.byType(CircularProgressIndicator), findsNothing);
+    });
+  });
+
+  group('AppLoadingIndicator HUD overlay', () {
+    tearDown(AppLoadingIndicator.resetOverlayForTest);
+
+    testWidgets('show inserts overlay with status and dismiss removes it', (
+      tester,
+    ) async {
+      late BuildContext capturedContext;
+
+      await tester.pumpWidget(
+        ScreenUtilInit(
+          designSize: const Size(360, 800),
+          minTextAdapt: true,
+          builder: (_, __) => MaterialApp(
+            theme: AppTheme.light(),
+            home: Builder(
+              builder: (context) {
+                capturedContext = context;
+                return Scaffold(
+                  body: ElevatedButton(
+                    onPressed: () => AppLoadingIndicator.show(
+                      capturedContext,
+                      status: 'Loading…',
+                    ),
+                    child: const Text('Show HUD'),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Show HUD'));
+      await tester.pump();
+      await tester.pump(LoadingIndicatorTokens.hudFadeDuration);
+
+      expect(find.text('Loading…'), findsOneWidget);
+
+      AppLoadingIndicator.dismiss();
+      await tester.pump();
+      await tester.pump(LoadingIndicatorTokens.hudFadeDuration);
+
+      expect(find.text('Loading…'), findsNothing);
+    });
+
+    testWidgets('repeated show updates status without stacking overlays', (
+      tester,
+    ) async {
+      late BuildContext capturedContext;
+
+      await tester.pumpWidget(
+        ScreenUtilInit(
+          designSize: const Size(360, 800),
+          minTextAdapt: true,
+          builder: (_, __) => MaterialApp(
+            theme: AppTheme.light(),
+            home: Builder(
+              builder: (context) {
+                capturedContext = context;
+                return const Scaffold(body: SizedBox.shrink());
+              },
+            ),
+          ),
+        ),
+      );
+
+      AppLoadingIndicator.show(capturedContext, status: 'First');
+      await tester.pump();
+      await tester.pump(LoadingIndicatorTokens.hudFadeDuration);
+      expect(find.text('First'), findsOneWidget);
+
+      AppLoadingIndicator.show(capturedContext, status: 'Second');
+      await tester.pump();
+      expect(find.text('Second'), findsOneWidget);
+      expect(find.text('First'), findsNothing);
+
+      AppLoadingIndicator.dismiss();
+      await tester.pump();
+      await tester.pump(LoadingIndicatorTokens.hudFadeDuration);
+      expect(find.text('Second'), findsNothing);
     });
   });
 }

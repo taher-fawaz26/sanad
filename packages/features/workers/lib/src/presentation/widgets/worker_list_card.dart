@@ -60,7 +60,9 @@ class WorkerListCard extends StatelessWidget {
                   ),
                   SizedBox(height: responsiveDimension(2)),
                   Text(
-                    worker.role,
+                    (worker.jobTitle?.trim().isNotEmpty ?? false)
+                        ? worker.jobTitle!.trim()
+                        : worker.role,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: typography.smallNone.copyWith(

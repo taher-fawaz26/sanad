@@ -11,6 +11,7 @@ class WorkerDto extends WorkerEntity implements EntityConverter<WorkerEntity> {
     super.status,
     super.phone,
     super.email,
+    super.jobTitle,
     super.branches,
   });
 
@@ -24,6 +25,7 @@ class WorkerDto extends WorkerEntity implements EntityConverter<WorkerEntity> {
       status: WorkerStatus.fromString(json['status'] as String?),
       phone: json['phone'] as String?,
       email: json['email'] as String?,
+      jobTitle: json['jobTitle'] as String? ?? json['title'] as String?,
       branches: json['branches'] as String?,
     );
   }
@@ -39,6 +41,7 @@ class WorkerDto extends WorkerEntity implements EntityConverter<WorkerEntity> {
     status: status,
     phone: phone,
     email: email,
+    jobTitle: jobTitle,
     branches: branches,
   );
 

@@ -1,3 +1,4 @@
+import 'package:app_assets/app_assets.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -97,7 +98,7 @@ class _WorkersContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (state.isLoading && state.workers.isEmpty) {
+    if (state.isLoading) {
       return const _LoadingSkeleton();
     }
 
@@ -259,11 +260,22 @@ class _EmptyState extends StatelessWidget {
       );
     }
     return Center(
-      child: AppGenericEmptyState(
+      child: AppEmptyState(
+        illustration: AppSvgPicture.asset(
+          AppSvgs.users2,
+          width: 48,
+          height: 48,
+          colorFilter: ColorFilter.mode(
+            context.appColors.textMuted,
+            BlendMode.srcIn,
+          ),
+        ),
         title: 'workers.empty_title'.tr(),
         description: 'workers.empty_description'.tr(),
         actionLabel: 'workers.add_team'.tr(),
         onAction: () => context.push(WorkerRoutes.add),
+        actionIcon: const Icon(Icons.add, size: 20),
+        actionIconPosition: AppButtonIconPosition.center,
       ),
     );
   }
@@ -317,98 +329,12 @@ class _ErrorState extends StatelessWidget {
   }
 }
 
-// Figma loading state (`1528:9929`) — skeleton shimmer items.
+// Figma loading state (`1528:9929`) — animated shimmer skeleton.
 class _LoadingSkeleton extends StatelessWidget {
   const _LoadingSkeleton();
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final shimmer = colors.surface;
-    final shimmerDark = colors.surfaceVariant;
-
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(height: AppSpacing.sm),
-          // Search skeleton
-          Container(
-            height: 48,
-            decoration: BoxDecoration(
-              color: shimmer,
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          SizedBox(height: AppSpacing.md),
-          // List item skeletons
-          ...List.generate(
-            6,
-            (_) => Padding(
-              padding: EdgeInsets.only(bottom: AppSpacing.sm),
-              child: Container(
-                height: 64,
-                decoration: BoxDecoration(
-                  color: colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: shimmer),
-                ),
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.md,
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: shimmer,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            height: 14,
-                            width: 120,
-                            decoration: BoxDecoration(
-                              color: shimmerDark,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                          SizedBox(height: AppSpacing.xs),
-                          Container(
-                            height: 11,
-                            width: 80,
-                            decoration: BoxDecoration(
-                              color: shimmer,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      width: 50,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        color: shimmer,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    return const ShimmerListSkeleton();
   }
 }

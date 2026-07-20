@@ -106,6 +106,14 @@ abstract final class AppSvgs {
   /// Edit branch — pencil icon.
   static const String branchEdit = '$_base/branch_edit.svg';
 
+  // ── Worker actions bottom sheet ────────────────────────────────────────────
+
+  /// Two vertical bars (pause) — Suspend Worker action row (`1526:12629`).
+  static const String workerSuspend = '$_base/worker_suspend.svg';
+
+  /// Chat bubble with send arrow — Reset Password action row (`1526:12619`).
+  static const String workerResetPassword = '$_base/worker_reset_password.svg';
+
   // ── Organization settings stat cards ───────────────────────────────────────
 
   /// Invitations — outbound mail icon.

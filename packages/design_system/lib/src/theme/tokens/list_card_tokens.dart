@@ -44,12 +44,14 @@ abstract final class ListCardTokens {
     required AppColors colors,
     required AppTypography typography,
   }) {
+    final dark = colors.palettes.dark;
+
     return ListCardStyleSpec(
       padding: EdgeInsets.all(responsiveSpacing(20)),
       contentHeight: AppDimension.fieldHeightMd,
       borderRadius: BorderRadius.circular(AppDimension.radiusSm),
-      backgroundColor: colors.background,
-      borderColor: colors.border,
+      backgroundColor: dark.shade50,
+      borderColor: dark.shade200,
       contentGap: AppSpacing.sm,
       titleStyle: typography.regularNormal.copyWith(
         fontSize: 16.rfs,

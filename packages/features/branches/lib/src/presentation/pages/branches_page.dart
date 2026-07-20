@@ -1,4 +1,3 @@
-import 'package:app_assets/app_assets.dart';
 import 'package:branches/src/presentation/bloc/branches/branches_bloc.dart';
 import 'package:branches/src/presentation/widgets/branch_empty_states.dart';
 import 'package:branches/src/presentation/widgets/branch_list_item.dart';
@@ -11,7 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-/// Figma Branches screen (`1563:10956`), collapsing header.
+/// Figma Branches screen (`73:2902`), collapsing header.
 ///
 /// Company row and title collapse away on scroll; search bar stays pinned.
 /// Filter chips and branch cards scroll below. "Add Branches" button sits
@@ -42,13 +41,14 @@ class _ProviderBranchesPageState extends State<ProviderBranchesPage> {
 class _BranchesTab extends StatelessWidget {
   const _BranchesTab();
 
-  static const _titleSectionHeight = 60.0;
-  static const _headerSafetyMargin = 20.0;
+  static const double _titleSectionHeight = 60;
+  static const double _headerSafetyMargin = 20;
 
   /// Pinned search row: bordered field height + vertical padding around it.
   /// Must match the [PreferredSize] child exactly to avoid RenderFlex overflow.
   double _bottomBarHeight() =>
-      responsiveDimension(FieldTokens.fieldHeight) + (AppSpacing.sm * 2);
+      responsiveDimension(FieldTokens.fieldHeight) +
+      (responsiveSpacing(10) * 2);
 
   double _expandedHeaderHeight() {
     final flexibleSpaceContent =
@@ -76,8 +76,8 @@ class _BranchesTab extends StatelessWidget {
       },
       child: BlocBuilder<BranchesBloc, BranchesState>(
         builder: (context, state) {
-          if (state.isLoading && state.branches.isEmpty) {
-            return const Center(child: AppLoadingIndicator());
+          if (state.isLoading) {
+            return const ShimmerListSkeleton();
           }
 
           final branches = state.filteredBranches;
@@ -99,9 +99,9 @@ class _BranchesTab extends StatelessWidget {
                   scrolledUnderElevation: 0,
                   elevation: 0,
                   expandedHeight: _expandedHeaderHeight(),
-                  flexibleSpace: FlexibleSpaceBar(
+                  flexibleSpace: const FlexibleSpaceBar(
                     background: SingleChildScrollView(
-                      physics: const NeverScrollableScrollPhysics(),
+                      physics: NeverScrollableScrollPhysics(),
                       child: _CollapsingHeader(),
                     ),
                   ),
@@ -109,8 +109,8 @@ class _BranchesTab extends StatelessWidget {
                     preferredSize: Size.fromHeight(_bottomBarHeight()),
                     child: Padding(
                       padding: EdgeInsets.symmetric(
-                        horizontal: AppSpacing.lg,
-                        vertical: AppSpacing.sm,
+                        horizontal: AppSpacing.xl,
+                        vertical: responsiveSpacing(10),
                       ),
                       child: AppSearchField(
                         variant: AppSearchFieldVariant.bordered,
@@ -122,11 +122,10 @@ class _BranchesTab extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Filter chips — scroll with content, below the pinned search.
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.symmetric(
-                      horizontal: AppSpacing.lg,
+                      horizontal: AppSpacing.xl,
                       vertical: AppSpacing.sm,
                     ),
                     child: _FilterRow(currentFilter: state.filter),
@@ -151,23 +150,19 @@ class _BranchesTab extends StatelessWidget {
                     ),
                   )
                 else ...[
-                  SliverList.builder(
+                  SliverList.separated(
                     itemCount: branches.length,
+                    separatorBuilder: (context, index) =>
+                        SizedBox(height: AppSpacing.md),
                     itemBuilder: (context, index) => Padding(
-                      padding: EdgeInsets.fromLTRB(
-                        AppSpacing.lg,
-                        AppSpacing.sm,
-                        AppSpacing.lg,
-                        0,
-                      ),
+                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
                       child: BranchListItem(branch: branches[index]),
                     ),
                   ),
-                  // "Add Branches" button at the bottom of the list.
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: EdgeInsets.symmetric(
-                        horizontal: AppSpacing.lg,
+                        horizontal: AppSpacing.xl,
                         vertical: AppSpacing.lg,
                       ),
                       child: AppButton(
@@ -197,23 +192,12 @@ class _CollapsingHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AppBar(
-          title: Text('branches.company_name'.tr()),
-          centerTitle: false,
-          leading: IconButton(
-            onPressed: () => context.pop(),
-            icon: const Icon(Icons.arrow_back),
-          ),
-          actions: [
-            //notification icon
-            Padding(
-              padding: EdgeInsetsGeometry.only(left: AppSpacing.md),
-              child: AppNotificationIcon(
-                hasUnread: true,
-                onTap: () {},
-              ),
-            ),
-          ],
+        AppNavBar(
+          title: 'branches.company_name'.tr(),
+          showBackButton: true,
+          onLeadingTap: () => context.pop(),
+          trailingAction: AppNavBarTrailingAction.icon,
+          trailing: AppNotificationIcon(hasUnread: true, onTap: () {}),
         ),
         AppSection(title: 'branches.title'.tr()),
       ],
@@ -230,45 +214,52 @@ class _FilterRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(
-          child: AppButton(
-            label: 'branches.filter_all'.tr(),
-            size: AppButtonSize.small,
-            type: currentFilter == BranchFilter.all
-                ? AppButtonType.secondary
-                : AppButtonType.outline,
-            onPressed: () => context.read<BranchesBloc>().add(
-              const BranchesFilterChangedEvent(BranchFilter.all),
-            ),
+        _FilterChip(
+          label: 'branches.filter_all'.tr(),
+          selected: currentFilter == BranchFilter.all,
+          onTap: () => context.read<BranchesBloc>().add(
+            const BranchesFilterChangedEvent(BranchFilter.all),
           ),
         ),
         SizedBox(width: AppSpacing.md),
-        Expanded(
-          child: AppButton(
-            label: 'branches.filter_maintenance'.tr(),
-            size: AppButtonSize.small,
-            type: currentFilter == BranchFilter.maintenance
-                ? AppButtonType.secondary
-                : AppButtonType.outline,
-            onPressed: () => context.read<BranchesBloc>().add(
-              const BranchesFilterChangedEvent(BranchFilter.maintenance),
-            ),
+        _FilterChip(
+          label: 'branches.filter_maintenance'.tr(),
+          selected: currentFilter == BranchFilter.maintenance,
+          onTap: () => context.read<BranchesBloc>().add(
+            const BranchesFilterChangedEvent(BranchFilter.maintenance),
           ),
         ),
         SizedBox(width: AppSpacing.md),
-        Expanded(
-          child: AppButton(
-            label: 'branches.filter_active'.tr(),
-            size: AppButtonSize.small,
-            type: currentFilter == BranchFilter.active
-                ? AppButtonType.secondary
-                : AppButtonType.outline,
-            onPressed: () => context.read<BranchesBloc>().add(
-              const BranchesFilterChangedEvent(BranchFilter.active),
-            ),
+        _FilterChip(
+          label: 'branches.filter_active'.tr(),
+          selected: currentFilter == BranchFilter.active,
+          onTap: () => context.read<BranchesBloc>().add(
+            const BranchesFilterChangedEvent(BranchFilter.active),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppButton(
+      label: label,
+      size: AppButtonSize.small,
+      type: selected ? AppButtonType.secondary : AppButtonType.outline,
+      onPressed: onTap,
     );
   }
 }
@@ -290,11 +281,8 @@ class _EmptyState extends StatelessWidget {
       );
     }
     return Center(
-      child: AppGenericEmptyState(
-        title: 'branches.empty_first_branch_title'.tr(),
-        description: 'branches.empty_first_branch_description'.tr(),
-        actionLabel: 'branches.empty_first_branch_action'.tr(),
-        onAction: () => context.push(BranchRoutes.add),
+      child: BranchesEmptyState(
+        onAddBranch: () => context.push(BranchRoutes.add),
       ),
     );
   }

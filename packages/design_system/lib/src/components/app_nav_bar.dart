@@ -85,40 +85,41 @@ class AppNavBar extends StatelessWidget implements PreferredSizeWidget {
     if (leading != null) {
       return GestureDetector(
         onTap: onLeadingTap,
+        behavior: HitTestBehavior.opaque,
         child: leading,
       );
     }
 
-    if (showBackButton || leadingLabel != null) {
-      return GestureDetector(
-        onTap: onLeadingTap,
-        behavior: HitTestBehavior.opaque,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (showBackButton)
-              Icon(
-                Icons.chevron_left,
-                size: spec.iconSize,
-                color: spec.actionTextStyle.color,
-              ),
-            if (showBackButton && leadingLabel != null)
-              SizedBox(width: spec.leadingIconTextGap),
-            if (leadingLabel != null)
-              Text(leadingLabel!, style: spec.actionTextStyle),
-          ],
-        ),
-      );
+    if (!showBackButton && leadingLabel == null) {
+      return const SizedBox.shrink();
     }
 
-    if (leadingLabel != null && !showBackButton) {
-      return GestureDetector(
-        onTap: onLeadingTap,
-        child: Text(leadingLabel!, style: spec.actionTextStyle),
-      );
-    }
-
-    return const SizedBox.shrink();
+    // Figma variants (`40:6853/6840/6865` back-only, `40:6869/6844/6874`
+    // label-only, `40:6858/6925/6919` back + label).
+    return GestureDetector(
+      onTap: onLeadingTap,
+      behavior: HitTestBehavior.opaque,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (showBackButton)
+            Icon(
+              Icons.chevron_left,
+              size: spec.iconSize,
+              // Back chevron is grey/100 (#131214) in Figma — not the tint
+              // used for text actions.
+              color: spec.titleStyle.color,
+            ),
+          if (showBackButton && leadingLabel != null)
+            SizedBox(width: spec.leadingIconTextGap),
+          if (leadingLabel != null)
+            Text(
+              leadingLabel!,
+              style: showBackButton ? spec.titleStyle : spec.actionTextStyle,
+            ),
+        ],
+      ),
+    );
   }
 
   Widget _buildTrailing(

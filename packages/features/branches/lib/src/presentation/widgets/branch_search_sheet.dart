@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:app_assets/app_assets.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/presentation/bloc/branches/branches_bloc.dart';
 import 'package:branches/src/presentation/widgets/branch_empty_states.dart';
@@ -112,13 +111,8 @@ class _BranchSearchSheetBodyState extends State<_BranchSearchSheetBody> {
                           query: state.searchQuery,
                           onClearSearch: () => Navigator.of(context).pop(),
                         )
-                      : AppGenericEmptyState(
-                          title: 'branches.empty_first_branch_title'.tr(),
-                          description: 'branches.empty_first_branch_description'
-                              .tr(),
-                          actionLabel: 'branches.empty_first_branch_action'
-                              .tr(),
-                          onAction: () => Navigator.of(
+                      : BranchesEmptyState(
+                          onAddBranch: () => Navigator.of(
                             context,
                           ).pop(const _StartAddBranch()),
                         ),

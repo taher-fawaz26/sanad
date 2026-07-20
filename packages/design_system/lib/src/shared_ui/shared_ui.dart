@@ -6,4 +6,5 @@
 /// in `docs/ARCHITECTURE.md`.
 library;
 
+export 'app_confirmation_content.dart';
 export 'app_empty_state.dart';

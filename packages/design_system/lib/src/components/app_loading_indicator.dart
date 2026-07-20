@@ -6,12 +6,12 @@ import 'package:flutter/material.dart';
 
 // ─── AppLoadingIndicator ─────────────────────────────────────────────────────
 
-/// Sanad Design System loading indicator.
+/// Sanad Design System loading indicator — Figma `Loader` (`53:2061`).
 ///
-/// Renders a circular spinner with an expanding and contracting arc that
-/// rotates continuously. All colours are resolved from `AppColors` (or the
-/// `ColorScheme` fallback) so the widget adapts automatically to light / dark
-/// theme without any extra configuration.
+/// Renders a gradient ring that fades from a solid leading tip (marked by a
+/// small dot) around to fully transparent, continuously rotating. All
+/// colours are resolved from `AppColors` so the widget adapts automatically
+/// to light / dark theme without any extra configuration.
 ///
 /// ### Basic usage
 /// ```dart
@@ -20,7 +20,7 @@ import 'package:flutter/material.dart';
 ///
 /// ### Custom size
 /// ```dart
-/// AppLoadingIndicator(size: 24, strokeWidth: 2.5)
+/// AppLoadingIndicator(size: 24, strokeWidth: 3.5)
 /// ```
 ///
 /// ### Custom colour
@@ -31,9 +31,9 @@ import 'package:flutter/material.dart';
 /// ### Performance notes
 /// - Wrapped in `RepaintBoundary` — the spinner repaints independently of the
 ///   surrounding widget tree.
-/// - `LoadingIndicatorPainter` listens directly to the animation
-///   controllers via its `repaint` listenable, so **no widget rebuilds occur
-///   during animation** — only the `RenderCustomPaint` is dirtied each frame.
+/// - `LoadingIndicatorPainter` listens directly to the rotation controller
+///   via its `repaint` listenable, so **no widget rebuilds occur during
+///   animation** — only the `RenderCustomPaint` is dirtied each frame.
 /// - Respects `MediaQuery.disableAnimations` for accessibility.
 ///
 /// See also:
@@ -45,7 +45,6 @@ class AppLoadingIndicator extends StatefulWidget {
     this.size,
     this.strokeWidth,
     this.color,
-    this.backgroundColor,
     this.duration,
     this.semanticsLabel,
   });
@@ -54,20 +53,17 @@ class AppLoadingIndicator extends StatefulWidget {
   /// Defaults to [LoadingIndicatorTokens.defaultSize] (40 dp).
   final double? size;
 
-  /// Stroke width of the arc and background ring.
-  /// Defaults to [LoadingIndicatorTokens.defaultStrokeWidth] (4 dp).
+  /// Stroke width of the gradient ring.
+  /// Defaults to [LoadingIndicatorTokens.defaultStrokeWidth] (6 dp).
   final double? strokeWidth;
 
-  /// Colour of the rotating arc.
+  /// Colour of the ring's solid leading tip and dot — fades to transparent
+  /// around the rest of the ring.
   /// Defaults to `AppColors.primary`.
   final Color? color;
 
-  /// Colour of the static background ring.
-  /// Defaults to `AppColors.controlFill`.
-  final Color? backgroundColor;
-
-  /// Duration of one full stroke expansion / contraction cycle.
-  /// Defaults to [LoadingIndicatorTokens.animationDuration] (1 500 ms).
+  /// Duration of one full 360° rotation.
+  /// Defaults to [LoadingIndicatorTokens.rotationDuration] (1 333 ms).
   final Duration? duration;
 
   /// Semantic label announced by screen readers.
@@ -79,73 +75,31 @@ class AppLoadingIndicator extends StatefulWidget {
 }
 
 class _AppLoadingIndicatorState extends State<AppLoadingIndicator>
-    with TickerProviderStateMixin {
-  // Two independent controllers:
-  //  _rotationController – drives the continuous clockwise rotation of the arc.
-  //  _strokeController   – drives the expand / contract of the arc length.
+    with SingleTickerProviderStateMixin {
   late final AnimationController _rotationController;
-  late final AnimationController _strokeController;
-
-  // Head: leading edge of the arc — accelerates in the first half of the cycle.
-  late final Animation<double> _headAnimation;
-
-  // Tail: trailing edge of the arc — follows in the second half.
-  late final Animation<double> _tailAnimation;
-
-  // Material-quality easing curve.
-  static const Curve _kSwing = Cubic(0.4, 0, 0.2, 1);
 
   @override
   void initState() {
     super.initState();
-
     _rotationController = AnimationController(
       vsync: this,
-      duration: LoadingIndicatorTokens.rotationDuration,
+      duration: widget.duration ?? LoadingIndicatorTokens.rotationDuration,
     )..repeat();
-
-    _strokeController = AnimationController(
-      vsync: this,
-      duration: widget.duration ?? LoadingIndicatorTokens.animationDuration,
-    )..repeat();
-
-    _headAnimation = Tween<double>(begin: 0, end: 0.75).animate(
-      CurvedAnimation(
-        parent: _strokeController,
-        curve: const Interval(
-          LoadingIndicatorTokens.headStartInterval,
-          LoadingIndicatorTokens.headEndInterval,
-          curve: _kSwing,
-        ),
-      ),
-    );
-
-    _tailAnimation = Tween<double>(begin: 0, end: 0.75).animate(
-      CurvedAnimation(
-        parent: _strokeController,
-        curve: const Interval(
-          LoadingIndicatorTokens.tailStartInterval,
-          LoadingIndicatorTokens.tailEndInterval,
-          curve: _kSwing,
-        ),
-      ),
-    );
   }
 
   @override
   void didUpdateWidget(AppLoadingIndicator oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.duration != widget.duration) {
-      _strokeController.duration =
-          widget.duration ?? LoadingIndicatorTokens.animationDuration;
-      if (_strokeController.isAnimating) _strokeController.repeat();
+      _rotationController.duration =
+          widget.duration ?? LoadingIndicatorTokens.rotationDuration;
+      if (_rotationController.isAnimating) _rotationController.repeat();
     }
   }
 
   @override
   void dispose() {
     _rotationController.dispose();
-    _strokeController.dispose();
     super.dispose();
   }
 
@@ -155,37 +109,27 @@ class _AppLoadingIndicatorState extends State<AppLoadingIndicator>
     final colorScheme = Theme.of(context).colorScheme;
     final reduceMotion = MediaQuery.of(context).disableAnimations;
 
-    final arcColor = widget.color ??
+    final arcColor =
+        widget.color ??
         (appColors != null
             ? LoadingIndicatorTokens.resolveColor(appColors)
             : colorScheme.primary);
-
-    final trackColor = widget.backgroundColor ??
-        LoadingIndicatorTokens.resolveBackgroundColor(appColors, colorScheme);
 
     final size = widget.size ?? LoadingIndicatorTokens.defaultSize;
     final strokeWidth =
         widget.strokeWidth ?? LoadingIndicatorTokens.defaultStrokeWidth;
 
-    // When system animations are disabled, render a fixed arc to indicate
-    // loading state without motion.
-    final painter = reduceMotion
-        ? LoadingIndicatorPainter._(
-            rotationAnimation: _rotationController,
-            headAnimation: const AlwaysStoppedAnimation(0.25),
-            tailAnimation: const AlwaysStoppedAnimation(0),
-            arcColor: arcColor,
-            trackColor: trackColor,
-            strokeWidth: strokeWidth,
-          )
-        : LoadingIndicatorPainter._(
-            rotationAnimation: _rotationController,
-            headAnimation: _headAnimation,
-            tailAnimation: _tailAnimation,
-            arcColor: arcColor,
-            trackColor: trackColor,
-            strokeWidth: strokeWidth,
-          );
+    // When system animations are disabled, render a fixed rotation angle to
+    // indicate loading state without motion.
+    final rotationAnimation = reduceMotion
+        ? const AlwaysStoppedAnimation<double>(0)
+        : _rotationController;
+
+    final painter = LoadingIndicatorPainter._(
+      rotationAnimation: rotationAnimation,
+      arcColor: arcColor,
+      strokeWidth: strokeWidth,
+    );
 
     return Semantics(
       label: widget.semanticsLabel ?? 'Loading',
@@ -203,46 +147,25 @@ class _AppLoadingIndicatorState extends State<AppLoadingIndicator>
 
 /// `CustomPainter` for [AppLoadingIndicator].
 ///
-/// Renders a static background ring and a rotating arc whose length expands
-/// and contracts. The painter listens directly to the animation controllers
-/// (via its `repaint` listenable), so repainting never triggers a widget
-/// rebuild — only the `RenderCustomPaint` layer is dirtied.
+/// Renders a full-circle [SweepGradient] ring — opaque at the leading tip,
+/// fading to fully transparent around the rest of the circle — plus a small
+/// solid dot marking the leading tip. The whole shape rotates continuously.
 ///
-/// ### Arc geometry
-/// - `startAngle` moves with the rotation controller and the arc head.
-/// - `sweepAngle` is `(headValue − tailValue) × 270°`, clamped to a minimum
-///   so the arc never fully disappears.
+/// The painter listens directly to the rotation controller (via its
+/// `repaint` listenable), so repainting never triggers a widget rebuild —
+/// only the `RenderCustomPaint` layer is dirtied.
 class LoadingIndicatorPainter extends CustomPainter {
   LoadingIndicatorPainter._({
     required this.rotationAnimation,
-    required this.headAnimation,
-    required this.tailAnimation,
     required this.arcColor,
-    required this.trackColor,
     required this.strokeWidth,
-  }) : super(
-          repaint: Listenable.merge([rotationAnimation, headAnimation]),
-        );
+  }) : super(repaint: rotationAnimation);
 
   final Animation<double> rotationAnimation;
-  final Animation<double> headAnimation;
-  final Animation<double> tailAnimation;
   final Color arcColor;
-  final Color trackColor;
   final double strokeWidth;
 
-  // ── Constants ──────────────────────────────────────────────────────────────
-
   static const double _twoPi = math.pi * 2;
-
-  // Minimum visible sweep so Canvas.drawArc never receives 0 (a no-op).
-  static const double _minSweep = 0.01;
-
-  // Maximum sweep = sweepPiFactor × π = 1.5 × π ≈ 270°.
-  static const double _sweepPi =
-      LoadingIndicatorTokens.sweepPiFactor * math.pi;
-
-  // ── Paint ──────────────────────────────────────────────────────────────────
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -251,55 +174,37 @@ class LoadingIndicatorPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final rect = Rect.fromCircle(center: center, radius: radius);
 
-    final head = headAnimation.value;
-    final tail = tailAnimation.value;
-    final rotation = rotationAnimation.value;
+    // Leading tip starts at the top and sweeps clockwise as it rotates.
+    final headAngle = -math.pi / 2 + rotationAnimation.value * _twoPi;
 
-    // ── Background ring ────────────────────────────────────────────────────
     canvas.drawCircle(
       center,
       radius,
       Paint()
-        ..color = trackColor
+        ..shader = SweepGradient(
+          startAngle: headAngle,
+          endAngle: headAngle + _twoPi,
+          colors: [arcColor, arcColor.withValues(alpha: 0)],
+        ).createShader(rect)
         ..strokeWidth = strokeWidth
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round,
+        ..style = PaintingStyle.stroke,
     );
 
-    // ── Rotating arc ───────────────────────────────────────────────────────
-    //
-    // startAngle: arc head tracks the continuous rotation plus its own
-    //   acceleration from the head animation.
-    // sweepAngle: difference between head and tail positions (in radians),
-    //   floored at _minSweep so the arc never fully disappears mid-cycle.
-    final startAngle = -math.pi / 2 +
-        rotation * _twoPi * LoadingIndicatorTokens.sweepPiFactor -
-        head * _sweepPi;
-
-    final sweepAngle = math.max(_minSweep, (head - tail) * _sweepPi);
-
-    canvas.drawArc(
-      rect,
-      startAngle,
-      sweepAngle,
-      false,
-      Paint()
-        ..color = arcColor
-        ..strokeWidth = strokeWidth
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round,
+    final dotRadius = strokeWidth / 2;
+    final dotCenter = Offset(
+      center.dx + radius * math.cos(headAngle),
+      center.dy + radius * math.sin(headAngle),
     );
+    canvas.drawCircle(dotCenter, dotRadius, Paint()..color = arcColor);
   }
 
-  // ── Repaint logic ──────────────────────────────────────────────────────────
-
   /// Returns `true` only when a structural property (colour or stroke width)
-  /// changes. Animation-driven repaints are handled by the `repaint` listenable
-  /// passed to `super`, so animation ticks never trigger this check.
+  /// changes. Animation-driven repaints are handled by the `repaint`
+  /// listenable passed to `super`, so animation ticks never trigger this
+  /// check.
   @override
   bool shouldRepaint(LoadingIndicatorPainter oldDelegate) =>
       oldDelegate.arcColor != arcColor ||
-      oldDelegate.trackColor != trackColor ||
       oldDelegate.strokeWidth != strokeWidth;
 
   @override

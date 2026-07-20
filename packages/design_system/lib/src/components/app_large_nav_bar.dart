@@ -5,8 +5,12 @@ import 'package:flutter/material.dart';
 /// Figma `Bars / Nav Bars: Large` (`40:6931`).
 class AppLargeNavBar extends StatelessWidget implements PreferredSizeWidget {
   const AppLargeNavBar({
-    required this.title, super.key,
+    required this.title,
+    super.key,
     this.caption,
+    this.leading,
+    this.showBackButton = false,
+    this.onLeadingTap,
     this.trailingAction = AppNavBarTrailingAction.none,
     this.trailing,
     this.trailingButtonLabel,
@@ -16,6 +20,13 @@ class AppLargeNavBar extends StatelessWidget implements PreferredSizeWidget {
 
   final String title;
   final String? caption;
+
+  /// Custom leading widget. Takes precedence over [showBackButton].
+  final Widget? leading;
+
+  /// Renders the standard back chevron if [leading] is not provided.
+  final bool showBackButton;
+  final VoidCallback? onLeadingTap;
   final AppNavBarTrailingAction trailingAction;
   final Widget? trailing;
   final String? trailingButtonLabel;
@@ -23,6 +34,7 @@ class AppLargeNavBar extends StatelessWidget implements PreferredSizeWidget {
   final bool useLargeTitleStyle;
 
   bool get _hasCaption => caption != null && caption!.isNotEmpty;
+  bool get _hasLeading => leading != null || showBackButton;
 
   @override
   Size get preferredSize {
@@ -40,6 +52,11 @@ class AppLargeNavBar extends StatelessWidget implements PreferredSizeWidget {
       AppNavBarTrailingAction.button => spec.titleRightInsetButton,
       _ => 0.0,
     };
+    // When a leading widget/back button is present, shift the title (and any
+    // caption) right so it doesn't collide with the chevron.
+    final titleLeftInset = _hasLeading
+        ? spec.iconSize + spec.leadingIconTextGap
+        : 0.0;
 
     final titleStyle = useLargeTitleStyle && _hasCaption
         ? spec.titleStyleLarge
@@ -54,7 +71,7 @@ class AppLargeNavBar extends StatelessWidget implements PreferredSizeWidget {
           child: Stack(
             children: [
               Positioned(
-                left: spec.horizontalPadding,
+                left: spec.horizontalPadding + titleLeftInset,
                 right: spec.horizontalPadding + titleRightInset,
                 top: _hasCaption ? height / 2 - 34 : null,
                 bottom: _hasCaption ? null : 0,
@@ -73,6 +90,25 @@ class AppLargeNavBar extends StatelessWidget implements PreferredSizeWidget {
                         child: Text(title, style: titleStyle),
                       ),
               ),
+              if (_hasLeading)
+                Positioned(
+                  left: spec.horizontalPadding,
+                  top: 0,
+                  bottom: 0,
+                  child: Center(
+                    child: GestureDetector(
+                      onTap: onLeadingTap,
+                      behavior: HitTestBehavior.opaque,
+                      child:
+                          leading ??
+                          Icon(
+                            Icons.chevron_left,
+                            size: spec.iconSize,
+                            color: spec.titleStyle.color,
+                          ),
+                    ),
+                  ),
+                ),
               if (trailingAction != AppNavBarTrailingAction.none)
                 Positioned(
                   right: trailingAction == AppNavBarTrailingAction.icon
@@ -94,28 +130,29 @@ class AppLargeNavBar extends StatelessWidget implements PreferredSizeWidget {
   Widget _buildTrailing(LargeNavBarStyleSpec spec, AppColors colors) {
     return switch (trailingAction) {
       AppNavBarTrailingAction.icon => GestureDetector(
-          onTap: onTrailingTap,
-          child: trailing ??
-              Icon(
-                Icons.person_outline,
-                size: spec.iconSize,
-                color: colors.primary,
-              ),
-        ),
-      AppNavBarTrailingAction.button => GestureDetector(
-          onTap: onTrailingTap,
-          child: Container(
-            padding: spec.actionButtonPadding,
-            decoration: BoxDecoration(
+        onTap: onTrailingTap,
+        child:
+            trailing ??
+            Icon(
+              Icons.person_outline,
+              size: spec.iconSize,
               color: colors.primary,
-              borderRadius: spec.actionButtonRadius,
             ),
-            child: Text(
-              trailingButtonLabel ?? 'Button',
-              style: spec.actionButtonTextStyle,
-            ),
+      ),
+      AppNavBarTrailingAction.button => GestureDetector(
+        onTap: onTrailingTap,
+        child: Container(
+          padding: spec.actionButtonPadding,
+          decoration: BoxDecoration(
+            color: colors.primary,
+            borderRadius: spec.actionButtonRadius,
+          ),
+          child: Text(
+            trailingButtonLabel ?? 'Button',
+            style: spec.actionButtonTextStyle,
           ),
         ),
+      ),
       _ => const SizedBox.shrink(),
     };
   }

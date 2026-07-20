@@ -11,8 +11,8 @@ import 'package:workers/src/presentation/widgets/action_confirmation_sheet.dart'
 import 'package:workers/src/routes/worker_routes.dart';
 
 const ({AppButtonType type, bool destructive}) _suspendButton = (
-  type: AppButtonType.primary,
-  destructive: true,
+  type: AppButtonType.warning,
+  destructive: false,
 );
 const ({AppButtonType type, bool destructive}) _unsuspendButton = (
   type: AppButtonType.primary,
@@ -57,7 +57,6 @@ class _WorkerActionsSheetBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final isSuspended = worker.status == WorkerStatus.suspended;
-    final isPending = worker.status == WorkerStatus.pending;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -67,10 +66,11 @@ class _WorkerActionsSheetBody extends StatelessWidget {
         AppTableRow(
           title: 'workers.action_view_details'.tr(),
           leading: AppTableLeading.icon,
-          leadingIcon: Icon(
-            Icons.visibility_outlined,
-            size: 24,
-            color: colors.textPrimary,
+          leadingIcon: AppSvgPicture.asset(
+            AppSvgs.branchView,
+            width: 24,
+            height: 24,
+            colorFilter: ColorFilter.mode(colors.textPrimary, BlendMode.srcIn),
           ),
           onTap: () {
             Navigator.of(context).pop();
@@ -95,34 +95,28 @@ class _WorkerActionsSheetBody extends StatelessWidget {
             );
           },
         ),
-        // Resend Invitation — only relevant while the worker hasn't
-        // accepted their invite yet.
-        if (isPending)
-          AppTableRow(
-            title: 'workers.action_resend_invitation'.tr(),
-            leading: AppTableLeading.icon,
-            leadingIcon: Icon(
-              Icons.forward_to_inbox_outlined,
-              size: 24,
-              color: colors.textPrimary,
-            ),
-            onTap: () {
-              Navigator.of(context).pop();
-              if (!pageContext.mounted) return;
-              pageContext.read<WorkersBloc>().add(
-                InvitationResendEvent(worker.id),
-              );
-            },
+        // Reset Password — always visible
+        AppTableRow(
+          title: 'workers.action_reset_password'.tr(),
+          leading: AppTableLeading.icon,
+          leadingIcon: AppSvgPicture.asset(
+            AppSvgs.workerResetPassword,
+            width: 24,
+            height: 24,
+            colorFilter: ColorFilter.mode(colors.textPrimary, BlendMode.srcIn),
           ),
+          onTap: () {
+            Navigator.of(context).pop();
+            // TODO(team): wire reset-password API when endpoint is available
+          },
+        ),
         const AppDivider(),
         // Suspend / Unsuspend Worker
         SheetActionRow(
           label: isSuspended
               ? 'workers.action_unsuspend'.tr()
               : 'workers.action_suspend'.tr(),
-          icon: isSuspended
-              ? Icons.play_circle_outline
-              : Icons.pause_circle_outline,
+          svgAsset: AppSvgs.workerSuspend,
           color: colors.warning,
           onTap: () async {
             Navigator.of(context).pop();
@@ -158,26 +152,24 @@ class _WorkerActionsSheetBody extends StatelessWidget {
     required bool isSuspending,
   }) async {
     final btnConfig = isSuspending ? _suspendButton : _unsuspendButton;
-    final confirmed = await showAppModalSheet<bool>(
+    final confirmed = await showWorkerConfirmationSheet(
       context: context,
-      child: ActionConfirmationSheet(
-        title: isSuspending
-            ? 'workers.suspend_title'.tr()
-            : 'workers.unsuspend_title'.tr(),
-        description: isSuspending
-            ? 'workers.suspend_description'.tr(
-                namedArgs: {'name': worker.fullName},
-              )
-            : 'workers.unsuspend_description'.tr(
-                namedArgs: {'name': worker.fullName},
-              ),
-        actionLabel: isSuspending
-            ? 'workers.suspend_action'.tr()
-            : 'workers.unsuspend_action'.tr(),
-        buttonType: btnConfig.type,
-        destructive: btnConfig.destructive,
-        cancelLabel: 'workers.cancel'.tr(),
-      ),
+      title: isSuspending
+          ? 'workers.suspend_title'.tr()
+          : 'workers.unsuspend_title'.tr(),
+      description: isSuspending
+          ? 'workers.suspend_description'.tr(
+              namedArgs: {'name': worker.fullName},
+            )
+          : 'workers.unsuspend_description'.tr(
+              namedArgs: {'name': worker.fullName},
+            ),
+      actionLabel: isSuspending
+          ? 'workers.suspend_action'.tr()
+          : 'workers.unsuspend_action'.tr(),
+      actionType: btnConfig.type,
+      destructive: btnConfig.destructive,
+      cancelLabel: 'workers.cancel'.tr(),
     );
 
     if ((confirmed ?? false) && context.mounted) {
@@ -194,18 +186,16 @@ class _WorkerActionsSheetBody extends StatelessWidget {
     required BuildContext context,
     required WorkerEntity worker,
   }) async {
-    final confirmed = await showAppModalSheet<bool>(
+    final confirmed = await showWorkerConfirmationSheet(
       context: context,
-      child: ActionConfirmationSheet(
-        title: 'workers.delete_title'.tr(),
-        description: 'workers.delete_description'.tr(
-          namedArgs: {'name': worker.fullName},
-        ),
-        actionLabel: 'workers.delete_action'.tr(),
-        buttonType: _deleteButton.type,
-        destructive: _deleteButton.destructive,
-        cancelLabel: 'workers.cancel'.tr(),
+      title: 'workers.delete_title'.tr(),
+      description: 'workers.delete_description'.tr(
+        namedArgs: {'name': worker.fullName},
       ),
+      actionLabel: 'workers.delete_action'.tr(),
+      actionType: _deleteButton.type,
+      destructive: _deleteButton.destructive,
+      cancelLabel: 'workers.cancel'.tr(),
     );
 
     if ((confirmed ?? false) && context.mounted) {

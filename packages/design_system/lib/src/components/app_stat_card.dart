@@ -70,7 +70,7 @@ class AppStatCard extends StatelessWidget {
             onPressed: onActionTap,
             size: AppButtonSize.small,
             icon: const Icon(Icons.arrow_forward, size: 16),
-            iconPosition: AppButtonIconPosition.left,
+            iconPosition: AppButtonIconPosition.center,
           ),
         ],
       ),

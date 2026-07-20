@@ -18,6 +18,9 @@ enum AppButtonType {
 
   /// Figma `Type=Transparent` — text-only / ghost.
   transparent,
+
+  /// Figma warning CTA — solid yellow fill (`yallow/400`, e.g. suspend).
+  warning,
 }
 
 /// Figma button size tier (`30:1738`).
@@ -115,6 +118,7 @@ abstract final class ButtonTokens {
     final main = colors.palettes.main;
     final dark = colors.palettes.dark;
     final sky = colors.palettes.sky;
+    final yellow = colors.palettes.yellow;
 
     final isDisabled = states.contains(WidgetState.disabled);
     final isPressed =
@@ -122,12 +126,31 @@ abstract final class ButtonTokens {
         states.contains(WidgetState.focused);
 
     if (isDisabled) {
-      return _disabled(type, isDark: isDark, main: main, dark: dark, sky: sky);
+      return _disabled(
+        type,
+        isDark: isDark,
+        main: main,
+        dark: dark,
+        sky: sky,
+        yellow: yellow,
+      );
     }
     if (isPressed) {
-      return _pressed(type, isDark: isDark, main: main, dark: dark);
+      return _pressed(
+        type,
+        isDark: isDark,
+        main: main,
+        dark: dark,
+        yellow: yellow,
+      );
     }
-    return _default(type, isDark: isDark, main: main, dark: dark);
+    return _default(
+      type,
+      isDark: isDark,
+      main: main,
+      dark: dark,
+      yellow: yellow,
+    );
   }
 
   static ButtonSurfaceColors _default(
@@ -135,6 +158,7 @@ abstract final class ButtonTokens {
     required bool isDark,
     required ColorScale main,
     required ColorScale dark,
+    required ColorScale yellow,
   }) {
     return switch (type) {
       AppButtonType.primary => ButtonSurfaceColors(
@@ -157,6 +181,11 @@ abstract final class ButtonTokens {
         foreground: isDark ? main.shade100 : main.shade600,
         border: Colors.transparent,
       ),
+      AppButtonType.warning => ButtonSurfaceColors(
+        background: yellow.shade400,
+        foreground: dark.shade50,
+        border: Colors.transparent,
+      ),
     };
   }
 
@@ -165,6 +194,7 @@ abstract final class ButtonTokens {
     required bool isDark,
     required ColorScale main,
     required ColorScale dark,
+    required ColorScale yellow,
   }) {
     return switch (type) {
       AppButtonType.primary => ButtonSurfaceColors(
@@ -187,6 +217,11 @@ abstract final class ButtonTokens {
         foreground: isDark ? main.shade600 : main.shade600,
         border: Colors.transparent,
       ),
+      AppButtonType.warning => ButtonSurfaceColors(
+        background: yellow.shade600,
+        foreground: dark.shade50,
+        border: Colors.transparent,
+      ),
     };
   }
 
@@ -196,21 +231,27 @@ abstract final class ButtonTokens {
     required ColorScale main,
     required ColorScale dark,
     required ColorScale sky,
+    required ColorScale yellow,
   }) {
     if (isDark) {
       return switch (type) {
-        AppButtonType.outline || AppButtonType.transparent =>
+        AppButtonType.outline ||
+        AppButtonType.transparent =>
           ButtonSurfaceColors(
             background: Colors.transparent,
             foreground: dark.shade500,
             border: dark.shade500,
           ),
-        AppButtonType.primary || AppButtonType.secondary =>
-          ButtonSurfaceColors(
-            background: dark.shade600,
-            foreground: dark.shade300,
-            border: Colors.transparent,
-          ),
+        AppButtonType.warning => ButtonSurfaceColors(
+          background: yellow.shade800,
+          foreground: dark.shade300,
+          border: Colors.transparent,
+        ),
+        AppButtonType.primary || AppButtonType.secondary => ButtonSurfaceColors(
+          background: dark.shade600,
+          foreground: dark.shade300,
+          border: Colors.transparent,
+        ),
       };
     }
 
@@ -219,6 +260,11 @@ abstract final class ButtonTokens {
         background: Colors.transparent,
         foreground: dark.shade200,
         border: dark.shade200,
+      ),
+      AppButtonType.warning => ButtonSurfaceColors(
+        background: yellow.shade100,
+        foreground: dark.shade500,
+        border: Colors.transparent,
       ),
       AppButtonType.primary || AppButtonType.secondary => ButtonSurfaceColors(
         background: sky.shade100,
@@ -277,6 +323,7 @@ abstract final class ButtonTokens {
         main: colors.palettes.main,
         dark: dark,
         sky: colors.palettes.sky,
+        yellow: colors.palettes.yellow,
       );
     }
 

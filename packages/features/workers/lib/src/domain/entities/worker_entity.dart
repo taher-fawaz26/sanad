@@ -10,16 +10,20 @@ class WorkerEntity extends Equatable {
     this.status = WorkerStatus.pending,
     this.phone,
     this.email,
+    this.jobTitle,
     this.branches,
   });
 
   final String id;
   final String fullName;
+
+  /// API worker type (`worker`, `manager`).
   final String role;
   final String initials;
   final WorkerStatus status;
   final String? phone;
   final String? email;
+  final String? jobTitle;
   final String? branches;
 
   @override
@@ -31,6 +35,7 @@ class WorkerEntity extends Equatable {
     status,
     phone,
     email,
+    jobTitle,
     branches,
   ];
 }

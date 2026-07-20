@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 
 /// Bordered list card — Figma branch row (`347:14378`).
 ///
-/// Layout: `[Avatar] [Title + Badge / Caption] …… [trailing]`
+/// Layout: `[Avatar] [Title / Caption] [Badge] …… [trailing]`
 /// on a `dark/50` surface with 8 dp radius and `dark/200` border.
 class AppListCard extends StatelessWidget {
   const AppListCard({
@@ -40,42 +40,43 @@ class AppListCard extends StatelessWidget {
     final content = ConstrainedBox(
       constraints: BoxConstraints(minHeight: spec.contentHeight),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (leading != null) ...[
-            leading!,
-            SizedBox(width: spec.contentGap),
-          ],
           Expanded(
-            child: Column(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: Text(
+                if (leading != null) ...[
+                  leading!,
+                  SizedBox(width: spec.contentGap),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
                         title,
                         style: spec.titleStyle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    if (badge != null) ...[
-                      Expanded(flex: 1, child: badge!),
+                      if (caption != null && caption!.isNotEmpty) ...[
+                        SizedBox(height: AppSpacing.xs),
+                        Text(
+                          caption!,
+                          style: captionStyle ?? spec.captionStyle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ],
-                  ],
-                ),
-                if (caption != null && caption!.isNotEmpty) ...[
-                  SizedBox(height: AppSpacing.xs),
-                  Text(
-                    caption!,
-                    style: captionStyle ?? spec.captionStyle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
+                ),
+                if (badge != null) ...[
+                  SizedBox(width: spec.contentGap),
+                  badge!,
                 ],
               ],
             ),

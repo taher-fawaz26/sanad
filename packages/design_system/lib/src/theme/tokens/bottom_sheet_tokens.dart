@@ -53,6 +53,18 @@ abstract final class BottomSheetTokens {
   static const double dragHandleTopPadding = 8;
   static const double horizontalPadding = 24;
 
+  /// Vertical gap between major sections in confirmation sheets
+  /// (Figma `Sheet Content` `1526:13048`).
+  static const double confirmationSectionGap = 24;
+
+  /// Gap inside the text group and between stacked action buttons.
+  static const double confirmationInnerGap = 12;
+
+  /// Extra top inset below the drag handle before confirmation title text.
+  /// Combined with [AppBottomSheet]'s post-handle gap (`AppSpacing.lg`) this
+  /// totals [confirmationSectionGap].
+  static const double confirmationContentTopGap = 8;
+
   /// Default height fraction for [showAppModalSheet] — the sheet occupies
   /// this proportion of the screen height.
   static const double modalHeightFraction = 0.92;

@@ -20,6 +20,15 @@ class BranchListItem extends StatelessWidget {
   /// search sheet to close itself before navigating.
   final VoidCallback? onTap;
 
+  static Color _avatarColor(AppColors colors, String seed) {
+    final palette = <Color>[
+      colors.palettes.sky.shade400,
+      colors.palettes.accent.shade400,
+      colors.palettes.main.shade600,
+    ];
+    return palette[seed.hashCode.abs() % palette.length];
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
@@ -35,7 +44,7 @@ class BranchListItem extends StatelessWidget {
       ),
       leading: AppAvatar(
         initials: initial,
-        backgroundColor: colors.primary,
+        backgroundColor: _avatarColor(colors, branch.id),
         showStatusDot: true,
       ),
       badge: AppStatusBadge(

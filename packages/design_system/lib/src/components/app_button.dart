@@ -252,6 +252,27 @@ extension AppButtonPresets on AppButton {
     );
   }
 
+  static AppButton warning({
+    required String label,
+    required VoidCallback? onPressed,
+    Key? key,
+    AppButtonSize size = AppButtonSize.block,
+    Widget? icon,
+    AppButtonIconPosition iconPosition = AppButtonIconPosition.none,
+    bool isLoading = false,
+  }) {
+    return AppButton(
+      key: key,
+      label: label,
+      onPressed: onPressed,
+      type: AppButtonType.warning,
+      size: size,
+      icon: icon,
+      iconPosition: iconPosition,
+      isLoading: isLoading,
+    );
+  }
+
   static AppButton transparent({
     required String label,
     required VoidCallback? onPressed,

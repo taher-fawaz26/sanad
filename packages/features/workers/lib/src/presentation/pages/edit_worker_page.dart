@@ -55,7 +55,7 @@ class _EditWorkerPageState extends State<EditWorkerPage> {
                     initialFullName: widget.worker.fullName,
                     initialEmail: widget.worker.email,
                     initialPhone: widget.worker.phone,
-                    initialJobTitle: widget.worker.role,
+                    initialJobTitle: widget.worker.jobTitle,
                     initialType: WorkerType.fromApiString(widget.worker.role),
                   ),
                 ),

@@ -1,4 +1,5 @@
-import 'package:design_system/design_system.dart' show AppLargeNavBar, AppNavBar, AppTheme;
+import 'package:design_system/design_system.dart'
+    show AppLargeNavBar, AppNavBar, AppTheme;
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
 import 'package:design_system/src/theme/typography/app_typography.dart';
@@ -54,6 +55,7 @@ class LargeNavBarStyleSpec {
     required this.titleStyleLarge,
     required this.captionStyle,
     required this.iconSize,
+    required this.leadingIconTextGap,
     required this.trailingIconInset,
     required this.trailingButtonInset,
     required this.titleRightInsetIcon,
@@ -71,6 +73,7 @@ class LargeNavBarStyleSpec {
   final TextStyle titleStyleLarge;
   final TextStyle captionStyle;
   final double iconSize;
+  final double leadingIconTextGap;
   final double trailingIconInset;
   final double trailingButtonInset;
   final double titleRightInsetIcon;
@@ -220,6 +223,7 @@ abstract final class NavBarTokens {
         height: 24 / 16,
       ),
       iconSize: responsiveDimension(iconSize),
+      leadingIconTextGap: responsiveDimension(leadingIconTextGap),
       trailingIconInset: responsiveDimension(32),
       trailingButtonInset: responsiveDimension(24),
       titleRightInsetIcon: responsiveDimension(56),

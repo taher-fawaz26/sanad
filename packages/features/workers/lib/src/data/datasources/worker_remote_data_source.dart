@@ -122,6 +122,7 @@ class WorkerRemoteDataSourceImpl implements WorkerRemoteDataSource {
             initials: _stubInitials(params.fullName),
             phone: params.phone,
             email: params.email,
+            jobTitle: params.jobTitle,
             branches: params.branchId,
           );
         },
