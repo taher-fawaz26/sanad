@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:app_assets/app_assets.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/presentation/bloc/branches/branches_bloc.dart';
 import 'package:branches/src/presentation/widgets/branch_empty_states.dart';

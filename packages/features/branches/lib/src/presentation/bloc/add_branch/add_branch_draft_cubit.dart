@@ -80,6 +80,16 @@ class AddBranchDraftCubit extends Cubit<AddBranchDraft> {
     emit(state.copyWith(selectedServices: services));
   }
 
+  void removeService(ServiceEntity service) {
+    emit(
+      state.copyWith(
+        selectedServices: state.selectedServices
+            .where((s) => s.id != service.id)
+            .toList(),
+      ),
+    );
+  }
+
   void updateWorkers(List<WorkerEntity> workers) {
     emit(state.copyWith(selectedWorkers: workers));
   }

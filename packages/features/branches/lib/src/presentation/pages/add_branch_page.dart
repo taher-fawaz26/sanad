@@ -1,3 +1,4 @@
+import 'package:app_assets/app_assets.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_cubit.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_state.dart';
@@ -169,12 +170,20 @@ class _AddBranchPageState extends State<AddBranchPage> {
     );
     if (!mounted || result == null) return;
 
-    context.read<AddBranchDraftCubit>().updateCoverage(
-      address: result.address,
-      position: result.position,
-      radiusKm: result.radiusKm,
-      servingAreas: result.servingAreas,
-    );
+    final draftCubit = context.read<AddBranchDraftCubit>()
+      ..updateCoverage(
+        address: result.address,
+        position: result.position,
+        radiusKm: result.radiusKm,
+        servingAreas: result.servingAreas,
+      );
+
+    // Coverage confirmed → advance straight to the services step. Step 2's
+    // body only ever shows the "add coverage" prompt (pre-coverage state);
+    // once coverage exists there is nothing left to do on that step.
+    if (_currentStep == 2 && draftCubit.state.isStepTwoComplete) {
+      _advanceTo(3);
+    }
   }
 
   Future<void> _openSelectServices() async {
@@ -281,6 +290,11 @@ class _AddBranchPageState extends State<AddBranchPage> {
   void _showBranchCreatedSuccessPopover() {
     final colors = context.appColors;
     final spec = context.appDialogTheme.spec;
+    // Figma `194:5419`: the whole title is `main/600` (== colors.primary),
+    // not just a highlighted lead-in — only the copy is split across two
+    // translation keys.
+    final titleStyle = spec.titleStyle.copyWith(color: colors.primary);
+    final iconSize = responsiveDimension(60);
 
     showAppPopover<void>(
       context: context,
@@ -290,11 +304,11 @@ class _AddBranchPageState extends State<AddBranchPage> {
           children: [
             TextSpan(
               text: 'branches.add_branch.success_dialog_title_highlight'.tr(),
-              style: spec.titleStyle.copyWith(color: colors.primary),
+              style: titleStyle,
             ),
             TextSpan(
               text: 'branches.add_branch.success_dialog_title_body'.tr(),
-              style: spec.titleStyle,
+              style: titleStyle,
             ),
           ],
         ),
@@ -302,7 +316,26 @@ class _AddBranchPageState extends State<AddBranchPage> {
       ),
       description: 'branches.add_branch.success_dialog_description'.tr(),
       imageLayout: AppDialogImageLayout.iconSmall,
-      featureIconColor: AppFeatureIconColor.success,
+      // Custom two-tone illustration (`365:15054`) instead of the generic
+      // featured icon — its dark-green/light-green pair isn't part of the
+      // `main` palette scale, so `featureIconColor` is left unset.
+      image: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors.successContainer,
+          shape: BoxShape.circle,
+        ),
+        child: SizedBox(
+          width: spec.featureIconOuterSize,
+          height: spec.featureIconOuterSize,
+          child: Center(
+            child: AppSvgPicture.asset(
+              AppSvgs.successCheck,
+              width: iconSize,
+              height: iconSize,
+            ),
+          ),
+        ),
+      ),
       actions: AppPopoverActions.single,
       primaryLabel: 'branches.add_branch.success_dialog_okay'.tr(),
       barrierDismissible: false,
@@ -443,30 +476,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
         totalSteps: _totalSteps,
         furthestCompletedStep: _furthestStep,
         onStepTapped: _onStepTapped,
-        child:
-            BlocSelector<
-              AddBranchDraftCubit,
-              AddBranchDraft,
-              ({
-                String? address,
-                List<ServingArea> areas,
-                double? radius,
-              })
-            >(
-              selector: (state) => (
-                address: state.branchAddress,
-                areas: state.servingAreas,
-                radius: state.coverageRadiusKm,
-              ),
-              builder: (context, data) {
-                return AddBranchCoverageStep(
-                  pickedAddress: data.address,
-                  servingAreas: data.areas,
-                  radiusKm: data.radius,
-                  onEditCoverage: _openCoverageArea,
-                );
-              },
-            ),
+        child: AddBranchCoverageStep(onEditCoverage: _openCoverageArea),
       ),
       3 => AddBranchWizardStepShell(
         currentStep: _currentStep,
@@ -484,6 +494,9 @@ class _AddBranchPageState extends State<AddBranchPage> {
                 return AddBranchServicesStep(
                   selectedServices: services,
                   onAddServices: _openSelectServices,
+                  onRemoveService: context
+                      .read<AddBranchDraftCubit>()
+                      .removeService,
                 );
               },
             ),

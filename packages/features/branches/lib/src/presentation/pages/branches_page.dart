@@ -1,3 +1,4 @@
+import 'package:app_assets/app_assets.dart';
 import 'package:branches/src/presentation/bloc/branches/branches_bloc.dart';
 import 'package:branches/src/presentation/widgets/branch_empty_states.dart';
 import 'package:branches/src/presentation/widgets/branch_list_item.dart';
@@ -44,7 +45,10 @@ class _BranchesTab extends StatelessWidget {
   static const _titleSectionHeight = 60.0;
   static const _headerSafetyMargin = 20.0;
 
-  double _bottomBarHeight() => AppSpacing.sm * 2 + AppDimension.fieldHeightMd;
+  /// Pinned search row: bordered field height + vertical padding around it.
+  /// Must match the [PreferredSize] child exactly to avoid RenderFlex overflow.
+  double _bottomBarHeight() =>
+      responsiveDimension(FieldTokens.fieldHeight) + (AppSpacing.sm * 2);
 
   double _expandedHeaderHeight() {
     final flexibleSpaceContent =
@@ -193,19 +197,23 @@ class _CollapsingHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AppTableRow(
-          title: 'branches.company_name'.tr(),
-          trailing: AppTableTrailing.icon,
-          leading: AppTableLeading.avatar,
-          leadingAvatar: AppAvatar(
-            initials: 'G',
-            backgroundColor: context.appColors.primary,
-            showStatusDot: true,
+        AppBar(
+          title: Text('branches.company_name'.tr()),
+          centerTitle: false,
+          leading: IconButton(
+            onPressed: () => context.pop(),
+            icon: const Icon(Icons.arrow_back),
           ),
-          trailingIcon: AppNotificationIcon(
-            hasUnread: true,
-            onTap: () {},
-          ),
+          actions: [
+            //notification icon
+            Padding(
+              padding: EdgeInsetsGeometry.only(left: AppSpacing.md),
+              child: AppNotificationIcon(
+                hasUnread: true,
+                onTap: () {},
+              ),
+            ),
+          ],
         ),
         AppSection(title: 'branches.title'.tr()),
       ],

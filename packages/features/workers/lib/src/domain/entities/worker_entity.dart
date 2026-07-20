@@ -23,6 +23,14 @@ class WorkerEntity extends Equatable {
   final String? branches;
 
   @override
-  List<Object?> get props =>
-      [id, fullName, role, initials, status, phone, email, branches];
+  List<Object?> get props => [
+    id,
+    fullName,
+    role,
+    initials,
+    status,
+    phone,
+    email,
+    branches,
+  ];
 }

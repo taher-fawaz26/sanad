@@ -32,6 +32,7 @@ export 'src/components/app_loading_indicator.dart';
 export 'src/components/app_radio_tile.dart';
 export 'src/components/app_refresh_indicator.dart';
 export 'src/components/app_select_field.dart';
+export 'src/components/app_stat_card.dart';
 export 'src/components/app_svg_picture.dart';
 export 'src/components/app_wizard_step_indicator.dart';
 export 'src/components/app_icon_button.dart';

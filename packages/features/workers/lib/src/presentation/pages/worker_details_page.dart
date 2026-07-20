@@ -1,8 +1,10 @@
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
 import 'package:workers/src/domain/entities/worker_status.dart';
+import 'package:workers/src/routes/worker_routes.dart';
 
 /// Figma `2. worker-details` (`1526:11216`).
 class WorkerDetailsPage extends StatelessWidget {
@@ -39,7 +41,7 @@ class WorkerDetailsPage extends StatelessWidget {
                 ),
               ),
             ),
-            _EditProfileButton(),
+            _EditProfileButton(worker: worker),
           ],
         ),
       ),
@@ -200,6 +202,10 @@ class _DetailRow extends StatelessWidget {
 }
 
 class _EditProfileButton extends StatelessWidget {
+  const _EditProfileButton({required this.worker});
+
+  final WorkerEntity worker;
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -209,9 +215,9 @@ class _EditProfileButton extends StatelessWidget {
       ),
       child: AppButton(
         label: 'workers.edit_profile'.tr(),
-        onPressed: () => showAppSnackbar(
-          context: context,
-          title: 'workers.coming_soon'.tr(),
+        onPressed: () => context.push(
+          WorkerRoutes.editWorkerFor(worker.id),
+          extra: worker,
         ),
       ),
     );

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
 import 'package:workers/src/domain/entities/worker_status.dart';
 import 'package:workers/src/presentation/bloc/workers/workers_bloc.dart';
+import 'package:workers/src/presentation/widgets/action_confirmation_sheet.dart';
 import 'package:workers/src/routes/worker_routes.dart';
 
 const ({AppButtonType type, bool destructive}) _suspendButton = (
@@ -56,6 +57,7 @@ class _WorkerActionsSheetBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final isSuspended = worker.status == WorkerStatus.suspended;
+    final isPending = worker.status == WorkerStatus.pending;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -87,32 +89,34 @@ class _WorkerActionsSheetBody extends StatelessWidget {
           ),
           onTap: () {
             Navigator.of(context).pop();
-            showAppSnackbar(
-              context: pageContext,
-              title: 'workers.coming_soon'.tr(),
+            pageContext.push(
+              WorkerRoutes.editWorkerFor(worker.id),
+              extra: worker,
             );
           },
         ),
-        // Resend Invitation
-        AppTableRow(
-          title: 'workers.action_resend_invitation'.tr(),
-          leading: AppTableLeading.icon,
-          leadingIcon: Icon(
-            Icons.forward_to_inbox_outlined,
-            size: 24,
-            color: colors.textPrimary,
+        // Resend Invitation — only relevant while the worker hasn't
+        // accepted their invite yet.
+        if (isPending)
+          AppTableRow(
+            title: 'workers.action_resend_invitation'.tr(),
+            leading: AppTableLeading.icon,
+            leadingIcon: Icon(
+              Icons.forward_to_inbox_outlined,
+              size: 24,
+              color: colors.textPrimary,
+            ),
+            onTap: () {
+              Navigator.of(context).pop();
+              if (!pageContext.mounted) return;
+              pageContext.read<WorkersBloc>().add(
+                InvitationResendEvent(worker.id),
+              );
+            },
           ),
-          onTap: () {
-            Navigator.of(context).pop();
-            showAppSnackbar(
-              context: pageContext,
-              title: 'workers.coming_soon'.tr(),
-            );
-          },
-        ),
         const AppDivider(),
         // Suspend / Unsuspend Worker
-        _ActionRow(
+        SheetActionRow(
           label: isSuspended
               ? 'workers.action_unsuspend'.tr()
               : 'workers.action_suspend'.tr(),
@@ -131,7 +135,7 @@ class _WorkerActionsSheetBody extends StatelessWidget {
           },
         ),
         // Delete Worker
-        _ActionRow(
+        SheetActionRow(
           label: 'workers.action_delete'.tr(),
           svgAsset: AppSvgs.trashBold,
           color: colors.error,
@@ -156,7 +160,7 @@ class _WorkerActionsSheetBody extends StatelessWidget {
     final btnConfig = isSuspending ? _suspendButton : _unsuspendButton;
     final confirmed = await showAppModalSheet<bool>(
       context: context,
-      child: _ConfirmationSheetContent(
+      child: ActionConfirmationSheet(
         title: isSuspending
             ? 'workers.suspend_title'.tr()
             : 'workers.unsuspend_title'.tr(),
@@ -192,7 +196,7 @@ class _WorkerActionsSheetBody extends StatelessWidget {
   }) async {
     final confirmed = await showAppModalSheet<bool>(
       context: context,
-      child: _ConfirmationSheetContent(
+      child: ActionConfirmationSheet(
         title: 'workers.delete_title'.tr(),
         description: 'workers.delete_description'.tr(
           namedArgs: {'name': worker.fullName},
@@ -207,126 +211,5 @@ class _WorkerActionsSheetBody extends StatelessWidget {
     if ((confirmed ?? false) && context.mounted) {
       context.read<WorkersBloc>().add(WorkerDeletedEvent(worker.id));
     }
-  }
-}
-
-class _ActionRow extends StatelessWidget {
-  const _ActionRow({
-    required this.label,
-    required this.color,
-    required this.onTap,
-    this.icon,
-    this.svgAsset,
-  });
-
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-  final IconData? icon;
-  final String? svgAsset;
-
-  @override
-  Widget build(BuildContext context) {
-    final typography = context.appTypography;
-    final colors = context.appColors;
-
-    return Material(
-      color: colors.white,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: AppSpacing.xl,
-            vertical: 18,
-          ),
-          child: Row(
-            children: [
-              if (svgAsset != null)
-                AppSvgPicture.asset(
-                  svgAsset!,
-                  width: 24,
-                  height: 24,
-                  colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
-                )
-              else if (icon != null)
-                Icon(icon, size: 24, color: color),
-              SizedBox(width: AppSpacing.lg),
-              Expanded(
-                child: Text(
-                  label,
-                  style: typography.regularNormal.copyWith(color: color),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Confirmation bottom sheet content for delete/suspend/unsuspend actions.
-///
-/// Figma `Sheet Content` (`1526:13048`, `1526:13037`, `1526:13026`).
-class _ConfirmationSheetContent extends StatelessWidget {
-  const _ConfirmationSheetContent({
-    required this.title,
-    required this.description,
-    required this.actionLabel,
-    required this.buttonType,
-    required this.destructive,
-    required this.cancelLabel,
-  });
-
-  final String title;
-  final String description;
-  final String actionLabel;
-  final AppButtonType buttonType;
-  final bool destructive;
-  final String cancelLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final typography = context.appTypography;
-
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(height: AppSpacing.lg),
-          Text(
-            title,
-            style: typography.title2.copyWith(
-              color: colors.textPrimary,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          SizedBox(height: AppSpacing.md),
-          Text(
-            description,
-            style: typography.regularNormal.copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
-          SizedBox(height: AppSpacing.xl),
-          AppButton(
-            label: actionLabel,
-            type: buttonType,
-            destructive: destructive,
-            onPressed: () => Navigator.of(context).pop(true),
-          ),
-          SizedBox(height: AppSpacing.md),
-          AppButton(
-            label: cancelLabel,
-            type: AppButtonType.outline,
-            onPressed: () => Navigator.of(context).pop(false),
-          ),
-          SizedBox(height: AppSpacing.lg),
-        ],
-      ),
-    );
   }
 }

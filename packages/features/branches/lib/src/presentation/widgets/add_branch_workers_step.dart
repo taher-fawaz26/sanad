@@ -1,4 +1,5 @@
 import 'package:app_assets/app_assets.dart';
+import 'package:branches/src/presentation/widgets/branch_pin_empty_body.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -6,7 +7,7 @@ import 'package:workers/workers.dart';
 
 /// Add branch — Step 4 workers.
 ///
-/// Empty: Figma `245:6400`.
+/// Empty: Figma `245:6400` (body `1563:11012`).
 /// Filled: Figma `956:3701`.
 class AddBranchWorkersStep extends StatelessWidget {
   const AddBranchWorkersStep({
@@ -32,12 +33,15 @@ class AddBranchWorkersStep extends StatelessWidget {
       );
     }
 
-    return Center(
-      child: AppEmptyState(
-        illustration: AppEmptyStateImage(
-          assetPath: AppImages.addWorkers,
-          width: responsiveDimension(155),
-          height: responsiveDimension(188),
+    final iconSize = responsiveDimension(48);
+    return GestureDetector(
+      onTap: onAddWorkers,
+      behavior: HitTestBehavior.opaque,
+      child: BranchPinEmptyBody(
+        icon: AppSvgPicture.asset(
+          AppSvgs.users2,
+          width: iconSize,
+          height: iconSize,
         ),
         title: 'branches.add_branch.workers_title'.tr(),
         description: 'branches.add_branch.workers_description'.tr(),
@@ -61,35 +65,29 @@ class _WorkersSetContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.xl,
+        vertical: AppSpacing.xl,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AppSection(
-            title: 'branches.add_branch.added_workers_section'.tr(
-              namedArgs: {'count': '${selectedWorkers.length}'},
+          for (final worker in selectedWorkers) ...[
+            WorkerListCard(
+              worker: worker,
+              onRemove: () => onRemoveWorker(worker),
             ),
-            size: AppSectionSize.compact,
-            tone: AppSectionTone.primary,
-          ),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-            child: Column(
-              children: [
-                for (var i = 0; i < selectedWorkers.length; i++) ...[
-                  if (i > 0) SizedBox(height: AppSpacing.sm),
-                  WorkerListCard(
-                    worker: selectedWorkers[i],
-                    onRemove: () => onRemoveWorker(selectedWorkers[i]),
-                  ),
-                ],
-                SizedBox(height: AppSpacing.md),
-                AppButtonPresets.outline(
-                  label: 'branches.add_branch.add_more_workers_button'.tr(),
-                  icon: const Icon(Icons.add, size: 20),
-                  iconPosition: AppButtonIconPosition.left,
-                  onPressed: onAddWorkers,
-                ),
-              ],
+            SizedBox(height: AppSpacing.md),
+          ],
+          SizedBox(height: AppSpacing.sm),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: AppButtonPresets.outline(
+              label: 'branches.add_branch.add_more_workers_button'.tr(),
+              size: AppButtonSize.large,
+              icon: const Icon(Icons.add_circle_outline),
+              iconPosition: AppButtonIconPosition.left,
+              onPressed: onAddWorkers,
             ),
           ),
         ],

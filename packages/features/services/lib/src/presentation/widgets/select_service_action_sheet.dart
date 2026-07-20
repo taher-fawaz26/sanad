@@ -1,3 +1,4 @@
+import 'package:app_assets/app_assets.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -143,6 +144,7 @@ class _SelectServiceActionSheetState extends State<_SelectServiceActionSheet> {
             ),
             child: AppSearchField(
               controller: _searchController,
+              variant: AppSearchFieldVariant.bordered,
               hint: 'services.select_service.search_hint'.tr(),
               showMicIcon: false,
               onChanged: (value) => setState(() => _query = value),
@@ -193,27 +195,41 @@ class _SelectServiceActionSheetState extends State<_SelectServiceActionSheet> {
 
     final services = _filteredServices;
     if (services.isEmpty) {
-      // Figma `No services found` search-empty state (`1513:7799`).
+      // Figma `service-search-empty` (`1517:9696`): 48dp search-alert icon,
+      // semibold title, muted description.
+      final typography = context.appTypography;
+      final colors = context.appColors;
+      final iconSize = responsiveDimension(48);
       return Center(
         child: Padding(
-          padding: EdgeInsets.all(AppSpacing.xl),
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.xl,
+            vertical: AppSpacing.xxxl,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              AppSvgPicture.asset(
+                AppSvgs.searchAlert,
+                width: iconSize,
+                height: iconSize,
+              ),
+              SizedBox(height: AppSpacing.lg),
               Text(
                 'services.select_service.empty'.tr(),
                 textAlign: TextAlign.center,
-                style: context.appTypography.regularNormal.copyWith(
-                  color: context.appColors.textPrimary,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: typography
+                    .semiBold(typography.regularNormal)
+                    .copyWith(
+                      color: colors.textPrimary,
+                    ),
               ),
-              SizedBox(height: AppSpacing.xs),
+              SizedBox(height: AppSpacing.sm),
               Text(
                 'services.select_service.empty_description'.tr(),
                 textAlign: TextAlign.center,
-                style: context.appTypography.smallNormal.copyWith(
-                  color: context.appColors.textSecondary,
+                style: typography.smallNormal.copyWith(
+                  color: colors.textMuted,
                 ),
               ),
             ],

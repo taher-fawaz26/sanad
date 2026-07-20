@@ -21,6 +21,12 @@ abstract final class AppSvgs {
   /// Check circle — featured icon success default.
   static const String checkCircle = '$_base/check_circle.svg';
 
+  /// Solid dark-green circle + light-green checkmark — add-branch success
+  /// popover illustration (`194:5419` / `365:15054`). Baked-in Figma colors
+  /// (`#085D3A` / `#75E0A7`) — not part of the `main` palette scale, so
+  /// shipped as a standalone asset rather than reconstructed from tokens.
+  static const String successCheck = '$_base/success_check.svg';
+
   // ── Bottom navigation ──────────────────────────────────────────────────────
 
   /// Home tab.
@@ -45,6 +51,12 @@ abstract final class AppSvgs {
   /// Magnifying glass — Figma `Bars / Search Bars` leading icon.
   static const String search = '$_base/search.svg';
 
+  /// Magnifier with alert mark — search-empty states (`1517:9783`).
+  static const String searchAlert = '$_base/search_alert.svg';
+
+  /// Two-people outline — team empty / search-empty states (`1563:11019`).
+  static const String users2 = '$_base/users_2.svg';
+
   /// Microphone — Figma `Bars / Search Bars` trailing icon.
   static const String mic = '$_base/mic.svg';
 
@@ -55,6 +67,12 @@ abstract final class AppSvgs {
 
   /// Red map pin marker — Figma location / coverage map pin.
   static const String mapPinMarker = '$_base/map_pin_marker.svg';
+
+  /// Outline map pin — Figma coverage empty state `map-pin` (`1563:10990`).
+  static const String pin = '$_base/pin.svg';
+
+  /// Outline car — service card icon (`962:6345`).
+  static const String car = '$_base/car.svg';
 
   /// Teal radius ring overlay — Figma coverage map ellipse.
   static const String mapRadiusRing = '$_base/map_radius_ring.svg';
@@ -87,4 +105,12 @@ abstract final class AppSvgs {
 
   /// Edit branch — pencil icon.
   static const String branchEdit = '$_base/branch_edit.svg';
+
+  // ── Organization settings stat cards ───────────────────────────────────────
+
+  /// Invitations — outbound mail icon.
+  static const String mailOut = '$_base/mail_out.svg';
+
+  /// Services — bag icon.
+  static const String bag = '$_base/bag.svg';
 }

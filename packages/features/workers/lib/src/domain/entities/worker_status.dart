@@ -1,7 +1,8 @@
 enum WorkerStatus {
   active,
   pending,
-  suspended;
+  suspended
+  ;
 
   static WorkerStatus fromString(String? value) =>
       switch (value?.toLowerCase()) {

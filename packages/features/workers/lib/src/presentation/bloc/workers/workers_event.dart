@@ -49,3 +49,38 @@ final class WorkerStatusChangedEvent extends WorkersEvent {
 final class WorkerActionFailureClearedEvent extends WorkersEvent {
   const WorkerActionFailureClearedEvent();
 }
+
+final class WorkersTabChangedEvent extends WorkersEvent {
+  const WorkersTabChangedEvent(this.tabIndex);
+
+  final int tabIndex;
+
+  @override
+  List<Object?> get props => [tabIndex];
+}
+
+final class InvitationsFetchEvent extends WorkersEvent {
+  const InvitationsFetchEvent();
+}
+
+final class InvitationsRefreshEvent extends WorkersEvent {
+  const InvitationsRefreshEvent();
+}
+
+final class InvitationResendEvent extends WorkersEvent {
+  const InvitationResendEvent(this.invitationId);
+
+  final String invitationId;
+
+  @override
+  List<Object?> get props => [invitationId];
+}
+
+final class InvitationCancelledEvent extends WorkersEvent {
+  const InvitationCancelledEvent(this.invitationId);
+
+  final String invitationId;
+
+  @override
+  List<Object?> get props => [invitationId];
+}

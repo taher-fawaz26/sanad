@@ -8,25 +8,30 @@ class WorkersState extends Equatable {
     this.searchQuery = '',
     this.failure,
     this.actionFailure,
+    this.selectedTab = 0,
+    this.invitations = const [],
+    this.filteredInvitations = const [],
+    this.invitationsStatus = RequestStatus.initial,
   });
 
   final RequestStatus status;
-
-  /// All workers loaded from the API (unfiltered).
   final List<WorkerEntity> workers;
-
-  /// Pre-computed result of applying [searchQuery] to [workers].
   final List<WorkerEntity> filteredWorkers;
-
   final String searchQuery;
   final Failure? failure;
-
-  /// Failure from item actions (delete, status change) — not fetch errors.
   final Failure? actionFailure;
+
+  final int selectedTab;
+  final List<InvitationEntity> invitations;
+  final List<InvitationEntity> filteredInvitations;
+  final RequestStatus invitationsStatus;
 
   bool get isLoading => status == RequestStatus.loading;
   bool get isSuccess => status == RequestStatus.success;
   bool get hasError => status == RequestStatus.failure;
+
+  bool get isTeamTab => selectedTab == 0;
+  bool get isInvitationsTab => selectedTab == 1;
 
   WorkersState copyWith({
     RequestStatus? status,
@@ -36,8 +41,12 @@ class WorkersState extends Equatable {
     Failure? actionFailure,
     bool clearFailure = false,
     bool clearActionFailure = false,
+    int? selectedTab,
+    List<InvitationEntity>? invitations,
+    RequestStatus? invitationsStatus,
   }) {
     final newWorkers = workers ?? this.workers;
+    final newInvitations = invitations ?? this.invitations;
     final newQuery = searchQuery ?? this.searchQuery;
 
     return WorkersState(
@@ -49,6 +58,10 @@ class WorkersState extends Equatable {
       actionFailure: clearActionFailure
           ? null
           : (actionFailure ?? this.actionFailure),
+      selectedTab: selectedTab ?? this.selectedTab,
+      invitations: newInvitations,
+      filteredInvitations: _applyInvitationSearch(newInvitations, newQuery),
+      invitationsStatus: invitationsStatus ?? this.invitationsStatus,
     );
   }
 
@@ -60,21 +73,39 @@ class WorkersState extends Equatable {
     searchQuery,
     failure,
     actionFailure,
+    selectedTab,
+    invitations,
+    filteredInvitations,
+    invitationsStatus,
   ];
 }
 
 List<WorkerEntity> _applySearch(
   List<WorkerEntity> workers,
   String searchQuery,
-) =>
-    searchQuery.isEmpty
-        ? workers
-        : workers
-              .where(
-                (w) =>
-                    w.fullName.toLowerCase().contains(
-                          searchQuery.toLowerCase(),
-                        ) ||
-                    w.role.toLowerCase().contains(searchQuery.toLowerCase()),
-              )
-              .toList();
+) => searchQuery.isEmpty
+    ? workers
+    : workers
+          .where(
+            (w) =>
+                w.fullName.toLowerCase().contains(
+                  searchQuery.toLowerCase(),
+                ) ||
+                w.role.toLowerCase().contains(searchQuery.toLowerCase()),
+          )
+          .toList();
+
+List<InvitationEntity> _applyInvitationSearch(
+  List<InvitationEntity> invitations,
+  String searchQuery,
+) => searchQuery.isEmpty
+    ? invitations
+    : invitations
+          .where(
+            (i) =>
+                i.fullName.toLowerCase().contains(
+                  searchQuery.toLowerCase(),
+                ) ||
+                i.role.toLowerCase().contains(searchQuery.toLowerCase()),
+          )
+          .toList();

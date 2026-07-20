@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
 import 'package:workers/src/domain/entities/worker_status.dart';
 import 'package:workers/src/presentation/bloc/workers/workers_bloc.dart';
+import 'package:workers/src/presentation/widgets/invitations_content.dart';
 import 'package:workers/src/presentation/widgets/worker_actions_bottom_sheet.dart';
 import 'package:workers/src/routes/worker_routes.dart';
 
@@ -57,7 +58,27 @@ class _WorkersPageState extends State<WorkersPage> {
                     showBackButton: true,
                     trailing: AppNotificationIcon(onTap: () {}),
                   ),
-                  Expanded(child: _WorkersContent(state: state)),
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                      vertical: AppSpacing.sm,
+                    ),
+                    child: AppSegmentedControl(
+                      segments: [
+                        'workers.tab_team'.tr(),
+                        'workers.tab_invitations'.tr(),
+                      ],
+                      selectedIndex: state.selectedTab,
+                      onChanged: (index) => context.read<WorkersBloc>().add(
+                        WorkersTabChangedEvent(index),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: state.isTeamTab
+                        ? _WorkersContent(state: state)
+                        : InvitationsContent(state: state),
+                  ),
                   _FooterButton(isLoading: state.isLoading),
                 ],
               );
@@ -213,12 +234,7 @@ class _FooterButton extends StatelessWidget {
         label: 'workers.add_team'.tr(),
         icon: const Icon(Icons.add_circle_outline),
         iconPosition: AppButtonIconPosition.center,
-        onPressed: isLoading
-            ? null
-            : () => showAppSnackbar(
-                context: context,
-                title: 'workers.coming_soon'.tr(),
-              ),
+        onPressed: isLoading ? null : () => context.push(WorkerRoutes.add),
       ),
     );
   }
@@ -247,10 +263,7 @@ class _EmptyState extends StatelessWidget {
         title: 'workers.empty_title'.tr(),
         description: 'workers.empty_description'.tr(),
         actionLabel: 'workers.add_team'.tr(),
-        onAction: () => showAppSnackbar(
-          context: context,
-          title: 'workers.coming_soon'.tr(),
-        ),
+        onAction: () => context.push(WorkerRoutes.add),
       ),
     );
   }

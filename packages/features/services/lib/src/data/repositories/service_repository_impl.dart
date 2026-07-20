@@ -12,6 +12,6 @@ class ServiceRepositoryImpl implements ServiceRepository {
   @override
   TaskEither<Failure, List<ServiceEntity>> getServices() =>
       _remoteDataSource.getServices().map(
-            (dtos) => dtos.map((dto) => dto.toEntity()).toList(),
-          );
+        (dtos) => dtos.map((dto) => dto.toEntity()).toList(),
+      );
 }

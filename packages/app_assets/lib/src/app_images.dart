@@ -21,5 +21,8 @@ abstract final class AppImages {
   /// Figma add-branch workers empty state (`245:6400`).
   static const String addWorkers = '$_base/workers/worker.png';
 
+  /// Wrench & screwdriver — services empty state (`347:13959`).
+  static const String serviceTools = '$_base/services/service_tools.png';
+
   static const String addServices = '$_base/illustrations/add_services.svg';
 }

@@ -17,7 +17,9 @@ Future<LocationPickerResult?> showLocationPickerSheet(
   return showAppModalSheet<LocationPickerResult>(
     context: context,
     child: Builder(
-      builder: (sheetContext) => Padding(
+      // Scrollable so locale/text-scale variance (e.g. taller Arabic line
+      // heights) scrolls instead of overflowing the sheet's fixed height.
+      builder: (sheetContext) => SingleChildScrollView(
         padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
