@@ -5,6 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:localization/localization.dart';
 import 'package:workers/src/presentation/bloc/workers/workers_bloc.dart';
 import 'package:workers/src/presentation/widgets/invitations_content.dart';
 import 'package:workers/src/presentation/widgets/worker_empty_states.dart';
@@ -38,13 +39,11 @@ class _WorkersPageState extends State<WorkersPage> {
               previous.actionFailure != current.actionFailure &&
               current.actionFailure != null,
           listener: (context, state) {
-            final message = state.actionFailure!.message.trim();
-            final title = message.isEmpty
+            final failure = state.actionFailure!;
+            final title = failure.message.trim().isEmpty
                 ? 'workers.action_failed'.tr()
-                : message.contains(' ')
-                ? message
-                : message.tr();
-            showAppSnackbar(context: context, title: title);
+                : failure.localizedMessage();
+            showAppErrorSnackbar(context: context, title: title);
             context.read<WorkersBloc>().add(
               const WorkerActionFailureClearedEvent(),
             );
@@ -182,6 +181,15 @@ class _WorkersContent extends StatelessWidget {
   }
 }
 
+/// Opens the add-worker flow and refreshes the list if a worker was added.
+/// The add page pops `true` on success — see EH-S3-02 refresh convention.
+Future<void> _openAddWorker(BuildContext context) async {
+  final added = await context.push<bool>(WorkerRoutes.add);
+  if ((added ?? false) && context.mounted) {
+    context.read<WorkersBloc>().add(const WorkersRefreshEvent());
+  }
+}
+
 class _FooterButton extends StatelessWidget {
   const _FooterButton({required this.isLoading});
 
@@ -198,7 +206,7 @@ class _FooterButton extends StatelessWidget {
         label: 'workers.add_team'.tr(),
         icon: const Icon(Icons.add_circle_outline),
         iconPosition: AppButtonIconPosition.center,
-        onPressed: isLoading ? null : () => context.push(WorkerRoutes.add),
+        onPressed: isLoading ? null : () => _openAddWorker(context),
       ),
     );
   }
@@ -221,7 +229,7 @@ class _EmptyState extends StatelessWidget {
         title: 'workers.empty_title'.tr(),
         description: 'workers.empty_description'.tr(),
         actionLabel: 'workers.add_team'.tr(),
-        onAction: () => context.push(WorkerRoutes.add),
+        onAction: () => _openAddWorker(context),
         actionIcon: const Icon(Icons.add, size: 20),
         actionIconPosition: AppButtonIconPosition.center,
       ),
@@ -237,42 +245,15 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final retryLabel = 'empty_states.retry'.tr();
-    final f = failure;
-
-    if (f is NoInternetFailure || f is NetworkFailure) {
-      return Center(
-        child: AppNetworkFailureState(
-          title: 'empty_states.network_title'.tr(),
-          description: 'empty_states.network_description'.tr(),
-          retryLabel: retryLabel,
-          onRetry: onRetry,
-        ),
-      );
-    }
-
-    if (f is TimeoutFailure) {
-      return Center(
-        child: AppNetworkFailureState(
-          title: 'empty_states.timeout_title'.tr(),
-          description: 'empty_states.timeout_description'.tr(),
-          retryLabel: retryLabel,
-          onRetry: onRetry,
-        ),
-      );
-    }
-
-    final description = (f != null && f.message.isNotEmpty)
-        ? f.message.tr()
-        : 'empty_states.server_error_description'.tr();
-
-    return Center(
-      child: AppGenericEmptyState(
-        title: 'empty_states.server_error_title'.tr(),
-        description: description,
-        actionLabel: retryLabel,
-        onAction: onRetry,
-      ),
+    final display = failureErrorDisplay(failure);
+    return AppErrorState(
+      style: display.isConnectivity
+          ? AppErrorStateStyle.network
+          : AppErrorStateStyle.generic,
+      title: display.title,
+      description: display.description,
+      retryLabel: failureRetryLabel(),
+      onRetry: display.isRetryable ? onRetry : null,
     );
   }
 }

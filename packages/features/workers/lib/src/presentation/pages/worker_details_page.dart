@@ -4,6 +4,7 @@ import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:localization/localization.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
 import 'package:workers/src/domain/entities/worker_status.dart';
 import 'package:workers/src/domain/entities/worker_type.dart';
@@ -85,20 +86,26 @@ class _WorkerDetailsPageState extends State<WorkerDetailsPage> {
               child: switch ((worker, _loading, _failure)) {
                 (final WorkerEntity w, _, _) => _DetailsBody(worker: w),
                 (_, true, _) => const Center(child: AppLoadingIndicator()),
-                (_, _, final Failure _) => Center(
-                  child: AppNetworkFailureState(
-                    title: 'empty_states.network_title'.tr(),
-                    description: 'empty_states.network_description'.tr(),
-                    retryLabel: 'empty_states.retry'.tr(),
-                    onRetry: _fetch,
-                  ),
-                ),
+                (_, _, final Failure failure) => _errorState(failure),
                 _ => const SizedBox.shrink(),
               },
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _errorState(Failure failure) {
+    final display = failureErrorDisplay(failure);
+    return AppErrorState(
+      style: display.isConnectivity
+          ? AppErrorStateStyle.network
+          : AppErrorStateStyle.generic,
+      title: display.title,
+      description: display.description,
+      retryLabel: failureRetryLabel(),
+      onRetry: display.isRetryable ? _fetch : null,
     );
   }
 }

@@ -12,8 +12,11 @@ import 'package:sanad_client/src/di/app_di.dart';
 ///
 /// Extracted from main.dart to keep the entry-point minimal and to allow
 /// flavor-specific entry-points to share this bootstrap sequence.
-Future<void> bootstrap() async {
+Future<void> bootstrap() => runGuarded(_bootstrap);
+
+Future<void> _bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
+  installGlobalErrorHandlers();
   await EasyLocalization.ensureInitialized();
 
   final appDir = await getApplicationDocumentsDirectory();

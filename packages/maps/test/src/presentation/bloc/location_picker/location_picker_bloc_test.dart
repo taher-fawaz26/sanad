@@ -8,7 +8,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:maps/src/domain/entities/geocoded_address.dart';
 import 'package:maps/src/domain/entities/place_prediction.dart';
 import 'package:maps/src/domain/usecases/forward_geocode_usecase.dart';
-import 'package:maps/src/domain/usecases/get_current_location_usecase.dart';
 import 'package:maps/src/domain/usecases/get_place_details_usecase.dart';
 import 'package:maps/src/domain/usecases/open_location_settings_usecase.dart';
 import 'package:maps/src/domain/usecases/reverse_geocode_usecase.dart';
@@ -17,9 +16,6 @@ import 'package:maps/src/presentation/bloc/location_picker/location_picker_bloc.
 import 'package:maps/src/presentation/models/place_search_status.dart';
 import 'package:maps/src/services/location_failure_codes.dart';
 import 'package:mocktail/mocktail.dart';
-
-class _MockGetCurrentLocation extends Mock
-    implements GetCurrentLocationUseCase {}
 
 class _MockReverseGeocode extends Mock implements ReverseGeocodeUseCase {}
 
@@ -50,7 +46,6 @@ const _tPrediction = PlacePrediction(
 );
 
 void main() {
-  late _MockGetCurrentLocation getCurrentLocation;
   late _MockReverseGeocode reverseGeocode;
   late _MockForwardGeocode forwardGeocode;
   late _MockOpenSettings openSettings;
@@ -58,7 +53,6 @@ void main() {
   late _MockGetPlaceDetails getPlaceDetails;
 
   LocationPickerBloc buildBloc({bool withPlaces = false}) => LocationPickerBloc(
-    getCurrentLocationUseCase: getCurrentLocation,
     reverseGeocodeUseCase: reverseGeocode,
     forwardGeocodeUseCase: forwardGeocode,
     openLocationSettingsUseCase: openSettings,
@@ -83,7 +77,6 @@ void main() {
   });
 
   setUp(() {
-    getCurrentLocation = _MockGetCurrentLocation();
     reverseGeocode = _MockReverseGeocode();
     forwardGeocode = _MockForwardGeocode();
     openSettings = _MockOpenSettings();
@@ -144,57 +137,18 @@ void main() {
       );
 
       blocTest<LocationPickerBloc, LocationPickerState>(
-        'without initial position -> gets current location',
-        build: () {
-          when(
-            () => getCurrentLocation(any()),
-          ).thenReturn(TaskEither.right(_tPosition));
-          when(
-            () => reverseGeocode(any()),
-          ).thenReturn(TaskEither.right(_tGeocoded));
-          return buildBloc();
-        },
+        'without initial position -> ready on UAE default, no GPS, no pin',
+        build: buildBloc,
         act: (bloc) => bloc.add(LocationPickerStarted()),
         expect: () => [
-          isA<LocationPickerState>().having(
-            (s) => s.status,
-            'status',
-            LocationPickerStatus.loadingLocation,
-          ),
-          isA<LocationPickerState>()
-              .having(
-                (s) => s.status,
-                'status',
-                LocationPickerStatus.geocoding,
-              )
-              .having((s) => s.position, 'position', _tPosition),
           isA<LocationPickerState>()
               .having((s) => s.status, 'status', LocationPickerStatus.ready)
-              .having((s) => s.address, 'address', _tAddress),
+              .having((s) => s.position, 'position', isNull),
         ],
-      );
-
-      blocTest<LocationPickerBloc, LocationPickerState>(
-        'permission denied -> permissionDenied status',
-        build: () {
-          when(
-            () => getCurrentLocation(any()),
-          ).thenReturn(TaskEither.left(_tFailure));
-          return buildBloc();
+        verify: (_) {
+          // The map must never reverse-geocode a device location on open.
+          verifyNever(() => reverseGeocode(any()));
         },
-        act: (bloc) => bloc.add(LocationPickerStarted()),
-        expect: () => [
-          isA<LocationPickerState>().having(
-            (s) => s.status,
-            'status',
-            LocationPickerStatus.loadingLocation,
-          ),
-          isA<LocationPickerState>().having(
-            (s) => s.status,
-            'status',
-            LocationPickerStatus.permissionDenied,
-          ),
-        ],
       );
     });
 

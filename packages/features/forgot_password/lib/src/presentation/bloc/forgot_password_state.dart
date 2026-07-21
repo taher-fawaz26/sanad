@@ -20,12 +20,12 @@ class ForgotPasswordOtpSentState extends ForgotPasswordState {
 }
 
 class ForgotPasswordRequestFailureState extends ForgotPasswordState {
-  const ForgotPasswordRequestFailureState(this.message);
+  const ForgotPasswordRequestFailureState(this.failure);
 
-  final String message;
+  final Failure failure;
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [failure];
 }
 
 class ForgotPasswordOtpVerifyLoadingState extends ForgotPasswordState {
@@ -45,12 +45,12 @@ class ForgotPasswordOtpVerifiedState extends ForgotPasswordState {
 }
 
 class ForgotPasswordOtpFailureState extends ForgotPasswordState {
-  const ForgotPasswordOtpFailureState(this.message);
+  const ForgotPasswordOtpFailureState(this.failure);
 
-  final String message;
+  final Failure failure;
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [failure];
 }
 
 class ForgotPasswordResetLoadingState extends ForgotPasswordState {
@@ -62,10 +62,10 @@ class ForgotPasswordResetSuccessState extends ForgotPasswordState {
 }
 
 class ForgotPasswordResetFailureState extends ForgotPasswordState {
-  const ForgotPasswordResetFailureState(this.message);
+  const ForgotPasswordResetFailureState(this.failure);
 
-  final String message;
+  final Failure failure;
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [failure];
 }

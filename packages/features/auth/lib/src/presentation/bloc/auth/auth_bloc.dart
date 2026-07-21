@@ -65,7 +65,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           emit(const AuthLoginUnverifiedState());
           return;
         }
-        emit(AuthLoginFailureState(failure.message, code: failure.code));
+        emit(AuthLoginFailureState(failure));
       },
       (r) async {
         _authStatusNotifier.update(
@@ -89,7 +89,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     await _sessionManager.logout();
     _authStatusNotifier.update(AuthStatus.unauthenticated);
     await result.match(
-      (failure) async => emit(AuthLogoutFailureState(failure.message)),
+      (failure) async => emit(AuthLogoutFailureState(failure)),
       (_) async => emit(const AuthLogoutSuccessState('auth.logout_success')),
     );
   }
@@ -102,7 +102,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     if (previousUser == null) {
       emit(
         const AuthDeleteAccountFailureState(
-          'auth.delete_account_no_user',
+          UnknownFailure(message: 'auth.delete_account_no_user'),
           user: null,
         ),
       );
@@ -118,7 +118,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     await result.match(
       (failure) async {
         emit(
-          AuthDeleteAccountFailureState(failure.message, user: previousUser),
+          AuthDeleteAccountFailureState(failure, user: previousUser),
         );
       },
       (_) async {
@@ -146,7 +146,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         .run();
 
     await result.match(
-      (l) async => emit(AuthRegisterFailureState(l.message)),
+      (l) async => emit(AuthRegisterFailureState(l)),
       (_) async =>
           emit(const AuthRegisterSuccessState('auth.register_success')),
     );

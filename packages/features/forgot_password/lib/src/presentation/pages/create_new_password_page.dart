@@ -7,6 +7,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:forgot_password/src/models/create_new_password_args.dart';
 import 'package:forgot_password/src/presentation/bloc/forgot_password_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:localization/localization.dart';
 
 /// Create a new password after forgot-password OTP verification.
 class CreateNewPasswordPage extends HookWidget {
@@ -31,7 +32,10 @@ class CreateNewPasswordPage extends HookWidget {
           current is ForgotPasswordResetFailureState,
       listener: (context, state) {
         if (state is ForgotPasswordResetFailureState) {
-          showAppSnackbar(context: context, title: state.message.tr());
+          showAppErrorSnackbar(
+            context: context,
+            title: state.failure.localizedMessage(),
+          );
         } else if (state is ForgotPasswordResetSuccessState) {
           showAppSnackbar(
             context: context,

@@ -98,7 +98,6 @@ abstract final class MapsDI {
       )
       ..registerFactory(
         () => LocationPickerBloc(
-          getCurrentLocationUseCase: sl<GetCurrentLocationUseCase>(),
           reverseGeocodeUseCase: sl<ReverseGeocodeUseCase>(),
           forwardGeocodeUseCase: sl<ForwardGeocodeUseCase>(),
           openLocationSettingsUseCase: sl<OpenLocationSettingsUseCase>(),

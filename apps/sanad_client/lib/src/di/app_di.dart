@@ -43,7 +43,7 @@ Future<void> configureDependencies() async {
       () {
         final config = sl<NetworkConfig>();
         final dio = Dio(config.dioBaseOptions);
-        dio.interceptors.add(LoggingInterceptor());
+        dio.interceptors.add(LoggingInterceptor(logger: appLogger));
         return dio;
       },
       instanceName: 'rawDio',
@@ -86,7 +86,7 @@ Future<void> configureDependencies() async {
           ),
           RetryOnTimeoutInterceptor(dio: dio),
           TimeoutErrorInterceptor(),
-          LoggingInterceptor(),
+          LoggingInterceptor(logger: appLogger),
         ]);
 
         return dio;

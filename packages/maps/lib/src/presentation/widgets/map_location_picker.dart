@@ -8,22 +8,23 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:maps/src/domain/entities/place_prediction.dart';
 import 'package:maps/src/domain/usecases/get_current_location_usecase.dart';
 import 'package:maps/src/presentation/bloc/location_picker/location_picker_bloc.dart';
+import 'package:maps/src/presentation/camera/initial_camera_resolver.dart';
 import 'package:maps/src/presentation/controllers/map_camera_controller.dart';
 import 'package:maps/src/presentation/models/location_picker_labels.dart';
 import 'package:maps/src/presentation/models/location_picker_result.dart';
 import 'package:maps/src/presentation/models/map_configuration.dart';
-import 'package:maps/src/presentation/models/place_search_status.dart';
 import 'package:maps/src/presentation/widgets/location_address_field.dart';
 import 'package:maps/src/presentation/widgets/map_control_bar.dart';
 import 'package:maps/src/presentation/widgets/map_my_location_button.dart';
 import 'package:maps/src/presentation/widgets/map_zoom_controls.dart';
-import 'package:maps/src/presentation/widgets/place_search_bar.dart';
+import 'package:maps/src/presentation/widgets/place_search_sheet_body.dart';
 import 'package:maps/src/widgets/app_google_map.dart';
 
 class MapLocationPicker extends StatefulWidget {
   const MapLocationPicker({
     required this.labels,
-    this.initialPosition,
+    this.existingLocation,
+    this.initialLocation,
     this.initialAddress,
     this.configuration = const MapConfiguration(),
     this.pinMarker,
@@ -38,7 +39,14 @@ class MapLocationPicker extends StatefulWidget {
   });
 
   final LocationPickerLabels labels;
-  final LatLng? initialPosition;
+
+  /// A previously saved location (edit flow). Highest priority for the initial
+  /// camera. See [InitialCameraResolver].
+  final LatLng? existingLocation;
+
+  /// An explicit initial location supplied by the caller. Used when there is no
+  /// [existingLocation].
+  final LatLng? initialLocation;
   final String? initialAddress;
   final MapConfiguration configuration;
   final Widget? pinMarker;
@@ -56,21 +64,47 @@ class MapLocationPicker extends StatefulWidget {
 
 class MapLocationPickerState extends State<MapLocationPicker> {
   final _cameraController = MapCameraController();
-  final _searchFocusNode = FocusNode();
 
   @override
   void dispose() {
     _cameraController.dispose();
-    _searchFocusNode.dispose();
     super.dispose();
   }
 
-  void _dismissSearch() {
-    _searchFocusNode.unfocus();
-  }
-
-  void _onMapTap(LatLng _) {
-    _dismissSearch();
+  /// Opens the tap-to-search modal sheet, mirroring the Branches/Workers search
+  /// UX. Typing only updates predictions (never the camera); selecting a result
+  /// closes the sheet and dispatches the existing prediction-selected flow,
+  /// which animates the camera exactly once.
+  Future<void> _openSearchSheet(BuildContext context) async {
+    final bloc = context.read<LocationPickerBloc>();
+    final selected = await showAppModalSheet<PlacePrediction>(
+      context: context,
+      child: BlocProvider.value(
+        value: bloc,
+        child: BlocBuilder<LocationPickerBloc, LocationPickerState>(
+          builder: (context, state) => PlaceSearchSheetBody(
+            labels: PlaceSearchSheetLabels(
+              hint: widget.labels.searchHint,
+              emptyMessage: widget.labels.searchEmpty,
+              errorMessage: widget.labels.genericError,
+              retryLabel: widget.labels.searchRetry,
+            ),
+            predictions: state.predictions,
+            searchStatus: state.searchStatus,
+            searchQuery: state.searchQuery,
+            errorMessage: state.searchError,
+            onQueryChanged: (q) => context.read<LocationPickerBloc>().add(
+              LocationPickerQueryChanged(q),
+            ),
+            onPredictionTap: (p) => Navigator.of(context).pop(p),
+          ),
+        ),
+      ),
+    );
+    bloc.add(const LocationPickerPredictionsCleared());
+    if (selected != null) {
+      bloc.add(LocationPickerPredictionSelected(selected));
+    }
   }
 
   void _onCameraIdle(LocationPickerBloc bloc, LocationPickerState state) {
@@ -88,7 +122,10 @@ class MapLocationPickerState extends State<MapLocationPicker> {
       create: (_) => sl<LocationPickerBloc>()
         ..add(
           LocationPickerStarted(
-            initialPosition: widget.initialPosition,
+            initialPosition: InitialCameraResolver.resolveInitialLocation(
+              existingLocation: widget.existingLocation,
+              initialLocation: widget.initialLocation,
+            ),
             initialAddress: widget.initialAddress,
             localeIdentifier: localeIdentifier,
           ),
@@ -136,38 +173,15 @@ class MapLocationPickerState extends State<MapLocationPicker> {
   }
 
   Widget _buildSearchBar() {
-    return BlocSelector<LocationPickerBloc, LocationPickerState, _SearchState>(
-      selector: (state) => _SearchState(
-        predictions: state.predictions,
-        searchStatus: state.searchStatus,
-        searchError: state.searchError,
-        searchQuery: state.searchQuery,
+    // Tap-to-open trigger — the live search lives in the modal sheet.
+    return Builder(
+      builder: (context) => AppSearchField(
+        variant: AppSearchFieldVariant.bordered,
+        hint: widget.labels.searchHint,
+        showMicIcon: false,
+        readOnly: true,
+        onTap: () => _openSearchSheet(context),
       ),
-      builder: (context, searchState) {
-        final bloc = context.read<LocationPickerBloc>();
-        return PlaceSearchBar(
-          focusNode: _searchFocusNode,
-          hint: widget.labels.searchHint,
-          predictions: searchState.predictions,
-          searchStatus: searchState.searchStatus,
-          searchQuery: searchState.searchQuery,
-          errorMessage: searchState.searchError,
-          onQueryChanged: (query) {
-            bloc.add(LocationPickerQueryChanged(query));
-          },
-          onSubmitted: (query) {
-            bloc
-              ..add(const LocationPickerPredictionsCleared())
-              ..add(LocationPickerSearchSubmitted(query));
-          },
-          onPredictionSelected: (prediction) {
-            bloc.add(LocationPickerPredictionSelected(prediction));
-          },
-          onCleared: () {
-            bloc.add(const LocationPickerPredictionsCleared());
-          },
-        );
-      },
     );
   }
 
@@ -185,12 +199,15 @@ class MapLocationPickerState extends State<MapLocationPicker> {
           position: mapState.position,
           isLoadingMap: mapState.isLoadingMap,
           isGeocoding: mapState.isGeocoding,
-          configuration: widget.configuration,
+          initialCameraPosition: InitialCameraResolver.resolveCamera(
+            existingLocation: widget.existingLocation,
+            initialLocation: widget.initialLocation,
+            zoom: widget.configuration.initialZoom,
+          ),
           cameraController: _cameraController,
           pinMarker: widget.pinMarker,
           height: widget.mapHeight,
           showControls: widget.showControls,
-          onMapTap: _onMapTap,
           onCameraIdle: () => _onCameraIdle(bloc, state),
         );
       },
@@ -247,28 +264,6 @@ class MapLocationPickerState extends State<MapLocationPicker> {
   }
 }
 
-class _SearchState extends Equatable {
-  const _SearchState({
-    required this.predictions,
-    required this.searchStatus,
-    required this.searchQuery,
-    this.searchError,
-  });
-
-  final List<PlacePrediction> predictions;
-  final PlaceSearchStatus searchStatus;
-  final String searchQuery;
-  final String? searchError;
-
-  @override
-  List<Object?> get props => [
-    predictions,
-    searchStatus,
-    searchQuery,
-    searchError,
-  ];
-}
-
 class _MapState extends Equatable {
   const _MapState({
     required this.position,
@@ -286,11 +281,10 @@ class _MapState extends Equatable {
 
 class _MapView extends StatelessWidget {
   const _MapView({
-    required this.configuration,
+    required this.initialCameraPosition,
     required this.cameraController,
     required this.height,
     required this.showControls,
-    required this.onMapTap,
     required this.onCameraIdle,
     required this.isLoadingMap,
     required this.isGeocoding,
@@ -301,17 +295,15 @@ class _MapView extends StatelessWidget {
   final LatLng? position;
   final bool isLoadingMap;
   final bool isGeocoding;
-  final MapConfiguration configuration;
+  final CameraPosition initialCameraPosition;
   final MapCameraController cameraController;
   final Widget? pinMarker;
   final double height;
   final bool showControls;
-  final ValueChanged<LatLng> onMapTap;
   final VoidCallback onCameraIdle;
 
   @override
   Widget build(BuildContext context) {
-    final initialPosition = position ?? configuration.initialPosition;
     final colors = context.appColors;
 
     return SizedBox(
@@ -322,14 +314,10 @@ class _MapView extends StatelessWidget {
           alignment: Alignment.center,
           children: [
             AppGoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: initialPosition,
-                zoom: configuration.initialZoom,
-              ),
+              initialCameraPosition: initialCameraPosition,
               onMapCreated: cameraController.onMapCreated,
               onCameraMove: cameraController.onCameraMove,
               onCameraIdle: onCameraIdle,
-              onTap: onMapTap,
               myLocationEnabled: position != null,
               tiltGesturesEnabled: false,
               rotateGesturesEnabled: false,

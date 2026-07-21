@@ -1,4 +1,5 @@
 import 'package:auth/auth.dart';
+import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:network/network.dart';
@@ -44,7 +45,7 @@ class OtpBloc extends Bloc<OtpEvent, OtpState> {
         .run();
 
     await result.fold(
-      (failure) async => emit(OtpValidateFailureState(failure.message)),
+      (failure) async => emit(OtpValidateFailureState(failure)),
       (response) async {
         _authStatusNotifier.update(
           AuthStatus.authenticated,
@@ -77,7 +78,7 @@ class OtpBloc extends Bloc<OtpEvent, OtpState> {
         .run();
 
     result.fold(
-      (failure) => emit(OtpResendFailureState(failure.message)),
+      (failure) => emit(OtpResendFailureState(failure)),
       (_) => emit(const OtpResendSuccessState()),
     );
   }

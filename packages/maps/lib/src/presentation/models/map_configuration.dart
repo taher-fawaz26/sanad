@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:maps/src/presentation/camera/default_map_viewport.dart';
 
 /// Configurable defaults for maps platform widgets.
 ///
@@ -7,8 +8,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 /// widgets instead of hardcoding values.
 class MapConfiguration {
   const MapConfiguration({
-    this.initialPosition = const LatLng(25.0772, 55.1396),
-    this.initialZoom = 14,
+    this.initialPosition = DefaultMapViewport.center,
+    this.initialZoom = DefaultMapViewport.defaultZoom,
     this.minZoom,
     this.maxZoom,
     this.mapType = MapType.normal,

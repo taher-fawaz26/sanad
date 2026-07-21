@@ -2,8 +2,11 @@ import 'package:core/core.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:network/network.dart';
 import 'package:workers/src/data/endpoints/worker_api_paths.dart';
+import 'package:workers/src/data/models/create_invitation_dto.dart';
 import 'package:workers/src/data/models/invitation_dto.dart';
 import 'package:workers/src/data/models/sanad_page.dart';
+import 'package:workers/src/data/models/update_worker_dto.dart';
+import 'package:workers/src/data/models/update_worker_status_dto.dart';
 import 'package:workers/src/data/models/worker_dto.dart';
 import 'package:workers/src/domain/entities/paged_result.dart';
 import 'package:workers/src/domain/entities/worker_status.dart';
@@ -85,7 +88,7 @@ class WorkerRemoteDataSourceImpl implements WorkerRemoteDataSource {
   ) => _apiClient.request<WorkerDto>(
     path: WorkerApiPaths.workerStatus(id),
     method: RequestMethod.patch,
-    body: {'status': status.toApiValue()},
+    body: UpdateWorkerStatusDto.fromStatus(status).toJson(),
     parser: _parseWorker,
   );
 
@@ -110,13 +113,7 @@ class WorkerRemoteDataSourceImpl implements WorkerRemoteDataSource {
       _apiClient.request<Unit>(
         path: WorkerApiPaths.invitations,
         method: RequestMethod.post,
-        body: {
-          'name': params.fullName,
-          'email': params.email,
-          'phone': params.phone,
-          if (params.jobTitle.isNotEmpty) 'jobTitle': params.jobTitle,
-          'type': params.type.toApiString(),
-        },
+        body: CreateInvitationDto.fromParams(params).toJson(),
         parser: (_) => unit,
       );
 
@@ -141,12 +138,7 @@ class WorkerRemoteDataSourceImpl implements WorkerRemoteDataSource {
       _apiClient.request<WorkerDto>(
         path: WorkerApiPaths.worker(params.id),
         method: RequestMethod.patch,
-        body: {
-          'name': params.fullName,
-          if (params.phone != null) 'phone': params.phone,
-          if (params.jobTitle.isNotEmpty) 'jobTitle': params.jobTitle,
-          'type': params.type.toApiString(),
-        },
+        body: UpdateWorkerDto.fromParams(params).toJson(),
         parser: _parseWorker,
       );
 }

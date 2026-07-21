@@ -10,8 +10,15 @@ import 'package:sanad_provider/src/app.dart';
 import 'package:sanad_provider/src/di/app_di.dart';
 
 /// Initialises the Flutter engine, storage, DI, and runs the app.
-Future<void> bootstrap() async {
+///
+/// Runs inside a guarded zone so uncaught async, framework, and platform
+/// errors are captured by [ErrorReporter]. See `docs/ARCHITECTURE_BLUEPRINT.md`
+/// §12.
+Future<void> bootstrap() => runGuarded(_bootstrap);
+
+Future<void> _bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
+  installGlobalErrorHandlers();
 
   await Future.wait([
     EasyLocalization.ensureInitialized(),

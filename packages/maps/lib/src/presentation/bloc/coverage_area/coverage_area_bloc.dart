@@ -115,7 +115,11 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
       return;
     }
 
-    await _requestCurrentLocation(emit);
+    // No saved/explicit center: open on the default UAE viewport with no
+    // center and WITHOUT requesting location permission. Current location is
+    // used only when the user explicitly requests it
+    // ([CoverageAreaCurrentLocationRequested]).
+    emit(state.copyWith(status: CoverageAreaStatus.ready, clearFailure: true));
   }
 
   Future<void> _onMapMoved(

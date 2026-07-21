@@ -142,3 +142,24 @@ void showAppSnackbar({
     ),
   );
 }
+
+/// Shows an error-styled snackbar ([AppSnackbarColor.error]).
+///
+/// Use this for failure feedback so errors are visually distinct from neutral
+/// and success messages instead of sharing the default `dark` style.
+void showAppErrorSnackbar({
+  required BuildContext context,
+  required String title,
+  String? caption,
+  AppSnackbarLayout layout = AppSnackbarLayout.box,
+  Duration duration = const Duration(seconds: 4),
+}) {
+  showAppSnackbar(
+    context: context,
+    title: title,
+    caption: caption,
+    color: AppSnackbarColor.error,
+    layout: layout,
+    duration: duration,
+  );
+}

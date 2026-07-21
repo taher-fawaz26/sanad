@@ -4,6 +4,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:localization/localization.dart';
 import 'package:workers/src/domain/usecases/invite_worker_usecase.dart';
 import 'package:workers/src/presentation/bloc/add_worker/add_worker_bloc.dart';
 import 'package:workers/src/presentation/widgets/worker_form_body.dart';
@@ -128,7 +129,9 @@ class _AddWorkerPageState extends State<AddWorkerPage> {
       description: 'workers.add_worker.success_description'.tr(),
       primaryLabel: 'workers.add_worker.success_okay'.tr(),
     ).then((_) {
-      if (mounted) context.pop();
+      // Signal the caller (worker list) that a worker was added so it can
+      // refresh — see EH-S3-02 refresh convention.
+      if (mounted) context.pop(true);
     });
   }
 
@@ -136,15 +139,12 @@ class _AddWorkerPageState extends State<AddWorkerPage> {
     final message = failure.message.trim();
     final caption = message.isEmpty
         ? 'workers.add_worker.error_invitation_failed'.tr()
-        : message.contains(' ')
-        ? message
-        : message.tr();
+        : failure.localizedMessage();
 
-    showAppSnackbar(
+    showAppErrorSnackbar(
       context: context,
       title: 'workers.add_worker.error_invitation_failed'.tr(),
       caption: caption,
-      color: AppSnackbarColor.error,
     );
   }
 }

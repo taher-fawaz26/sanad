@@ -9,6 +9,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:localization/localization.dart';
 
 /// Figma Branches screen (`73:2902`), collapsing header.
 ///
@@ -63,13 +64,11 @@ class _BranchesTab extends StatelessWidget {
           previous.actionFailure != current.actionFailure &&
           current.actionFailure != null,
       listener: (context, state) {
-        final message = state.actionFailure!.message.trim();
-        final title = message.isEmpty
+        final failure = state.actionFailure!;
+        final title = failure.message.trim().isEmpty
             ? 'branches.actions.action_failed'.tr()
-            : message.contains(' ')
-            ? message
-            : message.tr();
-        showAppSnackbar(context: context, title: title);
+            : failure.localizedMessage();
+        showAppErrorSnackbar(context: context, title: title);
         context.read<BranchesBloc>().add(
           const BranchActionFailureClearedEvent(),
         );
@@ -169,7 +168,7 @@ class _BranchesTab extends StatelessWidget {
                         label: 'branches.add_button'.tr(),
                         icon: const Icon(Icons.add_circle_outline),
                         iconPosition: AppButtonIconPosition.center,
-                        onPressed: () => context.push(BranchRoutes.add),
+                        onPressed: () => _openAddBranch(context),
                       ),
                     ),
                   ),
@@ -282,9 +281,18 @@ class _EmptyState extends StatelessWidget {
     }
     return Center(
       child: BranchesEmptyState(
-        onAddBranch: () => context.push(BranchRoutes.add),
+        onAddBranch: () => _openAddBranch(context),
       ),
     );
+  }
+}
+
+/// Opens the add-branch flow and refreshes the list if a branch was added.
+/// The add page pops `true` on success — see EH-S3-02 refresh convention.
+Future<void> _openAddBranch(BuildContext context) async {
+  final added = await context.push<bool>(BranchRoutes.add);
+  if ((added ?? false) && context.mounted) {
+    context.read<BranchesBloc>().add(const BranchesRefreshEvent());
   }
 }
 
@@ -296,42 +304,21 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final retryLabel = 'empty_states.retry'.tr();
-    final f = failure;
-
-    if (f is NoInternetFailure || f is NetworkFailure) {
-      return Center(
-        child: AppNetworkFailureState(
-          title: 'empty_states.network_title'.tr(),
-          description: 'empty_states.network_description'.tr(),
-          retryLabel: retryLabel,
-          onRetry: onRetry,
-        ),
-      );
-    }
-
-    if (f is TimeoutFailure) {
-      return Center(
-        child: AppNetworkFailureState(
-          title: 'empty_states.timeout_title'.tr(),
-          description: 'empty_states.timeout_description'.tr(),
-          retryLabel: retryLabel,
-          onRetry: onRetry,
-        ),
-      );
-    }
-
-    final description = (f != null && f.message.isNotEmpty)
-        ? f.message.tr()
-        : 'branches.load_error_description'.tr();
-
-    return Center(
-      child: AppGenericEmptyState(
-        title: 'branches.load_error_title'.tr(),
-        description: description,
-        actionLabel: 'branches.load_error_action'.tr(),
-        onAction: onRetry,
-      ),
+    final display = failureErrorDisplay(
+      failure,
+      genericTitleKey: 'branches.load_error_title',
+      genericDescriptionKey: 'branches.load_error_description',
+    );
+    return AppErrorState(
+      style: display.isConnectivity
+          ? AppErrorStateStyle.network
+          : AppErrorStateStyle.generic,
+      title: display.title,
+      description: display.description,
+      retryLabel: display.isConnectivity
+          ? failureRetryLabel()
+          : 'branches.load_error_action'.tr(),
+      onRetry: display.isRetryable ? onRetry : null,
     );
   }
 }

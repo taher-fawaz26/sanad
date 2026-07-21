@@ -127,8 +127,12 @@ class _AddBranchPageState extends State<AddBranchPage> {
         serviceDisabled: 'branches.location_picker.service_disabled'.tr(),
         genericError: 'branches.location_picker.generic_error'.tr(),
         openSettings: 'branches.location_picker.open_settings'.tr(),
+        searchEmpty: 'branches.location_picker.no_results'.tr(),
+        searchRetry: 'empty_states.retry'.tr(),
       ),
-      initialPosition: draft.pickedPosition,
+      // The draft position is the branch's saved/already-picked location, so
+      // it takes edit-flow priority for the initial camera.
+      existingLocation: draft.pickedPosition,
       initialAddress: draft.branchAddress,
     );
     if (!mounted || result == null) return;
@@ -274,7 +278,8 @@ class _AddBranchPageState extends State<AddBranchPage> {
       description: 'branches.add_branch.success_dialog_description'.tr(),
       primaryLabel: 'branches.add_branch.success_dialog_okay'.tr(),
     ).then((_) {
-      if (mounted) context.pop();
+      // Signal the branch list to refresh — see EH-S3-02 refresh convention.
+      if (mounted) context.pop(true);
     });
   }
 

@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:forgot_password/src/presentation/bloc/forgot_password_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:localization/localization.dart';
 import 'package:otp/otp.dart';
 
 /// Step 1 of password recovery: submit email to receive OTP.
@@ -31,7 +32,10 @@ class ForgotPasswordPage extends HookWidget {
           current is ForgotPasswordRequestFailureState,
       listener: (context, state) {
         if (state is ForgotPasswordRequestFailureState) {
-          showAppSnackbar(context: context, title: state.message.tr());
+          showAppErrorSnackbar(
+            context: context,
+            title: state.failure.localizedMessage(),
+          );
         } else if (state is ForgotPasswordOtpSentState) {
           final identifier = emailController.text.trim();
           if (identifier.isEmpty) return;

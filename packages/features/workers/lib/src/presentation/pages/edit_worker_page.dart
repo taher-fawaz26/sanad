@@ -4,6 +4,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:localization/localization.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
 import 'package:workers/src/domain/entities/worker_type.dart';
 import 'package:workers/src/domain/usecases/update_worker_usecase.dart';
@@ -148,15 +149,12 @@ class _EditWorkerPageState extends State<EditWorkerPage> {
     final message = failure.message.trim();
     final caption = message.isEmpty
         ? 'workers.add_worker.error_invitation_failed'.tr()
-        : message.contains(' ')
-        ? message
-        : message.tr();
+        : failure.localizedMessage();
 
-    showAppSnackbar(
+    showAppErrorSnackbar(
       context: context,
       title: 'workers.add_worker.error_invitation_failed'.tr(),
       caption: caption,
-      color: AppSnackbarColor.error,
     );
   }
 }

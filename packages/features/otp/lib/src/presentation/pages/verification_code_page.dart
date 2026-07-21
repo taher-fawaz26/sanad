@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
+import 'package:localization/localization.dart';
 import 'package:otp/src/cubit/otp_ui_cubit.dart';
 import 'package:otp/src/domain/enums/otp_purpose.dart';
 import 'package:otp/src/models/otp_args.dart';
@@ -41,7 +42,10 @@ class VerificationCodePage extends HookWidget {
             );
             onVerified?.call();
           } else if (state is OtpValidateFailureState) {
-            showAppSnackbar(context: context, title: state.message.tr());
+            showAppErrorSnackbar(
+              context: context,
+              title: state.failure.localizedMessage(),
+            );
           } else if (state is OtpResendSuccessState) {
             context.read<OtpUiCubit>().startTimer();
             showAppSnackbar(
@@ -50,7 +54,10 @@ class VerificationCodePage extends HookWidget {
               color: AppSnackbarColor.primary,
             );
           } else if (state is OtpResendFailureState) {
-            showAppSnackbar(context: context, title: state.message.tr());
+            showAppErrorSnackbar(
+              context: context,
+              title: state.failure.localizedMessage(),
+            );
           }
         },
         child: Scaffold(

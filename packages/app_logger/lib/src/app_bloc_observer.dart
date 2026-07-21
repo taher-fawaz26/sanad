@@ -1,14 +1,17 @@
 import 'package:app_logger/src/app_logger.dart';
+import 'package:app_logger/src/error_reporter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class AppBlocObserver extends BlocObserver {
   @override
   void onError(BlocBase<dynamic> bloc, Object error, StackTrace stackTrace) {
-    appLogger.e(
-      '[${bloc.runtimeType}] Error',
-      error: error,
-      stackTrace: stackTrace,
+    // Route to the single error-reporting owner (logs by default; forwards to
+    // crash reporting once a backend is attached via ErrorReporter.use).
+    ErrorReporter.report(
+      error,
+      stackTrace,
+      context: {'source': 'bloc', 'bloc': bloc.runtimeType.toString()},
     );
     super.onError(bloc, error, stackTrace);
   }

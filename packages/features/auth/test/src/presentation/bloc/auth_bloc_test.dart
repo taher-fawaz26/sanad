@@ -146,7 +146,7 @@ void main() {
         expect: () => [
           isA<AuthLoginLoadingState>(),
           isA<AuthLoginFailureState>()
-              .having((s) => s.message, 'message', 'server_error'),
+              .having((s) => s.failure.message, 'failure.message', 'server_error'),
         ],
       );
 
@@ -244,7 +244,7 @@ void main() {
         expect: () => [
           isA<AuthRegisterLoadingState>(),
           isA<AuthRegisterFailureState>()
-              .having((s) => s.message, 'message', 'server_error'),
+              .having((s) => s.failure.message, 'failure.message', 'server_error'),
         ],
       );
     });
@@ -351,7 +351,7 @@ void main() {
               .having((s) => s.user, 'user', _tUser),
           isA<AuthDeleteAccountFailureState>()
               .having((s) => s.user, 'user', _tUser)
-              .having((s) => s.message, 'message', 'server_error'),
+              .having((s) => s.failure.message, 'failure.message', 'server_error'),
         ],
       );
     });

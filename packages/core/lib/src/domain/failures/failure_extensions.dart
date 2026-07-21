@@ -12,4 +12,36 @@ extension FailureKindX on Failure {
   bool get isValidation => this is ValidationFailure;
   bool get isUnverifiedUser => this is UnverifiedUserFailure;
   bool get isUnauthorizedRole => this is UnauthorizedRoleFailure;
+  bool get isLocation => this is LocationFailure;
+  bool get isBusinessRule => this is BusinessRuleFailure;
+  bool get isConflict => this is ConflictFailure;
+  bool get isRateLimit => this is RateLimitFailure;
+
+  /// Whether retrying the same operation could plausibly succeed.
+  ///
+  /// Transient transport failures and 5xx server errors are retryable;
+  /// validation, auth, permission, not-found/4xx, secure-connection, and
+  /// cancellation are not. Drives retry affordances in the UI and any
+  /// automatic retry policy. See `docs/ARCHITECTURE_BLUEPRINT.md` §10.
+  bool get isRetryable {
+    if (isNoInternet || isTimeout || isRateLimit) return true;
+    if (isValidation ||
+        isUnauthorized ||
+        isUnverifiedUser ||
+        isUnauthorizedRole ||
+        isSecureConnection ||
+        isConflict ||
+        isBusinessRule) {
+      return false;
+    }
+    if (isServer) {
+      // `code` carries the HTTP status for server failures. 5xx (and an
+      // unparseable status) are transient; 4xx (404/409/business) are not.
+      final status = int.tryParse(code ?? '');
+      return status == null || status >= 500;
+    }
+    if (isCache || isLocation || isUnknown) return true;
+    // NetworkFailure (request cancelled) and anything else: not retryable.
+    return false;
+  }
 }

@@ -202,7 +202,8 @@
       "service_disabled": "Turn on device location services to pick a branch location.",
       "generic_error": "Couldn't load the location. Please try again.",
       "title": "Branch location",
-      "subtitle": "Move the pin to locate the branch on the map"
+      "subtitle": "Move the pin to locate the branch on the map",
+      "no_results": "No results found"
     },
     "coverage_area": {
       "title": "Coverage area",
@@ -438,6 +439,9 @@
     "request_cancelled": "Request was cancelled.",
     "secure_connection_failed": "Secure connection failed. Please try again.",
     "invalid_credentials": "Invalid credentials. Please try again.",
-    "cache_error": "Failed to load cached data."
+    "cache_error": "Failed to load cached data.",
+    "conflict": "This action conflicts with the current state. Please refresh and try again.",
+    "rate_limit": "Too many attempts. Please wait a moment and try again.",
+    "business_rule": "This action isn't allowed right now."
   }
 }

@@ -9,6 +9,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:localization/localization.dart';
 import 'package:maps/maps.dart';
 
 /// Figma Branch Details screen (`365:14892`).
@@ -27,11 +28,12 @@ class BranchDetailsPage extends StatelessWidget {
           prev.statusUpdateFailure != curr.statusUpdateFailure &&
           curr.statusUpdateFailure != null,
       listener: (context, state) {
-        showAppSnackbar(
+        final failure = state.statusUpdateFailure;
+        showAppErrorSnackbar(
           context: context,
-          title:
-              state.statusUpdateFailure?.message ??
-              'branches.details.status_update_error'.tr(),
+          title: failure != null
+              ? failure.localizedMessage()
+              : 'branches.details.status_update_error'.tr(),
         );
       },
       builder: (context, state) {
@@ -94,36 +96,15 @@ class _BranchDetailsError extends StatelessWidget {
   }
 
   Widget _errorContent() {
-    final retryLabel = 'empty_states.retry'.tr();
-    final f = failure;
-
-    if (f is NoInternetFailure || f is NetworkFailure) {
-      return AppNetworkFailureState(
-        title: 'empty_states.network_title'.tr(),
-        description: 'empty_states.network_description'.tr(),
-        retryLabel: retryLabel,
-        onRetry: onRetry,
-      );
-    }
-
-    if (f is TimeoutFailure) {
-      return AppNetworkFailureState(
-        title: 'empty_states.timeout_title'.tr(),
-        description: 'empty_states.timeout_description'.tr(),
-        retryLabel: retryLabel,
-        onRetry: onRetry,
-      );
-    }
-
-    final description = (f != null && f.message.isNotEmpty)
-        ? f.message.tr()
-        : 'empty_states.server_error_description'.tr();
-
-    return AppGenericEmptyState(
-      title: 'empty_states.server_error_title'.tr(),
-      description: description,
-      actionLabel: retryLabel,
-      onAction: onRetry,
+    final display = failureErrorDisplay(failure);
+    return AppErrorState(
+      style: display.isConnectivity
+          ? AppErrorStateStyle.network
+          : AppErrorStateStyle.generic,
+      title: display.title,
+      description: display.description,
+      retryLabel: failureRetryLabel(),
+      onRetry: display.isRetryable ? onRetry : null,
     );
   }
 }

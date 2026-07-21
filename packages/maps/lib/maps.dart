@@ -48,6 +48,10 @@ export 'src/domain/usecases/get_cities_usecase.dart';
 export 'src/presentation/bloc/coverage_area/coverage_area_bloc.dart';
 export 'src/presentation/bloc/location_picker/location_picker_bloc.dart';
 
+// Presentation — initial-camera resolution (UAE default, priority-based)
+export 'src/presentation/camera/default_map_viewport.dart';
+export 'src/presentation/camera/initial_camera_resolver.dart';
+
 // Presentation — controllers used to drive maps from feature widgets
 export 'src/presentation/controllers/map_camera_controller.dart';
 export 'src/presentation/controllers/map_radius_controller.dart';
@@ -66,7 +70,7 @@ export 'src/presentation/utils/radius_format.dart';
 export 'src/presentation/widgets/city_select_field.dart';
 export 'src/presentation/widgets/location_picker_sheet.dart';
 export 'src/presentation/widgets/map_area_picker.dart';
-export 'src/presentation/widgets/place_search_bar.dart';
+export 'src/presentation/widgets/place_search_sheet_body.dart';
 export 'src/presentation/widgets/serving_area_chips.dart';
 
 // Services — infrastructure wired by the host app's DI

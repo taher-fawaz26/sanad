@@ -9,6 +9,8 @@ class LocationPickerLabels {
     required this.serviceDisabled,
     required this.genericError,
     required this.openSettings,
+    required this.searchEmpty,
+    required this.searchRetry,
     this.title,
     this.subtitle,
   });
@@ -28,4 +30,10 @@ class LocationPickerLabels {
   final String serviceDisabled;
   final String genericError;
   final String openSettings;
+
+  /// Shown in the search sheet when a query returns no results.
+  final String searchEmpty;
+
+  /// Retry action shown in the search sheet on a search error.
+  final String searchRetry;
 }

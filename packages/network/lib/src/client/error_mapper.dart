@@ -112,6 +112,46 @@ abstract final class ErrorMapper {
             metadata: _coerceMap(data),
           );
         }
+        if (statusCode == 409) {
+          return ConflictFailure(
+            message: message,
+            code: '409',
+            metadata: _coerceMap(data),
+          );
+        }
+        if (statusCode == 429) {
+          return RateLimitFailure(
+            message: message,
+            code: '429',
+            metadata: _coerceMap(data),
+          );
+        }
+        if (statusCode == 400 || statusCode == 422) {
+          // Backend validation (NestJS class-validator) returns `message` as a
+          // JSON array, or 422. Preserve every message rather than collapsing
+          // to the first one, and surface it as a business ValidationFailure.
+          final fieldErrors = _extractFieldErrors(data);
+          final isValidation = _isValidationBody(data) ||
+              statusCode == 422 ||
+              fieldErrors != null;
+          if (isValidation) {
+            final messages = _extractMessages(data);
+            return ValidationFailure(
+              message: messages.isNotEmpty ? messages.first : message,
+              messages: messages,
+              fieldErrors: fieldErrors,
+              code: statusCode!.toString(),
+              metadata: _coerceMap(data),
+            );
+          }
+          // A single-string 400 is a business-rule violation (e.g. "Cannot
+          // delete the only branch"), not an input-validation error.
+          return BusinessRuleFailure(
+            message: message,
+            code: statusCode!.toString(),
+            metadata: _coerceMap(data),
+          );
+        }
         if (statusCode != null && statusCode >= 500) {
           return ServerFailure(message: message, code: statusCode.toString());
         }
@@ -176,6 +216,44 @@ abstract final class ErrorMapper {
       if (v != null) return v;
     }
     return null;
+  }
+
+  /// True when the response body carries a validation-shaped `message` (a JSON
+  /// array). Business exceptions return `message` as a plain string instead.
+  static bool _isValidationBody(dynamic data) {
+    final map = _coerceMap(data);
+    return map != null && map['message'] is List;
+  }
+
+  /// Extracts every validation message. Returns all entries of a `message`
+  /// array, or a single-element list for a string body, or empty.
+  static List<String> _extractMessages(dynamic data) {
+    final map = _coerceMap(data);
+    final raw = map?['message'];
+    if (raw is List) {
+      return raw
+          .map((e) => e?.toString().trim() ?? '')
+          .where((s) => s.isNotEmpty)
+          .toList();
+    }
+    final single = _extractMessage(data);
+    return single == null ? const <String>[] : <String>[single];
+  }
+
+  /// Extracts field-scoped errors from an optional `errors` object
+  /// (`{field: [messages]}`). Null when the backend provides no field mapping.
+  static Map<String, List<String>>? _extractFieldErrors(dynamic data) {
+    final map = _coerceMap(data);
+    final raw = map?['errors'];
+    if (raw is! Map) return null;
+    final out = <String, List<String>>{};
+    raw.forEach((key, value) {
+      final list = value is List
+          ? value.map((e) => e.toString()).toList()
+          : <String>[value.toString()];
+      if (list.isNotEmpty) out[key.toString()] = list;
+    });
+    return out.isEmpty ? null : out;
   }
 
   static String? _flattenField(dynamic raw) {

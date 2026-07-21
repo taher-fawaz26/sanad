@@ -155,20 +155,28 @@ class CursorResponse<T> {
 
 ## Error Mapping
 
-All errors map through `FailureMapper` in `packages/network` (alias of `ErrorMapper`):
+All errors map through `ErrorMapper.mapError` in `packages/network`, invoked once in
+`ApiClientImpl.request`. (`FailureMapper` is a legacy alias with no call sites.) The mapping
+below reflects the implementation after Epic 1 — see `docs/ARCHITECTURE_BLUEPRINT.md` §2/§6/§16.
 
 | HTTP / Exception | Failure type |
 |------------------|-------------|
-| `400` | `ValidationFailure` |
+| `400` (`message` is an array) / `422` | `ValidationFailure` (**all** messages; optional `fieldErrors`) |
+| `400` (single-string message) | `BusinessRuleFailure` (e.g. "Cannot delete the only branch") |
 | `401` | `UnauthorizedFailure` |
-| `403` | `UnauthorizedRoleFailure` / `UnverifiedUserFailure` |
+| `403` | `UnverifiedUserFailure` / `UnauthorizedRoleFailure` (prose-sniffed until backend error codes exist) |
 | `404` | `ServerFailure` (code: `404`) |
-| `422` | `ValidationFailure` (with field metadata) |
+| `409` | `ConflictFailure` |
+| `429` | `RateLimitFailure` |
 | `5xx` | `ServerFailure` |
-| Connection timeout | `TimeoutFailure` |
-| No connectivity | `NoInternetFailure` |
+| Connection/receive/send timeout | `TimeoutFailure` |
+| No connectivity / connection error | `NoInternetFailure` |
+| Cancelled request | `NetworkFailure` |
 | TLS / certificate | `SecureConnectionFailure` |
 | Unknown | `UnknownFailure` |
+
+`Failure.isRetryable` (in `core`) classifies which of these are worth retrying (transient
+transport, 5xx, 429) vs not (validation, auth, permission, conflict, business-rule, 4xx).
 
 **Rules:**
 - `DioException` never leaks past the data layer
@@ -215,11 +223,19 @@ Apps also register `ConnectivityController` + wrap the root with `ConnectivityOf
 
 ## Error Messages
 
-Presentation resolves i18n keys via `ErrorMessages` constants:
-- `ErrorMessages.noInternet` → `'errors.no_internet'`
-- `ErrorMessages.timeout` → `'errors.timeout'`
+Presentation resolves a `Failure` to a localized string via the **`FailureLocalizer`**
+extension (`package:localization`) — the single resolver:
 
-Never display raw `Failure.message` to users without i18n resolution.
+```dart
+showAppErrorSnackbar(context: context, title: failure.localizedMessage());
+// full-area error state:
+final display = failureErrorDisplay(failure); // title/description/isConnectivity/isRetryable
+```
+
+`localizedMessage()` translates dotted i18n keys (`errors.*`, `auth.*`) and passes
+backend prose through (the backend localizes its own messages via the Accept-Language
+interceptor). `errorKey` gives a type-based key for telemetry/fallback. Do **not** re-introduce
+the old `message.contains(' ') ? raw : message.tr()` heuristic — it was removed in Epic 1.
 
 ---
 

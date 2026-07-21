@@ -4,6 +4,7 @@ import 'package:services/src/data/datasources/service_remote_data_source.dart';
 import 'package:services/src/data/repositories/service_repository_impl.dart';
 import 'package:services/src/domain/repositories/service_repository.dart';
 import 'package:services/src/domain/usecases/get_services_usecase.dart';
+import 'package:services/src/presentation/cubit/services_cubit.dart';
 
 abstract final class ServicesDI {
   ServicesDI._();
@@ -18,6 +19,7 @@ abstract final class ServicesDI {
       )
       ..registerLazySingleton(
         () => GetServicesUseCase(sl<ServiceRepository>()),
-      );
+      )
+      ..registerFactory(() => ServicesCubit(sl<GetServicesUseCase>()));
   }
 }

@@ -3,6 +3,7 @@ import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:localization/localization.dart';
 import 'package:workers/src/presentation/bloc/workers/workers_bloc.dart';
 import 'package:workers/src/presentation/widgets/invitation_list_item.dart';
 import 'package:workers/src/presentation/widgets/worker_empty_states.dart';
@@ -126,42 +127,15 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final retryLabel = 'empty_states.retry'.tr();
-    final f = failure;
-
-    if (f is NoInternetFailure || f is NetworkFailure) {
-      return Center(
-        child: AppNetworkFailureState(
-          title: 'empty_states.network_title'.tr(),
-          description: 'empty_states.network_description'.tr(),
-          retryLabel: retryLabel,
-          onRetry: onRetry,
-        ),
-      );
-    }
-
-    if (f is TimeoutFailure) {
-      return Center(
-        child: AppNetworkFailureState(
-          title: 'empty_states.timeout_title'.tr(),
-          description: 'empty_states.timeout_description'.tr(),
-          retryLabel: retryLabel,
-          onRetry: onRetry,
-        ),
-      );
-    }
-
-    final description = (f != null && f.message.isNotEmpty)
-        ? f.message.tr()
-        : 'empty_states.server_error_description'.tr();
-
-    return Center(
-      child: AppGenericEmptyState(
-        title: 'empty_states.server_error_title'.tr(),
-        description: description,
-        actionLabel: retryLabel,
-        onAction: onRetry,
-      ),
+    final display = failureErrorDisplay(failure);
+    return AppErrorState(
+      style: display.isConnectivity
+          ? AppErrorStateStyle.network
+          : AppErrorStateStyle.generic,
+      title: display.title,
+      description: display.description,
+      retryLabel: failureRetryLabel(),
+      onRetry: display.isRetryable ? onRetry : null,
     );
   }
 }

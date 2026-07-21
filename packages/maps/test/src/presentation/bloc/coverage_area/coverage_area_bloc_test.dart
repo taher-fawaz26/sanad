@@ -23,7 +23,6 @@ class _MockGetCurrentLocation extends Mock
 const _tPosition = LatLng(25.0, 55.0);
 const _tPosition2 = LatLng(25.1, 55.1);
 const _tAddress = 'Dubai Marina, Dubai';
-const _tFailure = ServerFailure(message: 'error');
 
 const _tAreaA = ServingArea(
   placeId: 'place_a',
@@ -141,13 +140,8 @@ void main() {
       );
 
       blocTest<CoverageAreaBloc, CoverageAreaState>(
-        'failure from getCurrentLocation -> failure status',
-        build: () {
-          when(
-            () => getCurrentLocation(any()),
-          ).thenReturn(TaskEither.left(_tFailure));
-          return buildBloc();
-        },
+        'create mode without a center -> ready on UAE default, no GPS',
+        build: buildBloc,
         act: (bloc) => bloc.add(
           const CoverageAreaStarted(mode: CoverageMode.create),
         ),
@@ -157,12 +151,14 @@ void main() {
             'status',
             CoverageAreaStatus.loading,
           ),
-          isA<CoverageAreaState>().having(
-            (s) => s.status,
-            'status',
-            CoverageAreaStatus.failure,
-          ),
+          isA<CoverageAreaState>()
+              .having((s) => s.status, 'status', CoverageAreaStatus.ready)
+              .having((s) => s.center, 'center', isNull),
         ],
+        verify: (_) {
+          // Opening the coverage map must not request the device location.
+          verifyNever(() => getCurrentLocation(any()));
+        },
       );
 
       blocTest<CoverageAreaBloc, CoverageAreaState>(

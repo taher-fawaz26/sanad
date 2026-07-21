@@ -8,6 +8,7 @@ import 'package:forgot_password/src/models/create_new_password_args.dart';
 import 'package:forgot_password/src/presentation/bloc/forgot_password_bloc.dart';
 import 'package:forgot_password/src/routes/forgot_password_routes.dart';
 import 'package:go_router/go_router.dart';
+import 'package:localization/localization.dart';
 import 'package:otp/otp.dart';
 
 /// Forgot-password OTP verification screen.
@@ -47,7 +48,10 @@ class ForgotPasswordOtpPage extends HookWidget {
               );
             }
           } else if (state is ForgotPasswordOtpFailureState) {
-            showAppSnackbar(context: context, title: state.message.tr());
+            showAppErrorSnackbar(
+              context: context,
+              title: state.failure.localizedMessage(),
+            );
           } else if (state is ForgotPasswordOtpReadyState) {
             context.read<OtpUiCubit>().startTimer();
             showAppSnackbar(

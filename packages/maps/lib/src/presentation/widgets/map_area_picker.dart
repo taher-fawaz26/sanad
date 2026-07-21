@@ -8,14 +8,14 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:maps/src/domain/entities/map_area_picker_result.dart';
 import 'package:maps/src/domain/entities/place_prediction.dart';
 import 'package:maps/src/presentation/bloc/map_area_picker/map_area_picker_bloc.dart';
+import 'package:maps/src/presentation/camera/initial_camera_resolver.dart';
 import 'package:maps/src/presentation/controllers/map_camera_controller.dart';
 import 'package:maps/src/presentation/models/map_area_picker_labels.dart';
 import 'package:maps/src/presentation/models/map_configuration.dart';
-import 'package:maps/src/presentation/models/place_search_status.dart';
 import 'package:maps/src/presentation/widgets/location_address_field.dart';
 import 'package:maps/src/presentation/widgets/map_control_bar.dart';
 import 'package:maps/src/presentation/widgets/map_zoom_controls.dart';
-import 'package:maps/src/presentation/widgets/place_search_bar.dart';
+import 'package:maps/src/presentation/widgets/place_search_sheet_body.dart';
 import 'package:maps/src/widgets/app_google_map.dart';
 
 /// Reusable map picker that returns a single generic result.
@@ -24,7 +24,8 @@ import 'package:maps/src/widgets/app_google_map.dart';
 class MapAreaPicker extends StatefulWidget {
   const MapAreaPicker({
     required this.labels,
-    this.initialPosition,
+    this.existingLocation,
+    this.initialLocation,
     this.initialAddress,
     this.localeIdentifier,
     this.configuration = const MapConfiguration(),
@@ -36,7 +37,13 @@ class MapAreaPicker extends StatefulWidget {
   });
 
   final MapAreaPickerLabels labels;
-  final LatLng? initialPosition;
+
+  /// A previously saved location (edit flow). Highest priority for the initial
+  /// camera. See [InitialCameraResolver].
+  final LatLng? existingLocation;
+
+  /// An explicit initial location supplied by the caller.
+  final LatLng? initialLocation;
   final String? initialAddress;
   final String? localeIdentifier;
   final MapConfiguration configuration;
@@ -54,25 +61,53 @@ class MapAreaPicker extends StatefulWidget {
 
 class _MapAreaPickerState extends State<MapAreaPicker> {
   final _cameraController = MapCameraController();
-  final _searchFocusNode = FocusNode();
 
   @override
   void dispose() {
     _cameraController.dispose();
-    _searchFocusNode.dispose();
     super.dispose();
   }
 
-  void _dismissSearch() {
-    _searchFocusNode.unfocus();
-  }
-
   void _onMapTap(LatLng latLng) {
-    _dismissSearch();
     _cameraController.animateTo(
       latLng,
       zoom: widget.configuration.initialZoom,
     );
+  }
+
+  /// Opens the tap-to-search modal sheet. Typing only updates predictions;
+  /// selecting a result closes the sheet and dispatches the existing
+  /// prediction-selected flow, which animates the camera once.
+  Future<void> _openSearchSheet(BuildContext context) async {
+    final bloc = context.read<MapAreaPickerBloc>();
+    final selected = await showAppModalSheet<PlacePrediction>(
+      context: context,
+      child: BlocProvider.value(
+        value: bloc,
+        child: BlocBuilder<MapAreaPickerBloc, MapAreaPickerState>(
+          builder: (context, state) => PlaceSearchSheetBody(
+            labels: PlaceSearchSheetLabels(
+              hint: widget.labels.searchHint,
+              emptyMessage: widget.labels.noResultsMessage,
+              errorMessage: widget.labels.searchError,
+              retryLabel: widget.labels.searchRetry,
+            ),
+            predictions: state.predictions,
+            searchStatus: state.searchStatus,
+            searchQuery: state.searchQuery,
+            errorMessage: state.searchError,
+            onQueryChanged: (q) => context.read<MapAreaPickerBloc>().add(
+              MapAreaPickerQueryChanged(q),
+            ),
+            onPredictionTap: (p) => Navigator.of(context).pop(p),
+          ),
+        ),
+      ),
+    );
+    bloc.add(const MapAreaPickerPredictionsCleared());
+    if (selected != null) {
+      bloc.add(MapAreaPickerPredictionSelected(selected));
+    }
   }
 
   void _onCameraIdle(MapAreaPickerBloc bloc) {
@@ -91,7 +126,10 @@ class _MapAreaPickerState extends State<MapAreaPicker> {
       create: (_) => sl<MapAreaPickerBloc>()
         ..add(
           MapAreaPickerStarted(
-            initialPosition: widget.initialPosition,
+            initialPosition: InitialCameraResolver.resolveInitialLocation(
+              existingLocation: widget.existingLocation,
+              initialLocation: widget.initialLocation,
+            ),
             initialAddress: widget.initialAddress,
             localeIdentifier: localeIdentifier,
           ),
@@ -144,37 +182,15 @@ class _MapAreaPickerState extends State<MapAreaPicker> {
   }
 
   Widget _buildSearchBar() {
-    return BlocSelector<MapAreaPickerBloc, MapAreaPickerState, _SearchState>(
-      selector: (state) => _SearchState(
-        predictions: state.predictions,
-        searchStatus: state.searchStatus,
-        searchError: state.searchError,
-        searchQuery: state.searchQuery,
+    // Tap-to-open trigger — the live search lives in the modal sheet.
+    return Builder(
+      builder: (context) => AppSearchField(
+        variant: AppSearchFieldVariant.bordered,
+        hint: widget.labels.searchHint,
+        showMicIcon: false,
+        readOnly: true,
+        onTap: () => _openSearchSheet(context),
       ),
-      builder: (context, searchState) {
-        final bloc = context.read<MapAreaPickerBloc>();
-        return PlaceSearchBar(
-          focusNode: _searchFocusNode,
-          hint: widget.labels.searchHint,
-          predictions: searchState.predictions,
-          searchStatus: searchState.searchStatus,
-          searchQuery: searchState.searchQuery,
-          emptyMessage: widget.labels.noResultsMessage,
-          errorMessage: searchState.searchError ?? widget.labels.searchError,
-          onQueryChanged: (query) {
-            bloc.add(MapAreaPickerQueryChanged(query));
-          },
-          onSubmitted: (_) {
-            _dismissSearch();
-          },
-          onPredictionSelected: (prediction) {
-            bloc.add(MapAreaPickerPredictionSelected(prediction));
-          },
-          onCleared: () {
-            bloc.add(const MapAreaPickerPredictionsCleared());
-          },
-        );
-      },
     );
   }
 
@@ -189,7 +205,11 @@ class _MapAreaPickerState extends State<MapAreaPicker> {
         return _MapAreaPickerMapView(
           position: mapState.position,
           isGeocoding: mapState.isGeocoding,
-          configuration: widget.configuration,
+          initialCameraPosition: InitialCameraResolver.resolveCamera(
+            existingLocation: widget.existingLocation,
+            initialLocation: widget.initialLocation,
+            zoom: widget.configuration.initialZoom,
+          ),
           cameraController: _cameraController,
           pinMarker: widget.pinMarker,
           height: widget.mapHeight,
@@ -271,28 +291,6 @@ class _MapAreaPickerState extends State<MapAreaPicker> {
   }
 }
 
-class _SearchState extends Equatable {
-  const _SearchState({
-    required this.predictions,
-    required this.searchStatus,
-    required this.searchQuery,
-    this.searchError,
-  });
-
-  final List<PlacePrediction> predictions;
-  final PlaceSearchStatus searchStatus;
-  final String searchQuery;
-  final String? searchError;
-
-  @override
-  List<Object?> get props => [
-    predictions,
-    searchStatus,
-    searchQuery,
-    searchError,
-  ];
-}
-
 class _MapState extends Equatable {
   const _MapState({
     required this.position,
@@ -308,7 +306,7 @@ class _MapState extends Equatable {
 
 class _MapAreaPickerMapView extends StatelessWidget {
   const _MapAreaPickerMapView({
-    required this.configuration,
+    required this.initialCameraPosition,
     required this.cameraController,
     required this.height,
     required this.onMapTap,
@@ -320,7 +318,7 @@ class _MapAreaPickerMapView extends StatelessWidget {
 
   final LatLng? position;
   final bool isGeocoding;
-  final MapConfiguration configuration;
+  final CameraPosition initialCameraPosition;
   final MapCameraController cameraController;
   final Widget? pinMarker;
   final double height;
@@ -329,9 +327,6 @@ class _MapAreaPickerMapView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initialPosition = position ?? configuration.initialPosition;
-    final colors = context.appColors;
-
     return SizedBox(
       height: responsiveDimension(height),
       child: ClipRRect(
@@ -340,10 +335,7 @@ class _MapAreaPickerMapView extends StatelessWidget {
           alignment: Alignment.center,
           children: [
             AppGoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: initialPosition,
-                zoom: configuration.initialZoom,
-              ),
+              initialCameraPosition: initialCameraPosition,
               onMapCreated: cameraController.onMapCreated,
               onCameraMove: cameraController.onCameraMove,
               onCameraIdle: onCameraIdle,
@@ -404,7 +396,8 @@ class _MapAreaPickerErrorMessage extends StatelessWidget {
 Future<MapAreaPickerResult?> showMapAreaPicker(
   BuildContext context, {
   required MapAreaPickerLabels labels,
-  LatLng? initialPosition,
+  LatLng? existingLocation,
+  LatLng? initialLocation,
   String? initialAddress,
   String? localeIdentifier,
   MapConfiguration configuration = const MapConfiguration(),
@@ -418,7 +411,8 @@ Future<MapAreaPickerResult?> showMapAreaPicker(
     child: Builder(
       builder: (sheetContext) => MapAreaPicker(
         labels: labels,
-        initialPosition: initialPosition,
+        existingLocation: existingLocation,
+        initialLocation: initialLocation,
         initialAddress: initialAddress,
         localeIdentifier: localeIdentifier,
         configuration: configuration,

@@ -25,12 +25,12 @@ class AuthRegisterSuccessState extends AuthState {
 }
 
 class AuthRegisterFailureState extends AuthState {
-  const AuthRegisterFailureState(this.message);
+  const AuthRegisterFailureState(this.failure);
 
-  final String message;
+  final Failure failure;
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [failure];
 }
 
 class AuthLoginLoadingState extends AuthState {
@@ -47,13 +47,12 @@ class AuthLoginSuccessState extends AuthState {
 }
 
 class AuthLoginFailureState extends AuthState {
-  const AuthLoginFailureState(this.message, {this.code});
+  const AuthLoginFailureState(this.failure);
 
-  final String message;
-  final String? code;
+  final Failure failure;
 
   @override
-  List<Object?> get props => [message, code];
+  List<Object?> get props => [failure];
 }
 
 /// Login failed because the account is not verified — navigate to OTP.
@@ -75,12 +74,12 @@ class AuthLogoutSuccessState extends AuthState {
 }
 
 class AuthLogoutFailureState extends AuthState {
-  const AuthLogoutFailureState(this.message);
+  const AuthLogoutFailureState(this.failure);
 
-  final String message;
+  final Failure failure;
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [failure];
 }
 
 class AuthDeleteAccountLoadingState extends AuthState {
@@ -93,13 +92,13 @@ class AuthDeleteAccountLoadingState extends AuthState {
 }
 
 class AuthDeleteAccountFailureState extends AuthState {
-  const AuthDeleteAccountFailureState(this.message, {required this.user});
+  const AuthDeleteAccountFailureState(this.failure, {required this.user});
 
-  final String message;
+  final Failure failure;
   final UserEntity? user;
 
   @override
-  List<Object?> get props => [message, user];
+  List<Object?> get props => [failure, user];
 }
 
 class AuthCheckSignInStatusLoadingState extends AuthState {

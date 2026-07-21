@@ -9,7 +9,8 @@ import 'package:maps/src/presentation/widgets/map_location_picker.dart';
 Future<LocationPickerResult?> showLocationPickerSheet(
   BuildContext context, {
   required LocationPickerLabels labels,
-  LatLng? initialPosition,
+  LatLng? existingLocation,
+  LatLng? initialLocation,
   String? initialAddress,
   MapConfiguration configuration = const MapConfiguration(),
   Widget? pinMarker,
@@ -46,7 +47,8 @@ Future<LocationPickerResult?> showLocationPickerSheet(
             ],
             MapLocationPicker(
               labels: labels,
-              initialPosition: initialPosition,
+              existingLocation: existingLocation,
+              initialLocation: initialLocation,
               initialAddress: initialAddress,
               configuration: configuration,
               pinMarker: pinMarker,

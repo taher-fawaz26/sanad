@@ -3,8 +3,10 @@ import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:localization/localization.dart';
 import 'package:services/src/domain/entities/service_entity.dart';
-import 'package:services/src/domain/usecases/get_services_usecase.dart';
+import 'package:services/src/presentation/cubit/services_cubit.dart';
 
 /// Result returned when the user confirms service selection.
 class SelectServiceResult {
@@ -35,8 +37,11 @@ Future<SelectServiceResult?> showSelectServiceActionSheet({
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: spec.barrierColor,
-    builder: (context) => _SelectServiceActionSheet(
-      initialSelectedIds: initialSelectedIds,
+    builder: (context) => BlocProvider(
+      create: (_) => sl<ServicesCubit>()..load(),
+      child: _SelectServiceActionSheet(
+        initialSelectedIds: initialSelectedIds,
+      ),
     ),
   );
 }
@@ -55,16 +60,12 @@ class _SelectServiceActionSheetState extends State<_SelectServiceActionSheet> {
   final _searchController = TextEditingController();
   final _selectedIds = <String>{};
 
-  List<ServiceEntity> _services = const [];
   String _query = '';
-  bool _isLoading = true;
-  Failure? _failure;
 
   @override
   void initState() {
     super.initState();
     _selectedIds.addAll(widget.initialSelectedIds);
-    _loadServices();
   }
 
   @override
@@ -73,32 +74,10 @@ class _SelectServiceActionSheetState extends State<_SelectServiceActionSheet> {
     super.dispose();
   }
 
-  Future<void> _loadServices() async {
-    setState(() {
-      _isLoading = true;
-      _failure = null;
-    });
-
-    final result = await sl<GetServicesUseCase>()(const NoParams()).run();
-
-    if (!mounted) return;
-
-    result.fold(
-      (failure) => setState(() {
-        _isLoading = false;
-        _failure = failure;
-      }),
-      (services) => setState(() {
-        _isLoading = false;
-        _services = services;
-      }),
-    );
-  }
-
-  List<ServiceEntity> get _filteredServices {
+  List<ServiceEntity> _filteredServices(List<ServiceEntity> services) {
     final query = _query.trim().toLowerCase();
-    if (query.isEmpty) return _services;
-    return _services
+    if (query.isEmpty) return services;
+    return services
         .where(
           (service) =>
               service.name.toLowerCase().contains(query) ||
@@ -118,7 +97,10 @@ class _SelectServiceActionSheetState extends State<_SelectServiceActionSheet> {
   }
 
   void _confirm() {
-    final selected = _services
+    final selected = context
+        .read<ServicesCubit>()
+        .state
+        .services
         .where((service) => _selectedIds.contains(service.id))
         .toList();
     Navigator.of(context).pop(SelectServiceResult(selectedServices: selected));
@@ -152,7 +134,9 @@ class _SelectServiceActionSheetState extends State<_SelectServiceActionSheet> {
           ),
           ConstrainedBox(
             constraints: BoxConstraints(maxHeight: maxHeight),
-            child: _buildListBody(),
+            child: BlocBuilder<ServicesCubit, ServicesState>(
+              builder: (context, state) => _buildListBody(state),
+            ),
           ),
         ],
       ),
@@ -163,12 +147,12 @@ class _SelectServiceActionSheetState extends State<_SelectServiceActionSheet> {
     );
   }
 
-  Widget _buildListBody() {
-    if (_isLoading) {
+  Widget _buildListBody(ServicesState state) {
+    if (state.isLoading) {
       return const Center(child: AppLoadingIndicator());
     }
 
-    if (_failure != null) {
+    if (state.failure != null) {
       return Center(
         child: Padding(
           padding: EdgeInsets.all(AppSpacing.xl),
@@ -176,7 +160,7 @@ class _SelectServiceActionSheetState extends State<_SelectServiceActionSheet> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                _failure!.message,
+                state.failure!.localizedMessage(),
                 textAlign: TextAlign.center,
                 style: context.appTypography.regularNormal.copyWith(
                   color: context.appColors.textSecondary,
@@ -185,7 +169,7 @@ class _SelectServiceActionSheetState extends State<_SelectServiceActionSheet> {
               SizedBox(height: AppSpacing.md),
               AppButtonPresets.outline(
                 label: 'services.select_service.retry'.tr(),
-                onPressed: _loadServices,
+                onPressed: () => context.read<ServicesCubit>().load(),
               ),
             ],
           ),
@@ -193,7 +177,7 @@ class _SelectServiceActionSheetState extends State<_SelectServiceActionSheet> {
       );
     }
 
-    final services = _filteredServices;
+    final services = _filteredServices(state.services);
     if (services.isEmpty) {
       // Figma `service-search-empty` (`1517:9696`): 48dp search-alert icon,
       // semibold title, muted description.

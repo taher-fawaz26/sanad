@@ -68,10 +68,36 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
     );
   }
 
-  void _onSearchPredictionSelected(PlacePrediction prediction) {
-    context.read<LocationPickerBloc>().add(
-      LocationPickerPredictionSelected(prediction),
+  Future<void> _openSearchSheet(BuildContext context) async {
+    final bloc = context.read<LocationPickerBloc>();
+    final selected = await showAppModalSheet<PlacePrediction>(
+      context: context,
+      child: BlocProvider.value(
+        value: bloc,
+        child: BlocBuilder<LocationPickerBloc, LocationPickerState>(
+          builder: (context, state) => PlaceSearchSheetBody(
+            labels: PlaceSearchSheetLabels(
+              hint: 'branches.coverage_area.search_hint'.tr(),
+              emptyMessage: 'branches.coverage_area.no_areas_found'.tr(),
+              errorMessage: 'branches.coverage_area.search_error'.tr(),
+              retryLabel: 'empty_states.retry'.tr(),
+            ),
+            predictions: state.predictions,
+            searchStatus: state.searchStatus,
+            searchQuery: state.searchQuery,
+            errorMessage: state.searchError,
+            onQueryChanged: (q) => context.read<LocationPickerBloc>().add(
+              LocationPickerQueryChanged(q),
+            ),
+            onPredictionTap: (p) => Navigator.of(context).pop(p),
+          ),
+        ),
+      ),
     );
+    bloc.add(const LocationPickerPredictionsCleared());
+    if (selected != null) {
+      bloc.add(LocationPickerPredictionSelected(selected));
+    }
   }
 
   Future<void> _openAddAreaPicker() async {
@@ -79,7 +105,8 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
     final state = bloc.state;
     final result = await showMapAreaPicker(
       context,
-      initialPosition: state.center,
+      // Start the area picker near the coverage center the caller already has.
+      initialLocation: state.center,
       initialAddress: state.address,
       localeIdentifier: context.locale.toString(),
       requirePlaceId: true,
@@ -92,6 +119,7 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
         addressHint: 'branches.location_picker.address_hint'.tr(),
         genericError: 'branches.location_picker.generic_error'.tr(),
         confirm: 'branches.coverage_area.done'.tr(),
+        searchRetry: 'empty_states.retry'.tr(),
         placeIdRequiredHint: 'branches.coverage_area.select_from_search_hint'
             .tr(),
       ),
@@ -249,35 +277,15 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
   }
 
   Widget _buildSearchBar(BuildContext context) {
+    // Tap-to-open trigger — the live search lives in the modal sheet.
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      child: BlocBuilder<LocationPickerBloc, LocationPickerState>(
-        buildWhen: (prev, curr) =>
-            prev.predictions != curr.predictions ||
-            prev.searchStatus != curr.searchStatus ||
-            prev.searchQuery != curr.searchQuery ||
-            prev.searchError != curr.searchError,
-        builder: (context, lpState) {
-          return PlaceSearchBar(
-            hint: 'branches.coverage_area.search_hint'.tr(),
-            predictions: lpState.predictions,
-            searchStatus: lpState.searchStatus,
-            searchQuery: lpState.searchQuery,
-            errorMessage: lpState.searchError,
-            onQueryChanged: (query) {
-              context.read<LocationPickerBloc>().add(
-                LocationPickerQueryChanged(query),
-              );
-            },
-            onSubmitted: (_) {},
-            onPredictionSelected: _onSearchPredictionSelected,
-            onCleared: () {
-              context.read<LocationPickerBloc>().add(
-                const LocationPickerPredictionsCleared(),
-              );
-            },
-          );
-        },
+      child: AppSearchField(
+        variant: AppSearchFieldVariant.bordered,
+        hint: 'branches.coverage_area.search_hint'.tr(),
+        showMicIcon: false,
+        readOnly: true,
+        onTap: () => _openSearchSheet(context),
       ),
     );
   }

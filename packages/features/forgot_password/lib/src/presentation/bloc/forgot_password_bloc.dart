@@ -1,3 +1,4 @@
+import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:forgot_password/src/domain/usecases/forgot_password_params.dart';
@@ -39,7 +40,7 @@ class ForgotPasswordBloc
         )
         .run();
     result.fold(
-      (failure) => emit(ForgotPasswordRequestFailureState(failure.message)),
+      (failure) => emit(ForgotPasswordRequestFailureState(failure)),
       (_) => emit(const ForgotPasswordOtpSentState()),
     );
   }
@@ -58,7 +59,7 @@ class ForgotPasswordBloc
         )
         .run();
     result.fold(
-      (failure) => emit(ForgotPasswordOtpFailureState(failure.message)),
+      (failure) => emit(ForgotPasswordOtpFailureState(failure)),
       (_) => emit(const ForgotPasswordOtpVerifiedState()),
     );
   }
@@ -74,7 +75,7 @@ class ForgotPasswordBloc
         )
         .run();
     result.fold(
-      (failure) => emit(ForgotPasswordOtpFailureState(failure.message)),
+      (failure) => emit(ForgotPasswordOtpFailureState(failure)),
       (_) => emit(const ForgotPasswordOtpReadyState()),
     );
   }
@@ -93,7 +94,7 @@ class ForgotPasswordBloc
         )
         .run();
     result.fold(
-      (failure) => emit(ForgotPasswordResetFailureState(failure.message)),
+      (failure) => emit(ForgotPasswordResetFailureState(failure)),
       (_) => emit(const ForgotPasswordResetSuccessState()),
     );
   }

@@ -26,12 +26,12 @@ class OtpValidateSuccessState extends OtpState {
 }
 
 class OtpValidateFailureState extends OtpState {
-  const OtpValidateFailureState(this.message);
+  const OtpValidateFailureState(this.failure);
 
-  final String message;
+  final Failure failure;
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [failure];
 }
 
 class OtpResendLoadingState extends OtpState {
@@ -43,10 +43,10 @@ class OtpResendSuccessState extends OtpState {
 }
 
 class OtpResendFailureState extends OtpState {
-  const OtpResendFailureState(this.message);
+  const OtpResendFailureState(this.failure);
 
-  final String message;
+  final Failure failure;
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [failure];
 }

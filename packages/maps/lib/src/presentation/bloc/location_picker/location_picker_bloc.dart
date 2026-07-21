@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:maps/src/domain/entities/place_prediction.dart';
 import 'package:maps/src/domain/usecases/forward_geocode_usecase.dart';
-import 'package:maps/src/domain/usecases/get_current_location_usecase.dart';
 import 'package:maps/src/domain/usecases/get_place_details_usecase.dart';
 import 'package:maps/src/domain/usecases/open_location_settings_usecase.dart';
 import 'package:maps/src/domain/usecases/reverse_geocode_usecase.dart';
@@ -12,7 +11,6 @@ import 'package:maps/src/domain/usecases/search_places_usecase.dart';
 import 'package:maps/src/presentation/models/place_search_status.dart';
 import 'package:maps/src/presentation/utils/latest_operation.dart';
 import 'package:maps/src/presentation/utils/place_search_runner.dart';
-import 'package:maps/src/services/location_failure_codes.dart';
 
 part 'location_picker_event.dart';
 part 'location_picker_state.dart';
@@ -20,14 +18,12 @@ part 'location_picker_state.dart';
 class LocationPickerBloc
     extends Bloc<LocationPickerEvent, LocationPickerState> {
   LocationPickerBloc({
-    required GetCurrentLocationUseCase getCurrentLocationUseCase,
     required ReverseGeocodeUseCase reverseGeocodeUseCase,
     required ForwardGeocodeUseCase forwardGeocodeUseCase,
     required OpenLocationSettingsUseCase openLocationSettingsUseCase,
     SearchPlacesUseCase? searchPlacesUseCase,
     GetPlaceDetailsUseCase? getPlaceDetailsUseCase,
-  }) : _getCurrentLocationUseCase = getCurrentLocationUseCase,
-       _reverseGeocodeUseCase = reverseGeocodeUseCase,
+  }) : _reverseGeocodeUseCase = reverseGeocodeUseCase,
        _forwardGeocodeUseCase = forwardGeocodeUseCase,
        _openLocationSettingsUseCase = openLocationSettingsUseCase,
        _getPlaceDetailsUseCase = getPlaceDetailsUseCase,
@@ -44,7 +40,6 @@ class LocationPickerBloc
     on<LocationPickerPredictionsCleared>(_onPredictionsCleared);
   }
 
-  final GetCurrentLocationUseCase _getCurrentLocationUseCase;
   final ReverseGeocodeUseCase _reverseGeocodeUseCase;
   final ForwardGeocodeUseCase _forwardGeocodeUseCase;
   final OpenLocationSettingsUseCase _openLocationSettingsUseCase;
@@ -85,36 +80,12 @@ class LocationPickerBloc
       return;
     }
 
+    // No saved/explicit location: open on the default UAE viewport with no
+    // pin and WITHOUT requesting location permission. The device location is
+    // only used when the user taps "Use My Current Location"
+    // ([MapMyLocationButton]).
     emit(
-      state.copyWith(
-        status: LocationPickerStatus.loadingLocation,
-        clearFailure: true,
-      ),
-    );
-
-    final result = await _getCurrentLocationUseCase(const NoParams()).run();
-    if (!_geocodeOp.isCurrent(token)) return;
-
-    await result.fold(
-      (failure) async {
-        emit(
-          state.copyWith(
-            status: _statusFromFailure(failure),
-            failure: failure,
-          ),
-        );
-      },
-      (position) async {
-        emit(
-          state.copyWith(
-            status: LocationPickerStatus.geocoding,
-            position: position,
-            cameraSource: LocationPickerCameraSource.programmatic,
-            clearFailure: true,
-          ),
-        );
-        await _reverseGeocode(position, emit, token);
-      },
+      state.copyWith(status: LocationPickerStatus.ready, clearFailure: true),
     );
   }
 
@@ -346,17 +317,5 @@ class LocationPickerBloc
         ),
       ),
     );
-  }
-
-  LocationPickerStatus _statusFromFailure(Failure failure) {
-    return switch (failure.code) {
-      LocationFailureCodes.permissionDenied =>
-        LocationPickerStatus.permissionDenied,
-      LocationFailureCodes.permissionPermanentlyDenied =>
-        LocationPickerStatus.permissionPermanentlyDenied,
-      LocationFailureCodes.serviceDisabled =>
-        LocationPickerStatus.serviceDisabled,
-      _ => LocationPickerStatus.failure,
-    };
   }
 }

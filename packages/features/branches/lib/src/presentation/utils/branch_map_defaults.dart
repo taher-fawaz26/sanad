@@ -4,8 +4,10 @@ import 'package:maps/maps.dart';
 abstract final class BranchMapDefaults {
   BranchMapDefaults._();
 
-  /// Fallback camera target (Dubai) shown before a real position is resolved.
-  static const LatLng position = LatLng(25.0772, 55.1396);
+  /// Fallback camera target (UAE, centered on Dubai) shown before a real
+  /// position is resolved. Sourced from the shared [DefaultMapViewport] so the
+  /// provider default lives in one place.
+  static const LatLng position = DefaultMapViewport.center;
 
   /// Zoom used by the draggable location-picker map.
   static const double pickerZoom = 14;
