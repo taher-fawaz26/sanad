@@ -58,7 +58,10 @@ abstract final class MapsDI {
         () => ForwardGeocodeUseCase(sl<GeocodingRepository>()),
       )
       ..registerLazySingleton(
-        () => ResolveNearbyAreasUseCase(sl<LocationsRepository>()),
+        () => ResolveNearbyAreasUseCase(
+          sl<LocationsRepository>(),
+          sl<GeocodingRepository>(),
+        ),
       )
       ..registerLazySingleton(
         () => ResolveCoverageLocationUseCase(
