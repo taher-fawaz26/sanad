@@ -149,13 +149,13 @@ melos:
     build:provider:android:
       run: >
         melos exec -c 1 --scope="sanad_provider" --
-        flutter build apk --release
+        flutter build apk --release --dart-define-from-file=dart_defines/android.json
       description: Build sanad_provider Android APK.
 
     build:provider:ios:
       run: >
         melos exec -c 1 --scope="sanad_provider" --
-        flutter build ipa --release
+        flutter build ipa --release --dart-define-from-file=dart_defines/ios.json
       description: Build sanad_provider iOS IPA.
 
     # ─── Architecture Validation ───────────────────────────────────────────────

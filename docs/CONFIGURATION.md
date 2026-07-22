@@ -39,6 +39,38 @@ class NetworkConfig {
 }
 ```
 
+## Maps / Places API key (`MAPS_API_KEY`)
+
+Google Places autocomplete (the location & coverage-area search sheets) needs a
+Google API key, supplied as the `MAPS_API_KEY` dart-define. It is read in
+`apps/sanad_provider/lib/src/di/app_di.dart` via `String.fromEnvironment`. When
+absent/empty the maps package falls back to keyless mode (no autocomplete) — see
+`MapsConfig.placesEnabled`.
+
+Keys are provided per platform through git-ignored dart-define files:
+
+```
+apps/sanad_provider/dart_defines/
+  android.example.json   # committed template ({ "MAPS_API_KEY": "" })
+  ios.example.json       # committed template
+  android.json           # real key — git-ignored, local only
+  ios.json               # real key — git-ignored, local only
+```
+
+Local setup — copy each template and fill in the platform key:
+
+```bash
+cd apps/sanad_provider
+cp dart_defines/android.example.json dart_defines/android.json
+cp dart_defines/ios.example.json    dart_defines/ios.json
+# then paste the real key into each
+```
+
+Launch configs (`.vscode/launch.json`) and the `build:provider:*` melos scripts
+already pass `--dart-define-from-file=dart_defines/<platform>.json`. **CI injects
+the real values** by writing these files (or overriding the define) at build
+time. Real keys are never committed — only the `*.example.json` templates are.
+
 ## Feature Flags
 
 Defined in `FeatureFlags` class in `packages/config`:

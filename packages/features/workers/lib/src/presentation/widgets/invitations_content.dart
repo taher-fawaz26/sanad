@@ -3,10 +3,10 @@ import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:localization/localization.dart';
 import 'package:workers/src/presentation/bloc/workers/workers_bloc.dart';
 import 'package:workers/src/presentation/widgets/invitation_list_item.dart';
 import 'package:workers/src/presentation/widgets/worker_empty_states.dart';
+import 'package:workers/src/presentation/widgets/worker_error_state.dart';
 import 'package:workers/src/presentation/widgets/worker_search_sheet.dart';
 
 /// Invitations tab content — mirrors `_WorkersContent` in `workers_page.dart`.
@@ -50,7 +50,7 @@ class InvitationsContent extends StatelessWidget {
                 state.invitationsStatus == RequestStatus.failure &&
                     state.invitations.isEmpty
                 ? AppFillRemainingScrollable(
-                    child: _ErrorState(
+                    child: WorkerErrorState(
                       failure: state.failure,
                       onRetry: () => context.read<WorkersBloc>().add(
                         const InvitationsRefreshEvent(),
@@ -115,27 +115,6 @@ class _EmptyState extends StatelessWidget {
         title: 'workers.invitations_empty_title'.tr(),
         description: 'workers.invitations_empty_description'.tr(),
       ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.onRetry, this.failure});
-
-  final Failure? failure;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final display = failureErrorDisplay(failure);
-    return AppErrorState(
-      style: display.isConnectivity
-          ? AppErrorStateStyle.network
-          : AppErrorStateStyle.generic,
-      title: display.title,
-      description: display.description,
-      retryLabel: failureRetryLabel(),
-      onRetry: display.isRetryable ? onRetry : null,
     );
   }
 }

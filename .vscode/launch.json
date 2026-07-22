@@ -33,7 +33,8 @@
             "cwd": "apps/sanad_provider",
             "request": "launch",
             "type": "dart",
-            "program": "lib/main.dart"
+            "program": "lib/main.dart",
+            "toolArgs": ["--dart-define-from-file=dart_defines/android.json"]
         },
         {
             "name": "sanad_provider (profile mode)",
@@ -41,7 +42,8 @@
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
-            "flutterMode": "profile"
+            "flutterMode": "profile",
+            "toolArgs": ["--dart-define-from-file=dart_defines/android.json"]
         },
         {
             "name": "sanad_provider (release mode)",
@@ -49,7 +51,34 @@
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
-            "flutterMode": "release"
+            "flutterMode": "release",
+            "toolArgs": ["--dart-define-from-file=dart_defines/android.json"]
+        },
+        {
+            "name": "sanad_provider (iOS)",
+            "cwd": "apps/sanad_provider",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "toolArgs": ["--dart-define-from-file=dart_defines/ios.json"]
+        },
+        {
+            "name": "sanad_provider (iOS profile mode)",
+            "cwd": "apps/sanad_provider",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "flutterMode": "profile",
+            "toolArgs": ["--dart-define-from-file=dart_defines/ios.json"]
+        },
+        {
+            "name": "sanad_provider (iOS release mode)",
+            "cwd": "apps/sanad_provider",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "flutterMode": "release",
+            "toolArgs": ["--dart-define-from-file=dart_defines/ios.json"]
         },
         {
             "name": "sand_analytics",

@@ -31,5 +31,13 @@ doc/api/
 # FVM Version Cache
 .fvm/
 
+# macOS finder metadata
+.DS_Store
+**/.DS_Store
+
 # Google Maps API keys (never commit)
 **/Secrets.xcconfig
+
+# dart-define secrets: commit only the *.example.json templates, never the real files
+**/dart_defines/*.json
+!**/dart_defines/*.example.json

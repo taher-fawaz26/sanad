@@ -48,6 +48,12 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
   void _onCameraIdle() {
     if (!_isDragging) return;
     setState(() => _isDragging = false);
+    // A programmatic animation (initial center, prediction jump, map tap,
+    // radius sync) also produces a move→idle sequence. Those paths dispatch
+    // their own CoverageAreaMapMoved(programmatic); treating this idle as a
+    // user pan would fire a second, spurious resolve that overwrites the
+    // seeded/loaded serving areas. Only real user pans reach the bloc here.
+    if (_cameraController.isAnimating.value) return;
     final center = _cameraController.position.value;
     if (center == null) return;
     context.read<CoverageAreaBloc>().add(

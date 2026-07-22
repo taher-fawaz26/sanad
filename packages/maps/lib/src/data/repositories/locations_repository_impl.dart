@@ -17,6 +17,13 @@ class LocationsRepositoryImpl implements LocationsRepository {
 
   final Map<String, List<AreaEntity>> _areasCache = {};
 
+  /// Shares a single in-flight pagination per city. Without this, concurrent
+  /// callers (e.g. the initial resolve and a camera-move resolve firing before
+  /// the first completes) would each walk all pages because the cache is only
+  /// populated once a full run finishes.
+  final Map<String, Future<Either<Failure, List<AreaEntity>>>> _areasInFlight =
+      {};
+
   @override
   TaskEither<Failure, List<CountryEntity>> getCountries() =>
       _apiClient.request<List<CountryEntity>>(
@@ -45,17 +52,25 @@ class LocationsRepositoryImpl implements LocationsRepository {
   TaskEither<Failure, List<AreaEntity>> getAreasByCity({
     required String cityId,
   }) {
-    final cached = _areasCache[cityId];
-    if (cached != null) {
-      return TaskEither.right(cached);
-    }
+    return TaskEither(() {
+      final cached = _areasCache[cityId];
+      if (cached != null) {
+        return Future.value(Either.right(cached));
+      }
 
-    return _fetchAllAreaPages(cityId: cityId, page: 1, accumulated: []).map(
-      (areas) {
-        _areasCache[cityId] = areas;
-        return areas;
-      },
-    );
+      return _areasInFlight[cityId] ??=
+          _fetchAllAreaPages(
+            cityId: cityId,
+            page: 1,
+            accumulated: [],
+          ).run().then((either) {
+            _areasInFlight.remove(cityId);
+            return either.map((areas) {
+              _areasCache[cityId] = areas;
+              return areas;
+            });
+          });
+    });
   }
 
   TaskEither<Failure, List<AreaEntity>> _fetchAllAreaPages({

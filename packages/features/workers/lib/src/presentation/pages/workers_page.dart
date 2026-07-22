@@ -1,5 +1,4 @@
 import 'package:app_assets/app_assets.dart';
-import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +8,7 @@ import 'package:localization/localization.dart';
 import 'package:workers/src/presentation/bloc/workers/workers_bloc.dart';
 import 'package:workers/src/presentation/widgets/invitations_content.dart';
 import 'package:workers/src/presentation/widgets/worker_empty_states.dart';
+import 'package:workers/src/presentation/widgets/worker_error_state.dart';
 import 'package:workers/src/presentation/widgets/worker_list_item.dart';
 import 'package:workers/src/presentation/widgets/worker_search_sheet.dart';
 import 'package:workers/src/routes/worker_routes.dart';
@@ -126,7 +126,7 @@ class _WorkersContent extends StatelessWidget {
             },
             child: state.hasError && state.workers.isEmpty
                 ? AppFillRemainingScrollable(
-                    child: _ErrorState(
+                    child: WorkerErrorState(
                       failure: state.failure,
                       onRetry: () => context.read<WorkersBloc>().add(
                         const WorkersRefreshEvent(),
@@ -233,27 +233,6 @@ class _EmptyState extends StatelessWidget {
         actionIcon: const Icon(Icons.add, size: 20),
         actionIconPosition: AppButtonIconPosition.center,
       ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.onRetry, this.failure});
-
-  final Failure? failure;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final display = failureErrorDisplay(failure);
-    return AppErrorState(
-      style: display.isConnectivity
-          ? AppErrorStateStyle.network
-          : AppErrorStateStyle.generic,
-      title: display.title,
-      description: display.description,
-      retryLabel: failureRetryLabel(),
-      onRetry: display.isRetryable ? onRetry : null,
     );
   }
 }
