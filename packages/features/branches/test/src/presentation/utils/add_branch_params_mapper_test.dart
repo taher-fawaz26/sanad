@@ -123,6 +123,54 @@ void main() {
       expect(params.branchAddress, '');
     });
 
+    test('drops synthetic latlng: serving-area ids, keeps catalogue ids', () {
+      final draft = completeDraft.copyWith(
+        servingAreas: const [
+          ServingArea(
+            placeId: 'ChIJ_catalogue',
+            name: 'Catalogue Area',
+            address: '',
+            latLng: LatLng(25.0, 55.0),
+          ),
+          ServingArea(
+            placeId: 'latlng:25.03,55.17',
+            name: 'Geocoder Area',
+            address: '',
+            latLng: LatLng(25.03, 55.17),
+          ),
+        ],
+      );
+
+      final params = AddBranchParamsMapper.toCreateParams(
+        draft,
+        companySchedule: companySchedule,
+      );
+
+      // The synthetic geocoder id is stripped; only the catalogue id is sent
+      // (the backend 400s the whole branch on any non-catalogue place_id).
+      expect(params.servingAreaPlaceIds, ['ChIJ_catalogue']);
+    });
+
+    test('sends null serving areas when only synthetic ids remain', () {
+      final draft = completeDraft.copyWith(
+        servingAreas: const [
+          ServingArea(
+            placeId: 'latlng:25.03,55.17',
+            name: 'Geocoder Area',
+            address: '',
+            latLng: LatLng(25.03, 55.17),
+          ),
+        ],
+      );
+
+      final params = AddBranchParamsMapper.toCreateParams(
+        draft,
+        companySchedule: companySchedule,
+      );
+
+      expect(params.servingAreaPlaceIds, isNull);
+    });
+
     test('omits optional area and service lists when empty', () {
       final draft = completeDraft.copyWith(
         servingAreas: [],

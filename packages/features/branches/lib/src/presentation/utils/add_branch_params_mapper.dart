@@ -23,6 +23,16 @@ abstract final class AddBranchParamsMapper {
     final position = draft.pickedPosition!;
     final radiusKm = draft.coverageRadiusKm!;
 
+    // The backend validates every serving-area place_id against its own areas
+    // catalogue and 400s the whole branch on any unknown id. Synthetic,
+    // geocoder-derived ids (coordinate keys like `latlng:25.07,55.13`) are not
+    // catalogue entries, so we never send them — only real catalogue place_ids
+    // reach the API. See `ServingArea.placeId`.
+    final servingAreaPlaceIds = draft.servingAreas
+        .map((a) => a.placeId)
+        .where((id) => id.isNotEmpty && !id.startsWith('latlng:'))
+        .toList(growable: false);
+
     return CreateBranchParams(
       branchName: draft.branchName.trim(),
       branchType: draft.branchType,
@@ -38,8 +48,8 @@ abstract final class AddBranchParamsMapper {
           ? BranchAvailabilityMode.custom
           : BranchAvailabilityMode.coreHours,
       availability: schedule.isNotEmpty ? schedule : null,
-      servingAreaPlaceIds: draft.servingAreas.isNotEmpty
-          ? draft.servingAreas.map((a) => a.placeId).toList(growable: false)
+      servingAreaPlaceIds: servingAreaPlaceIds.isNotEmpty
+          ? servingAreaPlaceIds
           : null,
       serviceIds: draft.selectedServices.isNotEmpty
           ? draft.selectedServices.map((s) => s.id).toList(growable: false)

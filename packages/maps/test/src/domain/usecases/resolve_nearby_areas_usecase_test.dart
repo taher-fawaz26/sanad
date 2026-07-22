@@ -3,8 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:maps/src/domain/entities/area_entity.dart';
-import 'package:maps/src/domain/entities/serving_area.dart';
-import 'package:maps/src/domain/repositories/geocoding_repository.dart';
 import 'package:maps/src/domain/repositories/locations_repository.dart';
 import 'package:maps/src/domain/usecases/coverage_location_intent.dart';
 import 'package:maps/src/domain/usecases/resolve_nearby_areas_usecase.dart';
@@ -12,24 +10,16 @@ import 'package:mocktail/mocktail.dart';
 
 class _MockLocationsRepository extends Mock implements LocationsRepository {}
 
-class _MockGeocodingRepository extends Mock implements GeocodingRepository {}
-
 void main() {
   late _MockLocationsRepository repository;
-  late _MockGeocodingRepository geocoder;
   late ResolveNearbyAreasUseCase useCase;
-
-  const center = LatLng(25.2048, 55.2708);
-
-  setUpAll(() => registerFallbackValue(const LatLng(0, 0)));
 
   setUp(() {
     repository = _MockLocationsRepository();
-    geocoder = _MockGeocodingRepository();
-    useCase = ResolveNearbyAreasUseCase(repository, geocoder);
+    useCase = ResolveNearbyAreasUseCase(repository);
   });
 
-  AreaEntity area({
+  AreaEntity _area({
     required String id,
     required String placeId,
     required double lat,
@@ -45,136 +35,154 @@ void main() {
     countryId: 'country-1',
   );
 
-  ResolveNearbyAreasParams params({
-    double radiusKm = 5.0,
-    String? locale,
-  }) => ResolveNearbyAreasParams(
-    intent: CoverageLocationIntent(
-      center: center,
-      radiusKm: radiusKm,
-      localeIdentifier: locale,
-      cityId: 'city-1',
-    ),
-    cityId: 'city-1',
-  );
+  group('ResolveNearbyAreasUseCase', () {
+    test('filters areas within radius', () async {
+      final center = const LatLng(25.2048, 55.2708);
 
-  group('ResolveNearbyAreasUseCase — catalogue primary', () {
-    test(
-      'filters catalogue areas within radius (geocoder untouched)',
-      () async {
-        when(() => repository.getAreasByCity(cityId: 'city-1')).thenReturn(
-          TaskEither.right([
-            area(id: 'near', placeId: 'ChIJ_near', lat: 25.205, lng: 55.271),
-            area(id: 'far', placeId: 'ChIJ_far', lat: 26.0, lng: 56.0),
-          ]),
-        );
+      when(() => repository.getAreasByCity(cityId: 'city-1')).thenReturn(
+        TaskEither.right([
+          _area(id: 'near', placeId: 'ChIJ_near', lat: 25.205, lng: 55.271),
+          _area(id: 'far', placeId: 'ChIJ_far', lat: 26.0, lng: 56.0),
+        ]),
+      );
 
-        final result = await useCase(params()).run();
-
-        final areas = result.getOrElse((_) => []);
-        expect(areas.length, 1);
-        expect(areas[0].placeId, 'ChIJ_near');
-        verifyNever(
-          () => geocoder.nearbyAreaNames(
-            center: any(named: 'center'),
-            radiusKm: any(named: 'radiusKm'),
-            localeIdentifier: any(named: 'localeIdentifier'),
+      final result = await useCase(
+        ResolveNearbyAreasParams(
+          intent: CoverageLocationIntent(
+            center: center,
+            radiusKm: 5.0,
+            cityId: 'city-1',
           ),
-        );
-      },
-    );
+          cityId: 'city-1',
+        ),
+      ).run();
+
+      expect(result.isRight(), isTrue);
+      final areas = result.getOrElse((_) => []);
+      expect(areas.length, 1);
+      expect(areas[0].placeId, 'ChIJ_near');
+    });
+
+    test('returns empty list when no areas within radius', () async {
+      when(() => repository.getAreasByCity(cityId: 'city-1')).thenReturn(
+        TaskEither.right([
+          _area(id: 'far1', placeId: 'ChIJ_far1', lat: 26.0, lng: 56.0),
+          _area(id: 'far2', placeId: 'ChIJ_far2', lat: 27.0, lng: 57.0),
+        ]),
+      );
+
+      final result = await useCase(
+        ResolveNearbyAreasParams(
+          intent: CoverageLocationIntent(
+            center: const LatLng(25.2048, 55.2708),
+            radiusKm: 1.0,
+            cityId: 'city-1',
+          ),
+          cityId: 'city-1',
+        ),
+      ).run();
+
+      final areas = result.getOrElse((_) => []);
+      expect(areas, isEmpty);
+    });
 
     test('uses Arabic names when locale is ar', () async {
       when(() => repository.getAreasByCity(cityId: 'city-1')).thenReturn(
         TaskEither.right([
-          area(id: 'a1', placeId: 'ChIJ_1', lat: 25.205, lng: 55.271),
+          _area(id: 'a1', placeId: 'ChIJ_1', lat: 25.205, lng: 55.271),
         ]),
       );
 
-      final result = await useCase(params(locale: 'ar_AE')).run();
+      final result = await useCase(
+        ResolveNearbyAreasParams(
+          intent: CoverageLocationIntent(
+            center: const LatLng(25.2048, 55.2708),
+            radiusKm: 5.0,
+            localeIdentifier: 'ar_AE',
+            cityId: 'city-1',
+          ),
+          cityId: 'city-1',
+        ),
+      ).run();
 
-      expect(result.getOrElse((_) => [])[0].name, 'منطقة a1');
+      final areas = result.getOrElse((_) => []);
+      expect(areas[0].name, 'منطقة a1');
     });
 
     test('uses English names when locale is en', () async {
       when(() => repository.getAreasByCity(cityId: 'city-1')).thenReturn(
         TaskEither.right([
-          area(id: 'a1', placeId: 'ChIJ_1', lat: 25.205, lng: 55.271),
+          _area(id: 'a1', placeId: 'ChIJ_1', lat: 25.205, lng: 55.271),
         ]),
       );
 
-      final result = await useCase(params(locale: 'en_US')).run();
-
-      expect(result.getOrElse((_) => [])[0].name, 'Area a1');
-    });
-  });
-
-  group('ResolveNearbyAreasUseCase — geocoder fallback', () {
-    final geocoded = [
-      const ServingArea(
-        placeId: 'ChIJ_geocoded',
-        name: 'Nearby Neighbourhood',
-        address: '',
-        latLng: center,
-      ),
-    ];
-
-    test(
-      'falls back to geocoder when no catalogue area is in radius',
-      () async {
-        // Catalogue returns only a far-away area (mimics the Dubai city record
-        // whose single area is ~113 km from the pin) → 0 matched → fallback.
-        when(() => repository.getAreasByCity(cityId: 'city-1')).thenReturn(
-          TaskEither.right([
-            area(id: 'far', placeId: 'ChIJ_far', lat: 26.5, lng: 56.5),
-          ]),
-        );
-        when(
-          () => geocoder.nearbyAreaNames(
-            center: center,
+      final result = await useCase(
+        ResolveNearbyAreasParams(
+          intent: CoverageLocationIntent(
+            center: const LatLng(25.2048, 55.2708),
             radiusKm: 5.0,
-            localeIdentifier: null,
+            localeIdentifier: 'en_US',
+            cityId: 'city-1',
           ),
-        ).thenReturn(TaskEither.right(geocoded));
-
-        final result = await useCase(params()).run();
-
-        final areas = result.getOrElse((_) => []);
-        expect(areas.length, 1);
-        expect(areas[0].placeId, 'ChIJ_geocoded');
-      },
-    );
-
-    test('falls back to geocoder when catalogue fetch fails', () async {
-      when(() => repository.getAreasByCity(cityId: 'city-1')).thenReturn(
-        TaskEither.left(const UnknownFailure(message: 'network')),
-      );
-      when(
-        () => geocoder.nearbyAreaNames(
-          center: center,
-          radiusKm: 5.0,
-          localeIdentifier: null,
+          cityId: 'city-1',
         ),
-      ).thenReturn(TaskEither.right(geocoded));
+      ).run();
 
-      final result = await useCase(params()).run();
-
-      expect(result.getOrElse((_) => [])[0].placeId, 'ChIJ_geocoded');
+      final areas = result.getOrElse((_) => []);
+      expect(areas[0].name, 'Area a1');
     });
 
-    test('returns failure when both catalogue and geocoder fail', () async {
+    test('all returned placeIds are real backend IDs, not synthetic', () async {
       when(() => repository.getAreasByCity(cityId: 'city-1')).thenReturn(
-        TaskEither.left(const UnknownFailure(message: 'network')),
+        TaskEither.right([
+          _area(
+            id: 'a1',
+            placeId: 'ChIJ3QPOgqjK9T4R3KMk0f9ucsg',
+            lat: 25.205,
+            lng: 55.271,
+          ),
+          _area(
+            id: 'a2',
+            placeId: 'ChIJRULP3yjK9T4RqYPvJA6bEHo',
+            lat: 25.204,
+            lng: 55.270,
+          ),
+        ]),
       );
-      when(
-        () => geocoder.nearbyAreaNames(
-          center: center,
-          radiusKm: 5.0,
-          localeIdentifier: null,
-        ),
-      ).thenReturn(TaskEither.left(const UnknownFailure(message: 'geocode')));
 
-      final result = await useCase(params()).run();
+      final result = await useCase(
+        ResolveNearbyAreasParams(
+          intent: CoverageLocationIntent(
+            center: const LatLng(25.2048, 55.2708),
+            radiusKm: 10.0,
+            cityId: 'city-1',
+          ),
+          cityId: 'city-1',
+        ),
+      ).run();
+
+      final areas = result.getOrElse((_) => []);
+      for (final area in areas) {
+        expect(area.placeId.startsWith('latlng:'), isFalse);
+        expect(area.placeId.isNotEmpty, isTrue);
+      }
+    });
+
+    test('propagates repository failure', () async {
+      when(() => repository.getAreasByCity(cityId: 'city-1')).thenReturn(
+        TaskEither.left(const UnknownFailure(message: 'test error')),
+      );
+
+      final result = await useCase(
+        ResolveNearbyAreasParams(
+          intent: CoverageLocationIntent(
+            center: const LatLng(25.2048, 55.2708),
+            radiusKm: 5.0,
+            cityId: 'city-1',
+          ),
+          cityId: 'city-1',
+        ),
+      ).run();
 
       expect(result.isLeft(), isTrue);
     });
