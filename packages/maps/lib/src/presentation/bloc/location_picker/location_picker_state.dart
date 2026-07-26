@@ -22,6 +22,7 @@ class LocationPickerState extends Equatable {
     this.status = LocationPickerStatus.initial,
     this.position,
     this.address,
+    this.isoCountryCode,
     this.failure,
     this.cameraSource = LocationPickerCameraSource.none,
     this.predictions = const [],
@@ -30,9 +31,15 @@ class LocationPickerState extends Equatable {
     this.searchQuery = '',
   });
 
+  /// Country the picked location must belong to (the UAE).
+  static const allowedCountryCode = 'AE';
+
   final LocationPickerStatus status;
   final LatLng? position;
   final String? address;
+
+  /// ISO country of [position] (uppercased), when known.
+  final String? isoCountryCode;
   final Failure? failure;
   final LocationPickerCameraSource cameraSource;
   final List<PlacePrediction> predictions;
@@ -40,11 +47,20 @@ class LocationPickerState extends Equatable {
   final String? searchError;
   final String searchQuery;
 
+  /// True only when the pin is *known* to be in another country — a null
+  /// geocode never blocks a legitimate in-country point.
+  bool get isOutsideCountry =>
+      status == LocationPickerStatus.ready &&
+      position != null &&
+      isoCountryCode != null &&
+      isoCountryCode!.toUpperCase() != allowedCountryCode;
+
   bool get canConfirm =>
       position != null &&
       address != null &&
       address!.isNotEmpty &&
-      status == LocationPickerStatus.ready;
+      status == LocationPickerStatus.ready &&
+      !isOutsideCountry;
 
   bool get isLoadingMap =>
       status == LocationPickerStatus.loadingLocation ||
@@ -65,6 +81,7 @@ class LocationPickerState extends Equatable {
     LocationPickerStatus? status,
     LatLng? position,
     String? address,
+    String? Function()? isoCountryCode,
     Failure? failure,
     LocationPickerCameraSource? cameraSource,
     List<PlacePrediction>? predictions,
@@ -80,6 +97,9 @@ class LocationPickerState extends Equatable {
       status: status ?? this.status,
       position: position ?? this.position,
       address: clearAddress ? null : (address ?? this.address),
+      isoCountryCode: isoCountryCode != null
+          ? isoCountryCode()
+          : this.isoCountryCode,
       failure: clearFailure ? null : (failure ?? this.failure),
       cameraSource: cameraSource ?? this.cameraSource,
       predictions: clearPredictions
@@ -100,6 +120,7 @@ class LocationPickerState extends Equatable {
     status,
     position,
     address,
+    isoCountryCode,
     failure,
     cameraSource,
     predictions,

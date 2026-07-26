@@ -1,10 +1,13 @@
+import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_cubit.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_state.dart';
+import 'package:branches/src/presentation/models/branch_form_mode.dart';
 import 'package:branches/src/presentation/models/coverage_area_args.dart';
 import 'package:branches/src/presentation/models/coverage_area_result.dart';
 import 'package:branches/src/presentation/utils/add_branch_error_snackbar.dart';
 import 'package:branches/src/presentation/utils/add_branch_params_mapper.dart';
+import 'package:branches/src/presentation/utils/branch_draft_seeder.dart';
 import 'package:branches/src/presentation/widgets/add_branch_coverage_step.dart';
 import 'package:branches/src/presentation/widgets/add_branch_location_permission_body.dart';
 import 'package:branches/src/presentation/widgets/add_branch_services_step.dart';
@@ -24,8 +27,31 @@ import 'package:maps/maps.dart';
 import 'package:services/services.dart';
 import 'package:workers/workers.dart';
 
+/// Coverage fields selected from the draft to render the step 2 preview.
+typedef _CoveragePreview = ({
+  LatLng? position,
+  double? radiusKm,
+  String? address,
+  List<String> areaNames,
+});
+
 class AddBranchPage extends StatefulWidget {
-  const AddBranchPage({super.key});
+  const AddBranchPage({
+    this.mode = BranchFormMode.create,
+    this.branchId,
+    this.initialBranch,
+    super.key,
+  });
+
+  /// Whether the wizard is creating a new branch or editing an existing one.
+  final BranchFormMode mode;
+
+  /// The branch being edited (edit mode only).
+  final String? branchId;
+
+  /// Pre-loaded branch passed from Branch Details to prefill without a refetch
+  /// (edit mode only). When null in edit mode, the branch is fetched by id.
+  final BranchEntity? initialBranch;
 
   @override
   State<AddBranchPage> createState() => _AddBranchPageState();
@@ -43,6 +69,28 @@ class _AddBranchPageState extends State<AddBranchPage> {
   bool _showStepOneErrors = false;
   bool _submittingDialogVisible = false;
   bool _coverageAccessDenied = false;
+
+  /// Whether the edit draft has been seeded yet. Always true in create mode and
+  /// in edit mode when the branch was pre-loaded; false until the id-only fetch
+  /// completes.
+  bool _isSeeded = true;
+
+  bool get _isEdit => widget.mode.isEdit;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isEdit) {
+      // Edit is an editor, not a strict wizard: every step is reachable.
+      _furthestStep = _totalSteps;
+      if (widget.initialBranch == null) {
+        _isSeeded = false;
+        context.read<AddBranchBloc>().add(
+          AddBranchLoadForEditEvent(branchId: widget.branchId!),
+        );
+      }
+    }
+  }
 
   // ── Navigation ──
 
@@ -96,14 +144,24 @@ class _AddBranchPageState extends State<AddBranchPage> {
 
   void _submit() {
     final draft = context.read<AddBranchDraftCubit>().state;
-    final companySchedule = context.read<AddBranchBloc>().state.companySchedule;
+    final bloc = context.read<AddBranchBloc>();
+    final companySchedule = bloc.state.companySchedule;
+
+    if (_isEdit) {
+      final params = AddBranchParamsMapper.toUpdateParams(
+        draft,
+        id: widget.branchId ?? widget.initialBranch!.id,
+        companySchedule: companySchedule,
+      );
+      bloc.add(UpdateBranchSubmitEvent(params: params));
+      return;
+    }
 
     final params = AddBranchParamsMapper.toCreateParams(
       draft,
       companySchedule: companySchedule,
     );
-
-    context.read<AddBranchBloc>().add(AddBranchSubmitEvent(params: params));
+    bloc.add(AddBranchSubmitEvent(params: params));
   }
 
   // ── Flow pickers ──
@@ -129,6 +187,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
         openSettings: 'branches.location_picker.open_settings'.tr(),
         searchEmpty: 'branches.location_picker.no_results'.tr(),
         searchRetry: 'empty_states.retry'.tr(),
+        outsideCountry: 'branches.location_picker.outside_uae'.tr(),
       ),
       // The draft position is the branch's saved/already-picked location, so
       // it takes edit-flow priority for the initial camera.
@@ -168,7 +227,9 @@ class _AddBranchPageState extends State<AddBranchPage> {
         address: draft.branchAddress,
         radiusKm: draft.coverageRadiusKm,
         servingAreas: draft.servingAreas,
-        cityId: draft.selectedCity?.id,
+        // Edit seeds the saved coverage without a network resolve; the first
+        // interaction elevates it to recalculate (see maps CoverageAreaBloc).
+        mode: _isEdit ? CoverageMode.edit : CoverageMode.create,
       ),
     );
     if (!mounted || result == null) return;
@@ -181,10 +242,12 @@ class _AddBranchPageState extends State<AddBranchPage> {
         servingAreas: result.servingAreas,
       );
 
-    // Coverage confirmed → advance straight to the services step. Step 2's
-    // body only ever shows the "add coverage" prompt (pre-coverage state);
-    // once coverage exists there is nothing left to do on that step.
-    if (_currentStep == 2 && draftCubit.state.isStepTwoComplete) {
+    // Create: coverage confirmed → advance straight to the services step (step
+    // 2's body only shows the pre-coverage prompt). Edit keeps free navigation,
+    // so it never auto-advances.
+    if (!_isEdit &&
+        _currentStep == 2 &&
+        draftCubit.state.isStepTwoComplete) {
       _advanceTo(3);
     }
   }
@@ -212,6 +275,22 @@ class _AddBranchPageState extends State<AddBranchPage> {
   // ── Bloc side effects ──
 
   void _onBlocStateChanged(BuildContext context, AddBranchState state) {
+    // Edit (id-only): seed the draft once the branch has been fetched.
+    if (_isEdit && !_isSeeded) {
+      if (state.loadStatus == RequestStatus.success &&
+          state.loadedBranch != null) {
+        context.read<AddBranchDraftCubit>().seed(
+          BranchDraftSeeder.fromBranch(state.loadedBranch!),
+        );
+        setState(() => _isSeeded = true);
+      } else if (state.hasLoadError && state.loadFailure != null) {
+        showAddBranchErrorSnackbar(
+          context: context,
+          failure: state.loadFailure!,
+        );
+      }
+    }
+
     if (state.isLoading) {
       _showSubmittingDialog();
       return;
@@ -219,7 +298,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
     _dismissSubmittingDialog();
 
     if (state.isSuccess) {
-      _showBranchCreatedSuccessPopover();
+      _showSuccessPopover();
     } else if (state.hasError && state.failure != null) {
       showAddBranchErrorSnackbar(
         context: context,
@@ -252,9 +331,10 @@ class _AddBranchPageState extends State<AddBranchPage> {
     dismissAppProgressDialog(context);
   }
 
-  void _showBranchCreatedSuccessPopover() {
+  void _showSuccessPopover() {
     // Copy is split across two keys; chrome comes from [showAppSuccessPopover]
-    // (Figma `1546:8473`).
+    // (Figma `1546:8473`). Create vs edit only swaps the localization prefix.
+    final prefix = _isEdit ? 'branches.edit_branch' : 'branches.add_branch';
     final titleStyle = AppSuccessPopover.titleStyleOf(context);
 
     showAppSuccessPopover<void>(
@@ -264,21 +344,21 @@ class _AddBranchPageState extends State<AddBranchPage> {
         TextSpan(
           children: [
             TextSpan(
-              text: 'branches.add_branch.success_dialog_title_highlight'.tr(),
+              text: '$prefix.success_dialog_title_highlight'.tr(),
               style: titleStyle,
             ),
             TextSpan(
-              text: 'branches.add_branch.success_dialog_title_body'.tr(),
+              text: '$prefix.success_dialog_title_body'.tr(),
               style: titleStyle,
             ),
           ],
         ),
         textAlign: TextAlign.center,
       ),
-      description: 'branches.add_branch.success_dialog_description'.tr(),
-      primaryLabel: 'branches.add_branch.success_dialog_okay'.tr(),
+      description: '$prefix.success_dialog_description'.tr(),
+      primaryLabel: '$prefix.success_dialog_okay'.tr(),
     ).then((_) {
-      // Signal the branch list to refresh — see EH-S3-02 refresh convention.
+      // Signal the branch list / details to refresh — EH-S3-02 refresh convention.
       if (mounted) context.pop(true);
     });
   }
@@ -288,8 +368,10 @@ class _AddBranchPageState extends State<AddBranchPage> {
   /// Figma `Discard changes?` confirmation shown when leaving with
   /// unsaved draft changes.
   Future<void> _handleClose() async {
-    final draft = context.read<AddBranchDraftCubit>().state;
-    if (!draft.hasChanges) {
+    // Baseline-aware: create compares against an empty draft, edit against the
+    // branch-seeded draft, so this guards unsaved edits in both modes.
+    final hasChanges = context.read<AddBranchDraftCubit>().hasChanges;
+    if (!hasChanges) {
       context.pop();
       return;
     }
@@ -324,7 +406,9 @@ class _AddBranchPageState extends State<AddBranchPage> {
         child: Scaffold(
           backgroundColor: context.appColors.surface,
           body: SafeArea(
-            child: _currentStep == _reviewStep
+            child: (_isEdit && !_isSeeded)
+                ? _buildSeedingScreen()
+                : _currentStep == _reviewStep
                 ? _buildReviewScreen()
                 : _buildWizardScreen(),
           ),
@@ -333,17 +417,51 @@ class _AddBranchPageState extends State<AddBranchPage> {
     );
   }
 
+  String get _navTitle => _isEdit ? 'branches.edit_branch.title'.tr() : '';
+
+  /// Shown in edit mode while the branch is being fetched (id-only entry).
+  Widget _buildSeedingScreen() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppNavBar(
+          title: _navTitle,
+          leading: AppCloseIcon(onTap: () => context.pop()),
+        ),
+        Expanded(
+          child: BlocSelector<AddBranchBloc, AddBranchState, bool>(
+            selector: (state) => state.hasLoadError,
+            builder: (context, hasError) {
+              if (hasError) {
+                return Center(
+                  child: AppButton(
+                    label: 'empty_states.retry'.tr(),
+                    onPressed: () => context.read<AddBranchBloc>().add(
+                      AddBranchLoadForEditEvent(branchId: widget.branchId!),
+                    ),
+                  ),
+                );
+              }
+              return const Center(child: AppLoadingIndicator());
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildWizardScreen() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AppNavBar(
-          title: '',
+          title: _navTitle,
           leading: AppCloseIcon(onTap: _handleClose),
         ),
         Expanded(child: _buildCurrentStep()),
         AddBranchWizardFooter(
           currentStep: _currentStep,
+          isEdit: _isEdit,
           onNext: _onNextPressed,
           onSubmit: _submit,
           onAddCoverage: _openCoverageArea,
@@ -362,7 +480,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AppNavBar(
-          title: '',
+          title: _navTitle,
           leading: AppCloseIcon(onTap: _handleClose),
         ),
         const Expanded(child: BranchReviewBody()),
@@ -377,7 +495,9 @@ class _AddBranchPageState extends State<AddBranchPage> {
             selector: (state) => state.isLoading,
             builder: (context, isLoading) {
               return AppButton(
-                label: 'branches.review.submit'.tr(),
+                label: _isEdit
+                    ? 'branches.edit_branch.save_button'.tr()
+                    : 'branches.review.submit'.tr(),
                 isLoading: isLoading,
                 onPressed: isLoading ? null : _submit,
               );
@@ -415,7 +535,27 @@ class _AddBranchPageState extends State<AddBranchPage> {
         totalSteps: _totalSteps,
         furthestCompletedStep: _furthestStep,
         onStepTapped: _onStepTapped,
-        child: AddBranchCoverageStep(onEditCoverage: _openCoverageArea),
+        child:
+            BlocSelector<AddBranchDraftCubit, AddBranchDraft, _CoveragePreview>(
+              selector: (state) => (
+                position: state.pickedPosition,
+                radiusKm: state.coverageRadiusKm,
+                address: state.branchAddress,
+                areaNames: state.servingAreas
+                    .map((a) => a.name)
+                    .where((n) => n.isNotEmpty)
+                    .toList(),
+              ),
+              builder: (context, cov) {
+                return AddBranchCoverageStep(
+                  onEditCoverage: _openCoverageArea,
+                  position: cov.position,
+                  radiusKm: cov.radiusKm,
+                  address: cov.address,
+                  areaNames: cov.areaNames,
+                );
+              },
+            ),
       ),
       3 => AddBranchWizardStepShell(
         currentStep: _currentStep,

@@ -8,6 +8,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:maps/src/domain/entities/map_area_picker_result.dart';
 import 'package:maps/src/domain/entities/place_prediction.dart';
 import 'package:maps/src/presentation/bloc/map_area_picker/map_area_picker_bloc.dart';
+import 'package:maps/src/presentation/camera/default_map_viewport.dart';
 import 'package:maps/src/presentation/camera/initial_camera_resolver.dart';
 import 'package:maps/src/presentation/controllers/map_camera_controller.dart';
 import 'package:maps/src/presentation/models/map_area_picker_labels.dart';
@@ -336,6 +337,9 @@ class _MapAreaPickerMapView extends StatelessWidget {
           children: [
             AppGoogleMap(
               initialCameraPosition: initialCameraPosition,
+              cameraTargetBounds: CameraTargetBounds(
+                DefaultMapViewport.uaeBounds,
+              ),
               onMapCreated: cameraController.onMapCreated,
               onCameraMove: cameraController.onCameraMove,
               onCameraIdle: onCameraIdle,

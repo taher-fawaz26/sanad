@@ -62,6 +62,7 @@ class BranchRepositoryImpl implements BranchRepository {
           branchName: params.branchName,
           branchAddress: params.branchAddress,
           branchPhone: params.branchPhone,
+          branchType: params.branchType,
           cityId: params.cityId,
           branchManagerId: params.branchManagerId,
           lat: params.lat,
@@ -73,6 +74,7 @@ class BranchRepositoryImpl implements BranchRepository {
           availability: params.availability,
           serviceIds: params.serviceIds,
           servingAreaPlaceIds: params.servingAreaPlaceIds,
+          workerIds: params.workerIds,
         ),
       )
       .map((dto) => dto.toDomain());

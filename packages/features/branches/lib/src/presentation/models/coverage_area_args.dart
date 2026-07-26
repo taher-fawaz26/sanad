@@ -9,7 +9,6 @@ class CoverageAreaArgs extends Equatable {
     this.radiusKm,
     this.servingAreas = const [],
     this.mode = CoverageMode.create,
-    this.cityId,
   });
 
   final LatLng? position;
@@ -17,7 +16,6 @@ class CoverageAreaArgs extends Equatable {
   final double? radiusKm;
   final List<ServingArea> servingAreas;
   final CoverageMode mode;
-  final String? cityId;
 
   @override
   List<Object?> get props => [
@@ -26,6 +24,5 @@ class CoverageAreaArgs extends Equatable {
     radiusKm,
     servingAreas,
     mode,
-    cityId,
   ];
 }

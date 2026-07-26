@@ -103,8 +103,17 @@
       "no_team_members": "لا يوجد أعضاء في الفريق",
       "no_serving_areas": "لم تتم إضافة مناطق تغطية"
     },
+    "edit_branch": {
+      "title": "تعديل الفرع",
+      "save_button": "حفظ التغييرات",
+      "success_dialog_title_highlight": "تم الحفظ! ",
+      "success_dialog_title_body": "تم تحديث الفرع.",
+      "success_dialog_description": "التغييرات الآن سارية.",
+      "success_dialog_okay": "حسناً"
+    },
     "add_branch": {
       "title": "إضافة فرع",
+      "edit_coverage_button": "تعديل منطقة التغطية",
       "subtitle": "إعداد الموقع والتغطية والفريق.",
       "section_main_info": "المعلومات الرئيسية",
       "section_contact": "التواصل",
@@ -203,7 +212,8 @@
       "generic_error": "تعذّر تحميل الموقع. يرجى المحاولة مرة أخرى.",
       "title": "موقع الفرع",
       "subtitle": "حرّك الدبوس لتحديد موقع الفرع على الخريطة",
-      "no_results": "لا توجد نتائج"
+      "no_results": "لا توجد نتائج",
+      "outside_uae": "يرجى اختيار موقع داخل الإمارات"
     },
     "coverage_area": {
       "title": "منطقة التغطية",
@@ -221,7 +231,8 @@
       "search_error": "فشل البحث. يرجى المحاولة مرة أخرى.",
       "done": "تم",
       "confirm": "تأكيد التغطية",
-      "select_from_search_hint": "يرجى اختيار منطقة من نتائج البحث."
+      "select_from_search_hint": "يرجى اختيار منطقة من نتائج البحث.",
+      "outside_uae": "يجب أن يكون مركز التغطية داخل الإمارات"
     },
     "load_error_title": "تعذر تحميل الفروع",
     "load_error_description": "تحقق من اتصالك وحاول مرة أخرى.",

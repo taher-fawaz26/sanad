@@ -3,6 +3,7 @@ import 'package:branches/src/data/models/branch_worker_dto.dart';
 import 'package:branches/src/domain/entities/branch_availability_mode.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/domain/entities/branch_type.dart';
+import 'package:maps/maps.dart' show LatLng, ServingArea;
 
 class BranchDto {
   const BranchDto({
@@ -14,6 +15,8 @@ class BranchDto {
     required this.isAvailable,
     required this.availabilityMode,
     this.branchType = BranchType.mainBranch,
+    this.cityId,
+    this.cityNameAr,
     this.branchManagerId,
     this.branchManagerName,
     this.lat,
@@ -24,6 +27,8 @@ class BranchDto {
     this.availability,
     this.servingAreaPlaceIds,
     this.servingAreaNames,
+    this.servingAreas = const [],
+    this.serviceIds,
     this.serviceNames,
     this.workers = const [],
     this.createdAt,
@@ -54,20 +59,38 @@ class BranchDto {
     }
 
     // --- Serving areas ---
-    // The API returns a `servingAreas` array of objects with placeId + nameEn.
-    // Also support legacy `servingAreaPlaceIds` flat string list.
+    // The API returns a `servingAreas` array of objects with placeId, names
+    // and geometry. Keep the flat placeId/name lists for display, plus a
+    // fully-typed [ServingArea] list (with LatLng) to prefill the editor.
+    // Also support a legacy `servingAreaPlaceIds` flat string list.
     List<String>? servingAreaPlaceIds;
     List<String>? servingAreaNames;
+    var servingAreas = const <ServingArea>[];
 
     final servingAreasJson = json['servingAreas'];
     if (servingAreasJson is List && servingAreasJson.isNotEmpty) {
-      servingAreaPlaceIds = servingAreasJson
-          .map((e) => (e as Map<String, dynamic>)['placeId'] as String? ?? '')
+      final objects = servingAreasJson.cast<Map<String, dynamic>>();
+      servingAreaPlaceIds = objects
+          .map((e) => e['placeId'] as String? ?? '')
           .where((id) => id.isNotEmpty)
           .toList();
-      servingAreaNames = servingAreasJson
-          .map((e) => (e as Map<String, dynamic>)['nameEn'] as String? ?? '')
+      servingAreaNames = objects
+          .map((e) => e['nameEn'] as String? ?? '')
           .where((n) => n.isNotEmpty)
+          .toList();
+      servingAreas = objects
+          .where((e) => (e['placeId'] as String? ?? '').isNotEmpty)
+          .map(
+            (e) => ServingArea(
+              placeId: e['placeId'] as String,
+              name: e['nameEn'] as String? ?? e['nameAr'] as String? ?? '',
+              address: '',
+              latLng: LatLng(
+                _numericField(e['latitude']) ?? 0,
+                _numericField(e['longitude']) ?? 0,
+              ),
+            ),
+          )
           .toList();
     } else {
       final legacyIds = json['servingAreaPlaceIds'];
@@ -78,24 +101,31 @@ class BranchDto {
 
     // --- Services ---
     final servicesJson = json['services'];
+    List<String>? serviceIds;
     List<String>? serviceNames;
     if (servicesJson is List && servicesJson.isNotEmpty) {
-      serviceNames = servicesJson
-          .map(
-            (e) =>
-                (e as Map<String, dynamic>)['serviceNameEn'] as String? ?? '',
-          )
+      final objects = servicesJson.cast<Map<String, dynamic>>();
+      serviceIds = objects
+          .map((e) => e['serviceId'] as String? ?? '')
+          .where((id) => id.isNotEmpty)
+          .toList();
+      serviceNames = objects
+          .map((e) => e['serviceNameEn'] as String? ?? '')
           .where((n) => n.isNotEmpty)
           .toList();
     }
 
     // --- City ---
-    // API returns city as an object `{ nameEn, nameAr, ... }`.
+    // API returns city as an object `{ id, nameEn, nameAr, ... }`.
     // Fall back to a plain string for backward compatibility.
     final cityRaw = json['city'];
     final String city;
+    String? cityId;
+    String? cityNameAr;
     if (cityRaw is Map<String, dynamic>) {
       city = cityRaw['nameEn'] as String? ?? cityRaw['nameAr'] as String? ?? '';
+      cityId = cityRaw['id'] as String?;
+      cityNameAr = cityRaw['nameAr'] as String?;
     } else {
       city = cityRaw as String? ?? '';
     }
@@ -133,6 +163,8 @@ class BranchDto {
         json['availabilityMode'] as String?,
       ),
       branchType: BranchType.fromApiString(json['type'] as String?),
+      cityId: cityId,
+      cityNameAr: cityNameAr,
       branchManagerId: managerId,
       branchManagerName: managerName,
       lat: _numericField(json['lat']),
@@ -143,6 +175,8 @@ class BranchDto {
       availability: availability,
       servingAreaPlaceIds: servingAreaPlaceIds,
       servingAreaNames: servingAreaNames,
+      servingAreas: servingAreas,
+      serviceIds: serviceIds,
       serviceNames: serviceNames,
       workers: workers,
       createdAt: json['createdAt'] != null
@@ -159,6 +193,8 @@ class BranchDto {
   final bool isAvailable;
   final BranchAvailabilityMode availabilityMode;
   final BranchType branchType;
+  final String? cityId;
+  final String? cityNameAr;
   final String? branchManagerId;
   final String? branchManagerName;
   final double? lat;
@@ -169,6 +205,8 @@ class BranchDto {
   final List<BranchAvailabilityDto>? availability;
   final List<String>? servingAreaPlaceIds;
   final List<String>? servingAreaNames;
+  final List<ServingArea> servingAreas;
+  final List<String>? serviceIds;
   final List<String>? serviceNames;
   final List<BranchWorkerDto> workers;
   final DateTime? createdAt;
@@ -182,6 +220,8 @@ class BranchDto {
     isAvailable: isAvailable,
     availabilityMode: availabilityMode,
     branchType: branchType,
+    cityId: cityId,
+    cityNameAr: cityNameAr,
     branchManagerId: branchManagerId,
     branchManagerName: branchManagerName,
     lat: lat,
@@ -192,6 +232,8 @@ class BranchDto {
     availability: availability?.map((a) => a.toDomain()).toList(),
     servingAreaPlaceIds: servingAreaPlaceIds,
     servingAreaNames: servingAreaNames,
+    servingAreas: servingAreas,
+    serviceIds: serviceIds,
     serviceNames: serviceNames,
     workers: workers.map((w) => w.toDomain()).toList(),
     createdAt: createdAt,

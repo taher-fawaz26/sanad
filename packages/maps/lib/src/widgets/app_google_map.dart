@@ -27,6 +27,8 @@ class AppGoogleMap extends StatelessWidget {
     this.rotateGesturesEnabled = true,
     this.mapType = MapType.normal,
     this.padding = EdgeInsets.zero,
+    this.cameraTargetBounds = CameraTargetBounds.unbounded,
+    this.minMaxZoomPreference = MinMaxZoomPreference.unbounded,
     this.gestureRecognizers,
     super.key,
   });
@@ -52,6 +54,14 @@ class AppGoogleMap extends StatelessWidget {
   final bool rotateGesturesEnabled;
   final MapType mapType;
   final EdgeInsets padding;
+
+  /// Constrains the camera target so the map cannot be panned outside these
+  /// bounds. Pickers pass [DefaultMapViewport.uaeBounds] to keep selection
+  /// inside the UAE. Defaults to unbounded for read-only/embedded maps.
+  final CameraTargetBounds cameraTargetBounds;
+
+  /// Constrains the zoom range. Defaults to unbounded.
+  final MinMaxZoomPreference minMaxZoomPreference;
   final Set<Factory<OneSequenceGestureRecognizer>>? gestureRecognizers;
 
   /// Claims pan/zoom gestures eagerly so the map stays interactive when it is
@@ -85,6 +95,8 @@ class AppGoogleMap extends StatelessWidget {
       rotateGesturesEnabled: rotateGesturesEnabled,
       mapType: mapType,
       padding: padding,
+      cameraTargetBounds: cameraTargetBounds,
+      minMaxZoomPreference: minMaxZoomPreference,
       gestureRecognizers: gestureRecognizers ?? eagerGestureRecognizers,
     );
   }

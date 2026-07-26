@@ -103,8 +103,17 @@
       "no_team_members": "No team members assigned",
       "no_serving_areas": "No coverage areas added"
     },
+    "edit_branch": {
+      "title": "Edit branch",
+      "save_button": "Save changes",
+      "success_dialog_title_highlight": "Saved! ",
+      "success_dialog_title_body": "Your branch has been updated.",
+      "success_dialog_description": "The changes are now live.",
+      "success_dialog_okay": "Okay"
+    },
     "add_branch": {
       "title": "Add branch",
+      "edit_coverage_button": "Edit coverage area",
       "subtitle": "Set up a location, its coverage, and team.",
       "section_main_info": "main information",
       "section_contact": "Contact",
@@ -203,7 +212,8 @@
       "generic_error": "Couldn't load the location. Please try again.",
       "title": "Branch location",
       "subtitle": "Move the pin to locate the branch on the map",
-      "no_results": "No results found"
+      "no_results": "No results found",
+      "outside_uae": "Please pick a location inside the UAE"
     },
     "coverage_area": {
       "title": "Coverage area",
@@ -221,7 +231,8 @@
       "search_error": "Search failed. Please try again.",
       "done": "Done",
       "confirm": "Confirm Coverage",
-      "select_from_search_hint": "Please select an area from the search results."
+      "select_from_search_hint": "Please select an area from the search results.",
+      "outside_uae": "The coverage centre must be inside the UAE"
     },
     "load_error_title": "Couldn't load your branches",
     "load_error_description": "Check your connection and try again.",

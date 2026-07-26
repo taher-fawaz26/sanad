@@ -313,6 +313,7 @@ class LocationPickerBloc
           status: LocationPickerStatus.ready,
           position: position,
           address: geocoded.formattedAddress,
+          isoCountryCode: () => geocoded.isoCountryCode,
           clearFailure: true,
         ),
       ),

@@ -18,8 +18,9 @@ abstract final class DefaultMapViewport {
 
   /// Approximate national bounds of the UAE.
   ///
-  /// Exposed for consumers that wish to constrain panning; the pickers apply a
-  /// soft default (open here) rather than hard-restricting the camera.
+  /// The interactive pickers pass these to [AppGoogleMap.cameraTargetBounds]
+  /// so the camera cannot be panned outside the UAE — providers may only
+  /// select places inside the country.
   static final LatLngBounds uaeBounds = LatLngBounds(
     southwest: const LatLng(22.5, 51.0),
     northeast: const LatLng(26.5, 56.5),

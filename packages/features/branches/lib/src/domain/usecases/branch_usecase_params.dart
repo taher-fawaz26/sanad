@@ -97,6 +97,7 @@ class UpdateBranchParams extends Equatable {
     required this.branchName,
     required this.branchAddress,
     required this.branchPhone,
+    this.branchType,
     this.cityId,
     this.branchManagerId,
     this.lat,
@@ -108,12 +109,16 @@ class UpdateBranchParams extends Equatable {
     this.availability,
     this.serviceIds,
     this.servingAreaPlaceIds,
+    this.workerIds,
   });
 
   final String id;
   final String branchName;
   final String branchAddress;
   final String branchPhone;
+
+  /// Optional during PATCH. Provide only when changing the branch type.
+  final BranchType? branchType;
 
   /// Optional during PATCH. Provide only when changing the branch city.
   final String? cityId;
@@ -129,12 +134,16 @@ class UpdateBranchParams extends Equatable {
   final List<String>? serviceIds;
   final List<String>? servingAreaPlaceIds;
 
+  /// Optional during PATCH. Provide only when changing assigned workers.
+  final List<String>? workerIds;
+
   @override
   List<Object?> get props => [
     id,
     branchName,
     branchAddress,
     branchPhone,
+    branchType,
     cityId,
     branchManagerId,
     lat,
@@ -146,6 +155,7 @@ class UpdateBranchParams extends Equatable {
     availability,
     serviceIds,
     servingAreaPlaceIds,
+    workerIds,
   ];
 }
 

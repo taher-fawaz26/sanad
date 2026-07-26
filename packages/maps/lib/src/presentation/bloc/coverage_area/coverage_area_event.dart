@@ -16,7 +16,6 @@ final class CoverageAreaStarted extends CoverageAreaEvent {
     this.initialAutoAreas = const <ServingArea>[],
     this.initialExtraAreas = const [],
     this.localeIdentifier,
-    this.cityId,
   });
 
   final CoverageMode mode;
@@ -30,7 +29,6 @@ final class CoverageAreaStarted extends CoverageAreaEvent {
   final List<ServingArea> initialAutoAreas;
   final List<ServingArea> initialExtraAreas;
   final String? localeIdentifier;
-  final String? cityId;
 
   @override
   List<Object?> get props => [
@@ -41,7 +39,6 @@ final class CoverageAreaStarted extends CoverageAreaEvent {
     initialAutoAreas,
     initialExtraAreas,
     localeIdentifier,
-    cityId,
   ];
 }
 

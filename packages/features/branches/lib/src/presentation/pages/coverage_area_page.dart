@@ -266,11 +266,27 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
                       AppSpacing.xl,
                       AppSpacing.sm,
                     ),
-                    child: AppButton(
-                      label: 'branches.coverage_area.confirm'.tr(),
-                      onPressed: state.canConfirm
-                          ? () => _confirm(state)
-                          : null,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (state.isOutsideCountry) ...[
+                          Text(
+                            'branches.coverage_area.outside_uae'.tr(),
+                            textAlign: TextAlign.center,
+                            style: context.appTypography.smallNormal.copyWith(
+                              color: context.appColors.error,
+                            ),
+                          ),
+                          SizedBox(height: AppSpacing.sm),
+                        ],
+                        AppButton(
+                          label: 'branches.coverage_area.confirm'.tr(),
+                          onPressed: state.canConfirm
+                              ? () => _confirm(state)
+                              : null,
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -316,6 +332,9 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
                 initialCameraPosition: CameraPosition(
                   target: mapTarget,
                   zoom: BranchMapDefaults.coverageZoom,
+                ),
+                cameraTargetBounds: CameraTargetBounds(
+                  DefaultMapViewport.uaeBounds,
                 ),
                 circles: _radiusController.buildCircles(
                   strokeColor: context.appColors.primary,

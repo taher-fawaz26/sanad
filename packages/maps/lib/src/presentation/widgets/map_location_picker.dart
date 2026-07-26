@@ -8,6 +8,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:maps/src/domain/entities/place_prediction.dart';
 import 'package:maps/src/domain/usecases/get_current_location_usecase.dart';
 import 'package:maps/src/presentation/bloc/location_picker/location_picker_bloc.dart';
+import 'package:maps/src/presentation/camera/default_map_viewport.dart';
 import 'package:maps/src/presentation/camera/initial_camera_resolver.dart';
 import 'package:maps/src/presentation/controllers/map_camera_controller.dart';
 import 'package:maps/src/presentation/models/location_picker_labels.dart';
@@ -239,25 +240,48 @@ class MapLocationPickerState extends State<MapLocationPicker> {
   }
 
   Widget _buildConfirmButton() {
-    return BlocSelector<LocationPickerBloc, LocationPickerState, bool>(
-      selector: (state) => state.canConfirm,
-      builder: (context, canConfirm) {
-        return AppButton(
-          label: widget.labels.confirm,
-          onPressed: canConfirm
-              ? () {
-                  final state = context.read<LocationPickerBloc>().state;
-                  final position = state.position;
-                  final address = state.address;
-                  if (position == null || address == null) return;
-                  widget.onConfirmed?.call(
-                    LocationPickerResult(
-                      position: position,
-                      address: address,
-                    ),
-                  );
-                }
-              : null,
+    return BlocSelector<
+      LocationPickerBloc,
+      LocationPickerState,
+      ({bool canConfirm, bool isOutsideCountry})
+    >(
+      selector: (state) => (
+        canConfirm: state.canConfirm,
+        isOutsideCountry: state.isOutsideCountry,
+      ),
+      builder: (context, rec) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (rec.isOutsideCountry) ...[
+              Text(
+                widget.labels.outsideCountry,
+                textAlign: TextAlign.center,
+                style: context.appTypography.smallNormal.copyWith(
+                  color: context.appColors.error,
+                ),
+              ),
+              SizedBox(height: AppSpacing.sm),
+            ],
+            AppButton(
+              label: widget.labels.confirm,
+              onPressed: rec.canConfirm
+                  ? () {
+                      final state = context.read<LocationPickerBloc>().state;
+                      final position = state.position;
+                      final address = state.address;
+                      if (position == null || address == null) return;
+                      widget.onConfirmed?.call(
+                        LocationPickerResult(
+                          position: position,
+                          address: address,
+                        ),
+                      );
+                    }
+                  : null,
+            ),
+          ],
         );
       },
     );
@@ -315,6 +339,9 @@ class _MapView extends StatelessWidget {
           children: [
             AppGoogleMap(
               initialCameraPosition: initialCameraPosition,
+              cameraTargetBounds: CameraTargetBounds(
+                DefaultMapViewport.uaeBounds,
+              ),
               onMapCreated: cameraController.onMapCreated,
               onCameraMove: cameraController.onCameraMove,
               onCameraIdle: onCameraIdle,

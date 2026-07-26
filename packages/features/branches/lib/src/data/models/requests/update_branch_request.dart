@@ -1,6 +1,7 @@
 import 'package:branches/src/data/models/branch_availability_dto.dart';
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
 import 'package:branches/src/domain/entities/branch_availability_mode.dart';
+import 'package:branches/src/domain/entities/branch_type.dart';
 import 'package:equatable/equatable.dart';
 
 /// PATCH request body for updating a branch.
@@ -12,6 +13,7 @@ class UpdateBranchRequest extends Equatable {
     required this.branchName,
     required this.branchAddress,
     required this.branchPhone,
+    this.branchType,
     this.cityId,
     this.branchManagerId,
     this.lat,
@@ -23,11 +25,15 @@ class UpdateBranchRequest extends Equatable {
     this.availability,
     this.serviceIds,
     this.servingAreaPlaceIds,
+    this.workerIds,
   });
 
   final String branchName;
   final String branchAddress;
   final String branchPhone;
+
+  /// Only serialized when changing the branch type.
+  final BranchType? branchType;
 
   /// Only serialized when changing the branch city.
   final String? cityId;
@@ -43,12 +49,16 @@ class UpdateBranchRequest extends Equatable {
   final List<String>? serviceIds;
   final List<String>? servingAreaPlaceIds;
 
+  /// Only serialized when changing assigned workers.
+  final List<String>? workerIds;
+
   Map<String, dynamic> toMap() {
     final body = <String, dynamic>{
       'branchName': branchName,
       'branchAddress': branchAddress,
       'branchPhone': branchPhone,
     };
+    if (branchType != null) body['type'] = branchType!.toApiString();
     if (cityId != null) body['cityId'] = cityId;
     if (branchManagerId != null) body['branchManagerId'] = branchManagerId;
     if (lat != null) body['lat'] = lat;
@@ -68,6 +78,7 @@ class UpdateBranchRequest extends Equatable {
     if (servingAreaPlaceIds != null) {
       body['servingAreaPlaceIds'] = servingAreaPlaceIds;
     }
+    if (workerIds != null) body['workerIds'] = workerIds;
     return body;
   }
 
@@ -76,6 +87,7 @@ class UpdateBranchRequest extends Equatable {
     branchName,
     branchAddress,
     branchPhone,
+    branchType,
     cityId,
     branchManagerId,
     lat,
@@ -87,5 +99,6 @@ class UpdateBranchRequest extends Equatable {
     availability,
     serviceIds,
     servingAreaPlaceIds,
+    workerIds,
   ];
 }

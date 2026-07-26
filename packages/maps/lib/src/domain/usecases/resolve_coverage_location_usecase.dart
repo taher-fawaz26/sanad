@@ -26,27 +26,17 @@ class ResolveCoverageLocationUseCase
       ),
     );
 
-    if (intent.cityId == null) {
-      return geocodeTask.map(
-        (geocoded) => CoverageLocation(
+    return geocodeTask.flatMap(
+      (geocoded) => _resolveNearbyAreas(
+        ResolveNearbyAreasParams(intent: intent),
+      ).map(
+        (nearbyAreas) => CoverageLocation(
           center: intent.center,
           address: geocoded.formattedAddress,
-          nearbyAreas: const [],
+          nearbyAreas: nearbyAreas,
+          isoCountryCode: geocoded.isoCountryCode,
         ),
-      );
-    }
-
-    return geocodeTask.flatMap(
-      (geocoded) =>
-          _resolveNearbyAreas(
-            ResolveNearbyAreasParams(intent: intent, cityId: intent.cityId!),
-          ).map(
-            (nearbyAreas) => CoverageLocation(
-              center: intent.center,
-              address: geocoded.formattedAddress,
-              nearbyAreas: nearbyAreas,
-            ),
-          ),
+      ),
     );
   }
 }

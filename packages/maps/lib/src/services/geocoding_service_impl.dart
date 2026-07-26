@@ -53,9 +53,13 @@ class GeocodingServiceImpl implements GeocodingService {
           );
         }
         final placemark = placemarks.first;
+        final iso = placemark.isoCountryCode;
         return GeocodedAddress(
           formattedAddress: _formatPlacemark(placemark),
           areaName: _areaNameFromPlacemark(placemark),
+          isoCountryCode: (iso == null || iso.isEmpty)
+              ? null
+              : iso.toUpperCase(),
         );
       },
       (error, _) => LocationFailure(

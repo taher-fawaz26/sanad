@@ -11,6 +11,7 @@ class LocationPickerLabels {
     required this.openSettings,
     required this.searchEmpty,
     required this.searchRetry,
+    required this.outsideCountry,
     this.title,
     this.subtitle,
   });
@@ -36,4 +37,7 @@ class LocationPickerLabels {
 
   /// Retry action shown in the search sheet on a search error.
   final String searchRetry;
+
+  /// Shown when the picked location is outside the supported country (UAE).
+  final String outsideCountry;
 }

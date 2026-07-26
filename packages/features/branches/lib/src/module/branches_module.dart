@@ -1,9 +1,13 @@
 import 'package:branches/src/di/branches_di.dart';
+import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_cubit.dart';
+import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_state.dart';
 import 'package:branches/src/presentation/bloc/branch_details/branch_details_bloc.dart';
 import 'package:branches/src/presentation/bloc/branches/branches_bloc.dart';
+import 'package:branches/src/presentation/models/branch_form_mode.dart';
 import 'package:branches/src/presentation/models/coverage_area_args.dart';
+import 'package:branches/src/presentation/utils/branch_draft_seeder.dart';
 import 'package:maps/maps.dart';
 import 'package:branches/src/presentation/pages/add_branch_page.dart';
 import 'package:branches/src/presentation/pages/branch_details_page.dart';
@@ -68,7 +72,6 @@ class BranchesModule extends FeatureModule {
                     initialRadiusKm: args?.radiusKm,
                     initialAutoAreas: args?.servingAreas ?? const [],
                     localeIdentifier: locale,
-                    cityId: args?.cityId,
                   ),
                 ),
             ),
@@ -77,6 +80,39 @@ class BranchesModule extends FeatureModule {
             ),
           ],
           child: const CoverageAreaPage(),
+        );
+      },
+    ),
+    GoRoute(
+      path: BranchRoutes.edit,
+      builder: (context, state) {
+        final branchId = state.pathParameters['id']!;
+        // Branch Details passes the already-loaded branch to avoid a refetch;
+        // deep links (id only) fall back to loading it in the wizard.
+        final branch = state.extra is BranchEntity
+            ? state.extra! as BranchEntity
+            : null;
+        return MultiBlocProvider(
+          providers: [
+            BlocProvider(
+              create: (_) => sl<AddBranchBloc>()..add(const AddBranchStarted()),
+            ),
+            BlocProvider(
+              // Seed the draft (and its change-tracking baseline) from the
+              // pre-loaded branch when available; the id-only path seeds later,
+              // once the wizard fetches the branch.
+              create: (_) => AddBranchDraftCubit(
+                initial: branch != null
+                    ? BranchDraftSeeder.fromBranch(branch)
+                    : const AddBranchDraft(),
+              ),
+            ),
+          ],
+          child: AddBranchPage(
+            mode: BranchFormMode.edit,
+            branchId: branchId,
+            initialBranch: branch,
+          ),
         );
       },
     ),

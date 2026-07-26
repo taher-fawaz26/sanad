@@ -8,12 +8,19 @@ import 'package:maps/src/domain/failures/places_failure.dart';
 import 'package:maps/src/services/places_provider.dart';
 
 class GooglePlacesProvider implements PlacesProvider {
-  GooglePlacesProvider({required String apiKey, required Dio dio})
-    : _apiKey = apiKey,
-      _dio = dio;
+  GooglePlacesProvider({
+    required String apiKey,
+    required Dio dio,
+    String countryCode = 'ae',
+  }) : _apiKey = apiKey,
+       _dio = dio,
+       _countryCode = countryCode;
 
   final String _apiKey;
   final Dio _dio;
+
+  /// ISO 3166-1 alpha-2 country the autocomplete results are restricted to.
+  final String _countryCode;
 
   static const _autocompleteUrl =
       'https://maps.googleapis.com/maps/api/place/autocomplete/json';
@@ -33,6 +40,10 @@ class GooglePlacesProvider implements PlacesProvider {
         final params = <String, String>{
           'input': query,
           'key': _apiKey,
+          // Restrict results to the configured country (UAE) so no place
+          // outside it can ever be selected. `region` biases spelling/format.
+          'components': 'country:$_countryCode',
+          'region': _countryCode,
           if (sessionToken != null) 'sessiontoken': sessionToken,
           if (language != null) 'language': language,
           if (location != null)

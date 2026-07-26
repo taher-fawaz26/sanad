@@ -17,6 +17,7 @@ class CoverageAreaState extends Equatable {
     this.status = CoverageAreaStatus.initial,
     this.center,
     this.address,
+    this.isoCountryCode,
     this.radiusKm = defaultRadiusKm,
     this.mode = CoverageMode.create,
     this.autoAreas = const [],
@@ -27,9 +28,16 @@ class CoverageAreaState extends Equatable {
 
   static const double defaultRadiusKm = 5;
 
+  /// Country the coverage centre must belong to. Selection outside it is
+  /// blocked so branches only cover the supported country (the UAE).
+  static const allowedCountryCode = 'AE';
+
   final CoverageAreaStatus status;
   final LatLng? center;
   final String? address;
+
+  /// ISO country of [center] (uppercased), when known.
+  final String? isoCountryCode;
   final double radiusKm;
   final CoverageMode mode;
   final List<ServingArea> autoAreas;
@@ -37,11 +45,20 @@ class CoverageAreaState extends Equatable {
   final Failure? failure;
   final CoverageAreaCameraSource cameraSource;
 
+  /// True only when the centre is *known* to be in another country — a null
+  /// geocode never blocks a legitimate in-country point.
+  bool get isOutsideCountry =>
+      status == CoverageAreaStatus.ready &&
+      center != null &&
+      isoCountryCode != null &&
+      isoCountryCode!.toUpperCase() != allowedCountryCode;
+
   bool get canConfirm =>
       center != null &&
       address != null &&
       address!.isNotEmpty &&
-      status == CoverageAreaStatus.ready;
+      status == CoverageAreaStatus.ready &&
+      !isOutsideCountry;
 
   bool get isLoading => status == CoverageAreaStatus.loading;
 
@@ -53,6 +70,7 @@ class CoverageAreaState extends Equatable {
     CoverageAreaStatus? status,
     LatLng? center,
     String? address,
+    String? Function()? isoCountryCode,
     double? radiusKm,
     CoverageMode? mode,
     List<ServingArea>? autoAreas,
@@ -66,6 +84,9 @@ class CoverageAreaState extends Equatable {
       status: status ?? this.status,
       center: center ?? this.center,
       address: clearAddress ? null : (address ?? this.address),
+      isoCountryCode: isoCountryCode != null
+          ? isoCountryCode()
+          : this.isoCountryCode,
       radiusKm: radiusKm ?? this.radiusKm,
       mode: mode ?? this.mode,
       autoAreas: autoAreas ?? this.autoAreas,
@@ -80,6 +101,7 @@ class CoverageAreaState extends Equatable {
     status,
     center,
     address,
+    isoCountryCode,
     radiusKm,
     mode,
     autoAreas,

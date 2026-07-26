@@ -3,6 +3,7 @@ import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/presentation/bloc/branch_details/branch_details_bloc.dart';
 import 'package:branches/src/presentation/utils/branch_maps_launcher.dart';
 import 'package:branches/src/presentation/widgets/branch_summary_view.dart';
+import 'package:branches/src/routes/branch_routes.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -182,10 +183,7 @@ class _BranchDetailsContent extends StatelessWidget {
               ),
               child: AppButton(
                 label: 'branches.details.edit_branch'.tr(),
-                onPressed: () => _showComingSoon(
-                  context,
-                  'branches.details.edit_coming_soon'.tr(),
-                ),
+                onPressed: () => _openEdit(context),
               ),
             ),
           ],
@@ -202,6 +200,19 @@ class _BranchDetailsContent extends StatelessWidget {
         context: context,
         title: 'branches.details.maps_unavailable'.tr(),
       );
+    }
+  }
+
+  /// Opens the shared wizard in edit mode, passing the already-loaded branch so
+  /// it prefills without a refetch. Refreshes details when a save succeeds.
+  Future<void> _openEdit(BuildContext context) async {
+    final bloc = context.read<BranchDetailsBloc>();
+    final saved = await context.push<bool>(
+      BranchRoutes.editFor(branch.id),
+      extra: branch,
+    );
+    if (saved ?? false) {
+      bloc.add(const BranchDetailsRefreshEvent());
     }
   }
 
@@ -228,10 +239,7 @@ class _BranchDetailsContent extends StatelessWidget {
           leading: const Icon(Icons.edit_outlined),
           onTap: () {
             Navigator.of(context).pop();
-            _showComingSoon(
-              context,
-              'branches.details.edit_coming_soon'.tr(),
-            );
+            _openEdit(context);
           },
         ),
         AppActionSheetItem(

@@ -3,6 +3,7 @@ import 'package:branches/src/domain/entities/branch_manager_entity.dart';
 import 'package:branches/src/domain/entities/branch_type.dart';
 import 'package:branches/src/presentation/widgets/branch_schedule_section.dart';
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart';
 import 'package:maps/maps.dart';
 import 'package:services/services.dart';
 import 'package:workers/workers.dart';
@@ -39,23 +40,29 @@ class AddBranchDraft extends Equatable {
   final List<WorkerEntity> selectedWorkers;
 
   /// Whether the user has entered anything worth guarding with a
-  /// discard-changes confirmation (Figma `Discard changes?` popover).
+  /// discard-changes confirmation (Figma `Discard changes?` popover), relative
+  /// to an empty draft. Equivalent to `hasChangesFrom(const AddBranchDraft())`.
+  bool get hasChanges => hasChangesFrom(const AddBranchDraft());
+
+  /// Whether this draft differs from [baseline] in any user-editable field.
   ///
-  /// Checks user-entered fields only — [customSchedule] is excluded because
-  /// it is auto-seeded from the company schedule without user input.
-  bool get hasChanges =>
-      branchName.trim().isNotEmpty ||
-      branchType != BranchType.mainBranch ||
-      selectedCity != null ||
-      phone.trim().isNotEmpty ||
-      branchAddress != null ||
-      pickedPosition != null ||
-      selectedManager != null ||
-      scheduleMode != BranchScheduleMode.company ||
-      coverageRadiusKm != null ||
-      servingAreas.isNotEmpty ||
-      selectedServices.isNotEmpty ||
-      selectedWorkers.isNotEmpty;
+  /// In create mode the baseline is an empty draft; in edit mode it is the
+  /// draft seeded from the saved branch, so this drives the discard guard in
+  /// both flows. [customSchedule] is excluded because it is auto-seeded from
+  /// the company schedule without direct user input.
+  bool hasChangesFrom(AddBranchDraft baseline) =>
+      branchName.trim() != baseline.branchName.trim() ||
+      branchType != baseline.branchType ||
+      selectedCity != baseline.selectedCity ||
+      phone.trim() != baseline.phone.trim() ||
+      branchAddress != baseline.branchAddress ||
+      pickedPosition != baseline.pickedPosition ||
+      selectedManager != baseline.selectedManager ||
+      scheduleMode != baseline.scheduleMode ||
+      coverageRadiusKm != baseline.coverageRadiusKm ||
+      !listEquals(servingAreas, baseline.servingAreas) ||
+      !listEquals(selectedServices, baseline.selectedServices) ||
+      !listEquals(selectedWorkers, baseline.selectedWorkers);
 
   bool get isStepOneComplete =>
       branchName.trim().isNotEmpty &&
@@ -73,6 +80,15 @@ class AddBranchDraft extends Equatable {
   bool get isStepThreeComplete => selectedServices.isNotEmpty;
 
   bool get isStepFourComplete => selectedWorkers.isNotEmpty;
+
+  /// All steps complete — the draft can be submitted (create or edit). Phone
+  /// format validity is enforced separately by the caller (via
+  /// `UaePhoneValidator`), matching the create flow.
+  bool get canSubmit =>
+      isStepOneComplete &&
+      isStepTwoComplete &&
+      isStepThreeComplete &&
+      isStepFourComplete;
 
   AddBranchDraft copyWith({
     String? branchName,

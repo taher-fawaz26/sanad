@@ -3,12 +3,14 @@ import 'package:dio/dio.dart';
 import 'package:maps/src/config/maps_config.dart';
 import 'package:maps/src/data/cache/geocoding_cache.dart';
 import 'package:maps/src/data/repositories/geocoding_repository_impl.dart';
+import 'package:maps/src/data/repositories/google_nearby_areas_repository_impl.dart';
 import 'package:maps/src/data/repositories/location_repository_impl.dart';
 import 'package:maps/src/data/repositories/locations_repository_impl.dart';
 import 'package:maps/src/data/repositories/places_repository_impl.dart';
 import 'package:maps/src/domain/repositories/geocoding_repository.dart';
 import 'package:maps/src/domain/repositories/location_repository.dart';
 import 'package:maps/src/domain/repositories/locations_repository.dart';
+import 'package:maps/src/domain/repositories/nearby_areas_repository.dart';
 import 'package:maps/src/domain/repositories/places_repository.dart';
 import 'package:maps/src/domain/usecases/forward_geocode_usecase.dart';
 import 'package:maps/src/domain/usecases/get_cities_usecase.dart';
@@ -57,8 +59,17 @@ abstract final class MapsDI {
       ..registerLazySingleton(
         () => ForwardGeocodeUseCase(sl<GeocodingRepository>()),
       )
+      ..registerLazySingleton<NearbyAreasRepository>(
+        () => config.placesEnabled
+            ? GoogleNearbyAreasRepositoryImpl(
+                apiKey: config.placesApiKey!,
+                dio: _createPlacesDio(),
+                countryCode: config.countryCode,
+              )
+            : const NoopNearbyAreasRepository(),
+      )
       ..registerLazySingleton(
-        () => ResolveNearbyAreasUseCase(sl<LocationsRepository>()),
+        () => ResolveNearbyAreasUseCase(sl<NearbyAreasRepository>()),
       )
       ..registerLazySingleton(
         () => ResolveCoverageLocationUseCase(
@@ -127,6 +138,7 @@ abstract final class MapsDI {
       PlacesProviderType.google => GooglePlacesProvider(
         apiKey: config.placesApiKey!,
         dio: _createPlacesDio(),
+        countryCode: config.countryCode,
       ),
       PlacesProviderType.backend => const BackendPlacesProvider(),
       PlacesProviderType.openStreetMap => const OsmPlacesProvider(),

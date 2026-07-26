@@ -15,9 +15,9 @@ class CoverageAreaResult extends Equatable {
   final String address;
   final double radiusKm;
 
-  /// Auto-resolved areas from the radius overlay. Each carries a
-  /// coordinate-based [ServingArea.placeId] and a human-readable
-  /// [ServingArea.name]; the name is what users see, never the place ID.
+  /// Areas auto-resolved from Google within the radius. Each carries a real
+  /// Google [ServingArea.placeId] and a human-readable [ServingArea.name]; the
+  /// name is what users see, never the place ID.
   final List<ServingArea> autoAreas;
   final List<ServingArea> extraAreas;
 
