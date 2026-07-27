@@ -49,12 +49,12 @@ Future<void> configureDependencies() async {
         sl<AuthStatusNotifier>().update(AuthStatus.unauthenticated),
   );
 
+  // ── Permissions (registers PermissionService, config, theme, provider) ───
+  PermissionsDI.init();
+
   sl
-    ..registerLazySingleton<PermissionsService>(
-      () => const PermissionsServiceImpl(),
-    )
     ..registerLazySingleton<LocationService>(
-      () => LocationServiceImpl(sl<PermissionsService>()),
+      () => LocationServiceImpl(sl<PermissionService>()),
     )
     ..registerLazySingleton<GeocodingService>(
       () => const GeocodingServiceImpl(),

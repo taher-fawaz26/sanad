@@ -19,11 +19,11 @@ class _LocationServiceException implements Exception {
   String toString() => message;
 }
 
-/// Default implementation using [Geolocator] and [PermissionsService].
+/// Default implementation using [Geolocator] and [PermissionService].
 class LocationServiceImpl implements LocationService {
-  const LocationServiceImpl(this._permissionsService);
+  const LocationServiceImpl(this._permissionService);
 
-  final PermissionsService _permissionsService;
+  final PermissionService _permissionService;
 
   @override
   TaskEither<Failure, LatLng> getCurrentLocation() {
@@ -49,22 +49,26 @@ class LocationServiceImpl implements LocationService {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) return LocationPermissionStatus.serviceDisabled;
 
-    final status = await _permissionsService.check(
-      Permission.locationWhenInUse,
+    final result = await _permissionService.check(
+      PermissionType.locationWhenInUse,
     );
 
-    return switch (status) {
-      PermissionStatus.granted ||
-      PermissionStatus.limited ||
-      PermissionStatus.provisional => LocationPermissionStatus.granted,
-      PermissionStatus.permanentlyDenied ||
-      PermissionStatus.restricted => LocationPermissionStatus.permanentlyDenied,
-      PermissionStatus.denied => LocationPermissionStatus.denied,
-    };
+    return _toLocationPermissionStatus(result);
   }
 
   @override
-  Future<bool> openAppSettings() => _permissionsService.openSettings();
+  Future<bool> openAppSettings() => _permissionService.openSettings();
+
+  LocationPermissionStatus _toLocationPermissionStatus(
+    PermissionResult result,
+  ) {
+    if (result.isGranted) return LocationPermissionStatus.granted;
+    // permanentlyDenied || restricted — only recoverable via app settings.
+    if (result.canOpenSettings) {
+      return LocationPermissionStatus.permanentlyDenied;
+    }
+    return LocationPermissionStatus.denied;
+  }
 
   Future<LatLng> _resolveCurrentLocation() async {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -75,24 +79,21 @@ class LocationServiceImpl implements LocationService {
       );
     }
 
-    final permissionResult = await _permissionsService.request(
-      Permission.locationWhenInUse,
+    final result = await _permissionService.request(
+      PermissionType.locationWhenInUse,
     );
 
-    switch (permissionResult) {
-      case PermissionRequestResult.granted:
-      case PermissionRequestResult.notRequired:
-        break;
-      case PermissionRequestResult.denied:
-        throw const _LocationServiceException(
-          message: 'Location permission was denied.',
-          code: LocationFailureCodes.permissionDenied,
-        );
-      case PermissionRequestResult.permanentlyDenied:
+    if (!result.isGranted) {
+      if (result.canOpenSettings) {
         throw const _LocationServiceException(
           message: 'Location permission is permanently denied.',
           code: LocationFailureCodes.permissionPermanentlyDenied,
         );
+      }
+      throw const _LocationServiceException(
+        message: 'Location permission was denied.',
+        code: LocationFailureCodes.permissionDenied,
+      );
     }
 
     const settings = LocationSettings(

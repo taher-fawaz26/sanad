@@ -1,18 +1,30 @@
 name: permissions
-description: Shared permission handling — request, check, and open-settings abstractions over permission_handler.
+description: >
+  Production-grade permissions platform — the single source of truth for
+  requesting, checking, and managing runtime permissions across the monorepo.
+  Only this package may depend on permission_handler.
 version: 0.1.0
 publish_to: none
 resolution: workspace
 
 environment:
   sdk: ">=3.11.0 <4.0.0"
+  flutter: ">=3.19.0"
 
 dependencies:
+  core:
+    path: ../core
+  design_system:
+    path: ../design_system
+  equatable: ^2.1.0
   flutter:
     sdk: flutter
+  go_router: ^17.3.0
   permission_handler: ^11.3.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  get_it: ^8.0.3
+  mocktail: ^1.0.4
   very_good_analysis: ^9.0.0

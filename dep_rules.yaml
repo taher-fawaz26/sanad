@@ -45,6 +45,7 @@ layer_order:
       - flavors
       - testing
       - permissions
+      - device
       - test_verify
   - tier: 3
     packages: [maps, asset_picker]

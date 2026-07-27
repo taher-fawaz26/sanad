@@ -45,26 +45,29 @@ class AppOtpField extends StatelessWidget {
     final typography = context.appTypography;
     final brightness = Theme.of(context).brightness;
     final cellSize = AppDimension.otpCellSize;
-    final radius = FieldTokens.borderRadiusAll();
+    // --corner/large from the design system: 13.631 dp → 14 dp
+    final radius = BorderRadius.circular(responsiveDimension(14));
     final defaultWidth = responsiveDimension(FieldTokens.borderWidthDefault);
     final emphasisWidth = responsiveDimension(FieldTokens.borderWidthEmphasis);
 
-    final textStyle = FieldTokens.valueStyle(
-      typography,
-      colors,
-      brightness,
-      enabled: enabled,
+    final baseTextStyle = typography.largeNormal.copyWith(
+      fontWeight: FontWeight.w500,
+      letterSpacing: 0,
+      color: FieldTokens.valueColor(colors, brightness, enabled: enabled),
     );
+    // Filled digits use the primary teal colour.
+    final filledTextStyle = baseTextStyle.copyWith(color: colors.primary);
 
     PinTheme themeFor({
       required Color borderColor,
       required double borderWidth,
       Color? fillColor,
+      TextStyle? textStyle,
     }) {
       return PinTheme(
         width: cellSize,
         height: cellSize,
-        textStyle: textStyle,
+        textStyle: textStyle ?? baseTextStyle,
         decoration: BoxDecoration(
           color: fillColor ??
               FieldTokens.background(colors, brightness, enabled: enabled),
@@ -95,9 +98,16 @@ class AppOtpField extends StatelessWidget {
               borderColor: FieldTokens.borderDefault(colors, brightness),
               borderWidth: defaultWidth,
             ),
+            // Active/cursor cell: gray border (no colour emphasis on focus).
             focusedPinTheme: themeFor(
-              borderColor: FieldTokens.focusBorder(colors),
-              borderWidth: emphasisWidth,
+              borderColor: FieldTokens.borderDefault(colors, brightness),
+              borderWidth: defaultWidth,
+            ),
+            // Filled digits: primary teal border + primary teal text.
+            submittedPinTheme: themeFor(
+              borderColor: colors.primary,
+              borderWidth: defaultWidth,
+              textStyle: filledTextStyle,
             ),
             errorPinTheme: themeFor(
               borderColor: FieldTokens.errorBorder(colors, brightness),
@@ -109,14 +119,10 @@ class AppOtpField extends StatelessWidget {
               fillColor:
                   FieldTokens.background(colors, brightness, enabled: false),
             ),
-            submittedPinTheme: themeFor(
-              borderColor: FieldTokens.borderDefault(colors, brightness),
-              borderWidth: defaultWidth,
-            ),
-            separatorBuilder: (_) => SizedBox(width: AppSpacing.sm),
+            separatorBuilder: (_) => SizedBox(width: AppSpacing.lg),
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             hapticFeedbackType: HapticFeedbackType.lightImpact,
-            closeKeyboardWhenCompleted: true,
+
             validator: validator,
             onChanged: onChanged,
             onCompleted: onCompleted,

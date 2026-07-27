@@ -69,12 +69,6 @@ class InvitationScreenShell extends StatelessWidget {
                   topRight: Radius.circular(
                     responsiveDimension(_cardTopRadius),
                   ),
-                  bottomLeft: Radius.circular(
-                    responsiveDimension(_cardBottomRadius),
-                  ),
-                  bottomRight: Radius.circular(
-                    responsiveDimension(_cardBottomRadius),
-                  ),
                 ),
               ),
               child: SafeArea(
