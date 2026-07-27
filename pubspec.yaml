@@ -13,6 +13,7 @@ workspace:
   - packages/analytics
   - packages/app_assets
   - packages/app_logger
+  - packages/asset_picker
   - packages/config
   - packages/core
   - packages/design_system

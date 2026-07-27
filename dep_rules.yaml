@@ -47,7 +47,7 @@ layer_order:
       - permissions
       - test_verify
   - tier: 3
-    packages: [maps]
+    packages: [maps, asset_picker]
   - tier: 4
     packages: [auth, services, workers, change_password]
   - tier: 5
