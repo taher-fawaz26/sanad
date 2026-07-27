@@ -14,6 +14,7 @@ class InvitationDto extends InvitationEntity
     super.email,
     super.invitedAt,
     super.expiresAt,
+    super.invitationLink,
   });
 
   factory InvitationDto.fromJson(Map<String, dynamic> json) {
@@ -30,6 +31,7 @@ class InvitationDto extends InvitationEntity
       email: json['email'] as String?,
       invitedAt: createdAt != null ? DateTime.tryParse(createdAt) : null,
       expiresAt: expiresAt != null ? DateTime.tryParse(expiresAt) : null,
+      invitationLink: json['invitationLink'] as String?,
     );
   }
 
@@ -44,6 +46,7 @@ class InvitationDto extends InvitationEntity
     email: email,
     invitedAt: invitedAt,
     expiresAt: expiresAt,
+    invitationLink: invitationLink,
   );
 
   static String _initials(String name) {

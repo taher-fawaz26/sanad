@@ -1,9 +1,11 @@
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
 import 'package:workers/src/domain/entities/worker_status.dart';
+import 'package:workers/src/presentation/bloc/workers_list/workers_list_bloc.dart';
 import 'package:workers/src/presentation/widgets/worker_actions_bottom_sheet.dart';
 import 'package:workers/src/routes/worker_routes.dart';
 
@@ -25,6 +27,10 @@ class WorkerListItem extends StatelessWidget {
       title: worker.fullName,
       caption: worker.role,
       leading: AppAvatar(
+        image: worker.profilePicUrl != null &&
+                worker.profilePicUrl!.isNotEmpty
+            ? NetworkImage(worker.profilePicUrl!)
+            : null,
         initials: worker.initials,
         backgroundColor: colors.primary,
         showStatusDot: worker.status == WorkerStatus.active,
@@ -41,13 +47,17 @@ class WorkerListItem extends StatelessWidget {
           ),
         ),
       ),
-      onTap:
-          onTap ??
-          () => context.push(
-            WorkerRoutes.detailsFor(worker.id),
-            extra: worker,
-          ),
+      onTap: onTap ?? () => _openDetails(context),
     );
+  }
+
+  Future<void> _openDetails(BuildContext context) async {
+    final bloc = context.read<WorkersListBloc>();
+    final updated = await context.push<WorkerEntity>(
+      WorkerRoutes.detailsFor(worker.id),
+      extra: worker,
+    );
+    if (updated != null) bloc.add(WorkerReplacedInListEvent(updated));
   }
 
   AppStatusBadge _statusBadge(WorkerStatus status) => switch (status) {

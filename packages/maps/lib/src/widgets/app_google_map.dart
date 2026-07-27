@@ -1,10 +1,14 @@
+import 'package:design_system/design_system.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 /// Reusable Google Map with sensible defaults for Sanad location pickers.
-class AppGoogleMap extends StatelessWidget {
+///
+/// Shows an [AppShimmer] overlay until the underlying platform view fires
+/// [onMapCreated], then cross-fades to the live map surface.
+class AppGoogleMap extends StatefulWidget {
   const AppGoogleMap({
     required this.initialCameraPosition,
     this.markers = const <Marker>{},
@@ -72,32 +76,62 @@ class AppGoogleMap extends StatelessWidget {
       };
 
   @override
+  State<AppGoogleMap> createState() => _AppGoogleMapState();
+}
+
+class _AppGoogleMapState extends State<AppGoogleMap> {
+  bool _mapReady = false;
+
+  void _onMapCreated(GoogleMapController controller) {
+    if (mounted) setState(() => _mapReady = true);
+    widget.onMapCreated?.call(controller);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return GoogleMap(
-      initialCameraPosition: initialCameraPosition,
-      markers: markers,
-      circles: circles,
-      polygons: polygons,
-      polylines: polylines,
-      onMapCreated: onMapCreated,
-      onTap: onTap,
-      onLongPress: onLongPress,
-      onCameraMove: onCameraMove,
-      onCameraIdle: onCameraIdle,
-      myLocationEnabled: myLocationEnabled,
-      myLocationButtonEnabled: myLocationButtonEnabled,
-      zoomControlsEnabled: zoomControlsEnabled,
-      mapToolbarEnabled: mapToolbarEnabled,
-      compassEnabled: compassEnabled,
-      scrollGesturesEnabled: scrollGesturesEnabled,
-      zoomGesturesEnabled: zoomGesturesEnabled,
-      tiltGesturesEnabled: tiltGesturesEnabled,
-      rotateGesturesEnabled: rotateGesturesEnabled,
-      mapType: mapType,
-      padding: padding,
-      cameraTargetBounds: cameraTargetBounds,
-      minMaxZoomPreference: minMaxZoomPreference,
-      gestureRecognizers: gestureRecognizers ?? eagerGestureRecognizers,
+    return Stack(
+      children: [
+        GoogleMap(
+          initialCameraPosition: widget.initialCameraPosition,
+          markers: widget.markers,
+          circles: widget.circles,
+          polygons: widget.polygons,
+          polylines: widget.polylines,
+          onMapCreated: _onMapCreated,
+          onTap: widget.onTap,
+          onLongPress: widget.onLongPress,
+          onCameraMove: widget.onCameraMove,
+          onCameraIdle: widget.onCameraIdle,
+          myLocationEnabled: widget.myLocationEnabled,
+          myLocationButtonEnabled: widget.myLocationButtonEnabled,
+          zoomControlsEnabled: widget.zoomControlsEnabled,
+          mapToolbarEnabled: widget.mapToolbarEnabled,
+          compassEnabled: widget.compassEnabled,
+          scrollGesturesEnabled: widget.scrollGesturesEnabled,
+          zoomGesturesEnabled: widget.zoomGesturesEnabled,
+          tiltGesturesEnabled: widget.tiltGesturesEnabled,
+          rotateGesturesEnabled: widget.rotateGesturesEnabled,
+          mapType: widget.mapType,
+          padding: widget.padding,
+          cameraTargetBounds: widget.cameraTargetBounds,
+          minMaxZoomPreference: widget.minMaxZoomPreference,
+          gestureRecognizers:
+              widget.gestureRecognizers ?? AppGoogleMap.eagerGestureRecognizers,
+        ),
+        // Shimmer overlay — stays in front of the platform view until
+        // onMapCreated fires, then fades out over 300 ms.
+        AnimatedOpacity(
+          opacity: _mapReady ? 0 : 1,
+          duration: const Duration(milliseconds: 300),
+          // IgnorePointer so touches reach the map during the fade-out.
+          child: IgnorePointer(
+            ignoring: _mapReady,
+            child: AppShimmer(
+              child: Container(color: context.appColors.onBackground),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

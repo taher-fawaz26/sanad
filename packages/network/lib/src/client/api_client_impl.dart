@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:core/core.dart';
 import 'package:dio/dio.dart';
 import 'package:fpdart/fpdart.dart';
@@ -22,13 +24,14 @@ class ApiClientImpl implements BaseApiClient {
   TaskEither<Failure, T> request<T>({
     required String path,
     required RequestMethod method,
-    required T Function(dynamic data) parser, Map<String, dynamic>? query,
+    required FutureOr<T> Function(dynamic data) parser,
+    Map<String, dynamic>? query,
     dynamic body,
   }) {
     final httpTask = TaskEither<Failure, T>.tryCatch(
       () async {
         final response = await _executeDioRequest(path, method, query, body);
-        return parser(response.data);
+        return await parser(response.data);
       },
       (error, _) => ErrorMapper.mapError(error),
     );

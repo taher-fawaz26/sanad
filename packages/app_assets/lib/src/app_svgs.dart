@@ -132,4 +132,13 @@ abstract final class AppSvgs {
 
   /// Services — bag icon.
   static const String bag = '$_base/bag.svg';
+
+  // ── Invitation flow (mocked UI, no backend) ────────────────────────────────
+
+  /// Sanad wordmark — invitation-flow header logo (`2560:24653`). The
+  /// gradient background behind it is drawn natively, not part of this asset.
+  static const String sanadLogo = '$_base/sanad_logo.svg';
+
+  /// Badge-check glyph inside the success-screen circle (`2560:24743`).
+  static const String badgeCheck = '$_base/badge_check.svg';
 }

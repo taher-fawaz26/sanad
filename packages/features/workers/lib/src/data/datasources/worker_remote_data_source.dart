@@ -33,6 +33,7 @@ abstract interface class WorkerRemoteDataSource {
   TaskEither<Failure, Unit> inviteWorker(InviteWorkerParams params);
   TaskEither<Failure, Unit> resendInvitation(String id);
   TaskEither<Failure, Unit> cancelInvitation(String id);
+  TaskEither<Failure, Unit> deleteInvitation(String id);
   TaskEither<Failure, WorkerDto> updateWorker(UpdateWorkerParams params);
 }
 
@@ -130,6 +131,14 @@ class WorkerRemoteDataSourceImpl implements WorkerRemoteDataSource {
       _apiClient.request<Unit>(
         path: WorkerApiPaths.cancelInvitation(id),
         method: RequestMethod.post,
+        parser: (_) => unit,
+      );
+
+  @override
+  TaskEither<Failure, Unit> deleteInvitation(String id) =>
+      _apiClient.request<Unit>(
+        path: WorkerApiPaths.deleteInvitation(id),
+        method: RequestMethod.delete,
         parser: (_) => unit,
       );
 

@@ -28,6 +28,12 @@ class _EditWorkerPageState extends State<EditWorkerPage> {
   bool _showValidationErrors = false;
   var _submittingDialogVisible = false;
 
+  bool get _isTypeReadOnly {
+    final workerType = WorkerType.fromApiString(widget.worker.role);
+    if (workerType == WorkerType.manager) return true;
+    return widget.worker.assignedBranches.isNotEmpty;
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<EditWorkerBloc, EditWorkerState>(
@@ -57,9 +63,9 @@ class _EditWorkerPageState extends State<EditWorkerPage> {
                     initialPhone: widget.worker.phone,
                     initialJobTitle: widget.worker.jobTitle,
                     initialType: WorkerType.fromApiString(widget.worker.role),
-                    // Edit: contact optional; email not server-editable.
                     requireContact: false,
                     emailReadOnly: true,
+                    typeReadOnly: _isTypeReadOnly,
                   ),
                 ),
               ),

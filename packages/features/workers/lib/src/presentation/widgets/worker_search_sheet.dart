@@ -7,7 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
-import 'package:workers/src/presentation/bloc/workers/workers_bloc.dart';
+import 'package:workers/src/presentation/bloc/invitations_list/invitations_list_bloc.dart';
+import 'package:workers/src/presentation/bloc/workers_list/workers_list_bloc.dart';
 import 'package:workers/src/presentation/widgets/invitation_list_item.dart';
 import 'package:workers/src/presentation/widgets/worker_empty_states.dart';
 import 'package:workers/src/presentation/widgets/worker_list_item.dart';
@@ -29,24 +30,41 @@ class _StartAddWorker extends _SearchSheetResult {
 
 /// Workers / invitations search — bottom sheet (Figma `1526:12837`).
 ///
-/// Mirrors the branches search sheet: the page search field is tap-to-open
-/// only; typing and results live in this modal, sharing the page's
-/// [WorkersBloc]. The query is always cleared when the sheet closes.
+/// The page search field is tap-to-open only; typing and results live in this
+/// modal, which reuses the page's list blocs. The query is always cleared
+/// when the sheet closes so the underlying list resets.
 Future<void> showWorkerSearchSheet(
   BuildContext context, {
   required WorkerSearchScope scope,
 }) async {
-  final bloc = context.read<WorkersBloc>();
+  // Grab both blocs — the sheet reads from whichever matches [scope] but the
+  // reset on close always runs against the right one.
+  final workersList = context.read<WorkersListBloc>();
+  final invitationsList = context.read<InvitationsListBloc>();
 
   final result = await showAppModalSheet<_SearchSheetResult>(
     context: context,
-    child: BlocProvider.value(
-      value: bloc,
+    child: MultiBlocProvider(
+      providers: [
+        BlocProvider.value(value: workersList),
+        BlocProvider.value(value: invitationsList),
+      ],
       child: _WorkerSearchSheetBody(scope: scope),
     ),
   );
 
-  bloc.add(const WorkersSearchChangedEvent(''));
+  // Only reset when the user actually typed something — clearing an already
+  // empty query would still trigger the debounced refetch.
+  switch (scope) {
+    case WorkerSearchScope.team:
+      if (workersList.state.searchQuery.isNotEmpty) {
+        workersList.add(const WorkersListSearchChangedEvent(''));
+      }
+    case WorkerSearchScope.invitations:
+      if (invitationsList.state.searchQuery.isNotEmpty) {
+        invitationsList.add(const InvitationsListSearchChangedEvent(''));
+      }
+  }
 
   if (!context.mounted) return;
   switch (result) {
@@ -103,29 +121,30 @@ class _WorkerSearchSheetBodyState extends State<_WorkerSearchSheetBody> {
             hint: hint,
             showMicIcon: false,
             autofocus: true,
-            onChanged: (value) => context.read<WorkersBloc>().add(
-              WorkersSearchChangedEvent(value),
-            ),
+            onChanged: (value) => switch (widget.scope) {
+              WorkerSearchScope.team => context
+                  .read<WorkersListBloc>()
+                  .add(WorkersListSearchChangedEvent(value)),
+              WorkerSearchScope.invitations => context
+                  .read<InvitationsListBloc>()
+                  .add(InvitationsListSearchChangedEvent(value)),
+            },
           ),
         ),
         Expanded(
-          child: BlocBuilder<WorkersBloc, WorkersState>(
-            builder: (context, state) {
-              final hasQuery = state.searchQuery.trim().isNotEmpty;
-
-              if (widget.scope == WorkerSearchScope.team) {
-                return _TeamResults(
-                  state: state,
-                  hasQuery: hasQuery,
-                );
-              }
-
-              return _InvitationResults(
-                state: state,
-                hasQuery: hasQuery,
-              );
-            },
-          ),
+          child: widget.scope == WorkerSearchScope.team
+              ? BlocBuilder<WorkersListBloc, WorkersListState>(
+                  builder: (context, state) => _TeamResults(
+                    state: state,
+                    hasQuery: state.searchQuery.trim().isNotEmpty,
+                  ),
+                )
+              : BlocBuilder<InvitationsListBloc, InvitationsListState>(
+                  builder: (context, state) => _InvitationResults(
+                    state: state,
+                    hasQuery: state.searchQuery.trim().isNotEmpty,
+                  ),
+                ),
         ),
       ],
     );
@@ -135,7 +154,7 @@ class _WorkerSearchSheetBodyState extends State<_WorkerSearchSheetBody> {
 class _TeamResults extends StatelessWidget {
   const _TeamResults({required this.state, required this.hasQuery});
 
-  final WorkersState state;
+  final WorkersListState state;
   final bool hasQuery;
 
   @override
@@ -192,7 +211,7 @@ class _TeamResults extends StatelessWidget {
 class _InvitationResults extends StatelessWidget {
   const _InvitationResults({required this.state, required this.hasQuery});
 
-  final WorkersState state;
+  final InvitationsListState state;
   final bool hasQuery;
 
   @override

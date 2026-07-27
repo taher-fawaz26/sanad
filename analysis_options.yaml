@@ -1,6 +1,11 @@
 # Root analysis_options.yaml — inherited by all packages via `include`.
 # Each package may override specific rules in its own analysis_options.yaml.
-include: package:flutter_lints/flutter.yaml
+#
+# We use very_good_analysis (same base every package uses) so that running
+# `dart analyze` at the repo root produces the same diagnostics as running
+# it from inside a package directory. Previously the root used flutter_lints
+# which was strictly weaker than the per-package configs.
+include: package:very_good_analysis/analysis_options.yaml
 
 analyzer:
   language:

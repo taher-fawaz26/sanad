@@ -4,7 +4,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:forgot_password/src/models/create_new_password_args.dart';
+import 'package:forgot_password/src/presentation/models/create_new_password_args.dart';
 import 'package:forgot_password/src/presentation/bloc/forgot_password_bloc.dart';
 import 'package:forgot_password/src/routes/forgot_password_routes.dart';
 import 'package:go_router/go_router.dart';
@@ -69,15 +69,15 @@ class ForgotPasswordOtpPage extends HookWidget {
                 const AppDivider(),
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacingDp.xxl),
                     child: Form(
                       key: formKey,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const SizedBox(height: 32),
+                          const SizedBox(height: AppSpacingDp.xxxl),
                           const Center(child: AppAvatar(initials: 'E')),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: AppSpacingDp.xxl),
                           AppSection(
                             title: 'forgot_password.otp_title'.tr(),
                             caption: 'forgot_password.otp_subtitle'.tr(
@@ -85,7 +85,7 @@ class ForgotPasswordOtpPage extends HookWidget {
                             ),
                             padding: EdgeInsets.zero,
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: AppSpacingDp.xxl),
                           BlocBuilder<OtpUiCubit, OtpUiState>(
                             buildWhen: (previous, current) =>
                                 previous.otpError != current.otpError,
@@ -127,7 +127,7 @@ class ForgotPasswordOtpPage extends HookWidget {
                               );
                             },
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: AppSpacingDp.xxl),
                           BlocBuilder<ForgotPasswordBloc, ForgotPasswordState>(
                             builder: (context, state) {
                               final isLoading =
@@ -145,7 +145,7 @@ class ForgotPasswordOtpPage extends HookWidget {
                               );
                             },
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: AppSpacingDp.lg),
                           BlocBuilder<ForgotPasswordBloc, ForgotPasswordState>(
                             builder: (context, fpState) {
                               return BlocBuilder<OtpUiCubit, OtpUiState>(
@@ -189,7 +189,7 @@ class ForgotPasswordOtpPage extends HookWidget {
                               );
                             },
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: AppSpacingDp.lg),
                           AppButton(
                             label: 'otp.back_to_login'.tr(),
                             type: AppButtonType.transparent,
@@ -201,7 +201,7 @@ class ForgotPasswordOtpPage extends HookWidget {
                               }
                             },
                           ),
-                          const SizedBox(height: 32),
+                          const SizedBox(height: AppSpacingDp.xxxl),
                         ],
                       ),
                     ),

@@ -2,6 +2,7 @@ import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_cubit.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_state.dart';
+import 'package:branches/src/presentation/bloc/add_branch/add_branch_wizard_cubit.dart';
 import 'package:branches/src/presentation/models/branch_form_mode.dart';
 import 'package:branches/src/presentation/models/coverage_area_args.dart';
 import 'package:branches/src/presentation/models/coverage_area_result.dart';
@@ -35,6 +36,11 @@ typedef _CoveragePreview = ({
   List<String> areaNames,
 });
 
+const _totalSteps = 4;
+
+/// Pre-submit review screen (`365:14892`), shown after the 4 wizard steps.
+const _reviewStep = 5;
+
 class AddBranchPage extends StatefulWidget {
   const AddBranchPage({
     this.mode = BranchFormMode.create,
@@ -43,14 +49,8 @@ class AddBranchPage extends StatefulWidget {
     super.key,
   });
 
-  /// Whether the wizard is creating a new branch or editing an existing one.
   final BranchFormMode mode;
-
-  /// The branch being edited (edit mode only).
   final String? branchId;
-
-  /// Pre-loaded branch passed from Branch Details to prefill without a refetch
-  /// (edit mode only). When null in edit mode, the branch is fetched by id.
   final BranchEntity? initialBranch;
 
   @override
@@ -58,85 +58,45 @@ class AddBranchPage extends StatefulWidget {
 }
 
 class _AddBranchPageState extends State<AddBranchPage> {
-  static const _totalSteps = 4;
-
-  /// Pre-submit review screen (`365:14892`), shown after the 4 wizard steps.
-  static const _reviewStep = 5;
-
   final _stepOneFormKey = GlobalKey<FormState>();
-  int _currentStep = 1;
-  int _furthestStep = 1;
-  bool _showStepOneErrors = false;
-  bool _submittingDialogVisible = false;
-  bool _coverageAccessDenied = false;
-
-  /// Whether the edit draft has been seeded yet. Always true in create mode and
-  /// in edit mode when the branch was pre-loaded; false until the id-only fetch
-  /// completes.
-  bool _isSeeded = true;
 
   bool get _isEdit => widget.mode.isEdit;
 
   @override
   void initState() {
     super.initState();
-    if (_isEdit) {
-      // Edit is an editor, not a strict wizard: every step is reachable.
-      _furthestStep = _totalSteps;
-      if (widget.initialBranch == null) {
-        _isSeeded = false;
-        context.read<AddBranchBloc>().add(
-          AddBranchLoadForEditEvent(branchId: widget.branchId!),
-        );
-      }
+    if (_isEdit && widget.initialBranch == null) {
+      // Edit-by-id: seed the draft only after the branch is fetched.
+      context.read<AddBranchWizardCubit>().markSeedingRequired();
+      context.read<AddBranchBloc>().add(
+        AddBranchLoadForEditEvent(branchId: widget.branchId!),
+      );
     }
   }
 
   // ── Navigation ──
 
-  void _advanceTo(int step) {
-    setState(() {
-      _currentStep = step;
-      if (step > _furthestStep) _furthestStep = step;
-    });
-  }
-
-  void _onStepTapped(int step) {
-    if (step <= _furthestStep) {
-      setState(() => _currentStep = step);
-    }
-  }
-
   void _onNextPressed() {
-    if (_currentStep == 1) {
-      final formValid = _stepOneFormKey.currentState?.validate() ?? false;
-      final draft = context.read<AddBranchDraftCubit>().state;
-      final phoneValid =
-          draft.phone.trim().isNotEmpty &&
-          UaePhoneValidator.isValid(draft.phone);
-      if (!formValid || !draft.isStepOneComplete || !phoneValid) {
-        // Surface the Figma inline field errors (`1513:7801` error frame).
-        setState(() => _showStepOneErrors = true);
-        return;
-      }
-      _advanceTo(2);
-      return;
-    }
-
+    final wizard = context.read<AddBranchWizardCubit>();
     final draft = context.read<AddBranchDraftCubit>().state;
 
-    if (_currentStep == 2 && draft.isStepTwoComplete) {
-      _advanceTo(3);
-      return;
-    }
-
-    if (_currentStep == 3 && draft.isStepThreeComplete) {
-      _advanceTo(4);
-      return;
-    }
-
-    if (_currentStep == 4 && draft.isStepFourComplete) {
-      _advanceTo(_reviewStep);
+    switch (wizard.state.currentStep) {
+      case 1:
+        final formValid = _stepOneFormKey.currentState?.validate() ?? false;
+        final phoneValid = draft.phone.trim().isNotEmpty &&
+            UaePhoneValidator.isValid(draft.phone);
+        if (!formValid || !draft.isStepOneComplete || !phoneValid) {
+          // Surface the Figma inline field errors (`1513:7801` error frame).
+          wizard.showStepOneErrors();
+          return;
+        }
+        wizard.advanceTo(2);
+      case 2:
+        if (draft.isStepTwoComplete) wizard.advanceTo(3);
+      case 3:
+        if (draft.isStepThreeComplete) wizard.advanceTo(4);
+      case 4:
+        if (draft.isStepFourComplete) wizard.advanceTo(_reviewStep);
     }
   }
 
@@ -178,10 +138,9 @@ class _AddBranchPageState extends State<AddBranchPage> {
         specifiedLocation: 'branches.location_picker.specified_location'.tr(),
         addressHint: 'branches.location_picker.address_hint'.tr(),
         permissionDenied: 'branches.location_picker.permission_denied'.tr(),
-        permissionPermanentlyDenied:
-            'branches.location_picker'
-                    '.permission_permanently_denied'
-                .tr(),
+        permissionPermanentlyDenied: 'branches.location_picker'
+                '.permission_permanently_denied'
+            .tr(),
         serviceDisabled: 'branches.location_picker.service_disabled'.tr(),
         genericError: 'branches.location_picker.generic_error'.tr(),
         openSettings: 'branches.location_picker.open_settings'.tr(),
@@ -189,8 +148,6 @@ class _AddBranchPageState extends State<AddBranchPage> {
         searchRetry: 'empty_states.retry'.tr(),
         outsideCountry: 'branches.location_picker.outside_uae'.tr(),
       ),
-      // The draft position is the branch's saved/already-picked location, so
-      // it takes edit-flow priority for the initial camera.
       existingLocation: draft.pickedPosition,
       initialAddress: draft.branchAddress,
     );
@@ -203,21 +160,14 @@ class _AddBranchPageState extends State<AddBranchPage> {
   }
 
   Future<void> _openCoverageArea() async {
-    // Figma `location-permission-denied` (`1517:9804`): if the user has
-    // hard-blocked location access, surface the "Location access needed"
-    // screen instead of the coverage map.
+    // Figma `location-permission-denied` (`1517:9804`).
     final status = await sl<LocationService>().checkPermission();
     if (!mounted) return;
-    final denied =
-        status == LocationPermissionStatus.permanentlyDenied ||
+    final wizard = context.read<AddBranchWizardCubit>();
+    final denied = status == LocationPermissionStatus.permanentlyDenied ||
         status == LocationPermissionStatus.serviceDisabled;
-    if (denied) {
-      setState(() => _coverageAccessDenied = true);
-      return;
-    }
-    if (_coverageAccessDenied) {
-      setState(() => _coverageAccessDenied = false);
-    }
+    wizard.setCoverageAccessDenied(denied: denied);
+    if (denied) return;
 
     final draft = context.read<AddBranchDraftCubit>().state;
     final result = await context.push<CoverageAreaResult>(
@@ -227,8 +177,6 @@ class _AddBranchPageState extends State<AddBranchPage> {
         address: draft.branchAddress,
         radiusKm: draft.coverageRadiusKm,
         servingAreas: draft.servingAreas,
-        // Edit seeds the saved coverage without a network resolve; the first
-        // interaction elevates it to recalculate (see maps CoverageAreaBloc).
         mode: _isEdit ? CoverageMode.edit : CoverageMode.create,
       ),
     );
@@ -242,13 +190,11 @@ class _AddBranchPageState extends State<AddBranchPage> {
         servingAreas: result.servingAreas,
       );
 
-    // Create: coverage confirmed → advance straight to the services step (step
-    // 2's body only shows the pre-coverage prompt). Edit keeps free navigation,
-    // so it never auto-advances.
+    // Create: coverage confirmed → auto-advance to services step.
     if (!_isEdit &&
-        _currentStep == 2 &&
+        wizard.state.currentStep == 2 &&
         draftCubit.state.isStepTwoComplete) {
-      _advanceTo(3);
+      wizard.advanceTo(3);
     }
   }
 
@@ -272,17 +218,22 @@ class _AddBranchPageState extends State<AddBranchPage> {
     context.read<AddBranchDraftCubit>().updateWorkers(result.selectedWorkers);
   }
 
+  Future<void> _openLocationSettings() =>
+      sl<LocationService>().openAppSettings();
+
   // ── Bloc side effects ──
 
   void _onBlocStateChanged(BuildContext context, AddBranchState state) {
-    // Edit (id-only): seed the draft once the branch has been fetched.
-    if (_isEdit && !_isSeeded) {
+    final wizard = context.read<AddBranchWizardCubit>();
+
+    // Edit-by-id: seed the draft once the branch has been fetched.
+    if (_isEdit && !wizard.state.isSeeded) {
       if (state.loadStatus == RequestStatus.success &&
           state.loadedBranch != null) {
         context.read<AddBranchDraftCubit>().seed(
           BranchDraftSeeder.fromBranch(state.loadedBranch!),
         );
-        setState(() => _isSeeded = true);
+        wizard.markSeeded();
       } else if (state.hasLoadError && state.loadFailure != null) {
         showAddBranchErrorSnackbar(
           context: context,
@@ -300,40 +251,42 @@ class _AddBranchPageState extends State<AddBranchPage> {
     if (state.isSuccess) {
       _showSuccessPopover();
     } else if (state.hasError && state.failure != null) {
-      showAddBranchErrorSnackbar(
-        context: context,
-        failure: state.failure!,
-      );
+      showAddBranchErrorSnackbar(context: context, failure: state.failure!);
     } else if (state.hasSetupError && state.setupFailure != null) {
-      showAddBranchErrorSnackbar(
-        context: context,
-        failure: state.setupFailure!,
-      );
+      showAddBranchErrorSnackbar(context: context, failure: state.setupFailure!);
     }
   }
 
-  /// Figma loading-state dialog (`1546:8536`) while the create request
-  /// is in flight.
+  /// Figma loading-state dialog (`1546:8536`) while the submit is in flight.
   void _showSubmittingDialog() {
-    if (_submittingDialogVisible) return;
-    _submittingDialogVisible = true;
+    final wizard = context.read<AddBranchWizardCubit>();
+    if (wizard.state.submittingDialogVisible) return;
+    wizard.markSubmittingDialogShown();
 
     showAppProgressDialog(
       context: context,
       title: 'branches.add_branch.submitting_title'.tr(),
       description: 'branches.add_branch.submitting_description'.tr(),
-    ).then((_) => _submittingDialogVisible = false);
+    ).whenComplete(
+      () {
+        if (mounted) {
+          context
+              .read<AddBranchWizardCubit>()
+              .markSubmittingDialogDismissed();
+        }
+      },
+    );
   }
 
   void _dismissSubmittingDialog() {
-    if (!_submittingDialogVisible) return;
-    _submittingDialogVisible = false;
+    final wizard = context.read<AddBranchWizardCubit>();
+    if (!wizard.state.submittingDialogVisible) return;
+    wizard.markSubmittingDialogDismissed();
     dismissAppProgressDialog(context);
   }
 
   void _showSuccessPopover() {
-    // Copy is split across two keys; chrome comes from [showAppSuccessPopover]
-    // (Figma `1546:8473`). Create vs edit only swaps the localization prefix.
+    // Figma `1546:8473`. Create vs edit only swaps the localization prefix.
     final prefix = _isEdit ? 'branches.edit_branch' : 'branches.add_branch';
     final titleStyle = AppSuccessPopover.titleStyleOf(context);
 
@@ -358,18 +311,14 @@ class _AddBranchPageState extends State<AddBranchPage> {
       description: '$prefix.success_dialog_description'.tr(),
       primaryLabel: '$prefix.success_dialog_okay'.tr(),
     ).then((_) {
-      // Signal the branch list / details to refresh — EH-S3-02 refresh convention.
+      // Signal the branch list / details to refresh — EH-S3-02 convention.
       if (mounted) context.pop(true);
     });
   }
 
   // ── Discard guard ──
 
-  /// Figma `Discard changes?` confirmation shown when leaving with
-  /// unsaved draft changes.
   Future<void> _handleClose() async {
-    // Baseline-aware: create compares against an empty draft, edit against the
-    // branch-seeded draft, so this guards unsaved edits in both modes.
     final hasChanges = context.read<AddBranchDraftCubit>().hasChanges;
     if (!hasChanges) {
       context.pop();
@@ -406,11 +355,15 @@ class _AddBranchPageState extends State<AddBranchPage> {
         child: Scaffold(
           backgroundColor: context.appColors.surface,
           body: SafeArea(
-            child: (_isEdit && !_isSeeded)
-                ? _buildSeedingScreen()
-                : _currentStep == _reviewStep
-                ? _buildReviewScreen()
-                : _buildWizardScreen(),
+            child: BlocBuilder<AddBranchWizardCubit, AddBranchWizardState>(
+              builder: (context, wizard) {
+                if (_isEdit && !wizard.isSeeded) return _buildSeedingScreen();
+                if (wizard.currentStep == _reviewStep) {
+                  return _buildReviewScreen();
+                }
+                return _buildWizardScreen(wizard);
+              },
+            ),
           ),
         ),
       ),
@@ -419,7 +372,6 @@ class _AddBranchPageState extends State<AddBranchPage> {
 
   String get _navTitle => _isEdit ? 'branches.edit_branch.title'.tr() : '';
 
-  /// Shown in edit mode while the branch is being fetched (id-only entry).
   Widget _buildSeedingScreen() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -450,7 +402,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
     );
   }
 
-  Widget _buildWizardScreen() {
+  Widget _buildWizardScreen(AddBranchWizardState wizard) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -458,23 +410,22 @@ class _AddBranchPageState extends State<AddBranchPage> {
           title: _navTitle,
           leading: AppCloseIcon(onTap: _handleClose),
         ),
-        Expanded(child: _buildCurrentStep()),
+        Expanded(child: _buildCurrentStep(wizard)),
         AddBranchWizardFooter(
-          currentStep: _currentStep,
+          currentStep: wizard.currentStep,
           isEdit: _isEdit,
           onNext: _onNextPressed,
           onSubmit: _submit,
           onAddCoverage: _openCoverageArea,
           onAddServices: _openSelectServices,
           onAddWorkers: _openSelectWorkers,
-          coverageAccessDenied: _coverageAccessDenied,
+          coverageAccessDenied: wizard.coverageAccessDenied,
           onOpenLocationSettings: _openLocationSettings,
         ),
       ],
     );
   }
 
-  /// Figma `review` (`365:14892`) — pre-submit summary with a submit button.
   Widget _buildReviewScreen() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -508,33 +459,31 @@ class _AddBranchPageState extends State<AddBranchPage> {
     );
   }
 
-  Future<void> _openLocationSettings() async {
-    await sl<LocationService>().openAppSettings();
-  }
+  Widget _buildCurrentStep(AddBranchWizardState wizard) {
+    final wizardCubit = context.read<AddBranchWizardCubit>();
 
-  Widget _buildCurrentStep() {
-    return switch (_currentStep) {
+    return switch (wizard.currentStep) {
       1 => AddBranchStepOne(
         formKey: _stepOneFormKey,
         onPickLocation: _pickLocation,
-        currentStep: _currentStep,
+        currentStep: wizard.currentStep,
         totalSteps: _totalSteps,
-        furthestCompletedStep: _furthestStep,
-        onStepTapped: _onStepTapped,
-        showValidationErrors: _showStepOneErrors,
+        furthestCompletedStep: wizard.furthestStep,
+        onStepTapped: wizardCubit.tapStep,
+        showValidationErrors: wizard.showStepOneErrors,
       ),
-      2 when _coverageAccessDenied => AddBranchWizardStepShell(
-        currentStep: _currentStep,
+      2 when wizard.coverageAccessDenied => AddBranchWizardStepShell(
+        currentStep: wizard.currentStep,
         totalSteps: _totalSteps,
-        furthestCompletedStep: _furthestStep,
-        onStepTapped: _onStepTapped,
+        furthestCompletedStep: wizard.furthestStep,
+        onStepTapped: wizardCubit.tapStep,
         child: const AddBranchLocationPermissionBody(),
       ),
       2 => AddBranchWizardStepShell(
-        currentStep: _currentStep,
+        currentStep: wizard.currentStep,
         totalSteps: _totalSteps,
-        furthestCompletedStep: _furthestStep,
-        onStepTapped: _onStepTapped,
+        furthestCompletedStep: wizard.furthestStep,
+        onStepTapped: wizardCubit.tapStep,
         child:
             BlocSelector<AddBranchDraftCubit, AddBranchDraft, _CoveragePreview>(
               selector: (state) => (
@@ -558,10 +507,10 @@ class _AddBranchPageState extends State<AddBranchPage> {
             ),
       ),
       3 => AddBranchWizardStepShell(
-        currentStep: _currentStep,
+        currentStep: wizard.currentStep,
         totalSteps: _totalSteps,
-        furthestCompletedStep: _furthestStep,
-        onStepTapped: _onStepTapped,
+        furthestCompletedStep: wizard.furthestStep,
+        onStepTapped: wizardCubit.tapStep,
         child:
             BlocSelector<
               AddBranchDraftCubit,
@@ -573,18 +522,17 @@ class _AddBranchPageState extends State<AddBranchPage> {
                 return AddBranchServicesStep(
                   selectedServices: services,
                   onAddServices: _openSelectServices,
-                  onRemoveService: context
-                      .read<AddBranchDraftCubit>()
-                      .removeService,
+                  onRemoveService:
+                      context.read<AddBranchDraftCubit>().removeService,
                 );
               },
             ),
       ),
       4 => AddBranchWizardStepShell(
-        currentStep: _currentStep,
+        currentStep: wizard.currentStep,
         totalSteps: _totalSteps,
-        furthestCompletedStep: _furthestStep,
-        onStepTapped: _onStepTapped,
+        furthestCompletedStep: wizard.furthestStep,
+        onStepTapped: wizardCubit.tapStep,
         child:
             BlocSelector<
               AddBranchDraftCubit,
@@ -604,10 +552,10 @@ class _AddBranchPageState extends State<AddBranchPage> {
             ),
       ),
       _ => AddBranchWizardStepShell(
-        currentStep: _currentStep,
+        currentStep: wizard.currentStep,
         totalSteps: _totalSteps,
-        furthestCompletedStep: _furthestStep,
-        onStepTapped: _onStepTapped,
+        furthestCompletedStep: wizard.furthestStep,
+        onStepTapped: wizardCubit.tapStep,
         child: Center(
           child: Text(
             'branches.add_branch.upcoming_step_placeholder'.tr(),

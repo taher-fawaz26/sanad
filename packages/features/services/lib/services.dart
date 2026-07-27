@@ -13,3 +13,4 @@ export 'src/domain/usecases/get_services_usecase.dart';
 export 'src/module/services_module.dart';
 export 'src/presentation/widgets/select_service_action_sheet.dart';
 export 'src/presentation/widgets/service_list_card.dart';
+export 'src/routes/service_routes.dart';

@@ -1,4 +1,9 @@
 {
+  "common": {
+    "not_found_title": "Page not found",
+    "not_found_description": "The page you were looking for doesn't exist or has moved.",
+    "not_found_home": "Go home"
+  },
   "app": {
     "title": "Sanad",
     "core_ready": "Core is running. Add features incrementally from here.",
@@ -35,6 +40,9 @@
     "stat_services_count": "56",
     "stat_services_label": "Services",
     "stat_services_action": "Services",
+    "stat_invitation_demo_count": "Preview",
+    "stat_invitation_demo_label": "Invitation flow UI (temporary)",
+    "stat_invitation_demo_action": "Open",
     "placeholder_title": "More settings coming soon",
     "placeholder_description": "Account and app settings will be available here in a future update."
   },
@@ -355,7 +363,8 @@
       "error_invitation_failed": "Invitation Failed",
       "error_try_again": "Try Again",
       "validation_required": "This field is required",
-      "validation_email": "Please enter a valid email"
+      "validation_email": "Please enter a valid email",
+      "validation_reserved_domain": "This email domain cannot receive invitations. Please use a real email address."
     },
     "edit_worker": {
       "title": "Edit Member Team",
@@ -368,7 +377,55 @@
     },
     "invitation_status_cancelled": "Cancelled",
     "invitation_copy_coming_soon": "Copy invitation link is coming soon",
-    "reset_password_coming_soon": "Reset password is coming soon"
+    "reset_password_coming_soon": "Reset password is coming soon",
+    "invitation_action_delete": "Delete Invitation",
+    "invitation_delete_title": "Delete Invitation?",
+    "invitation_delete_description": "Are you sure you want to delete the invitation for {name}? This action cannot be undone.",
+    "invitation_delete_action": "Delete",
+    "invitation_deleted": "Invitation deleted",
+    "invitation_resend_in_progress": "Resending invitation...",
+    "invitation_cancel_in_progress": "Cancelling invitation...",
+    "invitation_delete_in_progress": "Deleting invitation...",
+    "invitation_resend_failed": "Failed to resend invitation",
+    "invitation_cancel_failed": "Failed to cancel invitation",
+    "invitation_delete_failed": "Failed to delete invitation",
+    "invitation_resend_email_domain_error": "This invitation's email address cannot receive messages. Please cancel it and invite the worker again with a valid email.",
+    "worker_suspend_in_progress": "Suspending worker...",
+    "worker_unsuspend_in_progress": "Unsuspending worker...",
+    "worker_delete_in_progress": "Deleting worker...",
+    "worker_suspended": "Worker suspended",
+    "worker_unsuspended": "Worker unsuspended",
+    "worker_deleted": "Worker deleted",
+    "worker_suspend_failed": "Failed to suspend worker",
+    "worker_unsuspend_failed": "Failed to unsuspend worker",
+    "worker_delete_failed": "Failed to delete worker",
+    "assign_branch": "Assign Branch",
+    "assign_branch_label": "Branch",
+    "assign_branch_hint": "Select a branch",
+    "assign_branch_success": "Branch assigned successfully",
+    "assigned_branches_title": "Assigned Branches",
+    "no_assigned_branches": "No assigned branches"
+  },
+  "invitation": {
+    "role_worker": "Worker",
+    "role_manager": "Manager",
+    "join_title": "Join {organization}",
+    "join_subtitle": "{inviter} has invited you to join {organization} as a {role}",
+    "details_label": "Invitation Details",
+    "detail_email": "Email",
+    "detail_organization": "Organization",
+    "detail_role": "Role",
+    "continue_button": "Continue",
+    "otp_title": "Enter OTP",
+    "otp_subtitle": "We've sent a verification code to {email}",
+    "otp_required": "Please enter the full code",
+    "otp_no_code": "Don't receive OTP ?",
+    "otp_send_again": "Send again",
+    "otp_resent": "OTP resent",
+    "verify_button": "Verify",
+    "success_title": "You're All Set!",
+    "success_description": "You've successfully joined {organization} as a {role}",
+    "open_dashboard_button": "Open Dashboard"
   },
   "auth": {
     "login_title": "Welcome Back",
@@ -453,6 +510,10 @@
     "cache_error": "Failed to load cached data.",
     "conflict": "This action conflicts with the current state. Please refresh and try again.",
     "rate_limit": "Too many attempts. Please wait a moment and try again.",
-    "business_rule": "This action isn't allowed right now."
+    "business_rule": "This action isn't allowed right now.",
+    "location": "Your location could not be determined. Please check location permissions.",
+    "validation": "Please check your input and try again.",
+    "unverified_user": "Please verify your account to continue.",
+    "unauthorized_role": "You do not have permission to perform this action."
   }
 }

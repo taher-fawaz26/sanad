@@ -63,20 +63,20 @@ class LoginPage extends HookWidget {
               // Login form
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacingDp.xxl),
                   child: Form(
                     key: formKey,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const SizedBox(height: 48),
+                        const SizedBox(height: AppSpacingDp.xxxxxl),
                         AppSection(
                           title: 'auth.login_title'.tr(),
                           caption: 'auth.login_caption'.tr(),
                           size: AppSectionSize.large,
                         ),
-                        const SizedBox(height: 32),
+                        const SizedBox(height: AppSpacingDp.xxxl),
                         // Phone/Email toggle
                         AppSegmentedControl(
                           segments: [
@@ -91,7 +91,7 @@ class LoginPage extends HookWidget {
                             passwordController.clear();
                           },
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: AppSpacingDp.xxl),
                         AppTextField(
                           controller: identifierController,
                           label: authMode.value == AuthMode.phone
@@ -114,7 +114,7 @@ class LoginPage extends HookWidget {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: AppSpacingDp.lg),
                         AppTextField(
                           controller: passwordController,
                           label: 'auth.password'.tr(),
@@ -127,7 +127,7 @@ class LoginPage extends HookWidget {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: AppSpacingDp.sm),
                         // Forgot password
                         Align(
                           alignment: AlignmentDirectional.centerEnd,
@@ -135,16 +135,10 @@ class LoginPage extends HookWidget {
                             label: 'auth.forgot_password'.tr(),
                             type: AppButtonType.transparent,
                             size: AppButtonSize.small,
-                            onPressed: () {
-                              if (onForgotPassword != null) {
-                                onForgotPassword!();
-                              } else {
-                                context.push('/forgot-password');
-                              }
-                            },
+                            onPressed: onForgotPassword,
                           ),
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: AppSpacingDp.xxl),
                         BlocBuilder<AuthBloc, AuthState>(
                           builder: (context, state) {
                             final isLoading = state is AuthLoginLoadingState;
@@ -155,14 +149,14 @@ class LoginPage extends HookWidget {
                             );
                           },
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: AppSpacingDp.lg),
                         // Register link
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
                               'auth.no_account'.tr(),
-                              style: TextStyle(
+                              style: context.appTypography.regularNormal.copyWith(
                                 color: context.appColors.textSecondary,
                               ),
                             ),
@@ -180,7 +174,7 @@ class LoginPage extends HookWidget {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 48),
+                        const SizedBox(height: AppSpacingDp.xxxxxl),
                       ],
                     ),
                   ),

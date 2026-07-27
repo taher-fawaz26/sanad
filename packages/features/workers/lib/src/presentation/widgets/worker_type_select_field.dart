@@ -8,12 +8,14 @@ class WorkerTypeSelectField extends StatelessWidget {
   const WorkerTypeSelectField({
     required this.selectedType,
     required this.onTypeSelected,
+    this.enabled = true,
     this.errorText,
     super.key,
   });
 
   final WorkerType? selectedType;
-  final ValueChanged<WorkerType> onTypeSelected;
+  final ValueChanged<WorkerType>? onTypeSelected;
+  final bool enabled;
   final String? errorText;
 
   @override
@@ -23,7 +25,8 @@ class WorkerTypeSelectField extends StatelessWidget {
       value: selectedType == null ? null : _localizedLabel(selectedType!),
       hint: 'workers.add_worker.type_hint'.tr(),
       errorText: errorText,
-      onTap: () => _openPicker(context),
+      enabled: enabled,
+      onTap: enabled ? () => _openPicker(context) : null,
     );
   }
 
@@ -36,7 +39,7 @@ class WorkerTypeSelectField extends StatelessWidget {
           .map(
             (type) => AppActionSheetItem(
               label: _localizedLabel(type),
-              onTap: () => onTypeSelected(type),
+              onTap: () => onTypeSelected?.call(type),
             ),
           )
           .toList(),

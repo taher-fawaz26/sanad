@@ -3,6 +3,7 @@ import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_cubit.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_state.dart';
+import 'package:branches/src/presentation/bloc/add_branch/add_branch_wizard_cubit.dart';
 import 'package:branches/src/presentation/bloc/branch_details/branch_details_bloc.dart';
 import 'package:branches/src/presentation/bloc/branches/branches_bloc.dart';
 import 'package:branches/src/presentation/models/branch_form_mode.dart';
@@ -49,6 +50,10 @@ class BranchesModule extends FeatureModule {
             create: (_) => sl<AddBranchBloc>()..add(const AddBranchStarted()),
           ),
           BlocProvider(create: (_) => AddBranchDraftCubit()),
+          BlocProvider(
+            create: (_) =>
+                AddBranchWizardCubit(isEdit: false, totalSteps: 4),
+          ),
         ],
         child: const AddBranchPage(),
       ),
@@ -106,6 +111,10 @@ class BranchesModule extends FeatureModule {
                     ? BranchDraftSeeder.fromBranch(branch)
                     : const AddBranchDraft(),
               ),
+            ),
+            BlocProvider(
+              create: (_) =>
+                  AddBranchWizardCubit(isEdit: true, totalSteps: 4),
             ),
           ],
           child: AddBranchPage(

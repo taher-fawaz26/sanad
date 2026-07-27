@@ -2,7 +2,7 @@ import 'package:auth/auth.dart';
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:forgot_password/src/di/forgot_password_di.dart';
-import 'package:forgot_password/src/models/create_new_password_args.dart';
+import 'package:forgot_password/src/presentation/models/create_new_password_args.dart';
 import 'package:forgot_password/src/presentation/pages/create_new_password_page.dart';
 import 'package:forgot_password/src/presentation/pages/forgot_password_page.dart';
 import 'package:forgot_password/src/routes/forgot_password_routes.dart';

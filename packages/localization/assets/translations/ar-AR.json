@@ -1,4 +1,9 @@
 {
+  "common": {
+    "not_found_title": "الصفحة غير موجودة",
+    "not_found_description": "الصفحة التي تبحث عنها غير موجودة أو تم نقلها.",
+    "not_found_home": "العودة للرئيسية"
+  },
   "app": {
     "title": "سند",
     "core_ready": "النواة تعمل. أضف الميزات تدريجياً من هنا.",
@@ -35,6 +40,9 @@
     "stat_services_count": "56",
     "stat_services_label": "الخدمات",
     "stat_services_action": "الخدمات",
+    "stat_invitation_demo_count": "معاينة",
+    "stat_invitation_demo_label": "واجهة تدفق الدعوة (مؤقت)",
+    "stat_invitation_demo_action": "فتح",
     "placeholder_title": "المزيد من الإعدادات قريباً",
     "placeholder_description": "ستتوفر إعدادات الحساب والتطبيق هنا في تحديث مستقبلي."
   },
@@ -355,7 +363,8 @@
       "error_invitation_failed": "فشلت الدعوة",
       "error_try_again": "حاول مرة أخرى",
       "validation_required": "هذا الحقل مطلوب",
-      "validation_email": "يرجى إدخال بريد إلكتروني صحيح"
+      "validation_email": "يرجى إدخال بريد إلكتروني صحيح",
+      "validation_reserved_domain": "لا يمكن لهذا النطاق استقبال الدعوات. يرجى استخدام بريد إلكتروني حقيقي."
     },
     "edit_worker": {
       "title": "تعديل عضو الفريق",
@@ -368,7 +377,55 @@
     },
     "invitation_status_cancelled": "ملغاة",
     "invitation_copy_coming_soon": "نسخ رابط الدعوة قادم قريباً",
-    "reset_password_coming_soon": "إعادة تعيين كلمة المرور قادمة قريباً"
+    "reset_password_coming_soon": "إعادة تعيين كلمة المرور قادمة قريباً",
+    "invitation_action_delete": "حذف الدعوة",
+    "invitation_delete_title": "حذف الدعوة؟",
+    "invitation_delete_description": "هل أنت متأكد من حذف الدعوة الخاصة بـ {name}؟ لا يمكن التراجع عن هذا الإجراء.",
+    "invitation_delete_action": "حذف",
+    "invitation_deleted": "تم حذف الدعوة",
+    "invitation_resend_in_progress": "جارٍ إعادة إرسال الدعوة...",
+    "invitation_cancel_in_progress": "جارٍ إلغاء الدعوة...",
+    "invitation_delete_in_progress": "جارٍ حذف الدعوة...",
+    "invitation_resend_failed": "فشلت إعادة إرسال الدعوة",
+    "invitation_cancel_failed": "فشل إلغاء الدعوة",
+    "invitation_delete_failed": "فشل حذف الدعوة",
+    "invitation_resend_email_domain_error": "لا يمكن لعنوان بريد هذه الدعوة استقبال الرسائل. يرجى إلغاؤها وإعادة دعوة العامل ببريد صحيح.",
+    "worker_suspend_in_progress": "جارٍ إيقاف العامل...",
+    "worker_unsuspend_in_progress": "جارٍ رفع الإيقاف عن العامل...",
+    "worker_delete_in_progress": "جارٍ حذف العامل...",
+    "worker_suspended": "تم إيقاف العامل",
+    "worker_unsuspended": "تم رفع الإيقاف عن العامل",
+    "worker_deleted": "تم حذف العامل",
+    "worker_suspend_failed": "فشل إيقاف العامل",
+    "worker_unsuspend_failed": "فشل رفع الإيقاف عن العامل",
+    "worker_delete_failed": "فشل حذف العامل",
+    "assign_branch": "تعيين فرع",
+    "assign_branch_label": "الفرع",
+    "assign_branch_hint": "اختر فرعاً",
+    "assign_branch_success": "تم تعيين الفرع بنجاح",
+    "assigned_branches_title": "الفروع المعينة",
+    "no_assigned_branches": "لا توجد فروع معينة"
+  },
+  "invitation": {
+    "role_worker": "عامل",
+    "role_manager": "مدير",
+    "join_title": "انضم إلى {organization}",
+    "join_subtitle": "دعاك {inviter} للانضمام إلى {organization} بصفة {role}",
+    "details_label": "تفاصيل الدعوة",
+    "detail_email": "البريد الإلكتروني",
+    "detail_organization": "المؤسسة",
+    "detail_role": "الدور",
+    "continue_button": "متابعة",
+    "otp_title": "أدخل رمز التحقق",
+    "otp_subtitle": "لقد أرسلنا رمز تحقق إلى {email}",
+    "otp_required": "يرجى إدخال الرمز كاملاً",
+    "otp_no_code": "لم يصلك الرمز؟",
+    "otp_send_again": "إعادة الإرسال",
+    "otp_resent": "تم إعادة إرسال الرمز",
+    "verify_button": "تحقق",
+    "success_title": "كل شيء جاهز!",
+    "success_description": "لقد انضممت بنجاح إلى {organization} بصفة {role}",
+    "open_dashboard_button": "فتح لوحة التحكم"
   },
   "auth": {
     "login_title": "مرحباً بعودتك",
@@ -453,6 +510,10 @@
     "cache_error": "فشل تحميل البيانات المخزنة مؤقتاً.",
     "conflict": "يتعارض هذا الإجراء مع الحالة الحالية. يرجى التحديث والمحاولة مرة أخرى.",
     "rate_limit": "محاولات كثيرة جداً. يرجى الانتظار لحظة والمحاولة مرة أخرى.",
-    "business_rule": "هذا الإجراء غير مسموح به حالياً."
+    "business_rule": "هذا الإجراء غير مسموح به حالياً.",
+    "location": "تعذّر تحديد موقعك. يرجى التحقق من أذونات الموقع.",
+    "validation": "يرجى التحقق من مدخلاتك والمحاولة مرة أخرى.",
+    "unverified_user": "يرجى التحقق من حسابك للمتابعة.",
+    "unauthorized_role": "ليس لديك صلاحية للقيام بهذا الإجراء."
   }
 }

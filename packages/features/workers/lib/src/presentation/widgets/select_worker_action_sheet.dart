@@ -20,248 +20,79 @@ class SelectWorkerResult {
 Future<SelectWorkerResult?> showSelectWorkerActionSheet({
   required BuildContext context,
   Set<String> initialSelectedIds = const {},
-}) {
-  final colors = context.appColors;
-  final typography = context.appTypography;
-  final brightness = Theme.of(context).brightness;
-  final spec = ActionSheetTokens.resolve(
-    colors: colors,
-    typography: typography,
-    brightness: brightness,
-  );
-
-  return showModalBottomSheet<SelectWorkerResult>(
+}) async {
+  final selected = await showAppSelectSheet<WorkerEntity>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    barrierColor: spec.barrierColor,
-    builder: (context) => _SelectWorkerActionSheet(
-      initialSelectedIds: initialSelectedIds,
+    title: 'workers.select_worker.title'.tr(),
+    confirmLabel: 'workers.select_worker.confirm'.tr(),
+    searchHint: 'workers.select_worker.search_hint'.tr(),
+    getId: (w) => w.id,
+    searchFilter: (w, q) =>
+        w.fullName.toLowerCase().contains(q) ||
+        w.role.toLowerCase().contains(q),
+    initialSelectedIds: initialSelectedIds,
+    loadItems: () async {
+      final result =
+          await sl<GetWorkersUseCase>()(const GetWorkersParams(limit: 100)).run();
+      return result.fold((f) => throw f, (paged) => paged.items);
+    },
+    errorTextBuilder: (e) => e is Failure ? e.message : e.toString(),
+    retryLabel: 'workers.select_worker.retry'.tr(),
+    emptyBuilder: (context) => _WorkerEmptyState(),
+    itemBuilder: (context, worker, isSelected, onTap) => AppTableRow(
+      title: worker.fullName,
+      caption: worker.role,
+      leading: AppTableLeading.avatar,
+      leadingAvatar: AppAvatar(
+        initials: worker.initials,
+        backgroundColor: context.appColors.primary,
+        showStatusDot: true,
+      ),
+      trailing: AppTableTrailing.icon,
+      trailingIcon: AppCheckbox(
+        value: isSelected,
+        onChanged: (_) => onTap(),
+      ),
+      onTap: onTap,
     ),
   );
+  if (selected == null) return null;
+  return SelectWorkerResult(selectedWorkers: selected);
 }
 
-class _SelectWorkerActionSheet extends StatefulWidget {
-  const _SelectWorkerActionSheet({required this.initialSelectedIds});
-
-  final Set<String> initialSelectedIds;
-
-  @override
-  State<_SelectWorkerActionSheet> createState() =>
-      _SelectWorkerActionSheetState();
-}
-
-class _SelectWorkerActionSheetState extends State<_SelectWorkerActionSheet> {
-  final _searchController = TextEditingController();
-  final _selectedIds = <String>{};
-
-  List<WorkerEntity> _workers = const [];
-  String _query = '';
-  bool _isLoading = true;
-  Failure? _failure;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedIds.addAll(widget.initialSelectedIds);
-    _loadWorkers();
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadWorkers() async {
-    setState(() {
-      _isLoading = true;
-      _failure = null;
-    });
-
-    final result = await sl<GetWorkersUseCase>()(
-      const GetWorkersParams(limit: 100),
-    ).run();
-
-    if (!mounted) return;
-
-    result.fold(
-      (failure) => setState(() {
-        _isLoading = false;
-        _failure = failure;
-      }),
-      (paged) => setState(() {
-        _isLoading = false;
-        _workers = paged.items;
-      }),
-    );
-  }
-
-  List<WorkerEntity> get _filteredWorkers {
-    final query = _query.trim().toLowerCase();
-    if (query.isEmpty) return _workers;
-    return _workers
-        .where(
-          (worker) =>
-              worker.fullName.toLowerCase().contains(query) ||
-              worker.role.toLowerCase().contains(query),
-        )
-        .toList();
-  }
-
-  void _toggleWorker(String id) {
-    setState(() {
-      if (_selectedIds.contains(id)) {
-        _selectedIds.remove(id);
-      } else {
-        _selectedIds.add(id);
-      }
-    });
-  }
-
-  void _confirm() {
-    final selected = _workers
-        .where((worker) => _selectedIds.contains(worker.id))
-        .toList();
-    Navigator.of(context).pop(SelectWorkerResult(selectedWorkers: selected));
-  }
-
+class _WorkerEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final maxHeight = MediaQuery.sizeOf(context).height * 0.55;
-
-    return AppActionSheet(
-      title: 'workers.select_worker.title'.tr(),
-      showCancel: false,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.xl,
-              AppSpacing.sm,
-              AppSpacing.xl,
-              AppSpacing.md,
-            ),
-            child: AppSearchField(
-              controller: _searchController,
-              hint: 'workers.select_worker.search_hint'.tr(),
-              showMicIcon: false,
-              onChanged: (value) => setState(() => _query = value),
-            ),
-          ),
-          ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxHeight),
-            child: _buildListBody(),
-          ),
-        ],
-      ),
-      footer: AppButton(
-        label: 'workers.select_worker.confirm'.tr(),
-        onPressed: _selectedIds.isEmpty ? null : _confirm,
-      ),
-    );
-  }
-
-  Widget _buildListBody() {
-    if (_isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-
-    if (_failure != null) {
-      return Center(
-        child: Padding(
-          padding: EdgeInsets.all(AppSpacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                _failure!.message,
-                textAlign: TextAlign.center,
-                style: context.appTypography.regularNormal.copyWith(
-                  color: context.appColors.textSecondary,
-                ),
-              ),
-              SizedBox(height: AppSpacing.md),
-              AppButtonPresets.outline(
-                label: 'workers.select_worker.retry'.tr(),
-                onPressed: _loadWorkers,
-              ),
-            ],
-          ),
+    final typography = context.appTypography;
+    final colors = context.appColors;
+    final iconSize = responsiveDimension(48);
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSpacing.xl,
+          vertical: AppSpacing.xxxl,
         ),
-      );
-    }
-
-    final workers = _filteredWorkers;
-    if (workers.isEmpty) {
-      // Figma `team-search-empty` (`1517:9725`): 48dp users-2 icon,
-      // semibold title, muted description.
-      final typography = context.appTypography;
-      final colors = context.appColors;
-      final iconSize = responsiveDimension(48);
-      return Center(
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: AppSpacing.xl,
-            vertical: AppSpacing.xxxl,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AppSvgPicture.asset(
-                AppSvgs.users2,
-                width: iconSize,
-                height: iconSize,
-              ),
-              SizedBox(height: AppSpacing.lg),
-              Text(
-                'workers.select_worker.empty'.tr(),
-                textAlign: TextAlign.center,
-                style: typography
-                    .semiBold(typography.regularNormal)
-                    .copyWith(color: colors.textPrimary),
-              ),
-              SizedBox(height: AppSpacing.sm),
-              Text(
-                'workers.select_worker.empty_description'.tr(),
-                textAlign: TextAlign.center,
-                style: typography.smallNormal.copyWith(
-                  color: colors.textMuted,
-                ),
-              ),
-            ],
-          ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppSvgPicture.asset(AppSvgs.users2, width: iconSize, height: iconSize),
+            SizedBox(height: AppSpacing.lg),
+            Text(
+              'workers.select_worker.empty'.tr(),
+              textAlign: TextAlign.center,
+              style: typography
+                  .semiBold(typography.regularNormal)
+                  .copyWith(color: colors.textPrimary),
+            ),
+            SizedBox(height: AppSpacing.sm),
+            Text(
+              'workers.select_worker.empty_description'.tr(),
+              textAlign: TextAlign.center,
+              style: typography.smallNormal.copyWith(color: colors.textMuted),
+            ),
+          ],
         ),
-      );
-    }
-
-    return ListView.separated(
-      shrinkWrap: true,
-      itemCount: workers.length,
-      separatorBuilder: (_, __) => const AppDivider(),
-      itemBuilder: (context, index) {
-        final worker = workers[index];
-        final isSelected = _selectedIds.contains(worker.id);
-
-        return AppTableRow(
-          title: worker.fullName,
-          caption: worker.role,
-          leading: AppTableLeading.avatar,
-          leadingAvatar: AppAvatar(
-            initials: worker.initials,
-            backgroundColor: context.appColors.primary,
-            showStatusDot: true,
-          ),
-          trailing: AppTableTrailing.icon,
-          trailingIcon: AppCheckbox(
-            value: isSelected,
-            onChanged: (_) => _toggleWorker(worker.id),
-          ),
-          onTap: () => _toggleWorker(worker.id),
-        );
-      },
+      ),
     );
   }
 }

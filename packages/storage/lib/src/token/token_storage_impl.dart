@@ -1,6 +1,5 @@
 import 'package:core/core.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:network/network.dart';
 
 /// Concrete [TokenStorage] backed by [FlutterSecureStorage].
 class TokenStorageImpl implements TokenStorage {

@@ -66,20 +66,20 @@ class RegisterPage extends HookWidget {
               const AppDivider(),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacingDp.xxl),
                   child: Form(
                     key: formKey,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const SizedBox(height: 48),
+                        const SizedBox(height: AppSpacingDp.xxxxxl),
                         AppSection(
                           title: 'auth.register_title'.tr(),
                           caption: 'auth.register_caption'.tr(),
                           size: AppSectionSize.large,
                           padding: EdgeInsets.zero,
                         ),
-                        const SizedBox(height: 32),
+                        const SizedBox(height: AppSpacingDp.xxxl),
                         AppSegmentedControl(
                           segments: [
                             'auth.phone'.tr(),
@@ -96,7 +96,7 @@ class RegisterPage extends HookWidget {
                             identifierController.clear();
                           },
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: AppSpacingDp.xxl),
                         AppTextField(
                           controller: identifierController,
                           label: mode.value == RegisterIdentifierMode.phone
@@ -120,7 +120,7 @@ class RegisterPage extends HookWidget {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: AppSpacingDp.lg),
                         AppTextField(
                           controller: passwordController,
                           label: 'auth.password'.tr(),
@@ -139,7 +139,7 @@ class RegisterPage extends HookWidget {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: AppSpacingDp.lg),
                         AppTextField(
                           controller: confirmController,
                           label: 'auth.confirm_password'.tr(),
@@ -155,7 +155,7 @@ class RegisterPage extends HookWidget {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: AppSpacingDp.xxl),
                         BlocBuilder<AuthBloc, AuthState>(
                           builder: (context, state) {
                             final isLoading = state is AuthRegisterLoadingState;
@@ -180,7 +180,7 @@ class RegisterPage extends HookWidget {
                             );
                           },
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: AppSpacingDp.lg),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -207,7 +207,7 @@ class RegisterPage extends HookWidget {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 48),
+                        const SizedBox(height: AppSpacingDp.xxxxxl),
                       ],
                     ),
                   ),

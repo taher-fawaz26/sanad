@@ -23,6 +23,7 @@ class WorkerFormBody extends StatefulWidget {
     this.initialType,
     this.requireContact = true,
     this.emailReadOnly = false,
+    this.typeReadOnly = false,
     super.key,
   });
 
@@ -39,6 +40,9 @@ class WorkerFormBody extends StatefulWidget {
 
   /// When true (Edit), email is shown but cannot be changed server-side.
   final bool emailReadOnly;
+
+  /// When true, worker type cannot be changed.
+  final bool typeReadOnly;
 
   @override
   State<WorkerFormBody> createState() => WorkerFormBodyState();
@@ -90,6 +94,16 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
     super.dispose();
   }
 
+  /// Reserved demo domains the backend's email service (Resend in test mode)
+  /// refuses to deliver to. Blocked at the form so the invitation cannot enter
+  /// a "created but un-sendable" state.
+  static const _reservedEmailDomains = {
+    'example.com',
+    'example.org',
+    'example.net',
+    'test.com',
+  };
+
   String? _validateEmail(String? value) {
     if (widget.emailReadOnly) return null;
     final trimmed = value?.trim() ?? '';
@@ -98,9 +112,17 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
           ? 'workers.add_worker.validation_required'.tr()
           : null;
     }
-    return EmailValidator.isValid(trimmed)
-        ? null
-        : 'workers.add_worker.validation_email'.tr();
+    if (!EmailValidator.isValid(trimmed)) {
+      return 'workers.add_worker.validation_email'.tr();
+    }
+    final at = trimmed.lastIndexOf('@');
+    if (at >= 0) {
+      final domain = trimmed.substring(at + 1).toLowerCase();
+      if (_reservedEmailDomains.contains(domain)) {
+        return 'workers.add_worker.validation_reserved_domain'.tr();
+      }
+    }
+    return null;
   }
 
   String? get _phoneErrorText {
@@ -155,7 +177,10 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
           SizedBox(height: AppSpacing.md),
           WorkerTypeSelectField(
             selectedType: type,
-            onTypeSelected: (value) => setState(() => type = value),
+            onTypeSelected: widget.typeReadOnly
+                ? null
+                : (value) => setState(() => type = value),
+            enabled: !widget.typeReadOnly,
             errorText: widget.showValidationErrors && type == null
                 ? 'workers.add_worker.validation_required'.tr()
                 : null,

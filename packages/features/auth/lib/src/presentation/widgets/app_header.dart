@@ -49,7 +49,7 @@ class LanguageDropdown extends StatelessWidget {
             children: [
               if (currentLocale.languageCode == 'en')
                 Padding(
-                  padding: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsetsDirectional.only(end: 8),
                   child: Icon(
                     Icons.check,
                     size: 20,
@@ -66,7 +66,7 @@ class LanguageDropdown extends StatelessWidget {
             children: [
               if (currentLocale.languageCode == 'ar')
                 Padding(
-                  padding: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsetsDirectional.only(end: 8),
                   child: Icon(
                     Icons.check,
                     size: 20,
@@ -79,16 +79,14 @@ class LanguageDropdown extends StatelessWidget {
         ),
       ],
       onSelected: (locale) async {
-        // Three systems must stay in sync on a language change:
+        // Two systems must stay in sync on a language change:
         //   1. EasyLocalization — drives `.tr()` and RTL/LTR rebuilds.
         //   2. TranslateBloc     — source of truth for `Accept-Language`.
-        //   3. AppLocaleRefreshBus — kicks BaseRequestBloc to auto-refetch.
         await context.setLocale(locale);
         if (!context.mounted) return;
         context.read<TranslateBloc>().add(
           locale.languageCode == 'ar' ? TrArabicEvent() : TrEnglishEvent(),
         );
-        sl<AppLocaleRefreshBus>().notifyLocaleChanged();
       },
     );
   }

@@ -1,5 +1,8 @@
 # Sanad Architecture
 
+> **Related:** [`ARCHITECTURE_BLUEPRINT.md`](ARCHITECTURE_BLUEPRINT.md) — pattern-level
+> reference for error handling, network retries, offline behaviour, and API contracts.
+
 ## Overview
 
 Sanad is a Flutter monorepo managed by Melos, containing two apps and 24+ shared packages. Business logic lives in packages; apps are thin shells handling routing, DI bootstrap, and app-specific UI pages.

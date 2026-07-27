@@ -153,9 +153,11 @@ class _BranchesTab extends StatelessWidget {
                     itemCount: branches.length,
                     separatorBuilder: (context, index) =>
                         SizedBox(height: AppSpacing.md),
-                    itemBuilder: (context, index) => Padding(
-                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-                      child: BranchListItem(branch: branches[index]),
+                    itemBuilder: (context, index) => RepaintBoundary(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                        child: BranchListItem(branch: branches[index]),
+                      ),
                     ),
                   ),
                   SliverToBoxAdapter(

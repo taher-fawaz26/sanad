@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:core/core.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:network/network.dart';
@@ -17,11 +19,17 @@ class FakeBaseApiClient implements BaseApiClient {
   TaskEither<Failure, T> request<T>({
     required String path,
     required RequestMethod method,
-    required T Function(dynamic data) parser,
+    required FutureOr<T> Function(dynamic data) parser,
     Map<String, dynamic>? query,
     dynamic body,
   }) {
     final handler = responses[path] ?? defaultResponse;
-    return handler.map((data) => parser(data));
+    return TaskEither(() async {
+      final result = await handler.run();
+      return result.match(
+        left,
+        (data) async => right(await parser(data)),
+      );
+    });
   }
 }

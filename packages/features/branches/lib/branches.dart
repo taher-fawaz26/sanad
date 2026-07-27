@@ -29,6 +29,7 @@ export 'src/domain/usecases/get_company_schedule_usecase.dart';
 export 'src/domain/usecases/update_branch_usecase.dart';
 export 'src/module/branches_module.dart';
 export 'src/presentation/bloc/add_branch/add_branch_bloc.dart';
+export 'src/presentation/bloc/add_branch/add_branch_wizard_cubit.dart';
 export 'src/presentation/bloc/branch_details/branch_details_bloc.dart';
 export 'src/presentation/bloc/branches/branches_bloc.dart';
 export 'src/presentation/pages/add_branch_page.dart';

@@ -40,8 +40,6 @@ dependencies:
     path: ../../packages/features/otp
   path_provider: ^2.1.5
   provider: ^6.1.5
-  shared_blocs:
-    path: ../../packages/shared_blocs
   storage:
     path: ../../packages/storage
 

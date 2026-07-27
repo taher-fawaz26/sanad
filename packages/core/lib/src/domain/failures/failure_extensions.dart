@@ -1,5 +1,32 @@
 import 'package:core/src/domain/failures/failure.dart';
 
+/// Maps each [Failure] variant to a stable i18n key under the `errors.*`
+/// namespace. Call `.tr()` at the presentation layer — e.g.
+/// `AppSnackbar.error(failure.messageKey.tr())`.
+///
+/// For [ValidationFailure] prefer showing [ValidationFailure.messages] when
+/// non-empty (already user-facing, locale-agnostic server text). Fall back to
+/// `errors.validation` otherwise.
+extension FailureMessageX on Failure {
+  String get messageKey => switch (this) {
+    NoInternetFailure() => 'errors.no_internet',
+    TimeoutFailure() => 'errors.timeout',
+    NetworkFailure() => 'errors.request_cancelled',
+    ServerFailure() => 'errors.server_error',
+    UnauthorizedFailure() => 'errors.unauthorized',
+    SecureConnectionFailure() => 'errors.secure_connection_failed',
+    LocationFailure() => 'errors.location',
+    CacheFailure() => 'errors.cache_error',
+    UnknownFailure() => 'errors.unknown',
+    ValidationFailure() => 'errors.validation',
+    UnverifiedUserFailure() => 'errors.unverified_user',
+    UnauthorizedRoleFailure() => 'errors.unauthorized_role',
+    BusinessRuleFailure() => 'errors.business_rule',
+    ConflictFailure() => 'errors.conflict',
+    RateLimitFailure() => 'errors.rate_limit',
+  };
+}
+
 /// Presentation helpers — use in BlocListener / UI.
 extension FailureKindX on Failure {
   bool get isTimeout => this is TimeoutFailure;

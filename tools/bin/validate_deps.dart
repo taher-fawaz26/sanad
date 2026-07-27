@@ -6,7 +6,12 @@ import 'package:sanad_tools/workspace.dart';
 import 'package:yaml/yaml.dart';
 
 /// Validates the workspace package dependency graph against dep_rules.yaml.
-void main() {
+///
+/// Pass `--strict` to require every workspace package to be declared in
+/// `layer_order`. In strict mode, an unmapped package is a build error —
+/// this keeps new features from slipping past tier enforcement.
+void main(List<String> args) {
+  final strict = args.contains('--strict');
   final ws = Workspace.find();
   final rules = ws.loadDepRules();
   final packages = ws.discoverPackages();
@@ -63,9 +68,20 @@ void main() {
     }
   }
 
+  final deletedRaw = rules['deleted_packages'] as YamlList? ?? YamlList();
+  final deleted = {for (final v in deletedRaw) v.toString()};
+
   for (final pkg in packages) {
     final fromTier = tierMap[pkg.name];
-    if (fromTier == null) continue;
+    if (fromTier == null) {
+      if (strict && !deleted.contains(pkg.name)) {
+        violations.add(
+          'UNMAPPED: ${pkg.name} is not declared in dep_rules.yaml layer_order '
+          '(add it to a tier, or list it under deleted_packages)',
+        );
+      }
+      continue;
+    }
     for (final dep in pkg.dependencies) {
       final toTier = tierMap[dep];
       if (toTier == null) continue;

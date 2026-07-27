@@ -38,6 +38,8 @@ dependencies:
   go_router: ^17.3.0
   hive_ce: ^2.10.1
   hydrated_bloc: ^11.0.0
+  invitation:
+    path: ../../packages/features/invitation
   localization:
     path: ../../packages/localization
   maps:
@@ -50,8 +52,6 @@ dependencies:
   permissions:
     path: ../../packages/permissions
   provider: ^6.1.5
-  shared_blocs:
-    path: ../../packages/shared_blocs
   storage:
     path: ../../packages/storage
 

@@ -83,8 +83,27 @@ abstract final class ErrorMapper {
           return UnauthorizedFailure(message: message, code: '401');
         }
         if (statusCode == 403) {
-          final ml = message.toLowerCase();
           final meta = _coerceMap(data);
+          // Prefer a structured error code sent by the backend over heuristics.
+          // Backend should send {"errorCode": "ACCOUNT_UNVERIFIED"} for the
+          // unverified-account case; migrate to this and remove the fallback
+          // heuristic below once all API versions return a stable code.
+          final rawCode =
+              (meta?['errorCode'] ?? meta?['error_code'] ?? meta?['error'])
+                  ?.toString()
+                  .toUpperCase();
+          if (rawCode == 'ACCOUNT_UNVERIFIED' ||
+              rawCode == 'EMAIL_UNVERIFIED' ||
+              rawCode == 'PHONE_UNVERIFIED') {
+            return UnverifiedUserFailure(
+              message: message,
+              code: '403',
+              metadata: meta,
+            );
+          }
+          // Legacy heuristic: substring-match the message body while the
+          // backend migration to structured error codes is in progress.
+          final ml = message.toLowerCase();
           final looksUnverified = ml.contains('verif') ||
               ml.contains('unverified') ||
               (ml.contains('email') && ml.contains('confirm')) ||

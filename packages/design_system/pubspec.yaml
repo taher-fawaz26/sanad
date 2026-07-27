@@ -10,6 +10,7 @@ environment:
 dependencies:
   app_assets:
     path: ../app_assets
+  cached_network_image: ^3.4.1
   core:
     path: ../core
   cupertino_icons: ^1.0.8

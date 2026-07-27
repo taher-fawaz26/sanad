@@ -6,7 +6,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
 import 'package:workers/src/domain/entities/worker_status.dart';
-import 'package:workers/src/presentation/bloc/workers/workers_bloc.dart';
+import 'package:workers/src/presentation/bloc/worker_action/worker_action_cubit.dart';
+import 'package:workers/src/presentation/bloc/workers_list/workers_list_bloc.dart';
 import 'package:workers/src/presentation/widgets/action_confirmation_sheet.dart';
 import 'package:workers/src/routes/worker_routes.dart';
 
@@ -28,14 +29,18 @@ Future<void> showWorkerActionsBottomSheet({
   required BuildContext context,
   required WorkerEntity worker,
 }) {
-  final bloc = context.read<WorkersBloc>();
+  final listBloc = context.read<WorkersListBloc>();
+  final actionCubit = context.read<WorkerActionCubit>();
   final pageContext = context;
 
   return showAppBottomSheet<void>(
     context: context,
     padChild: false,
-    child: BlocProvider.value(
-      value: bloc,
+    child: MultiBlocProvider(
+      providers: [
+        BlocProvider.value(value: listBloc),
+        BlocProvider.value(value: actionCubit),
+      ],
       child: _WorkerActionsSheetBody(
         worker: worker,
         pageContext: pageContext,
@@ -72,9 +77,16 @@ class _WorkerActionsSheetBody extends StatelessWidget {
             height: 24,
             colorFilter: ColorFilter.mode(colors.textPrimary, BlendMode.srcIn),
           ),
-          onTap: () {
+          onTap: () async {
+            final bloc = pageContext.read<WorkersListBloc>();
             Navigator.of(context).pop();
-            pageContext.push(WorkerRoutes.detailsFor(worker.id), extra: worker);
+            final updated = await pageContext.push<WorkerEntity>(
+              WorkerRoutes.detailsFor(worker.id),
+              extra: worker,
+            );
+            if (updated != null) {
+              bloc.add(WorkerReplacedInListEvent(updated));
+            }
           },
         ),
         // Edit Information
@@ -87,12 +99,16 @@ class _WorkerActionsSheetBody extends StatelessWidget {
             height: 24,
             colorFilter: ColorFilter.mode(colors.textPrimary, BlendMode.srcIn),
           ),
-          onTap: () {
+          onTap: () async {
+            final bloc = pageContext.read<WorkersListBloc>();
             Navigator.of(context).pop();
-            pageContext.push(
+            final updated = await pageContext.push<WorkerEntity>(
               WorkerRoutes.editWorkerFor(worker.id),
               extra: worker,
             );
+            if (updated != null) {
+              bloc.add(WorkerReplacedInListEvent(updated));
+            }
           },
         ),
         // Reset Password — always visible
@@ -178,11 +194,9 @@ class _WorkerActionsSheetBody extends StatelessWidget {
     );
 
     if ((confirmed ?? false) && context.mounted) {
-      context.read<WorkersBloc>().add(
-        WorkerStatusChangedEvent(
-          workerId: worker.id,
-          status: isSuspending ? WorkerStatus.inactive : WorkerStatus.active,
-        ),
+      await context.read<WorkerActionCubit>().changeStatus(
+        workerId: worker.id,
+        status: isSuspending ? WorkerStatus.inactive : WorkerStatus.active,
       );
     }
   }
@@ -204,7 +218,7 @@ class _WorkerActionsSheetBody extends StatelessWidget {
     );
 
     if ((confirmed ?? false) && context.mounted) {
-      context.read<WorkersBloc>().add(WorkerDeletedEvent(worker.id));
+      await context.read<WorkerActionCubit>().delete(worker.id);
     }
   }
 }

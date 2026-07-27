@@ -2,9 +2,11 @@ import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:workers/src/domain/entities/invitation_entity.dart';
-import 'package:workers/src/presentation/bloc/workers/workers_bloc.dart';
+import 'package:workers/src/domain/entities/invitation_status.dart';
+import 'package:workers/src/presentation/bloc/invitation_action/invitation_action_cubit.dart';
 import 'package:workers/src/presentation/widgets/action_confirmation_sheet.dart';
 
 const ({AppButtonType type, bool destructive}) _resendButton = (
@@ -15,20 +17,24 @@ const ({AppButtonType type, bool destructive}) _cancelButton = (
   type: AppButtonType.primary,
   destructive: true,
 );
+const ({AppButtonType type, bool destructive}) _deleteButton = (
+  type: AppButtonType.primary,
+  destructive: true,
+);
 
 /// Figma invitation actions bottom sheet (`1607:12699`).
 Future<void> showInvitationActionsBottomSheet({
   required BuildContext context,
   required InvitationEntity invitation,
 }) {
-  final bloc = context.read<WorkersBloc>();
+  final cubit = context.read<InvitationActionCubit>();
   final pageContext = context;
 
   return showAppBottomSheet<void>(
     context: context,
     padChild: false,
     child: BlocProvider.value(
-      value: bloc,
+      value: cubit,
       child: _InvitationActionsSheetBody(
         invitation: invitation,
         pageContext: pageContext,
@@ -45,6 +51,10 @@ class _InvitationActionsSheetBody extends StatelessWidget {
 
   final InvitationEntity invitation;
   final BuildContext pageContext;
+
+  bool get _canCancel => invitation.status == InvitationStatus.pending;
+  bool get _canDelete => invitation.status == InvitationStatus.cancelled;
+  bool get _canResend => invitation.status != InvitationStatus.accepted;
 
   @override
   Widget build(BuildContext context) {
@@ -66,40 +76,55 @@ class _InvitationActionsSheetBody extends StatelessWidget {
           onTap: () {
             Navigator.of(context).pop();
             if (!pageContext.mounted) return;
-            // Backend does not expose an invitation link yet — surface it as
-            // an explicit "coming soon" rather than fabricating a URL.
+            Clipboard.setData(
+              ClipboardData(text: invitation.invitationLink ?? ''),
+            );
             showAppSnackbar(
               context: pageContext,
-              title: 'workers.invitation_copy_coming_soon'.tr(),
+              title: 'workers.invitation_link_copied'.tr(),
             );
           },
         ),
-        AppTableRow(
-          title: 'workers.invitation_action_resend'.tr(),
-          leading: AppTableLeading.icon,
-          leadingIcon: AppSvgPicture.asset(
-            AppSvgs.invitationResend,
-            width: 24,
-            height: 24,
-            colorFilter: ColorFilter.mode(colors.textPrimary, BlendMode.srcIn),
+        if (_canResend)
+          AppTableRow(
+            title: 'workers.invitation_action_resend'.tr(),
+            leading: AppTableLeading.icon,
+            leadingIcon: AppSvgPicture.asset(
+              AppSvgs.invitationResend,
+              width: 24,
+              height: 24,
+              colorFilter:
+                  ColorFilter.mode(colors.textPrimary, BlendMode.srcIn),
+            ),
+            onTap: () async {
+              Navigator.of(context).pop();
+              if (!pageContext.mounted) return;
+              await _showResendConfirmation(context: pageContext);
+            },
           ),
-          onTap: () async {
-            Navigator.of(context).pop();
-            if (!pageContext.mounted) return;
-            await _showResendConfirmation(context: pageContext);
-          },
-        ),
-        const AppDivider(),
-        SheetActionRow(
-          label: 'workers.invitation_action_cancel'.tr(),
-          svgAsset: AppSvgs.trashBold,
-          color: colors.error,
-          onTap: () async {
-            Navigator.of(context).pop();
-            if (!pageContext.mounted) return;
-            await _showCancelConfirmation(context: pageContext);
-          },
-        ),
+        if (_canCancel || _canDelete) const AppDivider(),
+        if (_canCancel)
+          SheetActionRow(
+            label: 'workers.invitation_action_cancel'.tr(),
+            svgAsset: AppSvgs.trashBold,
+            color: colors.error,
+            onTap: () async {
+              Navigator.of(context).pop();
+              if (!pageContext.mounted) return;
+              await _showCancelConfirmation(context: pageContext);
+            },
+          ),
+        if (_canDelete)
+          SheetActionRow(
+            label: 'workers.invitation_action_delete'.tr(),
+            svgAsset: AppSvgs.trashBold,
+            color: colors.error,
+            onTap: () async {
+              Navigator.of(context).pop();
+              if (!pageContext.mounted) return;
+              await _showDeleteConfirmation(context: pageContext);
+            },
+          ),
       ],
     );
   }
@@ -118,7 +143,7 @@ class _InvitationActionsSheetBody extends StatelessWidget {
     );
 
     if ((confirmed ?? false) && context.mounted) {
-      context.read<WorkersBloc>().add(InvitationResendEvent(invitation.id));
+      await context.read<InvitationActionCubit>().resend(invitation.id);
     }
   }
 
@@ -136,9 +161,25 @@ class _InvitationActionsSheetBody extends StatelessWidget {
     );
 
     if ((confirmed ?? false) && context.mounted) {
-      context.read<WorkersBloc>().add(
-        InvitationCancelledEvent(invitation.id),
-      );
+      await context.read<InvitationActionCubit>().cancel(invitation.id);
+    }
+  }
+
+  Future<void> _showDeleteConfirmation({required BuildContext context}) async {
+    final confirmed = await showWorkerConfirmationSheet(
+      context: context,
+      title: 'workers.invitation_delete_title'.tr(),
+      description: 'workers.invitation_delete_description'.tr(
+        namedArgs: {'name': invitation.fullName},
+      ),
+      actionLabel: 'workers.invitation_delete_action'.tr(),
+      actionType: _deleteButton.type,
+      destructive: _deleteButton.destructive,
+      cancelLabel: 'workers.cancel'.tr(),
+    );
+
+    if ((confirmed ?? false) && context.mounted) {
+      await context.read<InvitationActionCubit>().delete(invitation.id);
     }
   }
 }

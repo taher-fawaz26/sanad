@@ -175,7 +175,7 @@ class _BranchDetailsContent extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: EdgeInsets.fromLTRB(
+              padding: EdgeInsetsDirectional.fromSTEB(
                 AppSpacing.xl,
                 AppSpacing.sm,
                 AppSpacing.xl,

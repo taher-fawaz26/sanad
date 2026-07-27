@@ -6,7 +6,10 @@ import 'package:workers/src/di/workers_di.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
 import 'package:workers/src/presentation/bloc/add_worker/add_worker_bloc.dart';
 import 'package:workers/src/presentation/bloc/edit_worker/edit_worker_bloc.dart';
-import 'package:workers/src/presentation/bloc/workers/workers_bloc.dart';
+import 'package:workers/src/presentation/bloc/invitation_action/invitation_action_cubit.dart';
+import 'package:workers/src/presentation/bloc/invitations_list/invitations_list_bloc.dart';
+import 'package:workers/src/presentation/bloc/worker_action/worker_action_cubit.dart';
+import 'package:workers/src/presentation/bloc/workers_list/workers_list_bloc.dart';
 import 'package:workers/src/presentation/pages/add_worker_page.dart';
 import 'package:workers/src/presentation/pages/edit_worker_page.dart';
 import 'package:workers/src/presentation/pages/worker_details_page.dart';
@@ -30,8 +33,13 @@ class WorkersModule extends FeatureModule {
   List<RouteBase> routes(FeatureRouteContext ctx) => [
     GoRoute(
       path: WorkerRoutes.list,
-      builder: (context, state) => BlocProvider(
-        create: (_) => sl<WorkersBloc>(),
+      builder: (context, state) => MultiBlocProvider(
+        providers: [
+          BlocProvider(create: (_) => sl<WorkersListBloc>()),
+          BlocProvider(create: (_) => sl<InvitationsListBloc>()),
+          BlocProvider(create: (_) => sl<WorkerActionCubit>()),
+          BlocProvider(create: (_) => sl<InvitationActionCubit>()),
+        ],
         child: const WorkersPage(),
       ),
       routes: [

@@ -4,6 +4,7 @@ import 'package:workers/src/data/datasources/worker_remote_data_source.dart';
 import 'package:workers/src/data/repositories/worker_repository_impl.dart';
 import 'package:workers/src/domain/repositories/worker_repository.dart';
 import 'package:workers/src/domain/usecases/cancel_invitation_usecase.dart';
+import 'package:workers/src/domain/usecases/delete_invitation_usecase.dart';
 import 'package:workers/src/domain/usecases/delete_worker_usecase.dart';
 import 'package:workers/src/domain/usecases/get_invitations_usecase.dart';
 import 'package:workers/src/domain/usecases/get_worker_usecase.dart';
@@ -14,7 +15,10 @@ import 'package:workers/src/domain/usecases/update_worker_status_usecase.dart';
 import 'package:workers/src/domain/usecases/update_worker_usecase.dart';
 import 'package:workers/src/presentation/bloc/add_worker/add_worker_bloc.dart';
 import 'package:workers/src/presentation/bloc/edit_worker/edit_worker_bloc.dart';
-import 'package:workers/src/presentation/bloc/workers/workers_bloc.dart';
+import 'package:workers/src/presentation/bloc/invitation_action/invitation_action_cubit.dart';
+import 'package:workers/src/presentation/bloc/invitations_list/invitations_list_bloc.dart';
+import 'package:workers/src/presentation/bloc/worker_action/worker_action_cubit.dart';
+import 'package:workers/src/presentation/bloc/workers_list/workers_list_bloc.dart';
 
 abstract final class WorkersDI {
   WorkersDI._();
@@ -52,16 +56,30 @@ abstract final class WorkersDI {
         () => CancelInvitationUseCase(sl<WorkerRepository>()),
       )
       ..registerLazySingleton(
+        () => DeleteInvitationUseCase(sl<WorkerRepository>()),
+      )
+      ..registerLazySingleton(
         () => UpdateWorkerUseCase(sl<WorkerRepository>()),
       )
       ..registerFactory(
-        () => WorkersBloc(
-          getWorkersUseCase: sl<GetWorkersUseCase>(),
+        () => WorkersListBloc(getWorkersUseCase: sl<GetWorkersUseCase>()),
+      )
+      ..registerFactory(
+        () => InvitationsListBloc(
+          getInvitationsUseCase: sl<GetInvitationsUseCase>(),
+        ),
+      )
+      ..registerFactory(
+        () => WorkerActionCubit(
           deleteWorkerUseCase: sl<DeleteWorkerUseCase>(),
           updateWorkerStatusUseCase: sl<UpdateWorkerStatusUseCase>(),
-          getInvitationsUseCase: sl<GetInvitationsUseCase>(),
+        ),
+      )
+      ..registerFactory(
+        () => InvitationActionCubit(
           resendInvitationUseCase: sl<ResendInvitationUseCase>(),
           cancelInvitationUseCase: sl<CancelInvitationUseCase>(),
+          deleteInvitationUseCase: sl<DeleteInvitationUseCase>(),
         ),
       )
       ..registerFactory(

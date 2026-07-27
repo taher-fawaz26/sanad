@@ -3,7 +3,6 @@ import 'package:branches/branches.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:forgot_password/forgot_password.dart';
 import 'package:go_router/go_router.dart';
 import 'package:network/network.dart';
@@ -40,6 +39,12 @@ GoRouter buildProviderRouter() {
   return GoRouter(
     initialLocation: AuthRoutes.splash,
     refreshListenable: authStatus,
+    errorBuilder: (context, state) => AppNotFoundPage(
+      title: 'common.not_found_title'.tr(),
+      description: 'common.not_found_description'.tr(),
+      homeLabel: 'common.not_found_home'.tr(),
+      onGoHome: () => context.go(AppRoutes.home),
+    ),
     redirect: (context, state) {
       if (state.matchedLocation == AuthRoutes.splash) return null;
 
@@ -52,43 +57,10 @@ GoRouter buildProviderRouter() {
       return null;
     },
     routes: [
-      ShellRoute(
-        builder: (context, state, child) => MultiBlocProvider(
-          providers: [
-            BlocProvider(create: (_) => sl<AuthBloc>()),
-            BlocProvider(create: (_) => sl<OtpBloc>()),
-            BlocProvider(create: (_) => sl<ForgotPasswordBloc>()),
-          ],
-          child: child,
-        ),
-        routes: [
+      AuthShell.buildShellRoute(
+        children: [
           ...moduleRegistry.allRoutes(routeContext),
-          // Combined OTP route — shared by verification and forgot-password flows.
-          GoRoute(
-            path: OtpRoutes.otp,
-            redirect: (context, state) =>
-                state.extra is OtpArgs ? null : AuthRoutes.login,
-            builder: (context, state) {
-              final args = state.extra! as OtpArgs;
-              if (args.flow == OtpFlow.forgotPassword) {
-                return ForgotPasswordOtpPage(
-                  args: args,
-                  onBackToLogin: () => context.go(AuthRoutes.login),
-                  onVerified: (identifier) {
-                    context.push(
-                      ForgotPasswordRoutes.resetPassword,
-                      extra: CreateNewPasswordArgs(identifier: identifier),
-                    );
-                  },
-                );
-              }
-              return VerificationCodePage(
-                args: args,
-                onVerified: () => context.go(AuthRoutes.login),
-                onBackToLogin: () => context.go(AuthRoutes.login),
-              );
-            },
-          ),
+          AuthShell.combinedOtpRoute(),
           StatefulShellRoute.indexedStack(
             builder: (context, state, navigationShell) =>
                 MainShell(navigationShell: navigationShell),

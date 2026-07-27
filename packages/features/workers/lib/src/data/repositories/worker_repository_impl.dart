@@ -73,6 +73,10 @@ class WorkerRepositoryImpl implements WorkerRepository {
       _remoteDataSource.cancelInvitation(id);
 
   @override
+  TaskEither<Failure, Unit> deleteInvitation(String id) =>
+      _remoteDataSource.deleteInvitation(id);
+
+  @override
   TaskEither<Failure, WorkerEntity> updateWorker(UpdateWorkerParams params) =>
       _remoteDataSource.updateWorker(params).map((dto) => dto.toEntity());
 }

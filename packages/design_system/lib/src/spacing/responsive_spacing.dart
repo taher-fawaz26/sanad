@@ -128,3 +128,76 @@ abstract final class AppSpacing {
   /// 256 dp — Figma step 64 (16rem).
   static double get space256 => responsiveSpacing(256);
 }
+
+// ─── AppSpacingDp ─────────────────────────────────────────────────────────────
+
+/// **Const design-spec dp values for use in `const` constructors.**
+///
+/// Use these whenever you need a `const` widget (e.g. `const SizedBox`,
+/// `const EdgeInsets`) and the spacing value should reflect the Figma
+/// design-spec dp rather than a screen-scaled value.
+///
+/// For screen-size-aware spacing at runtime, use [AppSpacing] instead.
+///
+/// ```dart
+/// // const-safe:
+/// const SizedBox(height: AppSpacingDp.xxl)
+/// const EdgeInsets.symmetric(horizontal: AppSpacingDp.xxl)
+///
+/// // screen-scaled (non-const):
+/// SizedBox(height: AppSpacing.xxl)
+/// ```
+abstract final class AppSpacingDp {
+  AppSpacingDp._();
+
+  /// 4 dp — Figma step 1.
+  static const double xs = 4;
+
+  /// 8 dp — Figma step 2.
+  static const double sm = 8;
+
+  /// 12 dp — Figma step 3.
+  static const double md = 12;
+
+  /// 16 dp — Figma step 4.
+  static const double lg = 16;
+
+  /// 20 dp — Figma step 5.
+  static const double xl = 20;
+
+  /// 24 dp — Figma step 6.
+  static const double xxl = 24;
+
+  /// 32 dp — Figma step 8.
+  static const double xxxl = 32;
+
+  /// 40 dp — Figma step 10.
+  static const double xxxxl = 40;
+
+  /// 48 dp — Figma step 12.
+  static const double xxxxxl = 48;
+
+  /// 64 dp — Figma step 16.
+  static const double space64 = 64;
+
+  /// 80 dp — Figma step 20.
+  static const double pageGap = 80;
+
+  /// 96 dp — Figma step 24.
+  static const double space96 = 96;
+
+  /// 128 dp — Figma step 32.
+  static const double space128 = 128;
+
+  /// 160 dp — Figma step 40.
+  static const double space160 = 160;
+
+  /// 192 dp — Figma step 48.
+  static const double space192 = 192;
+
+  /// 224 dp — Figma step 56.
+  static const double space224 = 224;
+
+  /// 256 dp — Figma step 64.
+  static const double space256 = 256;
+}

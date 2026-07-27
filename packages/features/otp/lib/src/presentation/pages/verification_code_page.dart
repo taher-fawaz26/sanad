@@ -6,9 +6,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
-import 'package:otp/src/cubit/otp_ui_cubit.dart';
+import 'package:otp/src/presentation/bloc/otp_ui_cubit.dart';
 import 'package:otp/src/domain/enums/otp_purpose.dart';
-import 'package:otp/src/models/otp_args.dart';
+import 'package:otp/src/presentation/models/otp_args.dart';
 import 'package:otp/src/presentation/bloc/otp_bloc.dart';
 import 'package:otp/src/presentation/widgets/app_otp_field.dart';
 
@@ -68,13 +68,13 @@ class VerificationCodePage extends HookWidget {
                 const AppDivider(),
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacingDp.xxl),
                     child: Form(
                       key: formKey,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const SizedBox(height: 32),
+                          const SizedBox(height: AppSpacingDp.xxxl),
                           Center(
                             child: AppAvatar(
                               initials: args.type == IdentifierType.phone
@@ -82,7 +82,7 @@ class VerificationCodePage extends HookWidget {
                                   : 'E',
                             ),
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: AppSpacingDp.xxl),
                           AppSection(
                             title: args.type == IdentifierType.phone
                                 ? 'otp.title_phone'.tr()
@@ -95,7 +95,7 @@ class VerificationCodePage extends HookWidget {
                             ),
                             padding: EdgeInsets.zero,
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: AppSpacingDp.xxl),
                           BlocBuilder<OtpUiCubit, OtpUiState>(
                             buildWhen: (previous, current) =>
                                 previous.otpError != current.otpError,
@@ -137,7 +137,7 @@ class VerificationCodePage extends HookWidget {
                               );
                             },
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: AppSpacingDp.xxl),
                           BlocBuilder<OtpBloc, OtpState>(
                             builder: (context, state) {
                               final isLoading =
@@ -155,7 +155,7 @@ class VerificationCodePage extends HookWidget {
                               );
                             },
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: AppSpacingDp.lg),
                           BlocBuilder<OtpBloc, OtpState>(
                             builder: (context, otpState) {
                               return BlocBuilder<OtpUiCubit, OtpUiState>(
@@ -204,7 +204,7 @@ class VerificationCodePage extends HookWidget {
                               );
                             },
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: AppSpacingDp.lg),
                           AppButton(
                             label: 'otp.back_to_login'.tr(),
                             type: AppButtonType.transparent,
@@ -221,7 +221,7 @@ class VerificationCodePage extends HookWidget {
                               }
                             },
                           ),
-                          const SizedBox(height: 32),
+                          const SizedBox(height: AppSpacingDp.xxxl),
                         ],
                       ),
                     ),

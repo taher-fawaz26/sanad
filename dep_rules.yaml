@@ -12,7 +12,7 @@ forbidden_edges:
     to: design_system
     reason: app_assets is a leaf asset package
   - from: design_system
-    to: [auth, otp, forgot_password, change_password]
+    to: "packages/features/**"
     reason: design_system must not depend on feature packages
   - from: "*"
     to: "apps/**"
@@ -22,10 +22,18 @@ deleted_packages:
   - shared_widgets
   - dependencies
   - settings
+  # Removed as part of Phase 2 orphan cleanup — no runtime consumers.
+  - api
+  - shared_models
+  - shared_blocs
+  - domain
 
+# Tier order — anything in tier N may only depend on packages in tier <= N.
+# --strict mode (see tools/bin/validate_deps.dart) requires every workspace
+# package to appear here; adding a new feature without a tier is a build error.
 layer_order:
   - tier: 0
-    packages: [core, app_assets, config, domain, utilities]
+    packages: [core, app_assets, config, utilities]
   - tier: 1
     packages: [design_system, app_logger, localization]
   - tier: 2
@@ -34,14 +42,22 @@ layer_order:
       - storage
       - analytics
       - notifications
-      - api
       - flavors
-      - shared_models
       - testing
+      - permissions
+      - test_verify
   - tier: 3
-    packages: [auth, otp, forgot_password, change_password, shared_blocs]
+    packages: [maps]
   - tier: 4
-    packages: [sanad_client, sanad_provider]
+    packages: [auth, services, workers, change_password]
+  - tier: 5
+    packages: [otp]
+  - tier: 6
+    packages: [forgot_password, invitation]
+  - tier: 7
+    packages: [branches]
+  - tier: 8
+    packages: [sanad_client, sanad_provider, design_catalog]
 
 # Within-package layer import rules (enforced by scan_imports.dart)
 layer_rules:
@@ -62,6 +78,7 @@ disallow_barrel_export:
     - "**/internal/**"
   exceptions:
     - "lib/src/di/**"
+    - "lib/src/module/**"
     - "lib/src/data/models/adapter/**"
 
 # Packages allowed to import Dio directly

@@ -1,12 +1,11 @@
+import 'package:core/core.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:network/network.dart' show AuthInterceptor;
-import 'package:network/src/interceptors/auth_interceptor.dart' show AuthInterceptor;
-
+import 'package:network/src/interceptors/auth_interceptor.dart'
+    show AuthInterceptor;
 import 'package:network/src/network_config.dart';
 import 'package:network/src/token/token_manager.dart';
 import 'package:network/src/token/token_refresh_model.dart';
-import 'package:network/src/token/token_storage.dart';
 
 /// Concrete [TokenManager] using a raw, unintercepted [Dio] for refresh calls.
 ///

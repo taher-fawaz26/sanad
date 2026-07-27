@@ -11,17 +11,16 @@ workspace:
   - apps/sanad_provider
   - apps/design_catalog
   - packages/analytics
-  - packages/api
   - packages/app_assets
   - packages/app_logger
   - packages/config
   - packages/core
   - packages/design_system
-  - packages/domain
   - packages/features/auth
   - packages/features/branches
   - packages/features/change_password
   - packages/features/forgot_password
+  - packages/features/invitation
   - packages/features/otp
   - packages/features/services
   - packages/flavors
@@ -30,8 +29,6 @@ workspace:
   - packages/network
   - packages/notifications
   - packages/permissions
-  - packages/shared_blocs
-  - packages/shared_models
   - packages/storage
   - packages/testing
   - packages/utilities
@@ -160,8 +157,8 @@ melos:
 
     # ─── Architecture Validation ───────────────────────────────────────────────
     validate:deps:
-      run: cd tools && dart pub get && dart run bin/validate_deps.dart
-      description: Validate package-level dependency graph.
+      run: cd tools && dart pub get && dart run bin/validate_deps.dart --strict
+      description: Validate package-level dependency graph (strict — every package must be mapped).
 
     validate:imports:
       run: cd tools && dart pub get && dart run bin/scan_imports.dart

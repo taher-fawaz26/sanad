@@ -72,5 +72,24 @@ void main() {
         expect(InvitationDto.fromJson(json).status, InvitationStatus.pending);
       });
     });
+
+    test('parses invitationLink when present', () {
+      final json = invitationJson()
+        ..['invitationLink'] = 'https://example.com/invite/abc';
+      final dto = InvitationDto.fromJson(json);
+      expect(dto.invitationLink, 'https://example.com/invite/abc');
+    });
+
+    test('invitationLink is null when absent', () {
+      final dto = InvitationDto.fromJson(invitationJson());
+      expect(dto.invitationLink, isNull);
+    });
+
+    test('toEntity preserves invitationLink', () {
+      final json = invitationJson()
+        ..['invitationLink'] = 'https://example.com/invite/xyz';
+      final entity = InvitationDto.fromJson(json).toEntity();
+      expect(entity.invitationLink, 'https://example.com/invite/xyz');
+    });
   });
 }

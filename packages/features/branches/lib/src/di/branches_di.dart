@@ -12,8 +12,10 @@ import 'package:branches/src/domain/usecases/update_branch_usecase.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
 import 'package:branches/src/presentation/bloc/branch_details/branch_details_bloc.dart';
 import 'package:branches/src/presentation/bloc/branches/branches_bloc.dart';
+import 'package:branches/src/presentation/widgets/assign_branch_sheet.dart';
 import 'package:core/core.dart';
 import 'package:network/network.dart';
+import 'package:workers/workers.dart';
 
 abstract final class BranchesDI {
   BranchesDI._();
@@ -64,6 +66,9 @@ abstract final class BranchesDI {
           updateBranchUseCase: sl<UpdateBranchUseCase>(),
           getBranchUseCase: sl<GetBranchUseCase>(),
         ),
+      )
+      ..registerLazySingleton<WorkerBranchAssigner>(
+        () => const BranchesWorkerBranchAssigner(),
       )
       ..registerFactory(
         () => BranchDetailsBloc(

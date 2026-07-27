@@ -16,8 +16,6 @@ dependencies:
     path: ../core
   design_system:
     path: ../design_system
-  domain:
-    path: ../domain
   equatable: ^2.1.0
   flutter:
     sdk: flutter

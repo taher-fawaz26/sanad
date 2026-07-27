@@ -37,7 +37,7 @@ class AddBranchWizardFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(
+      padding: EdgeInsetsDirectional.fromSTEB(
         AppSpacing.xl,
         AppSpacing.sm,
         AppSpacing.xl,

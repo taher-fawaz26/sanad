@@ -1,11 +1,17 @@
+import 'dart:async';
+
 import 'package:app_assets/app_assets.dart';
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
-import 'package:workers/src/presentation/bloc/workers/workers_bloc.dart';
+import 'package:workers/src/presentation/bloc/invitation_action/invitation_action_cubit.dart';
+import 'package:workers/src/presentation/bloc/invitations_list/invitations_list_bloc.dart';
+import 'package:workers/src/presentation/bloc/worker_action/worker_action_cubit.dart';
+import 'package:workers/src/presentation/bloc/workers_list/workers_list_bloc.dart';
 import 'package:workers/src/presentation/widgets/invitations_content.dart';
 import 'package:workers/src/presentation/widgets/worker_empty_states.dart';
 import 'package:workers/src/presentation/widgets/worker_error_state.dart';
@@ -23,160 +29,335 @@ class WorkersPage extends StatefulWidget {
 }
 
 class _WorkersPageState extends State<WorkersPage> {
+  int _selectedTab = 0;
+
+  StreamSubscription<WorkerActionEffect>? _workerEffectsSub;
+  StreamSubscription<InvitationActionEffect>? _invitationEffectsSub;
+
+  bool _workerProgressVisible = false;
+  bool _invitationProgressVisible = false;
+
   @override
   void initState() {
     super.initState();
-    context.read<WorkersBloc>().add(const WorkersFetchEvent());
+    context.read<WorkersListBloc>().add(const WorkersListFetchEvent());
+    _workerEffectsSub =
+        context.read<WorkerActionCubit>().effects.listen(_onWorkerEffect);
+    _invitationEffectsSub = context
+        .read<InvitationActionCubit>()
+        .effects
+        .listen(_onInvitationEffect);
   }
+
+  @override
+  void dispose() {
+    _workerEffectsSub?.cancel();
+    _invitationEffectsSub?.cancel();
+    super.dispose();
+  }
+
+  // ── Effect handling ──────────────────────────────────────────────────────
+
+  void _onWorkerEffect(WorkerActionEffect effect) {
+    if (!mounted) return;
+    switch (effect) {
+      case WorkerActionStarted(:final type):
+        _showWorkerProgress(type);
+      case WorkerActionSucceeded(
+          :final type,
+          :final workerId,
+          :final updatedWorker,
+        ):
+        _dismissWorkerProgress();
+        if (type == WorkerActionType.delete) {
+          context
+              .read<WorkersListBloc>()
+              .add(WorkerRemovedFromListEvent(workerId));
+        } else if (updatedWorker != null) {
+          context
+              .read<WorkersListBloc>()
+              .add(WorkerReplacedInListEvent(updatedWorker));
+        }
+        showAppSnackbar(context: context, title: _workerSuccessMessage(type));
+      case WorkerActionFailed(:final type, :final failure):
+        _dismissWorkerProgress();
+        showAppErrorSnackbar(
+          context: context,
+          title: _workerFailureMessage(type, failure),
+        );
+    }
+  }
+
+  void _onInvitationEffect(InvitationActionEffect effect) {
+    if (!mounted) return;
+    switch (effect) {
+      case InvitationActionStarted(:final type):
+        _showInvitationProgress(type);
+      case InvitationActionSucceeded(:final type, :final invitationId):
+        _dismissInvitationProgress();
+        final invitations = context.read<InvitationsListBloc>();
+        switch (type) {
+          case InvitationActionType.cancel:
+            invitations.add(InvitationCancelledInListEvent(invitationId));
+          case InvitationActionType.delete:
+            invitations.add(InvitationRemovedFromListEvent(invitationId));
+          case InvitationActionType.resend:
+            break;
+        }
+        showAppSnackbar(
+          context: context,
+          title: _invitationSuccessMessage(type),
+        );
+      case InvitationActionFailed(:final type, :final failure):
+        _dismissInvitationProgress();
+        showAppErrorSnackbar(
+          context: context,
+          title: _invitationFailureMessage(type, failure),
+        );
+    }
+  }
+
+  // ── Progress dialog control ──────────────────────────────────────────────
+
+  void _showWorkerProgress(WorkerActionType type) {
+    if (_workerProgressVisible) return;
+    _workerProgressVisible = true;
+    unawaited(
+      showAppProgressDialog(
+        context: context,
+        title: _workerProgressTitle(type),
+      ).whenComplete(() => _workerProgressVisible = false),
+    );
+  }
+
+  void _dismissWorkerProgress() {
+    if (!_workerProgressVisible) return;
+    _workerProgressVisible = false;
+    dismissAppProgressDialog(context);
+  }
+
+  void _showInvitationProgress(InvitationActionType type) {
+    if (_invitationProgressVisible) return;
+    _invitationProgressVisible = true;
+    unawaited(
+      showAppProgressDialog(
+        context: context,
+        title: _invitationProgressTitle(type),
+      ).whenComplete(() => _invitationProgressVisible = false),
+    );
+  }
+
+  void _dismissInvitationProgress() {
+    if (!_invitationProgressVisible) return;
+    _invitationProgressVisible = false;
+    dismissAppProgressDialog(context);
+  }
+
+  // ── Copy helpers ─────────────────────────────────────────────────────────
+
+  String _workerProgressTitle(WorkerActionType type) => switch (type) {
+    WorkerActionType.suspend => 'workers.worker_suspend_in_progress'.tr(),
+    WorkerActionType.unsuspend =>
+      'workers.worker_unsuspend_in_progress'.tr(),
+    WorkerActionType.delete => 'workers.worker_delete_in_progress'.tr(),
+  };
+
+  String _workerSuccessMessage(WorkerActionType type) => switch (type) {
+    WorkerActionType.suspend => 'workers.worker_suspended'.tr(),
+    WorkerActionType.unsuspend => 'workers.worker_unsuspended'.tr(),
+    WorkerActionType.delete => 'workers.worker_deleted'.tr(),
+  };
+
+  String _workerFailureMessage(WorkerActionType type, Failure failure) {
+    if (failure.message.trim().isNotEmpty) return failure.localizedMessage();
+    return switch (type) {
+      WorkerActionType.suspend => 'workers.worker_suspend_failed'.tr(),
+      WorkerActionType.unsuspend => 'workers.worker_unsuspend_failed'.tr(),
+      WorkerActionType.delete => 'workers.worker_delete_failed'.tr(),
+    };
+  }
+
+  String _invitationProgressTitle(InvitationActionType type) => switch (type) {
+    InvitationActionType.resend =>
+      'workers.invitation_resend_in_progress'.tr(),
+    InvitationActionType.cancel =>
+      'workers.invitation_cancel_in_progress'.tr(),
+    InvitationActionType.delete =>
+      'workers.invitation_delete_in_progress'.tr(),
+  };
+
+  String _invitationSuccessMessage(InvitationActionType type) => switch (type) {
+    InvitationActionType.resend => 'workers.invitation_resent'.tr(),
+    InvitationActionType.cancel => 'workers.invitation_cancelled'.tr(),
+    InvitationActionType.delete => 'workers.invitation_deleted'.tr(),
+  };
+
+  String _invitationFailureMessage(
+    InvitationActionType type,
+    Failure failure,
+  ) {
+    // Backend email service rejects reserved demo domains — surface a clearer
+    // message than the raw "Failed to send email:..." string.
+    final raw = failure.message.trim();
+    if (type == InvitationActionType.resend &&
+        raw.toLowerCase().contains('failed to send email')) {
+      return 'workers.invitation_resend_email_domain_error'.tr();
+    }
+
+    if (raw.isNotEmpty) return failure.localizedMessage();
+    return switch (type) {
+      InvitationActionType.resend =>
+        'workers.invitation_resend_failed'.tr(),
+      InvitationActionType.cancel =>
+        'workers.invitation_cancel_failed'.tr(),
+      InvitationActionType.delete =>
+        'workers.invitation_delete_failed'.tr(),
+    };
+  }
+
+  // ── Build ────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.appColors.surface,
       body: SafeArea(
-        child: BlocListener<WorkersBloc, WorkersState>(
-          listenWhen: (previous, current) =>
-              previous.actionFailure != current.actionFailure &&
-              current.actionFailure != null,
-          listener: (context, state) {
-            final failure = state.actionFailure!;
-            final title = failure.message.trim().isEmpty
-                ? 'workers.action_failed'.tr()
-                : failure.localizedMessage();
-            showAppErrorSnackbar(context: context, title: title);
-            context.read<WorkersBloc>().add(
-              const WorkerActionFailureClearedEvent(),
-            );
-          },
-          child: BlocBuilder<WorkersBloc, WorkersState>(
-            builder: (context, state) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  AppNavBar(
-                    title: 'workers.title'.tr(),
-                    showBackButton: true,
-                    trailing: AppNotificationIcon(onTap: () {}),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppSpacing.lg,
-                      vertical: AppSpacing.sm,
-                    ),
-                    child: AppSegmentedControl(
-                      segments: [
-                        'workers.tab_team'.tr(),
-                        'workers.tab_invitations'.tr(),
-                      ],
-                      selectedIndex: state.selectedTab,
-                      onChanged: (index) => context.read<WorkersBloc>().add(
-                        WorkersTabChangedEvent(index),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: state.isTeamTab
-                        ? _WorkersContent(state: state)
-                        : InvitationsContent(state: state),
-                  ),
-                  _FooterButton(isLoading: state.isLoading),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AppNavBar(
+              title: 'workers.title'.tr(),
+              showBackButton: true,
+              trailing: AppNotificationIcon(onTap: () {}),
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.sm,
+              ),
+              child: AppSegmentedControl(
+                segments: [
+                  'workers.tab_team'.tr(),
+                  'workers.tab_invitations'.tr(),
                 ],
-              );
-            },
-          ),
+                selectedIndex: _selectedTab,
+                onChanged: _onTabChanged,
+              ),
+            ),
+            Expanded(
+              child: _selectedTab == 0
+                  ? const _WorkersContent()
+                  : const InvitationsContent(),
+            ),
+            _FooterButton(
+              onAdd: () => _openAddWorker(context),
+            ),
+          ],
         ),
       ),
     );
   }
+
+  void _onTabChanged(int index) {
+    setState(() => _selectedTab = index);
+    if (index == 1 &&
+        context.read<InvitationsListBloc>().state.status ==
+            RequestStatus.initial) {
+      context
+          .read<InvitationsListBloc>()
+          .add(const InvitationsListFetchEvent());
+    }
+  }
 }
 
 class _WorkersContent extends StatelessWidget {
-  const _WorkersContent({required this.state});
-
-  final WorkersState state;
+  const _WorkersContent();
 
   @override
   Widget build(BuildContext context) {
-    if (state.isLoading) {
-      return const ShimmerListSkeleton();
-    }
+    return BlocBuilder<WorkersListBloc, WorkersListState>(
+      builder: (context, state) {
+        if (state.isLoading) return const ShimmerListSkeleton();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.sm,
-          ),
-          child: AppSearchField(
-            hint: 'workers.search_hint'.tr(),
-            showMicIcon: false,
-            readOnly: true,
-            onTap: () => showWorkerSearchSheet(
-              context,
-              scope: WorkerSearchScope.team,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.sm,
+              ),
+              child: AppSearchField(
+                hint: 'workers.search_hint'.tr(),
+                showMicIcon: false,
+                readOnly: true,
+                onTap: () => showWorkerSearchSheet(
+                  context,
+                  scope: WorkerSearchScope.team,
+                ),
+              ),
             ),
-          ),
-        ),
-        Expanded(
-          child: AppRefreshIndicator(
-            onRefresh: () async {
-              context.read<WorkersBloc>().add(const WorkersRefreshEvent());
-            },
-            child: state.hasError && state.workers.isEmpty
-                ? AppFillRemainingScrollable(
-                    child: WorkerErrorState(
-                      failure: state.failure,
-                      onRetry: () => context.read<WorkersBloc>().add(
-                        const WorkersRefreshEvent(),
+            Expanded(
+              child: AppRefreshIndicator(
+                onRefresh: () async {
+                  context
+                      .read<WorkersListBloc>()
+                      .add(const WorkersListRefreshEvent());
+                },
+                child: state.hasError && state.workers.isEmpty
+                    ? AppFillRemainingScrollable(
+                        child: WorkerErrorState(
+                          failure: state.failure,
+                          onRetry: () => context
+                              .read<WorkersListBloc>()
+                              .add(const WorkersListRefreshEvent()),
+                        ),
+                      )
+                    : state.filteredWorkers.isEmpty
+                    ? AppFillRemainingScrollable(child: _EmptyState())
+                    : NotificationListener<ScrollNotification>(
+                        onNotification: (notification) {
+                          if (notification.metrics.pixels >=
+                                  notification.metrics.maxScrollExtent - 200 &&
+                              state.hasMore &&
+                              !state.loadingMore) {
+                            context
+                                .read<WorkersListBloc>()
+                                .add(const WorkersListLoadMoreEvent());
+                          }
+                          return false;
+                        },
+                        child: ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: EdgeInsetsDirectional.only(
+                            start: AppSpacing.lg,
+                            end: AppSpacing.lg,
+                            bottom: AppSpacing.lg,
+                          ),
+                          itemCount: state.filteredWorkers.length +
+                              (state.loadingMore ? 1 : 0),
+                          separatorBuilder: (_, _) =>
+                              SizedBox(height: AppSpacing.sm),
+                          itemBuilder: (context, index) {
+                            if (index >= state.filteredWorkers.length) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                child: Center(child: AppLoadingIndicator()),
+                              );
+                            }
+                            return RepaintBoundary(
+                              child: WorkerListItem(
+                                worker: state.filteredWorkers[index],
+                              ),
+                            );
+                          },
+                        ),
                       ),
-                    ),
-                  )
-                : state.filteredWorkers.isEmpty
-                ? AppFillRemainingScrollable(
-                    child: _EmptyState(),
-                  )
-                : NotificationListener<ScrollNotification>(
-                    onNotification: (notification) {
-                      if (notification.metrics.pixels >=
-                              notification.metrics.maxScrollExtent - 200 &&
-                          state.workersHasMore &&
-                          !state.workersLoadingMore) {
-                        context.read<WorkersBloc>().add(
-                          const WorkersLoadMoreEvent(),
-                        );
-                      }
-                      return false;
-                    },
-                    child: ListView.separated(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: EdgeInsets.only(
-                        left: AppSpacing.lg,
-                        right: AppSpacing.lg,
-                        bottom: AppSpacing.lg,
-                      ),
-                      itemCount:
-                          state.filteredWorkers.length +
-                          (state.workersLoadingMore ? 1 : 0),
-                      separatorBuilder: (_, _) =>
-                          SizedBox(height: AppSpacing.sm),
-                      itemBuilder: (context, index) {
-                        if (index >= state.filteredWorkers.length) {
-                          return const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 16),
-                            child: Center(child: AppLoadingIndicator()),
-                          );
-                        }
-                        return WorkerListItem(
-                          worker: state.filteredWorkers[index],
-                        );
-                      },
-                    ),
-                  ),
-          ),
-        ),
-      ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -186,27 +367,32 @@ class _WorkersContent extends StatelessWidget {
 Future<void> _openAddWorker(BuildContext context) async {
   final added = await context.push<bool>(WorkerRoutes.add);
   if ((added ?? false) && context.mounted) {
-    context.read<WorkersBloc>().add(const WorkersRefreshEvent());
+    context
+        .read<WorkersListBloc>()
+        .add(const WorkersListRefreshEvent());
   }
 }
 
 class _FooterButton extends StatelessWidget {
-  const _FooterButton({required this.isLoading});
+  const _FooterButton({required this.onAdd});
 
-  final bool isLoading;
+  final VoidCallback onAdd;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: AppSpacing.xl,
-        vertical: AppSpacing.md,
-      ),
-      child: AppButton(
-        label: 'workers.add_team'.tr(),
-        icon: const Icon(Icons.add_circle_outline),
-        iconPosition: AppButtonIconPosition.center,
-        onPressed: isLoading ? null : () => _openAddWorker(context),
+    return BlocSelector<WorkersListBloc, WorkersListState, bool>(
+      selector: (s) => s.isLoading,
+      builder: (context, isLoading) => Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSpacing.xl,
+          vertical: AppSpacing.md,
+        ),
+        child: AppButton(
+          label: 'workers.add_team'.tr(),
+          icon: const Icon(Icons.add_circle_outline),
+          iconPosition: AppButtonIconPosition.center,
+          onPressed: isLoading ? null : onAdd,
+        ),
       ),
     );
   }

@@ -6,6 +6,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:invitation/invitation.dart';
 import 'package:workers/workers.dart';
 
 /// Figma `setting` (`1546:8548`) — Organization Settings dashboard.
@@ -165,6 +166,26 @@ class _OrganizationSettingsTab extends StatelessWidget {
             context: context,
             title: 'settings.coming_soon'.tr(),
           ),
+        ),
+        SizedBox(height: AppSpacing.md),
+        // TEMPORARY — demo entry point for the invitation flow UI while
+        // deep-link handling is not yet implemented. Remove once the real
+        // invitation email deep link replaces this shortcut.
+        AppStatCard(
+          icon: AppSvgPicture.asset(
+            AppSvgs.mailOut,
+            width: 24,
+            height: 24,
+            colorFilter: ColorFilter.mode(
+              colors.palettes.main.shade700,
+              BlendMode.srcIn,
+            ),
+          ),
+          iconBackgroundColor: colors.palettes.main.shade50,
+          count: 'settings.stat_invitation_demo_count'.tr(),
+          label: 'settings.stat_invitation_demo_label'.tr(),
+          actionLabel: 'settings.stat_invitation_demo_action'.tr(),
+          onActionTap: () => context.push(InvitationRoutes.details),
         ),
       ],
     );

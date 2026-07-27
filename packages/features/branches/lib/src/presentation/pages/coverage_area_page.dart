@@ -260,7 +260,7 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
                     ),
                   ),
                   Padding(
-                    padding: EdgeInsets.fromLTRB(
+                    padding: EdgeInsetsDirectional.fromSTEB(
                       AppSpacing.xl,
                       AppSpacing.sm,
                       AppSpacing.xl,

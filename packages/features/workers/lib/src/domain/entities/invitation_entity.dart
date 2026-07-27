@@ -12,6 +12,7 @@ class InvitationEntity extends Equatable {
     this.email,
     this.invitedAt,
     this.expiresAt,
+    this.invitationLink,
   });
 
   final String id;
@@ -23,6 +24,31 @@ class InvitationEntity extends Equatable {
   final String? email;
   final DateTime? invitedAt;
   final DateTime? expiresAt;
+  final String? invitationLink;
+
+  InvitationEntity copyWith({
+    String? id,
+    String? fullName,
+    String? role,
+    String? initials,
+    InvitationStatus? status,
+    String? phone,
+    String? email,
+    DateTime? invitedAt,
+    DateTime? expiresAt,
+    String? invitationLink,
+  }) => InvitationEntity(
+    id: id ?? this.id,
+    fullName: fullName ?? this.fullName,
+    role: role ?? this.role,
+    initials: initials ?? this.initials,
+    status: status ?? this.status,
+    phone: phone ?? this.phone,
+    email: email ?? this.email,
+    invitedAt: invitedAt ?? this.invitedAt,
+    expiresAt: expiresAt ?? this.expiresAt,
+    invitationLink: invitationLink ?? this.invitationLink,
+  );
 
   @override
   List<Object?> get props => [
@@ -35,5 +61,6 @@ class InvitationEntity extends Equatable {
     email,
     invitedAt,
     expiresAt,
+    invitationLink,
   ];
 }

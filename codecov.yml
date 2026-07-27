@@ -1,0 +1,38 @@
+# Codecov configuration — coverage floor + ratchet.
+#
+# `project` guards the overall coverage number: it may not drop by more than
+# 1% on any PR relative to the base branch. `patch` guards the diff itself:
+# new/changed lines in a PR must be at least 70% covered. Ratchet the
+# `target` values up over time as the suite grows.
+
+coverage:
+  precision: 2
+  round: down
+  range: "50...90"
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+        base: auto
+        if_ci_failed: error
+    patch:
+      default:
+        target: 70%
+        threshold: 5%
+        if_ci_failed: error
+
+comment:
+  layout: "reach,diff,flags,files"
+  behavior: default
+  require_changes: false
+
+ignore:
+  - "**/*.g.dart"
+  - "**/*.freezed.dart"
+  - "**/*.gen.dart"
+  - "**/generated/**"
+  - "**/gen/**"
+  - "apps/**/lib/main*.dart"
+  - "apps/**/lib/**/di/app_di.dart"
+  - "tools/**"

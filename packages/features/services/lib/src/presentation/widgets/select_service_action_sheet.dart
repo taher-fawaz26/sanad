@@ -3,10 +3,8 @@ import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:localization/localization.dart';
 import 'package:services/src/domain/entities/service_entity.dart';
-import 'package:services/src/presentation/cubit/services_cubit.dart';
+import 'package:services/src/domain/usecases/get_services_usecase.dart';
 
 /// Result returned when the user confirms service selection.
 class SelectServiceResult {
@@ -22,224 +20,76 @@ class SelectServiceResult {
 Future<SelectServiceResult?> showSelectServiceActionSheet({
   required BuildContext context,
   Set<String> initialSelectedIds = const {},
-}) {
-  final colors = context.appColors;
-  final typography = context.appTypography;
-  final brightness = Theme.of(context).brightness;
-  final spec = ActionSheetTokens.resolve(
-    colors: colors,
-    typography: typography,
-    brightness: brightness,
-  );
-
-  return showModalBottomSheet<SelectServiceResult>(
+}) async {
+  final selected = await showAppSelectSheet<ServiceEntity>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    barrierColor: spec.barrierColor,
-    builder: (context) => BlocProvider(
-      create: (_) => sl<ServicesCubit>()..load(),
-      child: _SelectServiceActionSheet(
-        initialSelectedIds: initialSelectedIds,
+    title: 'services.select_service.title'.tr(),
+    confirmLabel: 'services.select_service.confirm'.tr(),
+    searchHint: 'services.select_service.search_hint'.tr(),
+    searchVariant: AppSearchFieldVariant.bordered,
+    getId: (s) => s.id,
+    searchFilter: (s, q) =>
+        s.name.toLowerCase().contains(q) ||
+        s.category.toLowerCase().contains(q),
+    initialSelectedIds: initialSelectedIds,
+    loadItems: () async {
+      final result = await sl<GetServicesUseCase>()(const NoParams()).run();
+      return result.fold((f) => throw f, (services) => services);
+    },
+    errorTextBuilder: (e) => e is Failure ? e.message : e.toString(),
+    retryLabel: 'services.select_service.retry'.tr(),
+    emptyBuilder: (context) => _ServiceEmptyState(),
+    itemBuilder: (context, service, isSelected, onTap) => AppTableRow(
+      title: service.name,
+      trailing: AppTableTrailing.icon,
+      trailingIcon: AppCheckbox(
+        value: isSelected,
+        onChanged: (_) => onTap(),
       ),
+      onTap: onTap,
     ),
   );
+  if (selected == null) return null;
+  return SelectServiceResult(selectedServices: selected);
 }
 
-class _SelectServiceActionSheet extends StatefulWidget {
-  const _SelectServiceActionSheet({required this.initialSelectedIds});
-
-  final Set<String> initialSelectedIds;
-
-  @override
-  State<_SelectServiceActionSheet> createState() =>
-      _SelectServiceActionSheetState();
-}
-
-class _SelectServiceActionSheetState extends State<_SelectServiceActionSheet> {
-  final _searchController = TextEditingController();
-  final _selectedIds = <String>{};
-
-  String _query = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedIds.addAll(widget.initialSelectedIds);
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  List<ServiceEntity> _filteredServices(List<ServiceEntity> services) {
-    final query = _query.trim().toLowerCase();
-    if (query.isEmpty) return services;
-    return services
-        .where(
-          (service) =>
-              service.name.toLowerCase().contains(query) ||
-              service.category.toLowerCase().contains(query),
-        )
-        .toList();
-  }
-
-  void _toggleService(String id) {
-    setState(() {
-      if (_selectedIds.contains(id)) {
-        _selectedIds.remove(id);
-      } else {
-        _selectedIds.add(id);
-      }
-    });
-  }
-
-  void _confirm() {
-    final selected = context
-        .read<ServicesCubit>()
-        .state
-        .services
-        .where((service) => _selectedIds.contains(service.id))
-        .toList();
-    Navigator.of(context).pop(SelectServiceResult(selectedServices: selected));
-  }
-
+class _ServiceEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final maxHeight = MediaQuery.sizeOf(context).height * 0.55;
-
-    return AppActionSheet(
-      title: 'services.select_service.title'.tr(),
-      showCancel: false,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.xl,
-              AppSpacing.sm,
-              AppSpacing.xl,
-              AppSpacing.md,
-            ),
-            child: AppSearchField(
-              controller: _searchController,
-              variant: AppSearchFieldVariant.bordered,
-              hint: 'services.select_service.search_hint'.tr(),
-              showMicIcon: false,
-              onChanged: (value) => setState(() => _query = value),
-            ),
-          ),
-          ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxHeight),
-            child: BlocBuilder<ServicesCubit, ServicesState>(
-              builder: (context, state) => _buildListBody(state),
-            ),
-          ),
-        ],
-      ),
-      footer: AppButton(
-        label: 'services.select_service.confirm'.tr(),
-        onPressed: _selectedIds.isEmpty ? null : _confirm,
-      ),
-    );
-  }
-
-  Widget _buildListBody(ServicesState state) {
-    if (state.isLoading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-
-    if (state.failure != null) {
-      return Center(
-        child: Padding(
-          padding: EdgeInsets.all(AppSpacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                state.failure!.localizedMessage(),
-                textAlign: TextAlign.center,
-                style: context.appTypography.regularNormal.copyWith(
-                  color: context.appColors.textSecondary,
-                ),
-              ),
-              SizedBox(height: AppSpacing.md),
-              AppButtonPresets.outline(
-                label: 'services.select_service.retry'.tr(),
-                onPressed: () => context.read<ServicesCubit>().load(),
-              ),
-            ],
-          ),
+    final typography = context.appTypography;
+    final colors = context.appColors;
+    final iconSize = responsiveDimension(48);
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSpacing.xl,
+          vertical: AppSpacing.xxxl,
         ),
-      );
-    }
-
-    final services = _filteredServices(state.services);
-    if (services.isEmpty) {
-      // Figma `service-search-empty` (`1517:9696`): 48dp search-alert icon,
-      // semibold title, muted description.
-      final typography = context.appTypography;
-      final colors = context.appColors;
-      final iconSize = responsiveDimension(48);
-      return Center(
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: AppSpacing.xl,
-            vertical: AppSpacing.xxxl,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AppSvgPicture.asset(
-                AppSvgs.searchAlert,
-                width: iconSize,
-                height: iconSize,
-              ),
-              SizedBox(height: AppSpacing.lg),
-              Text(
-                'services.select_service.empty'.tr(),
-                textAlign: TextAlign.center,
-                style: typography
-                    .semiBold(typography.regularNormal)
-                    .copyWith(
-                      color: colors.textPrimary,
-                    ),
-              ),
-              SizedBox(height: AppSpacing.sm),
-              Text(
-                'services.select_service.empty_description'.tr(),
-                textAlign: TextAlign.center,
-                style: typography.smallNormal.copyWith(
-                  color: colors.textMuted,
-                ),
-              ),
-            ],
-          ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppSvgPicture.asset(
+              AppSvgs.searchAlert,
+              width: iconSize,
+              height: iconSize,
+            ),
+            SizedBox(height: AppSpacing.lg),
+            Text(
+              'services.select_service.empty'.tr(),
+              textAlign: TextAlign.center,
+              style: typography
+                  .semiBold(typography.regularNormal)
+                  .copyWith(color: colors.textPrimary),
+            ),
+            SizedBox(height: AppSpacing.sm),
+            Text(
+              'services.select_service.empty_description'.tr(),
+              textAlign: TextAlign.center,
+              style: typography.smallNormal.copyWith(color: colors.textMuted),
+            ),
+          ],
         ),
-      );
-    }
-
-    return ListView.separated(
-      shrinkWrap: true,
-      itemCount: services.length,
-      separatorBuilder: (_, __) => const AppDivider(),
-      itemBuilder: (context, index) {
-        final service = services[index];
-        final isSelected = _selectedIds.contains(service.id);
-
-        return AppTableRow(
-          title: service.name,
-          trailing: AppTableTrailing.icon,
-          trailingIcon: AppCheckbox(
-            value: isSelected,
-            onChanged: (_) => _toggleService(service.id),
-          ),
-          onTap: () => _toggleService(service.id),
-        );
-      },
+      ),
     );
   }
 }

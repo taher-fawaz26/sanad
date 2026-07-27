@@ -27,5 +27,6 @@ abstract interface class WorkerRepository {
   TaskEither<Failure, Unit> inviteWorker(InviteWorkerParams params);
   TaskEither<Failure, Unit> resendInvitation(String id);
   TaskEither<Failure, Unit> cancelInvitation(String id);
+  TaskEither<Failure, Unit> deleteInvitation(String id);
   TaskEither<Failure, WorkerEntity> updateWorker(UpdateWorkerParams params);
 }

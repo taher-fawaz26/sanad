@@ -64,19 +64,19 @@ class ForgotPasswordPage extends HookWidget {
               const AppDivider(),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacingDp.xxl),
                   child: Form(
                     key: formKey,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const SizedBox(height: 48),
+                        const SizedBox(height: AppSpacingDp.xxxxxl),
                         AppSection(
                           title: 'forgot_password.title'.tr(),
                           caption: 'forgot_password.subtitle'.tr(),
                           padding: EdgeInsets.zero,
                         ),
-                        const SizedBox(height: 32),
+                        const SizedBox(height: AppSpacingDp.xxxl),
                         AppTextField(
                           controller: emailController,
                           label: 'auth.email'.tr(),
@@ -92,7 +92,7 @@ class ForgotPasswordPage extends HookWidget {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: AppSpacingDp.xxl),
                         BlocBuilder<ForgotPasswordBloc, ForgotPasswordState>(
                           builder: (context, state) {
                             final isLoading =
@@ -116,7 +116,7 @@ class ForgotPasswordPage extends HookWidget {
                             );
                           },
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: AppSpacingDp.lg),
                         AppButton(
                           label: 'otp.back_to_login'.tr(),
                           type: AppButtonType.transparent,
@@ -128,7 +128,7 @@ class ForgotPasswordPage extends HookWidget {
                             }
                           },
                         ),
-                        const SizedBox(height: 48),
+                        const SizedBox(height: AppSpacingDp.xxxxxl),
                       ],
                     ),
                   ),

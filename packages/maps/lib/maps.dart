@@ -29,6 +29,7 @@ export 'package:google_maps_flutter/google_maps_flutter.dart'
 // Configuration & DI
 export 'src/config/maps_config.dart';
 export 'src/di/maps_di.dart';
+export 'src/module/maps_module.dart';
 
 // Domain entities (public value objects)
 export 'src/domain/entities/city_entity.dart';

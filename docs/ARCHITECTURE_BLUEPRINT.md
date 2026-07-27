@@ -1,5 +1,10 @@
 # SANAD Architecture Blueprint
 
+> **Canonical architecture reference:** [`docs/ARCHITECTURE.md`](ARCHITECTURE.md).
+> This blueprint contains the detailed pattern-level reference for error handling, retry,
+> logging, offline behaviour, and API contracts. For monorepo structure, module system,
+> and Clean Architecture layering see `ARCHITECTURE.md` first.
+
 > **Purpose.** This is the single architectural reference for error, success, mutation,
 > retry, logging, offline, and API-contract handling across the SANAD Flutter monorepo.
 > It is intended for onboarding new engineers and for guiding future feature work.

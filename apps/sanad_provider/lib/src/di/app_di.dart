@@ -1,11 +1,11 @@
-﻿import 'package:app_logger/app_logger.dart';
+import 'package:app_logger/app_logger.dart';
 import 'package:auth/auth.dart';
 import 'package:branches/branches.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:forgot_password/forgot_password.dart';
+import 'package:invitation/invitation.dart';
 import 'package:localization/localization.dart';
 import 'package:maps/maps.dart';
 import 'package:network/network.dart';
@@ -13,8 +13,8 @@ import 'package:otp/otp.dart';
 import 'package:permissions/permissions.dart';
 import 'package:sanad_provider/src/config/app_config.dart';
 import 'package:services/services.dart';
-import 'package:workers/workers.dart';
 import 'package:storage/storage.dart';
+import 'package:workers/workers.dart';
 
 late final ModuleRegistry moduleRegistry;
 
@@ -35,76 +35,21 @@ Future<void> configureDependencies() async {
       () => TokenStorageImpl(sl<FlutterSecureStorage>()),
     )
     // ── Localization & Theme ─────────────────────────────────────────────────
-    ..registerLazySingleton(AppLocaleRefreshBus.new)
-    ..registerLazySingleton<LocaleChangeBus>(sl.call<AppLocaleRefreshBus>)
     ..registerLazySingleton(TranslateBloc.new)
     ..registerLazySingleton(ThemeBloc.new)
     // ── Auth status ──────────────────────────────────────────────────────────
-    ..registerLazySingleton(AuthStatusNotifier.new)
-    // ── Network config ───────────────────────────────────────────────────────
-    ..registerLazySingleton<NetworkConfig>(() => AppConfig.network)
-    // ── Raw Dio (no AuthInterceptor — used by TokenManagerImpl only) ─────────
-    ..registerLazySingleton<Dio>(
-      () {
-        final config = sl<NetworkConfig>();
-        final dio = Dio(config.dioBaseOptions);
-        dio.interceptors.add(LoggingInterceptor(logger: appLogger));
-        return dio;
-      },
-      instanceName: 'rawDio',
-    )
-    // ── Token manager ────────────────────────────────────────────────────────
-    ..registerLazySingleton<TokenManager>(
-      () => TokenManagerImpl(
-        sl<Dio>(instanceName: 'rawDio'),
-        sl<TokenStorage>(),
-        sl<NetworkConfig>(),
-      ),
-    );
-  await sl<TokenManager>().init();
+    ..registerLazySingleton(AuthStatusNotifier.new);
 
-  // ── Session manager ──────────────────────────────────────────────────────
+  // ── Network stack (Dio, interceptors, token manager, connectivity) ───────
+  await NetworkDI.init(
+    networkConfig: AppConfig.network,
+    logger: appLogger,
+    resolveLanguageCode: () => sl<TranslateBloc>().state.languageCode,
+    onUnauthorized: () =>
+        sl<AuthStatusNotifier>().update(AuthStatus.unauthenticated),
+  );
+
   sl
-    ..registerLazySingleton(() => SessionManager(sl<TokenManager>()))
-    // ── Connectivity ─────────────────────────────────────────────────────────
-    ..registerLazySingleton<ConnectivityService>(ConnectivityServiceImpl.new)
-    ..registerLazySingleton(
-      () => ConnectivityController(sl<ConnectivityService>()),
-    )
-    ..registerLazySingleton(() => NetworkGuard(sl<ConnectivityService>()))
-    // ── Authenticated Dio (with AuthInterceptor) ─────────────────────────────
-    ..registerLazySingleton<Dio>(
-      () {
-        final config = sl<NetworkConfig>();
-        final dio = Dio(config.dioBaseOptions);
-
-        dio.interceptors.addAll([
-          AcceptLanguageInterceptor(
-            resolveLanguageCode: () =>
-                sl<TranslateBloc>().state.languageCode,
-          ),
-          AuthInterceptor(
-            dio: dio,
-            tokenManager: sl<TokenManager>(),
-            refreshTokenPath: config.refreshTokenPath,
-            onUnauthorized: () =>
-                sl<AuthStatusNotifier>().update(AuthStatus.unauthenticated),
-          ),
-          RetryOnTimeoutInterceptor(dio: dio),
-          TimeoutErrorInterceptor(),
-          LoggingInterceptor(logger: appLogger),
-        ]);
-
-        return dio;
-      },
-      instanceName: 'authDio',
-    )
-    ..registerLazySingleton<SecureDioClient>(
-      () => SecureDioClient(sl<Dio>(instanceName: 'authDio')),
-    )
-    ..registerLazySingleton<BaseApiClient>(
-      () => ApiClientImpl(sl<SecureDioClient>(), sl<NetworkGuard>()),
-    )
     ..registerLazySingleton<PermissionsService>(
       () => const PermissionsServiceImpl(),
     )
@@ -115,21 +60,20 @@ Future<void> configureDependencies() async {
       () => const GeocodingServiceImpl(),
     );
 
-  // ── Maps platform ─────────────────────────────────────────────────────────
-  MapsDI.init(
-    config: const MapsConfig(
-      placesApiKey: String.fromEnvironment('MAPS_API_KEY'),
-    ),
-  );
-
   // ── Feature modules ────────────────────────────────────────────────────────
   moduleRegistry = ModuleRegistry([
+    MapsModule(
+      config: const MapsConfig(
+        placesApiKey: String.fromEnvironment('MAPS_API_KEY'),
+      ),
+    ),
     AuthModule(),
     OtpModule(),
     ForgotPasswordModule(),
     BranchesModule(),
     ServicesModule(),
     WorkersModule(),
+    InvitationModule(),
   ]);
   await moduleRegistry.initAll();
 
