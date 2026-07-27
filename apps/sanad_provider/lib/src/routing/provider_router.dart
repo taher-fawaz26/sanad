@@ -7,6 +7,7 @@ import 'package:forgot_password/forgot_password.dart';
 import 'package:go_router/go_router.dart';
 import 'package:network/network.dart';
 import 'package:otp/otp.dart';
+import 'package:registration/registration.dart';
 import 'package:sanad_provider/src/di/app_di.dart';
 import 'package:sanad_provider/src/features/home/home_page.dart';
 import 'package:sanad_provider/src/features/messages/messages_page.dart';
@@ -36,6 +37,25 @@ GoRouter buildProviderRouter() {
     },
   );
 
+  // Module-contributed routes, with the auth-provided `/login` route swapped
+  // for an app-owned one whose "Register" button opens the new registration
+  // flow directly (no redirect, and without modifying the auth package).
+  final moduleRoutes = [
+    for (final route in moduleRegistry.allRoutes(routeContext))
+      if (route is GoRoute && route.path == AuthRoutes.login)
+        GoRoute(
+          path: AuthRoutes.login,
+          builder: (context, state) => LoginPage(
+            onAuthenticated: () => context.go(AppRoutes.home),
+            onForgotPassword: () =>
+                context.push(AuthModule.forgotPasswordPath),
+            onRegister: () => context.push(RegistrationRoutes.signUpEmail),
+          ),
+        )
+      else
+        route,
+  ];
+
   return GoRouter(
     initialLocation: AuthRoutes.splash,
     refreshListenable: authStatus,
@@ -59,7 +79,7 @@ GoRouter buildProviderRouter() {
     routes: [
       AuthShell.buildShellRoute(
         children: [
-          ...moduleRegistry.allRoutes(routeContext),
+          ...moduleRoutes,
           AuthShell.combinedOtpRoute(),
           StatefulShellRoute.indexedStack(
             builder: (context, state, navigationShell) =>

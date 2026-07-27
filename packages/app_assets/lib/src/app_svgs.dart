@@ -141,4 +141,52 @@ abstract final class AppSvgs {
 
   /// Badge-check glyph inside the success-screen circle (`2560:24743`).
   static const String badgeCheck = '$_base/badge_check.svg';
+
+  // ── Registration flow ──────────────────────────────────────────────────────
+
+  /// Building / clipboard icon — Organization account-type card.
+  static const String registrationOrganization =
+      '$_base/registration_organization.svg';
+
+  /// Person-in-circle icon — Individual account-type card.
+  static const String registrationIndividual =
+      '$_base/registration_individual.svg';
+
+  /// City / building icon — Organization Details header (`2142:14206`).
+  static const String registrationCity = '$_base/registration_city.svg';
+
+  /// Profile circle — Individual Details header (`2982:18077`).
+  static const String registrationProfile = '$_base/registration_profile.svg';
+
+  /// Scan-corners icon — Identity Verification header (`2971:3589`).
+  static const String registrationIdentityScan =
+      '$_base/registration_identity_scan.svg';
+
+  /// Cloud with upload arrow — document upload dropzone / CTA (`2897:13382`).
+  static const String cloudUpload = '$_base/cloud_upload.svg';
+
+  /// Gallery + plus — scanner / Select action gallery (`2977:3662`).
+  static const String registrationGallery = '$_base/registration_gallery.svg';
+
+  /// Camera shutter ring — Scan Emirates ID (`2897:13568`).
+  static const String registrationShutter = '$_base/registration_shutter.svg';
+
+  /// Document / mirror icon — Trade Licence header (`3001:19254`).
+  static const String registrationTradeLicence =
+      '$_base/registration_trade_licence.svg';
+
+  /// Green check — ID side review success (`2897:13686`).
+  static const String registrationCheckCircle =
+      '$_base/registration_check_circle.svg';
+
+  /// Red X — Review Information error alert (`3001:19468`).
+  static const String registrationAlertCancel =
+      '$_base/registration_alert_cancel.svg';
+
+  /// Right arrow — Scan Back Side CTA (`2897:13631` icon).
+  static const String registrationArrowRight =
+      '$_base/registration_arrow_right.svg';
+
+  /// Circular refresh — Retake Front/Back Side CTA (`2897:13632` icon).
+  static const String registrationRetake = '$_base/registration_retake.svg';
 }

@@ -23,6 +23,7 @@ workspace:
   - packages/features/change_password
   - packages/features/forgot_password
   - packages/features/invitation
+  - packages/features/registration
   - packages/features/otp
   - packages/features/services
   - packages/flavors

@@ -54,7 +54,7 @@ layer_order:
   - tier: 5
     packages: [otp]
   - tier: 6
-    packages: [forgot_password, invitation]
+    packages: [forgot_password, invitation, registration]
   - tier: 7
     packages: [branches]
   - tier: 8

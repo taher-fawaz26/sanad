@@ -66,7 +66,9 @@ class RegisterPage extends HookWidget {
               const AppDivider(),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacingDp.xxl),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacingDp.xxl,
+                  ),
                   child: Form(
                     key: formKey,
                     child: Column(

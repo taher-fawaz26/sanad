@@ -15,3 +15,4 @@ export 'app_network_error_page.dart';
 export 'app_progress_dialog.dart';
 export 'app_success_popover.dart';
 export 'app_validation_summary.dart';
+export 'auth_screen_shell.dart';

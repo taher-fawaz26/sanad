@@ -1,0 +1,27 @@
+name: registration
+description: Sign-up flow — email entry, OTP verification, and account-type selection.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+  flutter: ">=3.22.0"
+
+dependencies:
+  app_assets:
+    path: ../../app_assets
+  core:
+    path: ../../core
+  design_system:
+    path: ../../design_system
+  equatable: ^2.1.0
+  flutter:
+    sdk: flutter
+  flutter_bloc: ^9.1.1
+  flutter_hooks: ^0.21.3+1
+  flutter_svg: ^2.0.9
+  go_router: ^17.3.0
+  otp:
+    path: ../otp
+
+resolution: workspace

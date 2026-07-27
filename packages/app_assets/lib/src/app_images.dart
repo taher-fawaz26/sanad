@@ -25,4 +25,8 @@ abstract final class AppImages {
   static const String serviceTools = '$_base/services/service_tools.png';
 
   static const String addServices = '$_base/illustrations/add_services.svg';
+
+  /// Emirates ID front capture preview — Scan flow (`2897:13628`).
+  static const String emiratesIdFrontPreview =
+      '$_base/registration/emirates_id_front_preview.png';
 }

@@ -28,6 +28,7 @@ flutter:
     - assets/images/services/
     - assets/images/workers/
     - assets/images/onboarding/
+    - assets/images/registration/
     - assets/icons/
     - assets/lottie/
     - assets/animations/

@@ -11,6 +11,7 @@ import 'package:maps/maps.dart';
 import 'package:network/network.dart';
 import 'package:otp/otp.dart';
 import 'package:permissions/permissions.dart';
+import 'package:registration/registration.dart';
 import 'package:sanad_provider/src/config/app_config.dart';
 import 'package:services/services.dart';
 import 'package:storage/storage.dart';
@@ -74,6 +75,7 @@ Future<void> configureDependencies() async {
     ServicesModule(),
     WorkersModule(),
     InvitationModule(),
+    RegistrationModule(),
   ]);
   await moduleRegistry.initAll();
 

@@ -52,6 +52,8 @@ dependencies:
   permissions:
     path: ../../packages/permissions
   provider: ^6.1.5
+  registration:
+    path: ../../packages/features/registration
   storage:
     path: ../../packages/storage
 
