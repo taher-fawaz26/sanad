@@ -13,28 +13,17 @@ import 'package:registration/src/routes/registration_routes.dart';
 
 const _kIconSize = 48.0;
 
-/// Which Emirates ID side a capture is for.
-enum _IdSide { front, back }
-
-/// Step 5 — Emirates ID front/back upload.
+/// Step 7 (Organization path only) — trade licence upload.
 ///
-/// Figma: `Identity Verification` (`2794:34425`). Capture is powered by the
-/// shared `asset_picker` (camera / gallery / file). Continue unlocks only once
-/// both sides have been captured.
-class IdentityVerificationPage extends StatelessWidget {
-  const IdentityVerificationPage({super.key});
+/// Figma: `Trade Licence` (`2926:3450`).
+class TradeLicencePage extends StatelessWidget {
+  const TradeLicencePage({super.key});
 
-  Future<void> _capture(BuildContext context, _IdSide side) async {
+  Future<void> _capture(BuildContext context) async {
     try {
       final asset = await captureRegistrationDocument(context);
       if (asset == null || !context.mounted) return;
-      final cubit = context.read<RegistrationCubit>();
-      switch (side) {
-        case _IdSide.front:
-          cubit.setEmiratesIdFront(asset);
-        case _IdSide.back:
-          cubit.setEmiratesIdBack(asset);
-      }
+      context.read<RegistrationCubit>().setTradeLicence(asset);
     } on AssetPickerException {
       if (!context.mounted) return;
       showAppErrorSnackbar(
@@ -53,34 +42,48 @@ class IdentityVerificationPage extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AppSvgPicture.asset(
-          AppSvgs.registrationIdentityScan,
+          AppSvgs.registrationTradeLicence,
           width: responsiveDimension(_kIconSize),
           height: responsiveDimension(_kIconSize),
           colorFilter: ColorFilter.mode(colors.textPrimary, BlendMode.srcIn),
         ),
         SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
         RegistrationHeader(
-          title: 'registration.identity_title'.tr(),
-          subtitle: Text('registration.identity_subtitle'.tr()),
+          title: 'registration.trade_licence_title'.tr(),
+          subtitle: Text('registration.trade_licence_subtitle'.tr()),
         ),
         SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
         DocumentUploadCard(
-          title: 'registration.id_front'.tr(),
-          asset: state.emiratesIdFront,
-          onUpload: () => _capture(context, _IdSide.front),
+          title: 'registration.trade_licence_label'.tr(),
+          asset: state.tradeLicence,
+          onUpload: () => _capture(context),
         ),
-        SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-        DocumentUploadCard(
-          title: 'registration.id_back'.tr(),
-          asset: state.emiratesIdBack,
-          onUpload: () => _capture(context, _IdSide.back),
-        ),
-        SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-        AppButton(
-          label: 'registration.continue'.tr(),
-          onPressed: state.hasBothIdSides
-              ? () => context.push(RegistrationRoutes.reviewIdPhotos)
-              : null,
+        const Spacer(),
+        Row(
+          children: [
+            Expanded(
+              child: AppButtonPresets.secondary(
+                label: 'registration.back'.tr(),
+                onPressed: () => context.pop(),
+              ),
+            ),
+            SizedBox(width: responsiveDimension(AppSpacing.md)),
+            Expanded(
+              child: AppButtonPresets.primary(
+                label: 'registration.next'.tr(),
+                onPressed: state.tradeLicence == null
+                    ? null
+                    : () => context.push(RegistrationRoutes.extracting),
+                icon: AppSvgPicture.asset(
+                  AppSvgs.registrationArrowRight,
+                  width: responsiveDimension(ButtonTokens.iconSize),
+                  height: responsiveDimension(ButtonTokens.iconSize),
+                  colorFilter: ColorFilter.mode(colors.white, BlendMode.srcIn),
+                ),
+                iconPosition: AppButtonIconPosition.right,
+              ),
+            ),
+          ],
         ),
       ],
     );

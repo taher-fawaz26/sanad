@@ -10,10 +10,13 @@ environment:
 dependencies:
   app_assets:
     path: ../../app_assets
+  asset_picker:
+    path: ../../asset_picker
   core:
     path: ../../core
   design_system:
     path: ../../design_system
+  easy_localization: ^3.0.8
   equatable: ^2.1.0
   flutter:
     sdk: flutter

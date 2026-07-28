@@ -1,4 +1,6 @@
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -22,110 +24,129 @@ const _googleLogoSvg = '''
 </svg>
 ''';
 
+/// Step 1 — email entry.
+///
+/// Figma: `Signup` (`2142:14088`).
 class SignUpEmailPage extends HookWidget {
   const SignUpEmailPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final controller = useTextEditingController();
+    final controller = useTextEditingController(
+      text: context.read<RegistrationCubit>().state.email,
+    );
+    final formKey = useMemoized(GlobalKey<FormState>.new);
     final colors = context.appColors;
     final typography = context.appTypography;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        RegistrationHeader(
-          title: 'Sign Up Account',
-          subtitle: Text.rich(
-            TextSpan(
-              children: [
-                const TextSpan(text: 'Enter your '),
-                TextSpan(
-                  text: 'Email',
-                  style: TextStyle(color: colors.primary),
-                ),
-                const TextSpan(text: ' to create your account.'),
-              ],
+    void submit() {
+      if (!(formKey.currentState?.validate() ?? false)) return;
+      final email = controller.text.trim();
+      context.read<RegistrationCubit>().setEmail(email);
+      context.push(RegistrationRoutes.signUpOtp);
+    }
+
+    return Form(
+      key: formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          RegistrationHeader(
+            title: 'registration.sign_up_title'.tr(),
+            subtitle: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(text: 'registration.sign_up_subtitle_prefix'.tr()),
+                  TextSpan(
+                    text: 'registration.sign_up_email_word'.tr(),
+                    style: TextStyle(color: colors.primary),
+                  ),
+                  TextSpan(text: 'registration.sign_up_subtitle_suffix'.tr()),
+                ],
+              ),
             ),
           ),
-        ),
-        SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-        AppTextField(
-          controller: controller,
-          label: 'Email',
-          hint: 'eg. johnfrans@gmail.com',
-          keyboardType: TextInputType.emailAddress,
-          textInputAction: TextInputAction.done,
-        ),
-        SizedBox(height: responsiveDimension(AppSpacing.xl)),
-        AppButton(
-          label: 'Continue',
-          onPressed: () {
-            final email = controller.text.trim();
-            if (email.isEmpty) return;
-            context.read<RegistrationCubit>().setEmail(email);
-            context.push(RegistrationRoutes.signUpOtp);
-          },
-        ),
-        SizedBox(height: responsiveDimension(AppSpacing.xl)),
-        Row(
-          children: [
-            const Expanded(child: Divider()),
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: responsiveDimension(AppSpacing.md),
+          SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
+          AppTextField(
+            controller: controller,
+            label: 'registration.email_label'.tr(),
+            hint: 'registration.email_hint'.tr(),
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.done,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            onSubmitted: (_) => submit(),
+            validator: (value) {
+              if (!EmailValidator.isValid(value?.trim())) {
+                return 'registration.email_invalid'.tr();
+              }
+              return null;
+            },
+          ),
+          SizedBox(height: responsiveDimension(AppSpacing.xl)),
+          AppButton(
+            label: 'registration.continue'.tr(),
+            onPressed: submit,
+          ),
+          SizedBox(height: responsiveDimension(AppSpacing.xl)),
+          Row(
+            children: [
+              const Expanded(child: Divider()),
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: responsiveDimension(AppSpacing.md),
+                ),
+                child: Text(
+                  'registration.or'.tr(),
+                  style: typography.smallNormal.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
               ),
-              child: Text(
-                'Or',
-                style: typography.smallNormal.copyWith(
+              const Expanded(child: Divider()),
+            ],
+          ),
+          SizedBox(height: responsiveDimension(AppSpacing.md)),
+          Center(
+            child: Text.rich(
+              TextSpan(
+                style: typography.regularNormal.copyWith(
                   color: colors.textSecondary,
                 ),
-              ),
-            ),
-            const Expanded(child: Divider()),
-          ],
-        ),
-        SizedBox(height: responsiveDimension(AppSpacing.md)),
-        Center(
-          child: Text.rich(
-            TextSpan(
-              style: typography.regularNormal.copyWith(
-                color: colors.textSecondary,
-              ),
-              children: [
-                const TextSpan(text: 'I have an account? '),
-                TextSpan(
-                  text: 'Sign In',
-                  style: TextStyle(
-                    color: colors.primary,
-                    fontWeight: FontWeight.w600,
+                children: [
+                  TextSpan(text: 'registration.have_account'.tr()),
+                  TextSpan(
+                    text: 'registration.sign_in'.tr(),
+                    style: TextStyle(
+                      color: colors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () => context.pop(),
                   ),
-                  recognizer: TapGestureRecognizer()
-                    ..onTap = () => context.pop(),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-        SizedBox(height: responsiveDimension(AppSpacing.xl)),
-        OutlinedButton.icon(
-          onPressed: () {
-            // TODO(registration): trigger Google OAuth
-          },
-          icon: SvgPicture.string(_googleLogoSvg, width: 20, height: 20),
-          label: const Text('Sign in with Google'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: colors.textPrimary,
-            side: BorderSide(color: colors.border),
-            padding: EdgeInsets.symmetric(
-              vertical: responsiveDimension(14),
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: AppRadius.circularMd,
+          SizedBox(height: responsiveDimension(AppSpacing.xl)),
+          OutlinedButton.icon(
+            onPressed: () {
+              // TODO(registration): trigger Google OAuth
+            },
+            icon: SvgPicture.string(_googleLogoSvg, width: 20, height: 20),
+            label: Text('registration.google'.tr()),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: colors.textPrimary,
+              side: BorderSide(color: colors.border),
+              padding: EdgeInsets.symmetric(
+                vertical: responsiveDimension(14),
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: AppRadius.circularMd,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

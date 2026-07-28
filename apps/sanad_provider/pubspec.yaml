@@ -12,6 +12,8 @@ dependencies:
     path: ../../packages/app_assets
   app_logger:
     path: ../../packages/app_logger
+  asset_picker:
+    path: ../../packages/asset_picker
   auth:
     path: ../../packages/features/auth
   branches:

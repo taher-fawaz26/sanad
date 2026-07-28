@@ -75,5 +75,10 @@
 		<string>Sanad Provider uses your location to help you set the branch location on the map.</string>
 		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 		<string>Sanad Provider uses your location to help you set the branch location on the map.</string>
+		<!-- Camera / photo usage strings — required to capture and upload identity documents during registration -->
+		<key>NSCameraUsageDescription</key>
+		<string>Sanad Provider uses the camera to capture your Emirates ID and trade licence during registration.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Sanad Provider needs access to your photos so you can upload your Emirates ID and trade licence during registration.</string>
 	</dict>
 </plist>

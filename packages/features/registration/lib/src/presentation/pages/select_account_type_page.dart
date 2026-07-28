@@ -1,5 +1,6 @@
 import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -19,18 +20,14 @@ class SelectAccountTypePage extends HookWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const RegistrationHeader(
-          title: 'Select Account Type',
-          subtitle: Text(
-            "Choose whether you're signing up as an\n"
-            'Organization or an Individual.',
-          ),
+        RegistrationHeader(
+          title: 'registration.account_type_title'.tr(),
+          subtitle: Text('registration.account_type_subtitle'.tr()),
         ),
         SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
         _AccountTypeCard(
-          title: 'Organization',
-          description: 'For companies that manage branches,\n'
-              'employees, and field workers.',
+          title: 'registration.organization'.tr(),
+          description: 'registration.organization_desc'.tr(),
           iconPath: AppSvgs.registrationOrganization,
           type: RegistrationAccountType.organization,
           selected: selected.value,
@@ -38,9 +35,8 @@ class SelectAccountTypePage extends HookWidget {
         ),
         SizedBox(height: responsiveDimension(AppSpacing.lg)),
         _AccountTypeCard(
-          title: 'Individual',
-          description: 'For independent professionals who provide\n'
-              'services on their own.',
+          title: 'registration.individual'.tr(),
+          description: 'registration.individual_desc'.tr(),
           iconPath: AppSvgs.registrationIndividual,
           type: RegistrationAccountType.individual,
           selected: selected.value,
@@ -48,16 +44,17 @@ class SelectAccountTypePage extends HookWidget {
         ),
         const Spacer(),
         AppButton(
-          label: 'Continue',
+          label: 'registration.continue'.tr(),
           onPressed: selected.value == null
               ? null
               : () {
                   final type = selected.value!;
                   context.read<RegistrationCubit>().setAccountType(type);
-                  if (type == RegistrationAccountType.organization) {
-                    context.push(RegistrationRoutes.organizationDetails);
-                  }
-                  // Individual path: next screen not implemented yet.
+                  context.push(
+                    type == RegistrationAccountType.organization
+                        ? RegistrationRoutes.organizationDetails
+                        : RegistrationRoutes.individualDetails,
+                  );
                 },
         ),
       ],

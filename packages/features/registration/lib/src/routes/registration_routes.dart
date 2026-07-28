@@ -1,24 +1,32 @@
 /// Route path constants for the registration flow.
+///
+/// All steps are nested under `/signup` and share a single `RegistrationCubit`
+/// provided by the flow's `ShellRoute` (see `RegistrationModule`).
 abstract final class RegistrationRoutes {
   RegistrationRoutes._();
 
   static const signUpEmail = '/signup';
-
-  /// Relative: `otp` → full: `/signup/otp`
   static const signUpOtp = '/signup/otp';
-
-  /// Relative: `account-type` → full: `/signup/account-type`
   static const selectAccountType = '/signup/account-type';
 
-  /// Relative: `organization-details` → full: `/signup/organization-details`
+  /// Organization path — business + representative details.
   static const organizationDetails = '/signup/organization-details';
 
-  /// Relative: `identity-verification` → full: `/signup/identity-verification`
+  /// Individual path — full name.
+  static const individualDetails = '/signup/individual-details';
+
+  /// Shared — Emirates ID front/back upload.
   static const identityVerification = '/signup/identity-verification';
 
-  /// Relative: `scan-emirates-id-front` → full: `/signup/scan-emirates-id-front`
-  static const scanEmiratesIdFront = '/signup/scan-emirates-id-front';
+  /// Shared — full-screen review of the captured Emirates ID photos.
+  static const reviewIdPhotos = '/signup/review-id-photos';
 
-  /// Relative: `capture-preview-front` → full: `/signup/capture-preview-front`
-  static const capturePreviewFront = '/signup/capture-preview-front';
+  /// Organization only — trade licence upload.
+  static const tradeLicence = '/signup/trade-licence';
+
+  /// Shared — full-screen "AI extracting" loading step.
+  static const extracting = '/signup/extracting';
+
+  /// Shared — review of the extracted document information.
+  static const reviewInformation = '/signup/review';
 }

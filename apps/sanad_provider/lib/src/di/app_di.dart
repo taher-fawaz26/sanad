@@ -1,4 +1,5 @@
 import 'package:app_logger/app_logger.dart';
+import 'package:asset_picker/asset_picker.dart';
 import 'package:auth/auth.dart';
 import 'package:branches/branches.dart';
 import 'package:core/core.dart';
@@ -76,6 +77,7 @@ Future<void> configureDependencies() async {
     WorkersModule(),
     InvitationModule(),
     RegistrationModule(),
+    AssetPickerModule(),
   ]);
   await moduleRegistry.initAll();
 

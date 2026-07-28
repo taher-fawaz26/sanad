@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:design_system/design_system.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,11 +9,16 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:otp/otp.dart';
 import 'package:registration/src/presentation/cubit/registration_cubit.dart';
+import 'package:registration/src/presentation/cubit/registration_state.dart';
 import 'package:registration/src/presentation/widgets/registration_header.dart';
 import 'package:registration/src/routes/registration_routes.dart';
 
 const _kResendCooldown = 90;
+const _kOtpLength = 5;
 
+/// Step 2 — OTP verification (simulated).
+///
+/// Figma: `otp` (`2142:14121`).
 class SignUpOtpPage extends HookWidget {
   const SignUpOtpPage({super.key});
 
@@ -35,37 +41,67 @@ class SignUpOtpPage extends HookWidget {
       return timer.cancel;
     }, const []);
 
-    final email = context.watch<RegistrationCubit>().state.email;
+    final cubit = context.watch<RegistrationCubit>();
+    final email = cubit.state.email;
+    final isVerifying = cubit.state.otpStatus == OtpStatus.verifying;
     final colors = context.appColors;
     final typography = context.appTypography;
 
     final minutes = (secondsLeft.value ~/ 60).toString().padLeft(2, '0');
     final seconds = (secondsLeft.value % 60).toString().padLeft(2, '0');
 
-    void resend() {
+    Future<void> submit() async {
+      if (controller.text.length < _kOtpLength) {
+        showAppErrorSnackbar(
+          context: context,
+          title: 'registration.otp_invalid'.tr(),
+        );
+        return;
+      }
+      final ok = await context.read<RegistrationCubit>().verifyOtp(
+            controller.text,
+          );
+      if (!context.mounted) return;
+      if (ok) {
+        unawaited(context.push(RegistrationRoutes.selectAccountType));
+      } else {
+        showAppErrorSnackbar(
+          context: context,
+          title: 'registration.otp_failed'.tr(),
+        );
+      }
+    }
+
+    Future<void> resend() async {
       if (!canResend.value) return;
       secondsLeft.value = _kResendCooldown;
       canResend.value = false;
       controller.clear();
-      // TODO(registration): trigger resend OTP API call
+      await context.read<RegistrationCubit>().resendOtp();
+      if (!context.mounted) return;
+      showAppSnackbar(
+        context: context,
+        title: 'registration.otp_resent'.tr(),
+        color: AppSnackbarColor.primary,
+      );
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         RegistrationHeader(
-          title: 'Enter OTP',
+          title: 'registration.otp_title'.tr(),
           subtitle: Text.rich(
             TextSpan(
               children: [
-                const TextSpan(text: 'Please enter the OTP sent to\n'),
+                TextSpan(text: '${'registration.otp_subtitle'.tr()}\n'),
                 TextSpan(
                   text: email,
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 const TextSpan(text: ' '),
                 TextSpan(
-                  text: 'change',
+                  text: 'registration.change'.tr(),
                   style: TextStyle(
                     color: colors.primary,
                     fontWeight: FontWeight.w600,
@@ -82,16 +118,14 @@ class SignUpOtpPage extends HookWidget {
           child: AppOtpField(
             controller: controller,
             autofocus: true,
-            onCompleted: (_) {},
+            onCompleted: (_) => submit(),
           ),
         ),
         SizedBox(height: responsiveDimension(AppSpacing.xl)),
         AppButton(
-          label: 'Submit',
-          onPressed: () {
-            if (controller.text.length < 5) return;
-            context.push(RegistrationRoutes.selectAccountType);
-          },
+          label: 'registration.submit'.tr(),
+          isLoading: isVerifying,
+          onPressed: submit,
         ),
         SizedBox(height: responsiveDimension(AppSpacing.xl)),
         if (!canResend.value)
@@ -112,11 +146,11 @@ class SignUpOtpPage extends HookWidget {
                 color: colors.textSecondary,
               ),
               children: [
-                const TextSpan(text: "Don't receive OTP ? "),
+                TextSpan(text: 'registration.otp_not_received'.tr()),
                 TextSpan(
-                  text: 'Send again',
+                  text: 'registration.resend'.tr(),
                   style: TextStyle(
-                    color: colors.primary,
+                    color: canResend.value ? colors.primary : colors.textMuted,
                     fontWeight: FontWeight.w600,
                   ),
                   recognizer: canResend.value
