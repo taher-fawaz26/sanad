@@ -197,6 +197,7 @@ Future<T?> showAppActionSheet<T>({
   VoidCallback? onCancel,
   bool showCancel = true,
   bool isScrollControlled = false,
+  bool useRootNavigator = false,
 }) {
   final colors = context.appColors;
   final typography = context.appTypography;
@@ -210,6 +211,7 @@ Future<T?> showAppActionSheet<T>({
   return showModalBottomSheet<T>(
     context: context,
     isScrollControlled: isScrollControlled,
+    useRootNavigator: useRootNavigator,
     backgroundColor: Colors.transparent,
     barrierColor: spec.barrierColor,
     builder: (context) => AppActionSheet(

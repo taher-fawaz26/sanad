@@ -1,16 +1,25 @@
 import 'package:auth/src/data/endpoints/auth_api_paths.dart';
-import 'package:auth/src/data/models/login_response_model.dart';
-import 'package:auth/src/data/models/requests/login_model_request.dart';
-import 'package:auth/src/data/models/requests/register_model_request.dart';
+import 'package:auth/src/data/models/email_verify_response.dart';
+import 'package:auth/src/data/models/requests/email_otp_request.dart';
+import 'package:auth/src/data/models/requests/verify_email_otp_request.dart';
+import 'package:auth/src/domain/entities/email_auth_result.dart';
 import 'package:core/core.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:network/network.dart';
 
-/// Remote data source interface for core auth operations.
+/// Remote data source for passwordless email-OTP authentication.
 abstract class AuthRemoteDataSource {
-  TaskEither<Failure, LoginResponseModel> login(LoginModelRequest model);
+  /// Requests an OTP to be delivered to `model.email`.
+  TaskEither<Failure, void> requestEmailOtp(EmailOtpRequest model);
+
+  /// Verifies the OTP and resolves to either an authenticated session or an
+  /// onboarding hand-off.
+  TaskEither<Failure, EmailAuthResult> verifyEmailOtp(
+    VerifyEmailOtpRequest model,
+  );
+
   TaskEither<Failure, void> logout();
-  TaskEither<Failure, void> register(RegisterModelRequest model);
+
   TaskEither<Failure, void> deleteAccount({required String userSub});
 }
 
@@ -20,28 +29,30 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   final BaseApiClient _apiClient;
 
   @override
-  TaskEither<Failure, LoginResponseModel> login(LoginModelRequest model) =>
-      _apiClient.request<LoginResponseModel>(
-        path: AuthApiPaths.login,
+  TaskEither<Failure, void> requestEmailOtp(EmailOtpRequest model) =>
+      _apiClient.request<void>(
+        path: AuthApiPaths.emailRequestOtp,
+        method: RequestMethod.post,
+        body: model.toMap(),
+        parser: (_) {},
+      );
+
+  @override
+  TaskEither<Failure, EmailAuthResult> verifyEmailOtp(
+    VerifyEmailOtpRequest model,
+  ) =>
+      _apiClient.request<EmailAuthResult>(
+        path: AuthApiPaths.emailVerify,
         method: RequestMethod.post,
         body: model.toMap(),
         parser: (data) =>
-            LoginResponseModel.fromJson(data as Map<String, dynamic>),
+            EmailVerifyResponse.fromJson(data as Map<String, dynamic>),
       );
 
   @override
   TaskEither<Failure, void> logout() => _apiClient.request<void>(
-    path: AuthApiPaths.logout,
-    method: RequestMethod.post,
-    parser: (_) {},
-  );
-
-  @override
-  TaskEither<Failure, void> register(RegisterModelRequest model) =>
-      _apiClient.request<void>(
-        path: AuthApiPaths.register,
+        path: AuthApiPaths.logout,
         method: RequestMethod.post,
-        body: model.toMap(),
         parser: (_) {},
       );
 

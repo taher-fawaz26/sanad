@@ -2,10 +2,8 @@ import 'package:auth/auth.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:forgot_password/forgot_password.dart';
 import 'package:go_router/go_router.dart';
 import 'package:network/network.dart';
-import 'package:otp/otp.dart';
 import 'package:sanad_client/src/di/app_di.dart';
 import 'package:sanad_client/src/features/home/home_page.dart';
 import 'package:sanad_client/src/routing/client_routes.dart';
@@ -16,15 +14,6 @@ GoRouter buildClientRouter() {
   final routeContext = FeatureRouteContext(
     homeRoute: ClientRoutes.home,
     protectedRoutes: ClientRoutes.protected,
-    onRegisteredNeedsVerification: (context, identifier, isPhoneIdentifier) {
-      context.push(
-        OtpRoutes.otp,
-        extra: OtpArgs(
-          identifier: identifier,
-          type: isPhoneIdentifier ? IdentifierType.phone : IdentifierType.email,
-        ),
-      );
-    },
   );
 
   return GoRouter(
@@ -51,7 +40,13 @@ GoRouter buildClientRouter() {
       AuthShell.buildShellRoute(
         children: [
           ...moduleRegistry.allRoutes(routeContext),
-          AuthShell.combinedOtpRoute(),
+          AuthShell.otpRoute(
+            // The client app has no onboarding flow; a brand-new account
+            // returns to login (sign-up lives in the provider app).
+            onAuthenticated: (context) => context.go(ClientRoutes.home),
+            onOnboarding: (context, email, onboardingToken) =>
+                context.go(AuthRoutes.login),
+          ),
         ],
       ),
       GoRoute(

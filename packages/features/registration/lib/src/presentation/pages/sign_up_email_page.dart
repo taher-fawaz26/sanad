@@ -1,3 +1,4 @@
+import 'package:auth/auth.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -7,9 +8,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:localization/localization.dart';
 import 'package:registration/src/presentation/cubit/registration_cubit.dart';
 import 'package:registration/src/presentation/widgets/registration_header.dart';
-import 'package:registration/src/routes/registration_routes.dart';
 
 const _googleLogoSvg = '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -24,9 +25,10 @@ const _googleLogoSvg = '''
 </svg>
 ''';
 
-/// Step 1 — email entry.
+/// Step 1 — email entry (Sign Up entry point).
 ///
-/// Figma: `Signup` (`2142:14088`).
+/// Requests a one-time code via the shared auth OTP flow, then hands off to the
+/// shared OTP screen. Figma: `Signup` (`2142:14088`).
 class SignUpEmailPage extends HookWidget {
   const SignUpEmailPage({super.key});
 
@@ -43,109 +45,127 @@ class SignUpEmailPage extends HookWidget {
       if (!(formKey.currentState?.validate() ?? false)) return;
       final email = controller.text.trim();
       context.read<RegistrationCubit>().setEmail(email);
-      context.push(RegistrationRoutes.signUpOtp);
+      context.read<AuthBloc>().add(AuthRequestOtpEvent(email));
     }
 
-    return Form(
-      key: formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          RegistrationHeader(
-            title: 'registration.sign_up_title'.tr(),
-            subtitle: Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(text: 'registration.sign_up_subtitle_prefix'.tr()),
-                  TextSpan(
-                    text: 'registration.sign_up_email_word'.tr(),
-                    style: TextStyle(color: colors.primary),
-                  ),
-                  TextSpan(text: 'registration.sign_up_subtitle_suffix'.tr()),
-                ],
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthOtpSentState) {
+          context.push(AuthRoutes.otp, extra: state.email);
+        } else if (state is AuthOtpRequestFailureState) {
+          showAppErrorSnackbar(
+            context: context,
+            title: state.failure.localizedMessage(),
+          );
+        }
+      },
+      child: Form(
+        key: formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            RegistrationHeader(
+              title: 'registration.sign_up_title'.tr(),
+              subtitle: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(text: 'registration.sign_up_subtitle_prefix'.tr()),
+                    TextSpan(
+                      text: 'registration.sign_up_email_word'.tr(),
+                      style: TextStyle(color: colors.primary),
+                    ),
+                    TextSpan(text: 'registration.sign_up_subtitle_suffix'.tr()),
+                  ],
+                ),
               ),
             ),
-          ),
-          SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-          AppTextField(
-            controller: controller,
-            label: 'registration.email_label'.tr(),
-            hint: 'registration.email_hint'.tr(),
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.done,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
-            onSubmitted: (_) => submit(),
-            validator: (value) {
-              if (!EmailValidator.isValid(value?.trim())) {
-                return 'registration.email_invalid'.tr();
-              }
-              return null;
-            },
-          ),
-          SizedBox(height: responsiveDimension(AppSpacing.xl)),
-          AppButton(
-            label: 'registration.continue'.tr(),
-            onPressed: submit,
-          ),
-          SizedBox(height: responsiveDimension(AppSpacing.xl)),
-          Row(
-            children: [
-              const Expanded(child: Divider()),
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: responsiveDimension(AppSpacing.md),
+            SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
+            AppTextField(
+              controller: controller,
+              label: 'registration.email_label'.tr(),
+              hint: 'registration.email_hint'.tr(),
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.done,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              onSubmitted: (_) => submit(),
+              validator: (value) {
+                if (!EmailValidator.isValid(value?.trim())) {
+                  return 'registration.email_invalid'.tr();
+                }
+                return null;
+              },
+            ),
+            SizedBox(height: responsiveDimension(AppSpacing.xl)),
+            BlocBuilder<AuthBloc, AuthState>(
+              builder: (context, state) {
+                final isLoading = state is AuthOtpRequestLoadingState;
+                return AppButton(
+                  label: 'registration.continue'.tr(),
+                  isLoading: isLoading,
+                  onPressed: isLoading ? null : submit,
+                );
+              },
+            ),
+            SizedBox(height: responsiveDimension(AppSpacing.xl)),
+            Row(
+              children: [
+                const Expanded(child: Divider()),
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: responsiveDimension(AppSpacing.md),
+                  ),
+                  child: Text(
+                    'registration.or'.tr(),
+                    style: typography.smallNormal.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
                 ),
-                child: Text(
-                  'registration.or'.tr(),
-                  style: typography.smallNormal.copyWith(
+                const Expanded(child: Divider()),
+              ],
+            ),
+            SizedBox(height: responsiveDimension(AppSpacing.md)),
+            Center(
+              child: Text.rich(
+                TextSpan(
+                  style: typography.regularNormal.copyWith(
                     color: colors.textSecondary,
                   ),
-                ),
-              ),
-              const Expanded(child: Divider()),
-            ],
-          ),
-          SizedBox(height: responsiveDimension(AppSpacing.md)),
-          Center(
-            child: Text.rich(
-              TextSpan(
-                style: typography.regularNormal.copyWith(
-                  color: colors.textSecondary,
-                ),
-                children: [
-                  TextSpan(text: 'registration.have_account'.tr()),
-                  TextSpan(
-                    text: 'registration.sign_in'.tr(),
-                    style: TextStyle(
-                      color: colors.primary,
-                      fontWeight: FontWeight.w600,
+                  children: [
+                    TextSpan(text: 'registration.have_account'.tr()),
+                    TextSpan(
+                      text: 'registration.sign_in'.tr(),
+                      style: TextStyle(
+                        color: colors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = () => context.pop(),
                     ),
-                    recognizer: TapGestureRecognizer()
-                      ..onTap = () => context.pop(),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-          SizedBox(height: responsiveDimension(AppSpacing.xl)),
-          OutlinedButton.icon(
-            onPressed: () {
-              // TODO(registration): trigger Google OAuth
-            },
-            icon: SvgPicture.string(_googleLogoSvg, width: 20, height: 20),
-            label: Text('registration.google'.tr()),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: colors.textPrimary,
-              side: BorderSide(color: colors.border),
-              padding: EdgeInsets.symmetric(
-                vertical: responsiveDimension(14),
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: AppRadius.circularMd,
+            SizedBox(height: responsiveDimension(AppSpacing.xl)),
+            OutlinedButton.icon(
+              onPressed: () {
+                // TODO(registration): trigger Google OAuth
+              },
+              icon: SvgPicture.string(_googleLogoSvg, width: 20, height: 20),
+              label: Text('registration.google'.tr()),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: colors.textPrimary,
+                side: BorderSide(color: colors.border),
+                padding: EdgeInsets.symmetric(
+                  vertical: responsiveDimension(14),
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: AppRadius.circularMd,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -3,10 +3,8 @@ import 'package:auth/auth.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:forgot_password/forgot_password.dart';
 import 'package:localization/localization.dart';
 import 'package:network/network.dart';
-import 'package:otp/otp.dart';
 import 'package:sanad_client/src/config/app_config.dart';
 import 'package:storage/storage.dart';
 
@@ -46,8 +44,6 @@ Future<void> configureDependencies() async {
   // ── Feature modules ────────────────────────────────────────────────────────
   moduleRegistry = ModuleRegistry([
     AuthModule(),
-    OtpModule(),
-    ForgotPasswordModule(),
   ]);
   await moduleRegistry.initAll();
 

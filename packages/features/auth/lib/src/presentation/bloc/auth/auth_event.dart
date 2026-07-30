@@ -7,25 +7,25 @@ sealed class AuthEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class AuthLoginEvent extends AuthEvent {
-  const AuthLoginEvent(this.identifier, this.password);
+/// Request an OTP for [email] (shared by Sign In and Sign Up).
+class AuthRequestOtpEvent extends AuthEvent {
+  const AuthRequestOtpEvent(this.email);
 
-  final String identifier;
-  final String password;
+  final String email;
 
   @override
-  List<Object?> get props => [identifier, password];
+  List<Object?> get props => [email];
 }
 
-class AuthRegisterEvent extends AuthEvent {
-  const AuthRegisterEvent(this.identifier, this.password, this.type);
+/// Verify the [otp] entered for [email].
+class AuthVerifyOtpEvent extends AuthEvent {
+  const AuthVerifyOtpEvent({required this.email, required this.otp});
 
-  final String identifier;
-  final String password;
-  final UserType type;
+  final String email;
+  final String otp;
 
   @override
-  List<Object?> get props => [identifier, password, type];
+  List<Object?> get props => [email, otp];
 }
 
 class AuthLogoutEvent extends AuthEvent {}

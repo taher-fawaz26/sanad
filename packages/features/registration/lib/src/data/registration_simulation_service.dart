@@ -18,19 +18,6 @@ class RegistrationSimulationService {
 
   final Random _random;
 
-  /// Simulates verifying the OTP the user typed.
-  Future<void> verifyOtp(String code) async {
-    // TODO(registration): call the real verify-OTP endpoint and fail when the
-    // code is rejected instead of always succeeding.
-    await Future<void>.delayed(const Duration(milliseconds: 900));
-  }
-
-  /// Simulates re-sending the OTP.
-  Future<void> resendOtp(String email) async {
-    // TODO(registration): call the real resend-OTP endpoint.
-    await Future<void>.delayed(const Duration(milliseconds: 500));
-  }
-
   /// Simulates the "AI Extracting document information" step.
   ///
   /// [includeTradeLicence] is `true` for the organization path only.

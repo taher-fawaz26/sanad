@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:registration/src/data/models/extraction_result.dart';
 import 'package:registration/src/presentation/cubit/registration_cubit.dart';
 import 'package:registration/src/presentation/cubit/registration_state.dart';
+import 'package:registration/src/presentation/models/registration_document_slot.dart';
 import 'package:registration/src/presentation/widgets/registration_header.dart';
 import 'package:registration/src/presentation/widgets/review_section_card.dart';
 import 'package:registration/src/presentation/widgets/select_capture_method_sheet.dart';
@@ -27,8 +28,12 @@ class ReviewInformationPage extends StatelessWidget {
     try {
       final asset = await captureRegistrationDocument(context);
       if (asset == null || !context.mounted) return;
-      final cubit = context.read<RegistrationCubit>()
-        ..setEmiratesIdFront(asset);
+      final cubit = context.read<RegistrationCubit>();
+      await cubit.uploadDocument(
+        slot: RegistrationDocumentSlot.emiratesIdFront,
+        asset: asset,
+      );
+      if (!context.mounted) return;
       await cubit.extractDocuments();
     } on AssetPickerException {
       if (!context.mounted) return;
@@ -43,7 +48,12 @@ class ReviewInformationPage extends StatelessWidget {
     try {
       final asset = await captureRegistrationDocument(context);
       if (asset == null || !context.mounted) return;
-      final cubit = context.read<RegistrationCubit>()..setTradeLicence(asset);
+      final cubit = context.read<RegistrationCubit>();
+      await cubit.uploadDocument(
+        slot: RegistrationDocumentSlot.tradeLicence,
+        asset: asset,
+      );
+      if (!context.mounted) return;
       await cubit.extractDocuments();
     } on AssetPickerException {
       if (!context.mounted) return;
@@ -76,7 +86,7 @@ class ReviewInformationPage extends StatelessWidget {
           title: 'registration.emirates_id_details'.tr(),
           issue: extraction.emiratesId.issue,
           fields: _emiratesIdFields(extraction.emiratesId),
-          thumbnail: state.emiratesIdFront,
+          thumbnail: state.emiratesIdFront?.asset,
           onReplace: () => _replaceEmiratesId(context),
         ),
         if (extraction.tradeLicence != null) ...[
@@ -85,7 +95,7 @@ class ReviewInformationPage extends StatelessWidget {
             title: 'registration.trade_licence_details'.tr(),
             issue: extraction.tradeLicence!.issue,
             fields: _tradeLicenceFields(extraction.tradeLicence!),
-            thumbnail: state.tradeLicence,
+            thumbnail: state.tradeLicence?.asset,
             onReplace: () => _replaceTradeLicence(context),
           ),
         ],

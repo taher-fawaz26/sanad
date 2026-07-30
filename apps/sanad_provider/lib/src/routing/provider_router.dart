@@ -3,10 +3,8 @@ import 'package:branches/branches.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:forgot_password/forgot_password.dart';
 import 'package:go_router/go_router.dart';
 import 'package:network/network.dart';
-import 'package:otp/otp.dart';
 import 'package:registration/registration.dart';
 import 'package:sanad_provider/src/di/app_di.dart';
 import 'package:sanad_provider/src/features/home/home_page.dart';
@@ -14,6 +12,7 @@ import 'package:sanad_provider/src/features/messages/messages_page.dart';
 import 'package:sanad_provider/src/features/requests/requests_page.dart';
 import 'package:sanad_provider/src/features/settings/settings_page.dart';
 import 'package:sanad_provider/src/routing/app_routes.dart';
+import 'package:sanad_provider/src/routing/provider_navigator.dart';
 import 'package:sanad_provider/src/routing/shell/main_shell.dart';
 
 /// sanad_provider top-level router, independent from sanad_client.
@@ -26,29 +25,18 @@ GoRouter buildProviderRouter() {
       ...AppRoutes.protected,
       ...BranchRoutes.protectedRoutes,
     },
-    onRegisteredNeedsVerification: (context, identifier, isPhoneIdentifier) {
-      context.push(
-        OtpRoutes.otp,
-        extra: OtpArgs(
-          identifier: identifier,
-          type: isPhoneIdentifier ? IdentifierType.phone : IdentifierType.email,
-        ),
-      );
-    },
   );
 
   // Module-contributed routes, with the auth-provided `/login` route swapped
-  // for an app-owned one whose "Register" button opens the new registration
-  // flow directly (no redirect, and without modifying the auth package).
+  // for an app-owned one whose "Sign up" link opens the registration flow.
   final moduleRoutes = [
     for (final route in moduleRegistry.allRoutes(routeContext))
       if (route is GoRoute && route.path == AuthRoutes.login)
         GoRoute(
           path: AuthRoutes.login,
           builder: (context, state) => LoginPage(
-            onAuthenticated: () => context.go(AppRoutes.home),
-            onForgotPassword: () =>
-                context.push(AuthModule.forgotPasswordPath),
+            onOtpSent: (email) =>
+                context.push(AuthRoutes.otp, extra: email),
             onRegister: () => context.push(RegistrationRoutes.signUpEmail),
           ),
         )
@@ -57,6 +45,7 @@ GoRouter buildProviderRouter() {
   ];
 
   return GoRouter(
+    navigatorKey: providerRootNavigatorKey,
     initialLocation: AuthRoutes.splash,
     refreshListenable: authStatus,
     errorBuilder: (context, state) => AppNotFoundPage(
@@ -80,7 +69,16 @@ GoRouter buildProviderRouter() {
       AuthShell.buildShellRoute(
         children: [
           ...moduleRoutes,
-          AuthShell.combinedOtpRoute(),
+          AuthShell.otpRoute(
+            onAuthenticated: (context) => context.go(AppRoutes.home),
+            onOnboarding: (context, email, onboardingToken) => context.go(
+              RegistrationRoutes.selectAccountType,
+              extra: OnboardingArgs(
+                email: email,
+                onboardingToken: onboardingToken,
+              ),
+            ),
+          ),
           StatefulShellRoute.indexedStack(
             builder: (context, state, navigationShell) =>
                 MainShell(navigationShell: navigationShell),

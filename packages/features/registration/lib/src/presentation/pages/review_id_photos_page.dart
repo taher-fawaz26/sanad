@@ -6,42 +6,39 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:registration/src/presentation/cubit/registration_cubit.dart';
+import 'package:registration/src/presentation/flows/emirates_id_scan_flow.dart';
+import 'package:registration/src/presentation/models/emirates_id_scan_session.dart';
 import 'package:registration/src/presentation/widgets/captured_image.dart';
 import 'package:registration/src/presentation/widgets/registration_scan_chrome.dart';
-import 'package:registration/src/presentation/widgets/select_capture_method_sheet.dart';
-import 'package:registration/src/routes/registration_routes.dart';
 
 const double _kCardAspect = 254.76 / 156.49;
 
 /// Step 6 — full-screen review of the captured Emirates ID photos.
 ///
-/// Figma: `Review Both Sides` (`2897:13666`). Shows the real captured front and
-/// back images with a per-side retake option before continuing.
+/// Figma: `Review Both Sides` (`2897:13666`). Shows locally captured front and
+/// back images with a per-side retake option before returning to Identity
+/// Verification.
 class ReviewIdPhotosPage extends StatelessWidget {
   const ReviewIdPhotosPage({super.key});
 
   Future<void> _retake(BuildContext context, {required bool front}) async {
-    try {
-      final asset = await captureRegistrationDocument(context);
-      if (asset == null || !context.mounted) return;
-      final cubit = context.read<RegistrationCubit>();
-      front ? cubit.setEmiratesIdFront(asset) : cubit.setEmiratesIdBack(asset);
-    } on AssetPickerException {
-      if (!context.mounted) return;
-      showAppErrorSnackbar(
-        context: context,
-        title: 'registration.capture_failed'.tr(),
-      );
-    }
+    await EmiratesIdScanFlow.start(
+      context,
+      retakeSide:
+          front ? EmiratesIdScanSide.front : EmiratesIdScanSide.back,
+      launch: EmiratesIdScanLaunch.review,
+    );
   }
 
   void _confirm(BuildContext context) {
-    final isOrg = context.read<RegistrationCubit>().state.isOrganization;
-    context.push(
-      isOrg
-          ? RegistrationRoutes.tradeLicence
-          : RegistrationRoutes.extracting,
-    );
+    final cubit = context.read<RegistrationCubit>();
+    final state = cubit.state;
+    final front = state.emiratesIdFront?.asset;
+    final back = state.emiratesIdBack?.asset;
+    if (front == null || back == null) return;
+
+    cubit.setEmiratesIdLocal(front: front, back: back);
+    context.pop();
   }
 
   @override
@@ -70,17 +67,17 @@ class ReviewIdPhotosPage extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  if (state.emiratesIdFront != null)
+                  if (state.emiratesIdFront?.asset != null)
                     _PhotoTile(
                       label: 'registration.front_side'.tr(),
-                      asset: state.emiratesIdFront!,
+                      asset: state.emiratesIdFront!.asset,
                       onRetake: () => _retake(context, front: true),
                     ),
                   SizedBox(height: responsiveDimension(AppSpacing.lg)),
-                  if (state.emiratesIdBack != null)
+                  if (state.emiratesIdBack?.asset != null)
                     _PhotoTile(
                       label: 'registration.back_side'.tr(),
-                      asset: state.emiratesIdBack!,
+                      asset: state.emiratesIdBack!.asset,
                       onRetake: () => _retake(context, front: false),
                     ),
                 ],
@@ -96,7 +93,9 @@ class ReviewIdPhotosPage extends StatelessWidget {
             ),
             child: AppButtonPresets.primary(
               label: 'registration.confirm_photos'.tr(),
-              onPressed: () => _confirm(context),
+              onPressed: state.hasBothIdSidesCaptured
+                  ? () => _confirm(context)
+                  : null,
             ),
           ),
         ],

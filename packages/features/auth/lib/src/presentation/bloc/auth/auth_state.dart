@@ -11,21 +11,24 @@ class AuthInitialState extends AuthState {
   const AuthInitialState();
 }
 
-class AuthRegisterLoadingState extends AuthState {
-  const AuthRegisterLoadingState();
+// ─── Request OTP ────────────────────────────────────────────────────────────
+
+class AuthOtpRequestLoadingState extends AuthState {
+  const AuthOtpRequestLoadingState();
 }
 
-class AuthRegisterSuccessState extends AuthState {
-  const AuthRegisterSuccessState(this.message);
+/// OTP dispatched — navigate to the shared OTP screen for [email].
+class AuthOtpSentState extends AuthState {
+  const AuthOtpSentState(this.email);
 
-  final String message;
+  final String email;
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [email];
 }
 
-class AuthRegisterFailureState extends AuthState {
-  const AuthRegisterFailureState(this.failure);
+class AuthOtpRequestFailureState extends AuthState {
+  const AuthOtpRequestFailureState(this.failure);
 
   final Failure failure;
 
@@ -33,12 +36,15 @@ class AuthRegisterFailureState extends AuthState {
   List<Object?> get props => [failure];
 }
 
-class AuthLoginLoadingState extends AuthState {
-  const AuthLoginLoadingState();
+// ─── Verify OTP ─────────────────────────────────────────────────────────────
+
+class AuthOtpVerifyLoadingState extends AuthState {
+  const AuthOtpVerifyLoadingState();
 }
 
-class AuthLoginSuccessState extends AuthState {
-  const AuthLoginSuccessState(this.user);
+/// Existing user — session started, navigate to the dashboard.
+class AuthAuthenticatedState extends AuthState {
+  const AuthAuthenticatedState(this.user);
 
   final UserEntity user;
 
@@ -46,8 +52,22 @@ class AuthLoginSuccessState extends AuthState {
   List<Object?> get props => [user];
 }
 
-class AuthLoginFailureState extends AuthState {
-  const AuthLoginFailureState(this.failure);
+/// New user — must complete onboarding; carries the email + onboarding token.
+class AuthOnboardingRequiredState extends AuthState {
+  const AuthOnboardingRequiredState({
+    required this.email,
+    required this.onboardingToken,
+  });
+
+  final String email;
+  final String onboardingToken;
+
+  @override
+  List<Object?> get props => [email, onboardingToken];
+}
+
+class AuthOtpVerifyFailureState extends AuthState {
+  const AuthOtpVerifyFailureState(this.failure);
 
   final Failure failure;
 
@@ -55,10 +75,7 @@ class AuthLoginFailureState extends AuthState {
   List<Object?> get props => [failure];
 }
 
-/// Login failed because the account is not verified — navigate to OTP.
-class AuthLoginUnverifiedState extends AuthState {
-  const AuthLoginUnverifiedState();
-}
+// ─── Logout ─────────────────────────────────────────────────────────────────
 
 class AuthLogoutLoadingState extends AuthState {
   const AuthLogoutLoadingState();
@@ -82,6 +99,8 @@ class AuthLogoutFailureState extends AuthState {
   List<Object?> get props => [failure];
 }
 
+// ─── Delete account ───────────────────────────────────────────────────────
+
 class AuthDeleteAccountLoadingState extends AuthState {
   const AuthDeleteAccountLoadingState(this.user);
 
@@ -100,6 +119,8 @@ class AuthDeleteAccountFailureState extends AuthState {
   @override
   List<Object?> get props => [failure, user];
 }
+
+// ─── Session check (splash) ─────────────────────────────────────────────────
 
 class AuthCheckSignInStatusLoadingState extends AuthState {
   const AuthCheckSignInStatusLoadingState();

@@ -1,17 +1,16 @@
 import 'package:auth/src/di/auth_di.dart';
-import 'package:auth/src/domain/enums/user_type.dart';
 import 'package:auth/src/presentation/pages/login_page.dart';
-import 'package:auth/src/presentation/pages/register_page.dart';
 import 'package:auth/src/presentation/pages/splash_page.dart';
 import 'package:auth/src/routes/auth_routes.dart';
 import 'package:core/core.dart';
 import 'package:go_router/go_router.dart';
 
 /// Auth feature module — DI and routes.
+///
+/// Contributes the splash and (email-only) login routes. The shared OTP route
+/// is composed by each app via `AuthShell.otpRoute` so the app can wire its own
+/// post-verification navigation (dashboard vs onboarding).
 class AuthModule extends FeatureModule {
-  /// Forgot-password path constant — avoids circular package dependency.
-  static const forgotPasswordPath = '/forgot-password';
-
   @override
   String get name => 'auth';
 
@@ -26,9 +25,6 @@ class AuthModule extends FeatureModule {
 
   @override
   List<RouteBase> routes(FeatureRouteContext ctx) {
-    final userType = ctx.userType == FeatureUserType.provider
-        ? UserType.provider
-        : UserType.client;
     final home = ctx.homeRoute;
 
     return [
@@ -42,23 +38,7 @@ class AuthModule extends FeatureModule {
       GoRoute(
         path: AuthRoutes.login,
         builder: (context, state) => LoginPage(
-          onAuthenticated: () => context.go(home),
-          onForgotPassword: () => context.push(forgotPasswordPath),
-          onRegister: () => context.push(AuthRoutes.register),
-        ),
-      ),
-      GoRoute(
-        path: AuthRoutes.register,
-        builder: (context, state) => RegisterPage(
-          userType: userType,
-          onSignIn: () => context.go(AuthRoutes.login),
-          onRegistered: (identifier, mode) {
-            ctx.onRegisteredNeedsVerification?.call(
-              context,
-              identifier,
-              mode == RegisterIdentifierMode.phone,
-            );
-          },
+          onOtpSent: (email) => context.push(AuthRoutes.otp, extra: email),
         ),
       ),
     ];

@@ -5,5 +5,8 @@
 abstract final class AuthRoutes {
   static const splash = '/';
   static const login = '/login';
-  static const register = '/register';
+
+  /// Shared passwordless OTP screen (Sign In + Sign Up). Expects the email
+  /// address as the route `extra`.
+  static const otp = '/otp';
 }

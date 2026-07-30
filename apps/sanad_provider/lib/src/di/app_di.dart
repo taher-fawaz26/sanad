@@ -5,15 +5,14 @@ import 'package:branches/branches.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:forgot_password/forgot_password.dart';
 import 'package:invitation/invitation.dart';
 import 'package:localization/localization.dart';
 import 'package:maps/maps.dart';
 import 'package:network/network.dart';
-import 'package:otp/otp.dart';
 import 'package:permissions/permissions.dart';
 import 'package:registration/registration.dart';
 import 'package:sanad_provider/src/config/app_config.dart';
+import 'package:sanad_provider/src/routing/provider_navigator.dart';
 import 'package:services/services.dart';
 import 'package:storage/storage.dart';
 import 'package:workers/workers.dart';
@@ -70,14 +69,19 @@ Future<void> configureDependencies() async {
       ),
     ),
     AuthModule(),
-    OtpModule(),
-    ForgotPasswordModule(),
     BranchesModule(),
     ServicesModule(),
     WorkersModule(),
     InvitationModule(),
     RegistrationModule(),
-    AssetPickerModule(),
+    AssetPickerModule(
+      config: AssetPickerConfig(
+        scannerNavigatorKey: providerRootNavigatorKey,
+        documentScannerConfig: const DocumentScannerConfig(
+          requireBothSides: false,
+        ),
+      ),
+    ),
   ]);
   await moduleRegistry.initAll();
 

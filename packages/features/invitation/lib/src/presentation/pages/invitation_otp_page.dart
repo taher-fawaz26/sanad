@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:invitation/src/domain/entities/invitation_mock.dart';
 import 'package:invitation/src/presentation/widgets/invitation_screen_shell.dart';
 import 'package:invitation/src/routes/invitation_routes.dart';
-import 'package:otp/otp.dart';
 
 /// Mocked resend cooldown matching the Figma countdown (`01:30`).
 const _resendCooldown = Duration(seconds: 90);

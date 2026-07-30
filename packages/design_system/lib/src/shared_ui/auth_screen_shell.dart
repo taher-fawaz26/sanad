@@ -1,145 +1,277 @@
 import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
-import 'package:design_system/src/dimensions/responsive_dimension.dart';
-import 'package:design_system/src/theme/colors/app_colors.dart';
 import 'package:flutter/material.dart';
 
 const _kGradientStart = Color(0xFF10412F);
-const _kHeaderTop = 205.0;
-const _kLogoTop = 85.0;
+const _kExpandedHeight = 220.0;
 const _kLogoWidth = 225.0;
 const _kLogoHeight = 73.0;
+const _kSmallLogoWidth = 90.0;
+const _kSmallLogoHeight = 29.0;
 const _kCardTopRadius = 48.0;
 const _kHorizontalPadding = 20.0;
-const _kVerticalPadding = 64.0;
-
+const _kVerticalPadding = 40.0;
 const _kBackIconSize = 24.0;
-const _kBackTop = 56.0;
 
-/// Gradient header + white rounded-card scaffold shared by authentication and
+/// Sliver-based gradient-hero scaffold shared by authentication and
 /// registration screens.
 ///
-/// The gradient background and Sanad wordmark are fixed at the top. The white
-/// card sits at a constant offset (`_kHeaderTop`) from the top of the screen
-/// and always fills the remaining height — its size never adjusts to [child].
+/// The scroll owns the whole screen. The hero lives in a collapsing, pinned
+/// [SliverAppBar]:
+///   * Expanded — a large, centered Sanad logo over the gradient.
+///   * Collapsed — the logo shrinks and crossfades into a compact top bar
+///     showing a small logo alongside the page [title].
 ///
-/// [child] is placed inside the card with 20 dp horizontal and 64 dp vertical
-/// padding (matching the Figma `Signup` / `OTP` / `Select Account Type` specs).
+/// [child] is a plain box widget (typically a `Column`). It is placed inside a
+/// white rounded card via [SliverFillRemaining] so that short content pins a
+/// trailing `Spacer()` + button to the bottom, while tall content grows past
+/// the viewport and scrolls naturally.
 ///
-/// When [onBack] is provided, a white chevron is shown on the gradient header
-/// (Figma `Bars / Nav Bars: Standard` on Organization Details and later steps).
-///
-/// Usage:
-/// ```dart
-/// AuthScreenShell(
-///   onBack: () => context.pop(),
-///   child: Column(children: [ ... ]),
-/// )
-/// ```
+/// When [onBack] is provided, a white chevron is shown in the top bar.
 class AuthScreenShell extends StatelessWidget {
   const AuthScreenShell({
     required this.child,
     super.key,
     this.onBack,
+    this.title,
+    this.footer,
   });
 
   final Widget child;
-
-  /// When non-null, renders a back chevron on the gradient header.
   final VoidCallback? onBack;
+
+  /// Page title shown in the collapsed top bar next to the small logo.
+  /// When null the collapsed bar shows only the small logo.
+  final String? title;
+
+  /// Optional action bar pinned to the bottom of the screen. It stays visible
+  /// above the scrolling content (e.g. a "Continue" button on a long upload
+  /// form) instead of scrolling away with [child].
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final topPadding = MediaQuery.of(context).padding.top;
+    final hPad = responsiveDimension(_kHorizontalPadding);
+    final vPad = responsiveDimension(_kVerticalPadding);
+    final cardRadius = responsiveDimension(_kCardTopRadius);
+    final expandedHeight = responsiveDimension(_kExpandedHeight);
+    final hasFooter = footer != null;
 
     return Scaffold(
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          // ── Gradient background ──────────────────────────────────────────
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [_kGradientStart, Colors.black],
-              ),
-            ),
+      body: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [_kGradientStart, Colors.black],
           ),
-          // ── Sanad logo ───────────────────────────────────────────────────
-          Positioned(
-            top: responsiveDimension(_kLogoTop),
-            left: 0,
-            right: 0,
-            child: Center(
-              child: AppSvgPicture.asset(
-                AppSvgs.sanadLogo,
-                width: responsiveDimension(_kLogoWidth),
-                height: responsiveDimension(_kLogoHeight),
-              ),
-            ),
-          ),
-          // ── Back chevron (optional) ──────────────────────────────────────
-          if (onBack != null)
-            Positioned(
-              top: responsiveDimension(_kBackTop),
-              left: responsiveDimension(_kHorizontalPadding),
-              child: GestureDetector(
-                onTap: onBack,
-                behavior: HitTestBehavior.opaque,
-                child: Icon(
-                  Icons.chevron_left,
-                  size: responsiveDimension(_kBackIconSize),
-                  color: colors.white,
-                ),
-              ),
-            ),
-          // ── White card (scrollable when content exceeds height) ──────────
-          Positioned(
-            top: responsiveDimension(_kHeaderTop),
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(
-                    responsiveDimension(_kCardTopRadius),
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: CustomScrollView(
+                physics: const ClampingScrollPhysics(),
+                slivers: [
+                  SliverAppBar(
+                    expandedHeight: expandedHeight,
+                    pinned: true,
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    automaticallyImplyLeading: false,
+                    leading: onBack != null
+                        ? IconButton(
+                            icon: Icon(
+                              Icons.chevron_left,
+                              size: responsiveDimension(_kBackIconSize),
+                              color: colors.white,
+                            ),
+                            onPressed: onBack,
+                          )
+                        : null,
+                    flexibleSpace: _HeroFlexibleSpace(
+                      expandedHeight: expandedHeight,
+                      topPadding: topPadding,
+                      title: title,
+                    ),
                   ),
-                  topRight: Radius.circular(
-                    responsiveDimension(_kCardTopRadius),
-                  ),
-                ),
-              ),
-              child: SafeArea(
-                top: false,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final vPad =
-                        responsiveDimension(_kVerticalPadding);
-                    final hPad =
-                        responsiveDimension(_kHorizontalPadding);
-                    return SingleChildScrollView(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: hPad,
-                        vertical: vPad,
-                      ),
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minHeight:
-                              constraints.maxHeight - vPad * 2,
+                  // White rounded card. SliverFillRemaining gives its child a
+                  // tight height (the greater of the remaining viewport or the
+                  // content's own height) — short pages pin a trailing
+                  // `Spacer()` + button to the bottom, tall pages grow and
+                  // scroll. When a [footer] is present it owns the bottom safe
+                  // area instead of the card.
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: colors.white,
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(cardRadius),
+                          topRight: Radius.circular(cardRadius),
                         ),
-                        child: IntrinsicHeight(child: child),
                       ),
-                    );
-                  },
-                ),
+                      child: SafeArea(
+                        top: false,
+                        bottom: !hasFooter,
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            hPad,
+                            vPad,
+                            hPad,
+                            hasFooter ? 0 : vPad,
+                          ),
+                          child: child,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
+            if (hasFooter)
+              _FooterBar(hPad: hPad, color: colors.white, child: footer!),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// White action bar pinned below the scroll area (always visible).
+class _FooterBar extends StatelessWidget {
+  const _FooterBar({
+    required this.hPad,
+    required this.color,
+    required this.child,
+  });
+
+  final double hPad;
+  final Color color;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: color,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, -4),
           ),
         ],
       ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            hPad,
+            responsiveDimension(AppSpacing.lg),
+            hPad,
+            responsiveDimension(AppSpacing.lg),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+/// Gradient hero that crossfades between a large centered logo (expanded) and a
+/// compact logo + title bar (collapsed) as the [SliverAppBar] shrinks.
+class _HeroFlexibleSpace extends StatelessWidget {
+  const _HeroFlexibleSpace({
+    required this.expandedHeight,
+    required this.topPadding,
+    required this.title,
+  });
+
+  final double expandedHeight;
+  final double topPadding;
+  final String? title;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final typography = context.appTypography;
+    final collapsedHeight = kToolbarHeight + topPadding;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final range =
+            (expandedHeight - collapsedHeight).clamp(1.0, expandedHeight);
+        // 1.0 fully expanded → 0.0 fully collapsed.
+        final t = ((constraints.maxHeight - collapsedHeight) / range)
+            .clamp(0.0, 1.0);
+
+        return DecoratedBox(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [_kGradientStart, Colors.black],
+            ),
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Expanded: large centered logo.
+              Opacity(
+                opacity: t,
+                child: Padding(
+                  padding: EdgeInsets.only(top: topPadding),
+                  child: Center(
+                    child: AppSvgPicture.asset(
+                      AppSvgs.sanadLogo,
+                      width: responsiveDimension(_kLogoWidth),
+                      height: responsiveDimension(_kLogoHeight),
+                    ),
+                  ),
+                ),
+              ),
+              // Collapsed: small logo + page title in the top bar.
+              Opacity(
+                opacity: 1 - t,
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: Container(
+                    height: collapsedHeight,
+                    padding: EdgeInsets.only(top: topPadding),
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AppSvgPicture.asset(
+                          AppSvgs.sanadLogo,
+                          width: responsiveDimension(_kSmallLogoWidth),
+                          height: responsiveDimension(_kSmallLogoHeight),
+                        ),
+                        if (title != null) ...[
+                          SizedBox(width: responsiveDimension(AppSpacing.md)),
+                          Flexible(
+                            child: Text(
+                              title!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: typography.regularNormal.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

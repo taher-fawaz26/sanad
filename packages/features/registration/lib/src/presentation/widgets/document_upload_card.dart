@@ -8,28 +8,54 @@ import 'package:registration/src/presentation/widgets/captured_image.dart';
 const _kDropzoneHeight = 136.0;
 const _kUploadIconPlate = 40.0;
 const _kCloudIconSize = 24.0;
+const _kCancelSize = 32.0;
+const _kCancelIconSize = 20.0;
+const _kLoaderSize = 14.0;
 
-/// A single document slot: title header, a dashed dropzone when empty or a
-/// captured-document preview when filled, and an Upload / Change button.
+/// A single document slot: title header, empty / uploading / filled / failed
+/// body, and an Upload / Change / Retry button.
 ///
 /// Used by Identity Verification (Emirates ID front + back) and Trade Licence.
+/// Upload lifecycle is carried exclusively by [UploadableAsset].
 class DocumentUploadCard extends StatelessWidget {
   const DocumentUploadCard({
     required this.title,
     required this.onUpload,
-    this.asset,
+    this.uploadable,
+    this.onCancel,
+    this.onRemove,
+    this.onReplace,
     super.key,
   });
 
   final String title;
 
-  /// Opens the capture sheet. Same callback whether uploading or replacing.
+  /// Opens the capture sheet (or retries after failure).
   final VoidCallback onUpload;
 
-  /// When non-null the card renders its filled state with a preview.
-  final PickedAsset? asset;
+  /// When non-null the card renders uploading / filled / failed from this.
+  final UploadableAsset? uploadable;
 
-  bool get _filled => asset != null;
+  /// Cancels the in-flight HTTP upload.
+  /// Required while [uploadable] is uploading.
+  final VoidCallback? onCancel;
+
+  /// Clears a locally captured (pending) document.
+  final VoidCallback? onRemove;
+
+  /// Re-scans a locally captured document via the Emirates ID scan flow.
+  final VoidCallback? onReplace;
+
+  bool get _hasLocalAsset => uploadable?.asset != null;
+
+  bool get _uploaded => uploadable?.isUploaded ?? false;
+
+  bool get _uploading => uploadable?.isUploading ?? false;
+
+  bool get _failed => uploadable?.status.isFailed ?? false;
+
+  bool get _localPending =>
+      _hasLocalAsset && !_uploaded && !_uploading && !_failed;
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +87,7 @@ class DocumentUploadCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (_filled)
+                if (_uploaded)
                   AppSvgPicture.asset(
                     AppSvgs.registrationCheckCircle,
                     width: responsiveDimension(20),
@@ -84,36 +110,60 @@ class DocumentUploadCard extends StatelessWidget {
             ),
             child: Column(
               children: [
-                if (_filled)
-                  _FilledPreview(asset: asset!)
+                if (_uploading && uploadable != null)
+                  _UploadingDropzone(
+                    uploadable: uploadable!,
+                    onCancel: onCancel,
+                  )
+                else if (_hasLocalAsset && uploadable != null)
+                  _FilledPreview(asset: uploadable!.asset)
+                else if (_failed && uploadable != null)
+                  _FailedDropzone(uploadable: uploadable!)
                 else
                   const _EmptyDropzone(),
                 SizedBox(height: responsiveDimension(AppSpacing.lg)),
-                AppButton(
-                  label: _filled
-                      ? 'registration.change_doc'.tr()
-                      : 'registration.upload'.tr(),
-                  onPressed: onUpload,
-                  type: _filled
-                      ? AppButtonType.secondary
-                      : AppButtonType.primary,
-                  icon: AppSvgPicture.asset(
-                    AppSvgs.cloudUpload,
-                    width: responsiveDimension(ButtonTokens.iconSize),
-                    height: responsiveDimension(ButtonTokens.iconSize),
-                    colorFilter: ColorFilter.mode(
-                      _filled ? colors.primary : colors.white,
-                      BlendMode.srcIn,
-                    ),
+                if (_localPending) ...[
+                  AppButtonPresets.secondary(
+                    label: 'registration.replace_document'.tr(),
+                    onPressed: onReplace ?? onUpload,
                   ),
-                  iconPosition: AppButtonIconPosition.right,
-                ),
+                  SizedBox(height: responsiveDimension(AppSpacing.md)),
+                  AppButtonPresets.outline(
+                    label: 'registration.remove_document'.tr(),
+                    onPressed: onRemove,
+                  ),
+                ] else
+                  AppButton(
+                    label: _buttonLabel,
+                    onPressed: _uploading ? null : onUpload,
+                    type: _uploaded
+                        ? AppButtonType.secondary
+                        : AppButtonType.primary,
+                    icon: AppSvgPicture.asset(
+                      AppSvgs.cloudUpload,
+                      width: responsiveDimension(ButtonTokens.iconSize),
+                      height: responsiveDimension(ButtonTokens.iconSize),
+                      colorFilter: ColorFilter.mode(
+                        _uploaded || _uploading
+                            ? colors.primary
+                            : colors.white,
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                    iconPosition: AppButtonIconPosition.right,
+                  ),
               ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  String get _buttonLabel {
+    if (_failed) return 'registration.retry_upload'.tr();
+    if (_uploaded) return 'registration.change_doc'.tr();
+    return 'registration.upload'.tr();
   }
 }
 
@@ -171,6 +221,201 @@ class _EmptyDropzone extends StatelessWidget {
                 'registration.choose_upload_hint'.tr(),
                 textAlign: TextAlign.center,
                 style: typography.tinyNormal.copyWith(color: colors.textMuted),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Figma `2947:13800` — uploading progress dropzone.
+class _UploadingDropzone extends StatelessWidget {
+  const _UploadingDropzone({
+    required this.uploadable,
+    this.onCancel,
+  });
+
+  final UploadableAsset uploadable;
+  final VoidCallback? onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final typography = context.appTypography;
+    final radius = AppRadius.md;
+    final asset = uploadable.asset;
+    final percent = (uploadable.progress * 100).round().clamp(0, 100);
+
+    return SizedBox(
+      width: double.infinity,
+      child: CustomPaint(
+        painter: DashedBorderPainter(color: colors.border, radius: radius),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.gray50,
+            borderRadius: BorderRadius.circular(radius),
+          ),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: responsiveDimension(AppSpacing.lg),
+              vertical: responsiveDimension(AppSpacing.xxl),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            asset.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: typography.regularNormal.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: colors.textPrimary,
+                            ),
+                          ),
+                          SizedBox(height: responsiveDimension(AppSpacing.md)),
+                          Text(
+                            _formatMeta(asset),
+                            style: typography.tinyNormal.copyWith(
+                              fontWeight: FontWeight.w500,
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (onCancel != null)
+                      GestureDetector(
+                        onTap: onCancel,
+                        behavior: HitTestBehavior.opaque,
+                        child: Container(
+                          width: responsiveDimension(_kCancelSize),
+                          height: responsiveDimension(_kCancelSize),
+                          decoration: BoxDecoration(
+                            color: colors.slate100,
+                            borderRadius: BorderRadius.circular(
+                              responsiveDimension(16),
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: AppSvgPicture.asset(
+                            AppSvgs.close,
+                            width: responsiveDimension(_kCancelIconSize),
+                            height: responsiveDimension(_kCancelIconSize),
+                            colorFilter: ColorFilter.mode(
+                              colors.textPrimary,
+                              BlendMode.srcIn,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                SizedBox(height: responsiveDimension(AppSpacing.lg)),
+                Row(
+                  children: [
+                    Expanded(
+                      child: AppProgressBar(value: uploadable.progress),
+                    ),
+                    SizedBox(width: responsiveDimension(AppSpacing.lg)),
+                    SizedBox(
+                      width: responsiveDimension(40),
+                      child: Text(
+                        '$percent%',
+                        style: typography.tinyNormal.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: colors.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: responsiveDimension(AppSpacing.md)),
+                Row(
+                  children: [
+                    SizedBox(
+                      width: responsiveDimension(_kLoaderSize),
+                      height: responsiveDimension(_kLoaderSize),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: colors.primary,
+                      ),
+                    ),
+                    SizedBox(width: responsiveDimension(AppSpacing.sm)),
+                    Text(
+                      'registration.uploading'.tr(),
+                      style: typography.tinyNormal.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: colors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  static String _formatMeta(PickedAsset asset) {
+    final sizeLabel = asset.sizeInMb >= 0.1
+        ? '${asset.sizeInMb.toStringAsFixed(1)} MB'
+        : '${asset.sizeInKb.toStringAsFixed(0)} KB';
+    final typeLabel = asset.extension.isNotEmpty
+        ? asset.extension.toUpperCase()
+        : asset.mimeType;
+    return '$sizeLabel  •  $typeLabel';
+  }
+}
+
+class _FailedDropzone extends StatelessWidget {
+  const _FailedDropzone({required this.uploadable});
+
+  final UploadableAsset uploadable;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final typography = context.appTypography;
+    final radius = AppRadius.md;
+
+    return SizedBox(
+      height: responsiveDimension(_kDropzoneHeight),
+      width: double.infinity,
+      child: CustomPaint(
+        painter: DashedBorderPainter(color: colors.error, radius: radius),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.gray50,
+            borderRadius: BorderRadius.circular(radius),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                uploadable.asset.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: typography.smallNormal.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: colors.textPrimary,
+                ),
+              ),
+              SizedBox(height: responsiveDimension(AppSpacing.sm)),
+              Text(
+                'registration.upload_failed'.tr(),
+                textAlign: TextAlign.center,
+                style: typography.tinyNormal.copyWith(color: colors.error),
               ),
             ],
           ),

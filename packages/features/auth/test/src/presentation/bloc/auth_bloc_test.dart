@@ -2,15 +2,15 @@
 
 import 'package:auth/src/auth/auth_status.dart';
 import 'package:auth/src/auth/auth_status_notifier.dart';
-import 'package:auth/src/domain/entities/login_response_entity.dart';
+import 'package:auth/src/domain/entities/email_auth_result.dart';
 import 'package:auth/src/domain/entities/user_entity.dart';
 import 'package:auth/src/domain/enums/user_type.dart';
 import 'package:auth/src/domain/usecases/check_signin_status_usecase.dart';
 import 'package:auth/src/domain/usecases/delete_account_usecase.dart';
-import 'package:auth/src/domain/usecases/login_usecase.dart';
 import 'package:auth/src/domain/usecases/logout_usecase.dart';
-import 'package:auth/src/domain/usecases/register_usecase.dart';
+import 'package:auth/src/domain/usecases/request_email_otp_usecase.dart';
 import 'package:auth/src/domain/usecases/usecase_params.dart';
+import 'package:auth/src/domain/usecases/verify_email_otp_usecase.dart';
 import 'package:auth/src/presentation/bloc/auth/auth_bloc.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:core/core.dart';
@@ -21,13 +21,13 @@ import 'package:network/network.dart';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
-class _MockLoginUseCase extends Mock implements AuthLoginUseCase {}
+class _MockRequestOtpUseCase extends Mock implements RequestEmailOtpUseCase {}
+
+class _MockVerifyOtpUseCase extends Mock implements VerifyEmailOtpUseCase {}
 
 class _MockLogoutUseCase extends Mock implements AuthLogoutUseCase {}
 
 class _MockDeleteAccountUseCase extends Mock implements DeleteAccountUseCase {}
-
-class _MockRegisterUseCase extends Mock implements AuthRegisterUseCase {}
 
 class _MockSessionManager extends Mock implements SessionManager {}
 
@@ -36,19 +36,27 @@ class _MockCheckSignInStatusUseCase extends Mock
 
 // ── Fixture data ───────────────────────────────────────────────────────────
 
+const _tEmail = 'user@example.com';
+
 const _tUser = UserEntity(
   sub: 'sub-123',
-  identifier: 'user@example.com',
+  identifier: _tEmail,
   identifierType: 'email',
   isVerified: true,
   isProfileCompleted: true,
   type: UserType.client,
 );
 
-const _tLoginResponse = LoginResponseEntity(
+const _tAuthenticated = AuthenticatedResult(
   accessToken: 'access-token',
   refreshToken: 'refresh-token',
   user: _tUser,
+);
+
+const _tOnboarding = OnboardingResult(
+  onboardingToken: 'onboarding-token',
+  email: _tEmail,
+  userId: 'sub-123',
 );
 
 const _tFailure = ServerFailure(message: 'server_error');
@@ -56,39 +64,36 @@ const _tFailure = ServerFailure(message: 'server_error');
 // ── Tests ──────────────────────────────────────────────────────────────────
 
 void main() {
-  late _MockLoginUseCase loginUseCase;
+  late _MockRequestOtpUseCase requestOtpUseCase;
+  late _MockVerifyOtpUseCase verifyOtpUseCase;
   late _MockLogoutUseCase logoutUseCase;
   late _MockDeleteAccountUseCase deleteAccountUseCase;
-  late _MockRegisterUseCase registerUseCase;
   late _MockSessionManager sessionManager;
   late _MockCheckSignInStatusUseCase checkSignInStatusUseCase;
   late AuthStatusNotifier authStatusNotifier;
 
   AuthBloc buildBloc() => AuthBloc(
-        loginUseCase: loginUseCase,
+        requestOtpUseCase: requestOtpUseCase,
+        verifyOtpUseCase: verifyOtpUseCase,
         logoutUseCase: logoutUseCase,
         deleteAccountUseCase: deleteAccountUseCase,
-        registerUseCase: registerUseCase,
         sessionManager: sessionManager,
         checkSignInStatusUseCase: checkSignInStatusUseCase,
         authStatusNotifier: authStatusNotifier,
       );
 
   setUpAll(() {
-    registerFallbackValue(const LoginParams(identifier: '', password: ''));
-    registerFallbackValue(
-      const RegisterParams(
-          identifier: '', password: '', type: UserType.client),
-    );
+    registerFallbackValue(const RequestEmailOtpParams(email: ''));
+    registerFallbackValue(const VerifyEmailOtpParams(email: '', otp: ''));
     registerFallbackValue(const DeleteAccountParams(userSub: ''));
     registerFallbackValue(const NoParams());
   });
 
   setUp(() {
-    loginUseCase = _MockLoginUseCase();
+    requestOtpUseCase = _MockRequestOtpUseCase();
+    verifyOtpUseCase = _MockVerifyOtpUseCase();
     logoutUseCase = _MockLogoutUseCase();
     deleteAccountUseCase = _MockDeleteAccountUseCase();
-    registerUseCase = _MockRegisterUseCase();
     sessionManager = _MockSessionManager();
     checkSignInStatusUseCase = _MockCheckSignInStatusUseCase();
     authStatusNotifier = AuthStatusNotifier();
@@ -107,21 +112,53 @@ void main() {
       expect(buildBloc().state, isA<AuthInitialState>());
     });
 
-    // ── Login ────────────────────────────────────────────────────────────
+    // ── Request OTP ────────────────────────────────────────────────────────
 
-    group('AuthLoginEvent', () {
+    group('AuthRequestOtpEvent', () {
       blocTest<AuthBloc, AuthState>(
-        'emits [loading, success] when login succeeds',
+        'emits [loading, sent] when the OTP request succeeds',
         build: () {
-          when(() => loginUseCase(any()))
-              .thenReturn(TaskEither.right(_tLoginResponse));
+          when(() => requestOtpUseCase(any()))
+              .thenReturn(TaskEither<Failure, void>.right(null));
+          return buildBloc();
+        },
+        act: (bloc) => bloc.add(const AuthRequestOtpEvent(_tEmail)),
+        expect: () => [
+          isA<AuthOtpRequestLoadingState>(),
+          isA<AuthOtpSentState>().having((s) => s.email, 'email', _tEmail),
+        ],
+      );
+
+      blocTest<AuthBloc, AuthState>(
+        'emits [loading, failure] when the OTP request fails',
+        build: () {
+          when(() => requestOtpUseCase(any()))
+              .thenReturn(TaskEither.left(_tFailure));
+          return buildBloc();
+        },
+        act: (bloc) => bloc.add(const AuthRequestOtpEvent(_tEmail)),
+        expect: () => [
+          isA<AuthOtpRequestLoadingState>(),
+          isA<AuthOtpRequestFailureState>(),
+        ],
+      );
+    });
+
+    // ── Verify OTP ─────────────────────────────────────────────────────────
+
+    group('AuthVerifyOtpEvent', () {
+      blocTest<AuthBloc, AuthState>(
+        'existing user → [loading, authenticated] + session started',
+        build: () {
+          when(() => verifyOtpUseCase(any()))
+              .thenReturn(TaskEither.right(_tAuthenticated));
           return buildBloc();
         },
         act: (bloc) =>
-            bloc.add(const AuthLoginEvent('user@example.com', 'password')),
+            bloc.add(const AuthVerifyOtpEvent(email: _tEmail, otp: '12345')),
         expect: () => [
-          isA<AuthLoginLoadingState>(),
-          isA<AuthLoginSuccessState>().having((s) => s.user, 'user', _tUser),
+          isA<AuthOtpVerifyLoadingState>(),
+          isA<AuthAuthenticatedState>().having((s) => s.user, 'user', _tUser),
         ],
         verify: (_) {
           expect(authStatusNotifier.status, AuthStatus.authenticated);
@@ -135,36 +172,47 @@ void main() {
       );
 
       blocTest<AuthBloc, AuthState>(
-        'emits [loading, failure] when login fails',
+        'new user → [loading, onboardingRequired] and no session',
         build: () {
-          when(() => loginUseCase(any()))
+          when(() => verifyOtpUseCase(any()))
+              .thenReturn(TaskEither.right(_tOnboarding));
+          return buildBloc();
+        },
+        act: (bloc) =>
+            bloc.add(const AuthVerifyOtpEvent(email: _tEmail, otp: '12345')),
+        expect: () => [
+          isA<AuthOtpVerifyLoadingState>(),
+          isA<AuthOnboardingRequiredState>()
+              .having((s) => s.email, 'email', _tEmail)
+              .having((s) => s.onboardingToken, 'token', 'onboarding-token'),
+        ],
+        verify: (_) {
+          expect(authStatusNotifier.status, AuthStatus.unknown);
+          verifyNever(
+            () => sessionManager.startSession(
+              accessToken: any(named: 'accessToken'),
+              refreshToken: any(named: 'refreshToken'),
+            ),
+          );
+        },
+      );
+
+      blocTest<AuthBloc, AuthState>(
+        'emits [loading, failure] when verification fails',
+        build: () {
+          when(() => verifyOtpUseCase(any()))
               .thenReturn(TaskEither.left(_tFailure));
           return buildBloc();
         },
         act: (bloc) =>
-            bloc.add(const AuthLoginEvent('user@example.com', 'password')),
+            bloc.add(const AuthVerifyOtpEvent(email: _tEmail, otp: '00000')),
         expect: () => [
-          isA<AuthLoginLoadingState>(),
-          isA<AuthLoginFailureState>()
-              .having((s) => s.failure.message, 'failure.message', 'server_error'),
-        ],
-      );
-
-      blocTest<AuthBloc, AuthState>(
-        'emits [loading, unverified] when login returns UnverifiedUserFailure',
-        build: () {
-          when(() => loginUseCase(any())).thenReturn(
-            TaskEither.left(
-              const UnverifiedUserFailure(message: 'unverified'),
-            ),
-          );
-          return buildBloc();
-        },
-        act: (bloc) =>
-            bloc.add(const AuthLoginEvent('user@example.com', 'password')),
-        expect: () => [
-          isA<AuthLoginLoadingState>(),
-          isA<AuthLoginUnverifiedState>(),
+          isA<AuthOtpVerifyLoadingState>(),
+          isA<AuthOtpVerifyFailureState>().having(
+            (s) => s.failure.message,
+            'failure.message',
+            'server_error',
+          ),
         ],
       );
     });
@@ -203,49 +251,9 @@ void main() {
           isA<AuthLogoutFailureState>(),
         ],
         verify: (_) {
-          // Session must be cleared even when the API call fails
           verify(() => sessionManager.logout()).called(1);
           expect(authStatusNotifier.status, AuthStatus.unauthenticated);
         },
-      );
-    });
-
-    // ── Register ─────────────────────────────────────────────────────────
-
-    group('AuthRegisterEvent', () {
-      blocTest<AuthBloc, AuthState>(
-        'emits [loading, success] when register succeeds',
-        build: () {
-          when(() => registerUseCase(any()))
-              .thenReturn(TaskEither<Failure, void>.right(null));
-          return buildBloc();
-        },
-        act: (bloc) => bloc.add(
-          const AuthRegisterEvent(
-              'user@example.com', 'password', UserType.client),
-        ),
-        expect: () => [
-          isA<AuthRegisterLoadingState>(),
-          isA<AuthRegisterSuccessState>(),
-        ],
-      );
-
-      blocTest<AuthBloc, AuthState>(
-        'emits [loading, failure] when register fails',
-        build: () {
-          when(() => registerUseCase(any()))
-              .thenReturn(TaskEither.left(_tFailure));
-          return buildBloc();
-        },
-        act: (bloc) => bloc.add(
-          const AuthRegisterEvent(
-              'user@example.com', 'password', UserType.client),
-        ),
-        expect: () => [
-          isA<AuthRegisterLoadingState>(),
-          isA<AuthRegisterFailureState>()
-              .having((s) => s.failure.message, 'failure.message', 'server_error'),
-        ],
       );
     });
 
@@ -325,7 +333,7 @@ void main() {
               .thenReturn(TaskEither<Failure, void>.right(null));
           return buildBloc();
         },
-        seed: () => const AuthLoginSuccessState(_tUser),
+        seed: () => const AuthAuthenticatedState(_tUser),
         act: (bloc) => bloc.add(const AuthDeleteAccountEvent('sub-123')),
         expect: () => [
           isA<AuthDeleteAccountLoadingState>()
@@ -344,14 +352,18 @@ void main() {
               .thenReturn(TaskEither.left(_tFailure));
           return buildBloc();
         },
-        seed: () => const AuthLoginSuccessState(_tUser),
+        seed: () => const AuthAuthenticatedState(_tUser),
         act: (bloc) => bloc.add(const AuthDeleteAccountEvent('sub-123')),
         expect: () => [
           isA<AuthDeleteAccountLoadingState>()
               .having((s) => s.user, 'user', _tUser),
           isA<AuthDeleteAccountFailureState>()
               .having((s) => s.user, 'user', _tUser)
-              .having((s) => s.failure.message, 'failure.message', 'server_error'),
+              .having(
+                (s) => s.failure.message,
+                'failure.message',
+                'server_error',
+              ),
         ],
       );
     });

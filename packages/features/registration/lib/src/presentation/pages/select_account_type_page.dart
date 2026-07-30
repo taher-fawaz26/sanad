@@ -7,6 +7,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:registration/src/presentation/cubit/registration_cubit.dart';
 import 'package:registration/src/presentation/cubit/registration_state.dart';
+import 'package:registration/src/presentation/models/onboarding_args.dart';
 import 'package:registration/src/presentation/widgets/registration_header.dart';
 import 'package:registration/src/routes/registration_routes.dart';
 
@@ -16,6 +17,19 @@ class SelectAccountTypePage extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final selected = useState<RegistrationAccountType?>(null);
+
+    // Seed the verified email + onboarding token handed over by the auth OTP
+    // flow (this is the first registration step for a new user).
+    final extra = GoRouterState.of(context).extra;
+    useEffect(() {
+      if (extra is OnboardingArgs) {
+        context.read<RegistrationCubit>().setOnboarding(
+              email: extra.email,
+              onboardingToken: extra.onboardingToken,
+            );
+      }
+      return null;
+    }, [extra]);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

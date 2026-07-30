@@ -1,29 +1,24 @@
-import 'package:auth/src/domain/enums/user_type.dart';
 import 'package:equatable/equatable.dart';
 
-class LoginParams extends Equatable {
-  const LoginParams({required this.identifier, required this.password});
+/// Params for `POST /auth/email/request-otp`.
+class RequestEmailOtpParams extends Equatable {
+  const RequestEmailOtpParams({required this.email});
 
-  final String identifier;
-  final String password;
+  final String email;
 
   @override
-  List<Object?> get props => [identifier, password];
+  List<Object?> get props => [email];
 }
 
-class RegisterParams extends Equatable {
-  const RegisterParams({
-    required this.identifier,
-    required this.password,
-    required this.type,
-  });
+/// Params for `POST /auth/email/verify`.
+class VerifyEmailOtpParams extends Equatable {
+  const VerifyEmailOtpParams({required this.email, required this.otp});
 
-  final String identifier;
-  final String password;
-  final UserType type;
+  final String email;
+  final String otp;
 
   @override
-  List<Object?> get props => [identifier, password, type];
+  List<Object?> get props => [email, otp];
 }
 
 class DeleteAccountParams extends Equatable {

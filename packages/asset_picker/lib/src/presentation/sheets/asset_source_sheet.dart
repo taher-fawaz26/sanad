@@ -40,7 +40,10 @@ class AssetSourceSheet extends StatelessWidget {
 
     return Material(
       color: colors.surface,
-      borderRadius: theme.sheetRadius,
+      borderRadius: const BorderRadius.only(
+        topLeft: Radius.circular(24),
+        topRight: Radius.circular(24),
+      ),
       clipBehavior: Clip.antiAlias,
       child: SafeArea(
         top: false,
@@ -116,6 +119,10 @@ Future<AssetSource?> showAssetSourceSheet({
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
+    // The sheet renders its own drag handle (see [theme.showDragHandle]).
+    // Disable Material's built-in handle so it isn't drawn twice when the
+    // app-wide BottomSheetThemeData enables showDragHandle.
+    showDragHandle: false,
     builder: (_) => AssetSourceSheet(options: options, theme: theme),
   );
 }

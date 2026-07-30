@@ -272,6 +272,24 @@ class OrdersRemoteDataSourceImpl implements OrdersRemoteDataSource {
 
 ---
 
+## Media upload (`POST media/upload-single`)
+
+Used by registration (Emirates ID, trade licence) during onboarding.
+
+| Item | Detail |
+|------|--------|
+| Path | `media/upload-single` (`MediaApiPaths.uploadSingle`) |
+| Method | `POST` multipart (`field: file`) |
+| Client | `SecureDioClient.postMultipart` |
+| Auth | Onboarding Bearer via explicit `Authorization` header (not session `TokenManager`) |
+| Progress | Dio `onSendProgress` |
+| Cancel | Dio `CancelToken` keyed by document slot |
+| Response | `{ id, originalName, fileName, mimeType, size, type, url, createdAt }` → store `id`/`url` on `UploadableAsset.remoteId` / `remoteUrl` |
+
+Package: `packages/features/registration` (`UploadSingleMediaUseCase`).
+
+---
+
 ## Validation
 
 Import scanner (`melos validate:arch`) detects `DioException` imports outside `packages/network`.

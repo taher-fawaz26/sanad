@@ -2,14 +2,14 @@ import 'dart:async';
 
 import 'package:auth/src/auth/auth_status.dart';
 import 'package:auth/src/auth/auth_status_notifier.dart';
+import 'package:auth/src/domain/entities/email_auth_result.dart';
 import 'package:auth/src/domain/entities/user_entity.dart';
-import 'package:auth/src/domain/enums/user_type.dart';
 import 'package:auth/src/domain/usecases/check_signin_status_usecase.dart';
 import 'package:auth/src/domain/usecases/delete_account_usecase.dart';
-import 'package:auth/src/domain/usecases/login_usecase.dart';
 import 'package:auth/src/domain/usecases/logout_usecase.dart';
-import 'package:auth/src/domain/usecases/register_usecase.dart';
+import 'package:auth/src/domain/usecases/request_email_otp_usecase.dart';
 import 'package:auth/src/domain/usecases/usecase_params.dart';
+import 'package:auth/src/domain/usecases/verify_email_otp_usecase.dart';
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -20,63 +20,88 @@ part 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc({
-    required AuthLoginUseCase loginUseCase,
+    required RequestEmailOtpUseCase requestOtpUseCase,
+    required VerifyEmailOtpUseCase verifyOtpUseCase,
     required AuthLogoutUseCase logoutUseCase,
     required DeleteAccountUseCase deleteAccountUseCase,
-    required AuthRegisterUseCase registerUseCase,
     required SessionManager sessionManager,
     required AuthCheckSignInStatusUseCase checkSignInStatusUseCase,
     required AuthStatusNotifier authStatusNotifier,
-  })  : _loginUseCase = loginUseCase,
+  })  : _requestOtpUseCase = requestOtpUseCase,
+        _verifyOtpUseCase = verifyOtpUseCase,
         _logoutUseCase = logoutUseCase,
         _deleteAccountUseCase = deleteAccountUseCase,
-        _registerUseCase = registerUseCase,
         _sessionManager = sessionManager,
         _checkSignInStatusUseCase = checkSignInStatusUseCase,
         _authStatusNotifier = authStatusNotifier,
         super(const AuthInitialState()) {
-    on<AuthLoginEvent>(_login);
+    on<AuthRequestOtpEvent>(_requestOtp);
+    on<AuthVerifyOtpEvent>(_verifyOtp);
     on<AuthLogoutEvent>(_logout);
     on<AuthDeleteAccountEvent>(_deleteAccount);
-    on<AuthRegisterEvent>(_register);
     on<AuthCheckSignInStatusEvent>(_checkSignInStatus);
   }
 
-  final AuthLoginUseCase _loginUseCase;
+  final RequestEmailOtpUseCase _requestOtpUseCase;
+  final VerifyEmailOtpUseCase _verifyOtpUseCase;
   final AuthLogoutUseCase _logoutUseCase;
   final DeleteAccountUseCase _deleteAccountUseCase;
-  final AuthRegisterUseCase _registerUseCase;
   final SessionManager _sessionManager;
   final AuthCheckSignInStatusUseCase _checkSignInStatusUseCase;
   final AuthStatusNotifier _authStatusNotifier;
 
-  Future<void> _login(AuthLoginEvent event, Emitter<AuthState> emit) async {
-    emit(const AuthLoginLoadingState());
+  Future<void> _requestOtp(
+    AuthRequestOtpEvent event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthOtpRequestLoadingState());
 
-    final result = await _loginUseCase
-        .call(
-          LoginParams(identifier: event.identifier, password: event.password),
-        )
+    final result = await _requestOtpUseCase
+        .call(RequestEmailOtpParams(email: event.email))
+        .run();
+
+    result.match(
+      (failure) => emit(AuthOtpRequestFailureState(failure)),
+      (_) => emit(AuthOtpSentState(event.email)),
+    );
+  }
+
+  Future<void> _verifyOtp(
+    AuthVerifyOtpEvent event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthOtpVerifyLoadingState());
+
+    final result = await _verifyOtpUseCase
+        .call(VerifyEmailOtpParams(email: event.email, otp: event.otp))
         .run();
 
     await result.match(
-      (failure) async {
-        if (failure is UnverifiedUserFailure) {
-          emit(const AuthLoginUnverifiedState());
-          return;
+      (failure) async => emit(AuthOtpVerifyFailureState(failure)),
+      (outcome) async {
+        switch (outcome) {
+          case AuthenticatedResult(
+              :final accessToken,
+              :final refreshToken,
+              :final user,
+            ):
+            await _sessionManager.startSession(
+              accessToken: accessToken,
+              refreshToken: refreshToken,
+            );
+            _authStatusNotifier.update(
+              AuthStatus.authenticated,
+              isProfileCompleted: user.isProfileCompleted,
+            );
+            emit(AuthAuthenticatedState(user));
+          case OnboardingResult(:final email, :final onboardingToken):
+            emit(
+              AuthOnboardingRequiredState(
+                email: email,
+                onboardingToken: onboardingToken,
+              ),
+            );
         }
-        emit(AuthLoginFailureState(failure));
-      },
-      (r) async {
-        _authStatusNotifier.update(
-          AuthStatus.authenticated,
-          isProfileCompleted: r.user.isProfileCompleted,
-        );
-        await _sessionManager.startSession(
-          accessToken: r.accessToken,
-          refreshToken: r.refreshToken,
-        );
-        emit(AuthLoginSuccessState(r.user));
       },
     );
   }
@@ -129,29 +154,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     );
   }
 
-  Future<void> _register(
-    AuthRegisterEvent event,
-    Emitter<AuthState> emit,
-  ) async {
-    emit(const AuthRegisterLoadingState());
-
-    final result = await _registerUseCase
-        .call(
-          RegisterParams(
-            identifier: event.identifier,
-            password: event.password,
-            type: event.type,
-          ),
-        )
-        .run();
-
-    await result.match(
-      (l) async => emit(AuthRegisterFailureState(l)),
-      (_) async =>
-          emit(const AuthRegisterSuccessState('auth.register_success')),
-    );
-  }
-
   Future<void> _checkSignInStatus(
     AuthCheckSignInStatusEvent event,
     Emitter<AuthState> emit,
@@ -190,10 +192,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   static UserEntity? _userFromState(AuthState state) => switch (state) {
-    AuthLoginSuccessState(:final user) => user,
-    AuthCheckSignInStatusSuccessState(:final user) => user,
-    AuthDeleteAccountLoadingState(:final user) => user,
-    AuthDeleteAccountFailureState(:final user) => user,
-    _ => null,
-  };
+        AuthAuthenticatedState(:final user) => user,
+        AuthCheckSignInStatusSuccessState(:final user) => user,
+        AuthDeleteAccountLoadingState(:final user) => user,
+        AuthDeleteAccountFailureState(:final user) => user,
+        _ => null,
+      };
 }

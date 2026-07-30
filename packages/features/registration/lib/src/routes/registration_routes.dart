@@ -6,7 +6,6 @@ abstract final class RegistrationRoutes {
   RegistrationRoutes._();
 
   static const signUpEmail = '/signup';
-  static const signUpOtp = '/signup/otp';
   static const selectAccountType = '/signup/account-type';
 
   /// Organization path — business + representative details.
@@ -20,6 +19,14 @@ abstract final class RegistrationRoutes {
 
   /// Shared — full-screen review of the captured Emirates ID photos.
   static const reviewIdPhotos = '/signup/review-id-photos';
+
+  /// Scan flow — preview of the captured front side before scanning the back.
+  static const emiratesIdScanFrontPreview =
+      '/signup/emirates-id-scan/front-preview';
+
+  /// Scan flow — preview of the captured back side before the review screen.
+  static const emiratesIdScanBackPreview =
+      '/signup/emirates-id-scan/back-preview';
 
   /// Organization only — trade licence upload.
   static const tradeLicence = '/signup/trade-licence';

@@ -22,6 +22,7 @@ dependencies:
   flutter_svg: ^2.2.0
   font_awesome_flutter: ^11.0.0
   hydrated_bloc: ^11.0.0
+  pinput: ^6.0.2
 
 dev_dependencies:
   flutter_test:
