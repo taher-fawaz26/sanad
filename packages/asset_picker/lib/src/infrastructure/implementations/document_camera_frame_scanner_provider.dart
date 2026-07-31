@@ -114,16 +114,86 @@ class _DocumentScannerHostPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = config;
+    final primary = c.primaryColor;
+
+    final buttonStyle = DocumentCameraButtonStyle(
+      captureFrontButtonText: c.captureFrontButtonText,
+      captureBackButtonText: c.captureBackButtonText,
+      retakeButtonText: c.retakeButtonText,
+      saveButtonText: c.saveButtonText,
+      nextButtonText: c.nextButtonText,
+      previousButtonText: c.previousButtonText,
+    );
+
+    final titleStyle = DocumentCameraTitleStyle(
+      title: c.screenTitle != null
+          ? Text(
+              c.screenTitle!,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.w600,
+              ),
+            )
+          : null,
+      frontSideTitle: c.frontSideTitle != null
+          ? Text(
+              c.frontSideTitle!,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            )
+          : const DocumentCameraTitleStyle().frontSideTitle,
+      backSideTitle: c.backSideTitle != null
+          ? Text(
+              c.backSideTitle!,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            )
+          : const DocumentCameraTitleStyle().backSideTitle,
+    );
+
+    final instructionStyle = DocumentCameraInstructionStyle(
+      showInstructionText: c.showInstructionText,
+      frontSideInstruction: c.frontSideInstruction,
+      backSideInstruction: c.backSideInstruction,
+    );
+
+    final sideIndicatorStyle = DocumentCameraSideIndicatorStyle(
+      sideIndicatorActiveColor: primary,
+      sideIndicatorCompletedColor: primary,
+    );
+
+    final progressStyle = DocumentCameraProgressStyle(
+      progressIndicatorColor: primary,
+    );
+
+    final animationStyle = DocumentCameraAnimationStyle(
+      capturingAnimationColor: primary,
+    );
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: LayoutBuilder(
         builder: (context, constraints) {
           return DocumentCameraFrame(
-            frameWidth: constraints.maxWidth * config.frameWidthFactor,
-            frameHeight: constraints.maxHeight * config.frameHeightFactor,
-            showCloseButton: config.showCloseButton,
-            requireBothSides: config.requireBothSides,
-            enableAutoCapture: config.enableAutoCapture,
+            frameWidth: constraints.maxWidth * c.frameWidthFactor,
+            frameHeight: constraints.maxHeight * c.frameHeightFactor,
+            showCloseButton: c.showCloseButton,
+            requireBothSides: options.requireBothSides || c.requireBothSides,
+            enableAutoCapture: c.enableAutoCapture,
+            buttonStyle: buttonStyle,
+            titleStyle: titleStyle,
+            instructionStyle: instructionStyle,
+            sideIndicatorStyle: sideIndicatorStyle,
+            progressStyle: progressStyle,
+            animationStyle: animationStyle,
             // Output is JPEG (the widget's default) — required by the contract.
             imageQuality: options.enableCompression ? options.imageQuality : 90,
             onCameraError: (_) => Navigator.of(context).maybePop(),

@@ -14,19 +14,8 @@ abstract final class RegistrationRoutes {
   /// Individual path — full name.
   static const individualDetails = '/signup/individual-details';
 
-  /// Shared — Emirates ID front/back upload.
+  /// Shared — Emirates ID identity verification landing + capture flow.
   static const identityVerification = '/signup/identity-verification';
-
-  /// Shared — full-screen review of the captured Emirates ID photos.
-  static const reviewIdPhotos = '/signup/review-id-photos';
-
-  /// Scan flow — preview of the captured front side before scanning the back.
-  static const emiratesIdScanFrontPreview =
-      '/signup/emirates-id-scan/front-preview';
-
-  /// Scan flow — preview of the captured back side before the review screen.
-  static const emiratesIdScanBackPreview =
-      '/signup/emirates-id-scan/back-preview';
 
   /// Organization only — trade licence upload.
   static const tradeLicence = '/signup/trade-licence';

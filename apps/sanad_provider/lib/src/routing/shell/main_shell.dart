@@ -4,37 +4,59 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class MainShell extends StatelessWidget {
+class MainShell extends StatefulWidget {
   const MainShell({required this.navigationShell, super.key});
 
   final StatefulNavigationShell navigationShell;
 
   @override
+  State<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends State<MainShell> {
+  late final NotchBottomBarController _bottomNavController =
+      NotchBottomBarController(
+        index: 2, // Center index for 5 items
+      );
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: navigationShell,
+      body: widget.navigationShell,
       bottomNavigationBar: AppBottomNavBar(
-        currentIndex: navigationShell.currentIndex,
-        onTap: (index) => navigationShell.goBranch(
+        controller: _bottomNavController,
+        currentIndex: widget.navigationShell.currentIndex,
+        onTap: (index) => widget.navigationShell.goBranch(
           index,
-          initialLocation: index == navigationShell.currentIndex,
+          initialLocation: index == widget.navigationShell.currentIndex,
+        ),
+        centerAction: AppBottomNavCenterAction(
+          iconAsset: AppNavigationIcons.centerAction,
+          semanticLabel: 'nav.create'.tr(),
+          onTap: () {
+            // TODO: Implement center action
+          },
         ),
         items: [
           AppBottomNavItem(
-            iconAsset: AppSvgs.navHome,
+            iconAsset: AppNavigationIcons.home,
             label: 'nav.home'.tr(),
           ),
           AppBottomNavItem(
-            iconAsset: AppSvgs.navRequest,
+            iconAsset: AppNavigationIcons.service,
             label: 'nav.requests'.tr(),
           ),
           AppBottomNavItem(
-            iconAsset: AppSvgs.navMessage,
+            iconAsset: AppNavigationIcons.messages,
             label: 'nav.messages'.tr(),
           ),
           AppBottomNavItem(
-            iconAsset: AppSvgs.navSettings,
+            iconAsset: AppNavigationIcons.settings,
             label: 'nav.settings'.tr(),
+          ),
+          AppBottomNavItem(
+            iconAsset: AppNavigationIcons.home, // Placeholder icon
+            label: 'nav.more'.tr(),
           ),
         ],
       ),

@@ -40,3 +40,5 @@ class AuthDeleteAccountEvent extends AuthEvent {
 }
 
 class AuthCheckSignInStatusEvent extends AuthEvent {}
+
+class AuthGoogleSignInEvent extends AuthEvent {}

@@ -1,11 +1,13 @@
 ﻿import 'package:app_logger/app_logger.dart';
 import 'package:auth/auth.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:sanad_provider/firebase_options.dart';
 import 'package:sanad_provider/src/app.dart';
 import 'package:sanad_provider/src/di/app_di.dart';
 
@@ -19,6 +21,10 @@ Future<void> bootstrap() => runGuarded(_bootstrap);
 Future<void> _bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
   installGlobalErrorHandlers();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   await Future.wait([
     EasyLocalization.ensureInitialized(),

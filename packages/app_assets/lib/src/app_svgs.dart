@@ -30,19 +30,24 @@ abstract final class AppSvgs {
   /// shipped as a standalone asset rather than reconstructed from tokens.
   static const String successCheck = '$_base/success_check.svg';
 
-  // ── Bottom navigation ──────────────────────────────────────────────────────
+  // ── Bottom navigation (`3148:27106`) ───────────────────────────────────────
+
+  static const String _navBase = 'assets/icons/navigation';
 
   /// Home tab.
-  static const String navHome = '$_base/nav_home.svg';
+  static const String navHome = '$_navBase/home.svg';
 
-  /// Requests tab.
-  static const String navRequest = '$_base/nav_request.svg';
+  /// Service / requests tab.
+  static const String navRequest = '$_navBase/service.svg';
 
   /// Messages tab.
-  static const String navMessage = '$_base/nav_message.svg';
+  static const String navMessage = '$_navBase/messages.svg';
 
   /// Settings tab.
-  static const String navSettings = '$_base/nav_settings.svg';
+  static const String navSettings = '$_navBase/settings.svg';
+
+  /// Center FAB document action.
+  static const String navCenterAction = '$_navBase/center_action.svg';
 
   // ── Header / actions ───────────────────────────────────────────────────────
 
@@ -165,12 +170,6 @@ abstract final class AppSvgs {
   /// Cloud with upload arrow — document upload dropzone / CTA (`2897:13382`).
   static const String cloudUpload = '$_base/cloud_upload.svg';
 
-  /// Gallery + plus — scanner / Select action gallery (`2977:3662`).
-  static const String registrationGallery = '$_base/registration_gallery.svg';
-
-  /// Camera shutter ring — Scan Emirates ID (`2897:13568`).
-  static const String registrationShutter = '$_base/registration_shutter.svg';
-
   /// Document / mirror icon — Trade Licence header (`3001:19254`).
   static const String registrationTradeLicence =
       '$_base/registration_trade_licence.svg';
@@ -189,4 +188,10 @@ abstract final class AppSvgs {
 
   /// Circular refresh — Retake Front/Back Side CTA (`2897:13632` icon).
   static const String registrationRetake = '$_base/registration_retake.svg';
+
+  /// Replace document — Identity Verification success actions.
+  static const String registrationReplace = '$_base/registration_replace.svg';
+
+  /// Remove document — Identity Verification success actions.
+  static const String registrationRemove = '$_base/registration_remove.svg';
 }

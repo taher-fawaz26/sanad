@@ -22,12 +22,12 @@ class AssetSourceSheet extends StatelessWidget {
   final AssetPickerOptions options;
   final AssetPickerTheme theme;
 
-  /// The enabled sources, in a stable presentation order.
+  /// The enabled sources, in presentation order: files → scanner → gallery → camera.
   List<AssetSource> get _enabledSources => [
-    if (options.allowCamera) AssetSource.camera,
-    if (options.allowGallery) AssetSource.gallery,
     if (options.allowFiles) AssetSource.files,
     if (options.allowScanner) AssetSource.scanner,
+    if (options.allowGallery) AssetSource.gallery,
+    if (options.allowCamera) AssetSource.camera,
   ];
 
   @override

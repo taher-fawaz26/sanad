@@ -38,6 +38,14 @@ GoRouter buildProviderRouter() {
             onOtpSent: (email) =>
                 context.push(AuthRoutes.otp, extra: email),
             onRegister: () => context.push(RegistrationRoutes.signUpEmail),
+            onAuthenticated: () => context.go(AppRoutes.home),
+            onOnboarding: (email, token) => context.go(
+              RegistrationRoutes.selectAccountType,
+              extra: OnboardingArgs(
+                email: email,
+                onboardingToken: token,
+              ),
+            ),
           ),
         )
       else

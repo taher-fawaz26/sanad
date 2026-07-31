@@ -35,9 +35,10 @@ class IndividualDetailsPage extends HookWidget {
 
     return Form(
       key: formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           AppSvgPicture.asset(
             AppSvgs.registrationProfile,
             width: responsiveDimension(_kIconSize),
@@ -68,6 +69,7 @@ class IndividualDetailsPage extends HookWidget {
             onPressed: submit,
           ),
         ],
+        ),
       ),
     );
   }

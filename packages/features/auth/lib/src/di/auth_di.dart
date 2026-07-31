@@ -1,12 +1,14 @@
 import 'package:auth/src/auth/auth_status_notifier.dart';
 import 'package:auth/src/data/datasources/auth_local_datasource.dart';
 import 'package:auth/src/data/datasources/auth_remote_datasource.dart';
+import 'package:auth/src/data/datasources/google_auth_datasource.dart';
 import 'package:auth/src/data/repositories/auth_repository_impl.dart';
 import 'package:auth/src/domain/repositories/auth_repository.dart';
 import 'package:auth/src/domain/usecases/check_signin_status_usecase.dart';
 import 'package:auth/src/domain/usecases/delete_account_usecase.dart';
 import 'package:auth/src/domain/usecases/logout_usecase.dart';
 import 'package:auth/src/domain/usecases/request_email_otp_usecase.dart';
+import 'package:auth/src/domain/usecases/sign_in_with_google_usecase.dart';
 import 'package:auth/src/domain/usecases/verify_email_otp_usecase.dart';
 import 'package:auth/src/presentation/bloc/auth/auth_bloc.dart';
 import 'package:core/core.dart';
@@ -27,10 +29,14 @@ class AuthDI {
           sl<HiveLocalStorage>(),
         ),
       )
+      ..registerLazySingleton<GoogleAuthDataSource>(
+        () => GoogleAuthDataSourceImpl(apiClient: sl<BaseApiClient>()),
+      )
       ..registerLazySingleton<AuthRepository>(
         () => AuthRepositoryImpl(
           sl<AuthRemoteDataSource>(),
           sl<AuthLocalDataSource>(),
+          sl<GoogleAuthDataSource>(),
         ),
       )
       ..registerLazySingleton(
@@ -44,6 +50,9 @@ class AuthDI {
       ..registerLazySingleton(
         () => AuthCheckSignInStatusUseCase(sl<AuthRepository>()),
       )
+      ..registerLazySingleton(
+        () => SignInWithGoogleUseCase(sl<AuthRepository>()),
+      )
       ..registerFactory(
         () => AuthBloc(
           requestOtpUseCase: sl<RequestEmailOtpUseCase>(),
@@ -53,6 +62,7 @@ class AuthDI {
           sessionManager: sl<SessionManager>(),
           checkSignInStatusUseCase: sl<AuthCheckSignInStatusUseCase>(),
           authStatusNotifier: sl<AuthStatusNotifier>(),
+          signInWithGoogleUseCase: sl<SignInWithGoogleUseCase>(),
         ),
       );
   }

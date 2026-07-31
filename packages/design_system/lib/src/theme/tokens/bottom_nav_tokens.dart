@@ -1,158 +1,167 @@
-import 'package:design_system/src/dimensions/responsive_dimension.dart';
-import 'package:design_system/src/spacing/responsive_spacing.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
+import 'package:design_system/src/theme/colors/palettes/main_palette.dart';
 import 'package:design_system/src/theme/typography/app_typography.dart';
-import 'package:design_system/src/theme/typography/responsive_font_scale.dart';
-import 'package:design_system/src/utils/constants/app_shadows.dart';
+import 'package:design_system/src/utils/constants/app_durations.dart';
 import 'package:flutter/material.dart';
 
-@immutable
-class AppBottomNavItem {
-  const AppBottomNavItem({
-    required this.iconAsset,
-    required this.label,
-  });
-
-  /// SVG asset path — prefer [AppSvgs.navHome] and siblings.
-  final String iconAsset;
-  final String label;
-}
-
-@immutable
-class BottomNavItemStyleSpec {
-  const BottomNavItemStyleSpec({
-    required this.selectedLabelStyle,
-    required this.unselectedLabelStyle,
-    required this.selectedIconColor,
-    required this.unselectedIconColor,
-    required this.itemBackgroundColor,
-  });
-
-  final TextStyle selectedLabelStyle;
-  final TextStyle unselectedLabelStyle;
-  final Color selectedIconColor;
-  final Color unselectedIconColor;
-  final Color itemBackgroundColor;
-}
-
-@immutable
-class BottomNavStyleSpec {
-  const BottomNavStyleSpec({
-    required this.height,
-    required this.backgroundColor,
-    required this.shadow,
-    required this.iconSize,
-    required this.iconLabelGap,
-    required this.itemStyle,
-    required this.twoTabDarkBackground,
-  });
-
-  final double height;
-  final Color backgroundColor;
-  final List<BoxShadow> shadow;
-  final double iconSize;
-  final double iconLabelGap;
-  final BottomNavItemStyleSpec itemStyle;
-  final Color? twoTabDarkBackground;
-}
-
-@immutable
-class AppBottomNavTheme extends ThemeExtension<AppBottomNavTheme> {
-  const AppBottomNavTheme({required this.spec});
-
-  final BottomNavStyleSpec spec;
-
-  @override
-  AppBottomNavTheme copyWith({BottomNavStyleSpec? spec}) {
-    return AppBottomNavTheme(spec: spec ?? this.spec);
-  }
-
-  @override
-  AppBottomNavTheme lerp(covariant AppBottomNavTheme? other, double t) {
-    if (other == null) {
-      return this;
-    }
-    return t < 0.5 ? this : other;
-  }
-}
-
-extension AppBottomNavThemeX on BuildContext {
-  AppBottomNavTheme get appBottomNavTheme =>
-      Theme.of(this).extension<AppBottomNavTheme>()!;
-}
-
+/// Design tokens for [AppBottomNavBar] mapped to `animated_notch_bottom_bar` API.
+///
+/// Figma reference: `Nab-Bar` (`3148:27106`)
+/// Dribbble reference: Notch bottom navigation design
 abstract final class BottomNavTokens {
   BottomNavTokens._();
 
-  static AppBottomNavTheme themeExtension({
-    required AppColors colors,
-    required AppTypography typography,
-    required Brightness brightness,
-  }) {
-    return AppBottomNavTheme(
-      spec: resolve(
-        colors: colors,
-        typography: typography,
-        brightness: brightness,
-      ),
-    );
-  }
+  // ========== Package Parameters ==========
 
-  static BottomNavStyleSpec resolve({
-    required AppColors colors,
-    required AppTypography typography,
-    required Brightness brightness,
-  }) {
-    final isDark = brightness == Brightness.dark;
-    final clear = colors.palettes.white.withValues(alpha: 0);
+  /// Bottom bar background color — package `color` parameter.
+  static Color backgroundColor(AppColors colors, Brightness brightness) =>
+      brightness == Brightness.dark ? colors.background : colors.surface;
 
-    final labelBase = typography.smallNormal.copyWith(
-      fontSize: 14.rfs,
-      height: 12 / 14,
-    );
+  /// Notch background color — package `notchColor` parameter.
+  static Color notchColor(AppColors colors, Brightness brightness) =>
+      backgroundColor(colors, brightness);
 
-    return BottomNavStyleSpec(
-      height: AppDimension.buttonLg,
-      backgroundColor: isDark ? colors.background : colors.surface,
-      shadow: isDark ? const [] : AppShadows.small,
-      iconSize: AppDimension.iconMenu,
-      iconLabelGap: AppSpacing.sm,
-      twoTabDarkBackground: isDark ? colors.textDisabled : null,
-      itemStyle: BottomNavItemStyleSpec(
-        selectedLabelStyle: labelBase.copyWith(
-          fontWeight: FontWeight.w500,
-          color: colors.primary,
-        ),
-        unselectedLabelStyle: labelBase.copyWith(
-          fontWeight: FontWeight.w500,
-          color: colors.textSecondary,
-        ),
-        selectedIconColor: colors.primary,
-        unselectedIconColor: colors.textSecondary,
-        itemBackgroundColor: isDark ? colors.controlFill : clear,
-      ),
-    );
-  }
+  /// Animation duration — package `durationInMilliSeconds` parameter.
+  static int durationInMilliSeconds = AppDurations.notchBar.inMilliseconds;
 
-  static BottomNavigationBarThemeData bottomNavigationBarTheme({
-    required AppColors colors,
-    required AppTypography typography,
-    required Brightness brightness,
-  }) {
-    final spec = resolve(
-      colors: colors,
-      typography: typography,
-      brightness: brightness,
-    );
+  /// Bar height — package `bottomBarHeight` parameter.
+  static const double bottomBarHeight = 72;
 
-    return BottomNavigationBarThemeData(
-      backgroundColor: spec.backgroundColor,
-      elevation: 0,
-      type: BottomNavigationBarType.fixed,
-      selectedItemColor: spec.itemStyle.selectedIconColor,
-      unselectedItemColor: spec.itemStyle.unselectedIconColor,
-      selectedLabelStyle: spec.itemStyle.selectedLabelStyle,
-      unselectedLabelStyle: spec.itemStyle.unselectedLabelStyle,
-    );
-  }
+  /// Notch bottom radius — package `kBottomRadius` parameter.
+  static const double kBottomRadius = 28;
+
+  /// Show bar top radius — package `showTopRadius` parameter.
+  static const bool showTopRadius = true;
+
+  /// Show bar bottom radius — package `showBottomRadius` parameter.
+  static const bool showBottomRadius = true;
+
+  /// Remove margins — package `removeMargins` parameter.
+  static const bool removeMargins = true;
+
+  /// Shadow elevation — package `elevation` and `shadowElevation` parameters.
+  static const double elevation = 8;
+
+  /// Show shadow — package `showShadow` parameter.
+  static bool showShadow(Brightness brightness) =>
+      brightness == Brightness.light;
+
+  /// Show blur bottom bar — package `showBlurBottomBar` parameter.
+  static const bool showBlurBottomBar = false;
+
+  /// Blur opacity — package `blurOpacity` parameter (when blur is enabled).
+  static const double blurOpacity = 0;
+
+  /// Blur filter X — package `blurFilterX` parameter (when blur is enabled).
+  static const double blurFilterX = 0;
+
+  /// Blur filter Y — package `blurFilterY` parameter (when blur is enabled).
+  static const double blurFilterY = 0;
+
+  /// Icon size — package `kIconSize` parameter.
+  static const double kIconSize = 24;
+
+  /// Top margin — package `topMargin` parameter.
+  static const double topMargin = 12;
+
+  /// Circle margin — package `circleMargin` parameter.
+  static const double circleMargin = 8;
+
+  /// Show label — package `showLabel` parameter.
+  static const bool showLabel = true;
+
+  // ========== Item Style Tokens ==========
+
+  /// Label text style for selected items.
+  static TextStyle selectedLabelStyle(
+    AppTypography typography,
+    AppColors colors,
+  ) =>
+      typography.tinyNormal.copyWith(
+        fontSize: 12,
+        height: 16 / 12,
+        fontWeight: FontWeight.w500,
+        color: colors.primary,
+      );
+
+  /// Label text style for unselected items.
+  static TextStyle unselectedLabelStyle(
+    AppTypography typography,
+    AppColors colors,
+    Brightness brightness,
+  ) =>
+      typography.tinyNormal.copyWith(
+        fontSize: 12,
+        height: 16 / 12,
+        fontWeight: FontWeight.w500,
+        color: brightness == Brightness.dark
+            ? colors.slate400
+            : const Color(0xFF828A89),
+      );
+
+  /// Label text style for disabled items.
+  static TextStyle disabledLabelStyle(
+    AppTypography typography,
+    AppColors colors,
+  ) =>
+      typography.tinyNormal.copyWith(
+        fontSize: 12,
+        height: 16 / 12,
+        fontWeight: FontWeight.w500,
+        color: colors.textDisabled,
+      );
+
+  // ========== Icon Colors ==========
+
+  static Color selectedIconColor(AppColors colors) => colors.primary;
+
+  static Color unselectedIconColor(AppColors colors, Brightness brightness) =>
+      brightness == Brightness.dark
+          ? colors.slate400
+          : const Color(0xFF828A89);
+
+  static Color disabledIconColor(AppColors colors) => colors.textDisabled;
+
+  // ========== Center FAB Tokens ==========
+
+  /// Center FAB size.
+  static const double centerFabSize = 52;
+
+  /// Center FAB inactive color.
+  static Color centerFabInactiveColor(AppColors colors) => colors.slate400;
+
+  /// Center FAB active color.
+  static Color centerFabActiveColor(AppColors colors, Brightness brightness) =>
+      brightness == Brightness.dark
+          ? const Color(0xFF0C8A7B)
+          : MainPalette.shade600;
+
+  /// Center FAB disabled color.
+  static Color centerFabDisabledColor(AppColors colors) => colors.textDisabled;
+
+  /// Center FAB border color.
+  static Color centerFabBorderColor(AppColors colors) => colors.white;
+
+  /// Center FAB icon color.
+  static Color centerFabIconColor(AppColors colors) => colors.white;
+
+  /// Center FAB shadow.
+  static const List<BoxShadow> centerFabShadow = [
+    BoxShadow(
+      color: Color(0x2B05796B),
+      blurRadius: 19,
+      offset: Offset(0, 8),
+    ),
+  ];
+
+  // ========== Animation Tokens ==========
+
+  /// Selected icon scale factor.
+  static const double selectedIconScale = 1.1;
+
+  /// Unselected icon opacity.
+  static const double unselectedIconOpacity = 0.72;
+
+  /// Animation curve for icon/label transitions.
+  static const Curve animationCurve = Curves.easeOutCubic;
 }

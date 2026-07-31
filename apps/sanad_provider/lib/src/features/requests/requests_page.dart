@@ -8,9 +8,14 @@ class RequestsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppNavBar(title: 'requests.title'.tr()),
-      body: Center(child: Text('requests.title'.tr())),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppNavBar(title: 'nav.requests'.tr()),
+        Expanded(
+          child: Center(child: Text('nav.requests'.tr())),
+        ),
+      ],
     );
   }
 }

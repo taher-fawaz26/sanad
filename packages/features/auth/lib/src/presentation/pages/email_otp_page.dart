@@ -119,11 +119,12 @@ class EmailOtpPage extends HookWidget {
       child: AuthScreenShell(
         onBack: changeEmail,
         title: 'auth.otp_title'.tr(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'auth.otp_title'.tr(),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'auth.otp_title'.tr(),
               textAlign: TextAlign.center,
               style: typography.title2.copyWith(
                 fontWeight: FontWeight.w600,
@@ -210,7 +211,8 @@ class EmailOtpPage extends HookWidget {
                 ),
               ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );

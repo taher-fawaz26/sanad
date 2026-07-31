@@ -77,8 +77,7 @@ abstract final class ErrorMapper {
       case DioExceptionType.badResponse:
         final statusCode = e.response?.statusCode;
         final data = e.response?.data;
-        final message =
-            _extractMessage(data) ?? ErrorMessages.serverError;
+        final message = _extractMessage(data) ?? ErrorMessages.serverError;
         if (statusCode == 401) {
           return UnauthorizedFailure(message: message, code: '401');
         }
@@ -104,7 +103,8 @@ abstract final class ErrorMapper {
           // Legacy heuristic: substring-match the message body while the
           // backend migration to structured error codes is in progress.
           final ml = message.toLowerCase();
-          final looksUnverified = ml.contains('verif') ||
+          final looksUnverified =
+              ml.contains('verif') ||
               ml.contains('unverified') ||
               (ml.contains('email') && ml.contains('confirm')) ||
               (ml.contains('pending') && ml.contains('verification'));
@@ -150,7 +150,8 @@ abstract final class ErrorMapper {
           // JSON array, or 422. Preserve every message rather than collapsing
           // to the first one, and surface it as a business ValidationFailure.
           final fieldErrors = _extractFieldErrors(data);
-          final isValidation = _isValidationBody(data) ||
+          final isValidation =
+              _isValidationBody(data) ||
               statusCode == 422 ||
               fieldErrors != null;
           if (isValidation) {
@@ -204,7 +205,29 @@ abstract final class ErrorMapper {
 
       case DioExceptionType.unknown:
         if (inner is SocketException) {
-          return const NoInternetFailure(message: ErrorMessages.noInternet);
+          // Connection reset by peer (errno 104) means the server actively
+          // closed the connection - typically due to file size limits or timeouts
+          if (inner.osError?.errorCode == 104 ||
+              inner.message.toLowerCase().contains('connection reset')) {
+            return NetworkFailure(
+              message: ErrorMessages.connectionReset,
+              code: 'connection_reset',
+              metadata: {
+                'os_error': inner.osError?.message,
+                'errno': inner.osError?.errorCode,
+              },
+            );
+          }
+          // Connection refused typically means the server is down or unreachable
+          if (inner.osError?.errorCode == 111 ||
+              inner.message.toLowerCase().contains('connection refused')) {
+            return const NoInternetFailure(message: ErrorMessages.noInternet);
+          }
+          // Other socket errors are likely network connectivity issues
+          return NoInternetFailure(
+            message: ErrorMessages.noInternet,
+            code: 'socket_error',
+          );
         }
         if (inner is TimeoutException) {
           return const TimeoutFailure(message: ErrorMessages.timeout);
@@ -287,8 +310,8 @@ abstract final class ErrorMapper {
       if (first is Map) {
         final m = Map<String, dynamic>.from(first);
         return _flattenField(m['message']) ??
-          _flattenField(m['msg']) ??
-          first.toString();
+            _flattenField(m['msg']) ??
+            first.toString();
       }
       return first.toString();
     }

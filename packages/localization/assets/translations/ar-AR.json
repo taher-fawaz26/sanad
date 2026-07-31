@@ -18,7 +18,9 @@
     "home": "الرئيسية",
     "requests": "الطلبات",
     "messages": "الرسائل",
-    "settings": "الإعدادات"
+    "settings": "الإعدادات",
+    "more": "المزيد",
+    "create": "إنشاء"
   },
   "settings": {
     "title": "الإعدادات",
@@ -516,6 +518,7 @@
     "not_found": "لم يتم العثور على المورد المطلوب.",
     "bad_request": "طلب غير صالح. يرجى التحقق من المدخلات.",
     "request_cancelled": "تم إلغاء الطلب.",
+    "connection_reset": "فشل التحميل. قد يكون الملف كبيراً جداً أو تم قطع الاتصال. يرجى المحاولة مرة أخرى بملف أصغر.",
     "secure_connection_failed": "فشل الاتصال الآمن. يرجى المحاولة مرة أخرى.",
     "invalid_credentials": "بيانات اعتماد غير صالحة. يرجى المحاولة مرة أخرى.",
     "cache_error": "فشل تحميل البيانات المخزنة مؤقتاً.",
@@ -577,22 +580,13 @@
     "choose_upload": "اختر طريقة رفع مستندك",
     "choose_upload_hint": "التقاط أو مسح أو اختيار من المعرض",
     "change_doc": "تغيير",
+    "replace": "استبدال",
+    "remove": "إزالة",
     "capture_failed": "تعذّر الحصول على المستند. حاول مرة أخرى.",
     "select_action": "اختر إجراءً",
     "upload_file": "رفع ملف",
-    "scan_capture": "مسح أو التقاط",
+    "scan_capture": "مسح / التقاط",
     "upload_gallery": "الرفع من المعرض",
-    "review_photos_title": "مسح الهوية الإماراتية",
-    "review_photos_subtitle": "الرجاء مراجعة صور هويتك الإماراتية.",
-    "front_side": "الوجه الأمامي",
-    "back_side": "الوجه الخلفي",
-    "retake": "إعادة الالتقاط",
-    "scan_front_preview_subtitle": "تأكد من أن الوجه الأمامي لهويتك الإماراتية واضح وقابل للقراءة.",
-    "scan_back_preview_subtitle": "تأكد من أن الوجه الخلفي لهويتك الإماراتية واضح وقابل للقراءة.",
-    "scan_back_side": "مسح الوجه الخلفي",
-    "retake_front_side": "إعادة التقاط الوجه الأمامي",
-    "retake_back_side": "إعادة التقاط الوجه الخلفي",
-    "confirm_photos": "تبدو جيدة",
     "trade_licence_title": "الرخصة التجارية",
     "trade_licence_subtitle": "قم برفع رخصتك التجارية للتحقق من مؤسستك وإكمال التسجيل.",
     "trade_licence_label": "الرخصة التجارية",
@@ -628,6 +622,9 @@
     "issuance_date": "تاريخ الإصدار",
     "legal_form": "الشكل القانوني",
     "unified_reg_no": "رقم السجل الموحّد",
-    "unified_licence_no": "رقم الرخصة الموحّد"
+    "unified_licence_no": "رقم الرخصة الموحّد",
+    "completing_profile": "جاري إكمال التسجيل...",
+    "profile_complete_error_title": "فشل التسجيل",
+    "profile_complete_error_message": "تعذّر إكمال تسجيلك. تحقق من اتصالك بالإنترنت وحاول مرة أخرى."
   }
 }

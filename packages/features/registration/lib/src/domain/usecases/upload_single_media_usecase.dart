@@ -38,7 +38,7 @@ class UploadSingleMediaParams extends Equatable {
       ];
 }
 
-/// Uploads one file via `POST media/upload-single`.
+/// Uploads one file via `POST media/onboarding`.
 ///
 /// Cancel tokens stay in the data layer — call [cancel] with the same
 /// [UploadSingleMediaParams.uploadKey] to abort the HTTP request.

@@ -41,6 +41,7 @@ class AssetPickerOptions extends Equatable {
     this.enablePdfGeneration = false,
     this.imageQuality = 85,
     this.loadBytes = false,
+    this.requireBothSides = false,
   }) : assert(maxSelection >= 1, 'maxSelection must be at least 1'),
        assert(
          imageQuality >= 0 && imageQuality <= 100,
@@ -132,6 +133,13 @@ class AssetPickerOptions extends Equatable {
   /// Off by default to avoid holding large files in memory unnecessarily.
   final bool loadBytes;
 
+  /// Request both document sides (front and back) in a single scan session.
+  ///
+  /// Only honoured by scanner providers that support multi-side capture
+  /// (e.g. [DocumentCameraFrameScannerProvider]). When `true`, the scanner
+  /// returns two [PickedAsset]s — front first, back second.
+  final bool requireBothSides;
+
   /// The effective maximum number of assets, collapsing [allowMultiple] and
   /// [maxSelection] into a single value.
   int get effectiveMaxSelection => allowMultiple ? maxSelection : 1;
@@ -199,6 +207,7 @@ class AssetPickerOptions extends Equatable {
     bool? enablePdfGeneration,
     int? imageQuality,
     bool? loadBytes,
+    bool? requireBothSides,
   }) {
     return AssetPickerOptions(
       allowCamera: allowCamera ?? this.allowCamera,
@@ -225,6 +234,7 @@ class AssetPickerOptions extends Equatable {
       enablePdfGeneration: enablePdfGeneration ?? this.enablePdfGeneration,
       imageQuality: imageQuality ?? this.imageQuality,
       loadBytes: loadBytes ?? this.loadBytes,
+      requireBothSides: requireBothSides ?? this.requireBothSides,
     );
   }
 
@@ -254,5 +264,6 @@ class AssetPickerOptions extends Equatable {
     enablePdfGeneration,
     imageQuality,
     loadBytes,
+    requireBothSides,
   ];
 }

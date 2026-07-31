@@ -59,11 +59,12 @@ class SignUpEmailPage extends HookWidget {
           );
         }
       },
-      child: Form(
+        child: Form(
         key: formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
             RegistrationHeader(
               title: 'registration.sign_up_title'.tr(),
               subtitle: Text.rich(
@@ -165,6 +166,7 @@ class SignUpEmailPage extends HookWidget {
               ),
             ),
           ],
+          ),
         ),
       ),
     );

@@ -4,15 +4,14 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:registration/src/di/registration_di.dart';
+import 'package:registration/src/domain/usecases/complete_profile_usecase.dart';
+import 'package:registration/src/domain/usecases/extract_documents_usecase.dart';
 import 'package:registration/src/domain/usecases/upload_single_media_usecase.dart';
 import 'package:registration/src/presentation/cubit/registration_cubit.dart';
-import 'package:registration/src/presentation/models/emirates_id_scan_session.dart';
-import 'package:registration/src/presentation/pages/emirates_id_scan_preview_page.dart';
 import 'package:registration/src/presentation/pages/extracting_documents_page.dart';
 import 'package:registration/src/presentation/pages/identity_verification_page.dart';
 import 'package:registration/src/presentation/pages/individual_details_page.dart';
 import 'package:registration/src/presentation/pages/organization_details_page.dart';
-import 'package:registration/src/presentation/pages/review_id_photos_page.dart';
 import 'package:registration/src/presentation/pages/review_information_page.dart';
 import 'package:registration/src/presentation/pages/select_account_type_page.dart';
 import 'package:registration/src/presentation/pages/sign_up_email_page.dart';
@@ -24,7 +23,7 @@ import 'package:registration/src/routes/registration_routes.dart';
 /// A [ShellRoute] wraps all sub-routes so a single [RegistrationCubit] is
 /// created once when the user enters `/signup` and disposed automatically when
 /// they leave the entire flow. Card steps are wrapped in [AuthScreenShell];
-/// the full-screen scan / extraction steps render their own gradient scaffold.
+/// the full-screen extraction step renders its own gradient scaffold.
 class RegistrationModule extends FeatureModule {
   @override
   String get name => 'registration';
@@ -40,10 +39,8 @@ class RegistrationModule extends FeatureModule {
 
   /// Steps rendered inside the white [AuthScreenShell] card by this module.
   ///
-  /// Document-upload steps ([RegistrationRoutes.identityVerification],
-  /// [RegistrationRoutes.tradeLicence]) are intentionally excluded: they wrap
-  /// themselves in [AuthScreenShell] so they can pin their action button in the
-  /// shell footer (always visible above the scrolling upload cards).
+  /// The identity-verification and trade-licence steps are intentionally
+  /// excluded: they wrap themselves in [AuthScreenShell] to pin the footer.
   static const Set<String> _authShellSteps = {
     RegistrationRoutes.signUpEmail,
     RegistrationRoutes.selectAccountType,
@@ -81,6 +78,8 @@ class RegistrationModule extends FeatureModule {
             return BlocProvider(
               create: (_) => RegistrationCubit(
                 uploadMedia: sl<UploadSingleMediaUseCase>(),
+                extractDocuments: sl<ExtractDocumentsUseCase>(),
+                completeProfile: sl<CompleteProfileUseCase>(),
               ),
               child: useAuthShell
                   ? AuthScreenShell(
@@ -111,24 +110,6 @@ class RegistrationModule extends FeatureModule {
             GoRoute(
               path: RegistrationRoutes.identityVerification,
               builder: (context, state) => const IdentityVerificationPage(),
-            ),
-            GoRoute(
-              path: RegistrationRoutes.reviewIdPhotos,
-              builder: (context, state) => const ReviewIdPhotosPage(),
-            ),
-            GoRoute(
-              path: RegistrationRoutes.emiratesIdScanFrontPreview,
-              builder: (context, state) => EmiratesIdScanPreviewPage(
-                side: EmiratesIdScanSide.front,
-                initialSession: state.extra! as EmiratesIdScanSession,
-              ),
-            ),
-            GoRoute(
-              path: RegistrationRoutes.emiratesIdScanBackPreview,
-              builder: (context, state) => EmiratesIdScanPreviewPage(
-                side: EmiratesIdScanSide.back,
-                initialSession: state.extra! as EmiratesIdScanSession,
-              ),
             ),
             GoRoute(
               path: RegistrationRoutes.tradeLicence,

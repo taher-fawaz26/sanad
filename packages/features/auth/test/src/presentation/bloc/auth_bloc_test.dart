@@ -9,6 +9,7 @@ import 'package:auth/src/domain/usecases/check_signin_status_usecase.dart';
 import 'package:auth/src/domain/usecases/delete_account_usecase.dart';
 import 'package:auth/src/domain/usecases/logout_usecase.dart';
 import 'package:auth/src/domain/usecases/request_email_otp_usecase.dart';
+import 'package:auth/src/domain/usecases/sign_in_with_google_usecase.dart';
 import 'package:auth/src/domain/usecases/usecase_params.dart';
 import 'package:auth/src/domain/usecases/verify_email_otp_usecase.dart';
 import 'package:auth/src/presentation/bloc/auth/auth_bloc.dart';
@@ -33,6 +34,9 @@ class _MockSessionManager extends Mock implements SessionManager {}
 
 class _MockCheckSignInStatusUseCase extends Mock
     implements AuthCheckSignInStatusUseCase {}
+
+class _MockSignInWithGoogleUseCase extends Mock
+    implements SignInWithGoogleUseCase {}
 
 // ── Fixture data ───────────────────────────────────────────────────────────
 
@@ -70,6 +74,7 @@ void main() {
   late _MockDeleteAccountUseCase deleteAccountUseCase;
   late _MockSessionManager sessionManager;
   late _MockCheckSignInStatusUseCase checkSignInStatusUseCase;
+  late _MockSignInWithGoogleUseCase signInWithGoogleUseCase;
   late AuthStatusNotifier authStatusNotifier;
 
   AuthBloc buildBloc() => AuthBloc(
@@ -80,6 +85,7 @@ void main() {
         sessionManager: sessionManager,
         checkSignInStatusUseCase: checkSignInStatusUseCase,
         authStatusNotifier: authStatusNotifier,
+        signInWithGoogleUseCase: signInWithGoogleUseCase,
       );
 
   setUpAll(() {
@@ -96,6 +102,7 @@ void main() {
     deleteAccountUseCase = _MockDeleteAccountUseCase();
     sessionManager = _MockSessionManager();
     checkSignInStatusUseCase = _MockCheckSignInStatusUseCase();
+    signInWithGoogleUseCase = _MockSignInWithGoogleUseCase();
     authStatusNotifier = AuthStatusNotifier();
 
     when(

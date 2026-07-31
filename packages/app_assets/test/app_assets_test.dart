@@ -11,7 +11,14 @@ void main() {
   group('AppSvgs', () {
     test('paths are rooted under assets/svgs', () {
       expect(AppSvgs.close, startsWith('assets/svgs/'));
-      expect(AppSvgs.navHome, startsWith('assets/svgs/'));
+      expect(AppSvgs.navHome, startsWith('assets/icons/navigation/'));
+    });
+  });
+
+  group('AppNavigationIcons', () {
+    test('paths are rooted under assets/icons/navigation', () {
+      expect(AppNavigationIcons.home, startsWith('assets/icons/navigation/'));
+      expect(AppNavigationIcons.centerAction, startsWith('assets/icons/navigation/'));
     });
   });
 

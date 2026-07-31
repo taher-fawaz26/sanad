@@ -14,6 +14,7 @@ abstract class AuthRepository {
     VerifyEmailOtpParams params,
   );
 
+  TaskEither<Failure, EmailAuthResult> signInWithGoogle();
   TaskEither<Failure, void> logout();
   TaskEither<Failure, UserEntity?> checkSignInStatus();
   TaskEither<Failure, void> deleteAccount(DeleteAccountParams params);

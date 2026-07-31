@@ -79,6 +79,22 @@ Key components exported from `design_system.dart`:
 - **Input:** `AppTextField`, `AppSelectField`, `AppPhoneField`, `AppSearchField`, `AppFieldAction`
 - **Action:** `AppButton`, `AppButtonGroup`, `AppIconButton`
 - **Navigation:** `AppNavBar`, `AppLargeNavBar`, `AppBottomNavBar`, `AppTabBar`
+
+### AppBottomNavBar
+
+Figma `Nab-Bar` (`3148:27106`). Notch bottom navigation with a fixed center
+action, built on `animated_notch_bottom_bar` (official package, not forked).
+
+Full usage guide: [`docs/components/APP_BOTTOM_NAV_BAR.md`](components/APP_BOTTOM_NAV_BAR.md)
+
+| Concern | Detail |
+|---|---|
+| Icons | `AppNavigationIcons` (`app_assets`) via `AppSvgPicture` |
+| Tokens | `BottomNavTokens`, `AppBottomNavTheme` |
+| RTL | Tab order mirrors under `Directionality` |
+| Text scale | Labels clamped to 1× for layout stability; semantics unchanged |
+| Catalog | `apps/design_catalog` → Navigation → AppBottomNavBar |
+
 - **Display:** `AppSection`, `AppStatusBadge`, `AppChip`, `AppAvatar`, `AppKeyValueCard`
 - **Feedback:** `AppSnackbar`, `AppProgressBar`, `AppPopover`
 - **Form:** `AppCheckbox`, `AppRadio`, `AppRadioTile`, `AppSwitch`, `AppSlider`

@@ -8,6 +8,7 @@ import 'package:auth/src/domain/usecases/check_signin_status_usecase.dart';
 import 'package:auth/src/domain/usecases/delete_account_usecase.dart';
 import 'package:auth/src/domain/usecases/logout_usecase.dart';
 import 'package:auth/src/domain/usecases/request_email_otp_usecase.dart';
+import 'package:auth/src/domain/usecases/sign_in_with_google_usecase.dart';
 import 'package:auth/src/domain/usecases/usecase_params.dart';
 import 'package:auth/src/domain/usecases/verify_email_otp_usecase.dart';
 import 'package:core/core.dart';
@@ -27,6 +28,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required SessionManager sessionManager,
     required AuthCheckSignInStatusUseCase checkSignInStatusUseCase,
     required AuthStatusNotifier authStatusNotifier,
+    required SignInWithGoogleUseCase signInWithGoogleUseCase,
   })  : _requestOtpUseCase = requestOtpUseCase,
         _verifyOtpUseCase = verifyOtpUseCase,
         _logoutUseCase = logoutUseCase,
@@ -34,12 +36,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         _sessionManager = sessionManager,
         _checkSignInStatusUseCase = checkSignInStatusUseCase,
         _authStatusNotifier = authStatusNotifier,
+        _signInWithGoogleUseCase = signInWithGoogleUseCase,
         super(const AuthInitialState()) {
     on<AuthRequestOtpEvent>(_requestOtp);
     on<AuthVerifyOtpEvent>(_verifyOtp);
     on<AuthLogoutEvent>(_logout);
     on<AuthDeleteAccountEvent>(_deleteAccount);
     on<AuthCheckSignInStatusEvent>(_checkSignInStatus);
+    on<AuthGoogleSignInEvent>(_signInWithGoogle);
   }
 
   final RequestEmailOtpUseCase _requestOtpUseCase;
@@ -49,6 +53,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final SessionManager _sessionManager;
   final AuthCheckSignInStatusUseCase _checkSignInStatusUseCase;
   final AuthStatusNotifier _authStatusNotifier;
+  final SignInWithGoogleUseCase _signInWithGoogleUseCase;
 
   Future<void> _requestOtp(
     AuthRequestOtpEvent event,
@@ -187,6 +192,45 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           AuthStatus.authenticated,
           isProfileCompleted: user.isProfileCompleted,
         );
+      },
+    );
+  }
+
+  Future<void> _signInWithGoogle(
+    AuthGoogleSignInEvent event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthGoogleSignInLoadingState());
+
+    final result =
+        await _signInWithGoogleUseCase.call(const NoParams()).run();
+
+    await result.match(
+      (failure) async => emit(AuthGoogleSignInFailureState(failure)),
+      (outcome) async {
+        switch (outcome) {
+          case AuthenticatedResult(
+              :final accessToken,
+              :final refreshToken,
+              :final user,
+            ):
+            await _sessionManager.startSession(
+              accessToken: accessToken,
+              refreshToken: refreshToken,
+            );
+            _authStatusNotifier.update(
+              AuthStatus.authenticated,
+              isProfileCompleted: user.isProfileCompleted,
+            );
+            emit(AuthAuthenticatedState(user));
+          case OnboardingResult(:final email, :final onboardingToken):
+            emit(
+              AuthOnboardingRequiredState(
+                email: email,
+                onboardingToken: onboardingToken,
+              ),
+            );
+        }
       },
     );
   }

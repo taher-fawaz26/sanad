@@ -120,6 +120,21 @@ class AuthDeleteAccountFailureState extends AuthState {
   List<Object?> get props => [failure, user];
 }
 
+// ─── Google Sign-In ──────────────────────────────────────────────────────────
+
+class AuthGoogleSignInLoadingState extends AuthState {
+  const AuthGoogleSignInLoadingState();
+}
+
+class AuthGoogleSignInFailureState extends AuthState {
+  const AuthGoogleSignInFailureState(this.failure);
+
+  final Failure failure;
+
+  @override
+  List<Object?> get props => [failure];
+}
+
 // ─── Session check (splash) ─────────────────────────────────────────────────
 
 class AuthCheckSignInStatusLoadingState extends AuthState {

@@ -1,6 +1,6 @@
 import 'package:registration/src/domain/entities/media_file_entity.dart';
 
-/// DTO for `POST media/upload-single`.
+/// DTO for `POST media/onboarding`.
 class MediaUploadResponse {
   const MediaUploadResponse({
     required this.id,

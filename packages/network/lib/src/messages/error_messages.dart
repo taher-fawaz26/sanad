@@ -11,6 +11,7 @@ abstract final class ErrorMessages {
   static const String notFound = 'errors.not_found';
   static const String badRequest = 'errors.bad_request';
   static const String requestCancelled = 'errors.request_cancelled';
+  static const String connectionReset = 'errors.connection_reset';
   static const String secureConnectionFailed =
       'errors.secure_connection_failed';
   static const String invalidCredentials = 'errors.invalid_credentials';

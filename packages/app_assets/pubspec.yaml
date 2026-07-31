@@ -30,5 +30,6 @@ flutter:
     - assets/images/onboarding/
     - assets/images/registration/
     - assets/icons/
+    - assets/icons/navigation/
     - assets/lottie/
     - assets/animations/

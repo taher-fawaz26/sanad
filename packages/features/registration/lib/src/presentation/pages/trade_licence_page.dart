@@ -1,4 +1,5 @@
 import 'package:app_assets/app_assets.dart';
+import 'package:app_logger/app_logger.dart';
 import 'package:asset_picker/asset_picker.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -25,13 +26,18 @@ class TradeLicencePage extends StatelessWidget {
 
   Future<void> _capture(BuildContext context) async {
     try {
-      final asset = await captureRegistrationDocument(context);
-      if (asset == null || !context.mounted) return;
+      final result = await captureRegistrationDocument(context);
+      if (result == null || result.isEmpty || !context.mounted) return;
       await context.read<RegistrationCubit>().uploadDocument(
             slot: RegistrationDocumentSlot.tradeLicence,
-            asset: asset,
+            asset: result.assets.first,
           );
-    } on AssetPickerException {
+    } on AssetPickerException catch (e, stackTrace) {
+      appLogger.e(
+        'Trade licence picker failed: ${e.message}',
+        error: e,
+        stackTrace: stackTrace,
+      );
       if (!context.mounted) return;
       showAppErrorSnackbar(
         context: context,
@@ -91,36 +97,42 @@ class TradeLicencePage extends StatelessWidget {
                 ),
               ],
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                AppSvgPicture.asset(
-                  AppSvgs.registrationTradeLicence,
-                  width: responsiveDimension(_kIconSize),
-                  height: responsiveDimension(_kIconSize),
-                  colorFilter: ColorFilter.mode(
-                    colors.textPrimary,
-                    BlendMode.srcIn,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AppSvgPicture.asset(
+                    AppSvgs.registrationTradeLicence,
+                    width: responsiveDimension(_kIconSize),
+                    height: responsiveDimension(_kIconSize),
+                    colorFilter: ColorFilter.mode(
+                      colors.textPrimary,
+                      BlendMode.srcIn,
+                    ),
                   ),
-                ),
-                SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-                RegistrationHeader(
-                  title: 'registration.trade_licence_title'.tr(),
-                  subtitle: Text('registration.trade_licence_subtitle'.tr()),
-                ),
-                SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-                DocumentUploadCard(
-                  title: 'registration.trade_licence_label'.tr(),
-                  uploadable: state.tradeLicence,
-                  onUpload: () => _capture(context),
-                  onCancel: () => context
-                      .read<RegistrationCubit>()
-                      .cancelDocumentUpload(
-                        RegistrationDocumentSlot.tradeLicence,
-                      ),
-                ),
-                SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-              ],
+                  SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
+                  RegistrationHeader(
+                    title: 'registration.trade_licence_title'.tr(),
+                    subtitle: Text('registration.trade_licence_subtitle'.tr()),
+                  ),
+                  SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
+                  DocumentUploadCard(
+                    title: 'registration.trade_licence_label'.tr(),
+                    uploadable: state.tradeLicence,
+                    onUpload: () => _capture(context),
+                    onCancel: () => context
+                        .read<RegistrationCubit>()
+                        .cancelDocumentUpload(
+                          RegistrationDocumentSlot.tradeLicence,
+                        ),
+                    onReplace: () => _capture(context),
+                    onRemove: () => context
+                        .read<RegistrationCubit>()
+                        .clearDocument(RegistrationDocumentSlot.tradeLicence),
+                  ),
+                  SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
+                ],
+              ),
             ),
           );
         },

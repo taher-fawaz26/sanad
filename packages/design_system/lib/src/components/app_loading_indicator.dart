@@ -8,10 +8,12 @@ import 'package:flutter/material.dart';
 
 /// Sanad Design System loading indicator — Figma `Loader` (`53:2061`).
 ///
-/// Renders a gradient ring that fades from a solid leading tip (marked by a
-/// small dot) around to fully transparent, continuously rotating. All
-/// colours are resolved from `AppColors` so the widget adapts automatically
-/// to light / dark theme without any extra configuration.
+/// Renders a 270° gradient arc that rotates continuously. The arc fades
+/// from fully transparent at the tail through a light teal ramp to the
+/// solid brand primary at the leading tip, capped with a rounded end.
+///
+/// All colours are resolved from `AppColors` so the widget adapts to
+/// light / dark theme automatically.
 ///
 /// ### Basic usage
 /// ```dart
@@ -23,7 +25,7 @@ import 'package:flutter/material.dart';
 /// AppLoadingIndicator(size: 24, strokeWidth: 3.5)
 /// ```
 ///
-/// ### Custom colour
+/// ### Custom colour (derives light variant automatically)
 /// ```dart
 /// AppLoadingIndicator(color: Colors.white)
 /// ```
@@ -33,11 +35,11 @@ import 'package:flutter/material.dart';
 ///   surrounding widget tree.
 /// - `LoadingIndicatorPainter` listens directly to the rotation controller
 ///   via its `repaint` listenable, so **no widget rebuilds occur during
-///   animation** — only the `RenderCustomPaint` is dirtied each frame.
+///   animation** — only the `RenderCustomPaint` layer is dirtied each frame.
 /// - Respects `MediaQuery.disableAnimations` for accessibility.
 ///
 /// See also:
-///  * [LoadingIndicatorTokens], which defines default values.
+///  * [LoadingIndicatorTokens], which defines default values and stops.
 ///  * [LoadingIndicatorPainter], which handles all rendering.
 class AppLoadingIndicator extends StatefulWidget {
   const AppLoadingIndicator({
@@ -53,17 +55,17 @@ class AppLoadingIndicator extends StatefulWidget {
   /// Defaults to [LoadingIndicatorTokens.defaultSize] (40 dp).
   final double? size;
 
-  /// Stroke width of the gradient ring.
-  /// Defaults to [LoadingIndicatorTokens.defaultStrokeWidth] (6 dp).
+  /// Stroke width of the gradient arc.
+  /// Defaults to [LoadingIndicatorTokens.defaultStrokeWidth] (5 dp).
   final double? strokeWidth;
 
-  /// Colour of the ring's solid leading tip and dot — fades to transparent
-  /// around the rest of the ring.
+  /// Override the arc colour. When provided, the light gradient colour is
+  /// derived automatically as 50 % opacity of this value.
   /// Defaults to `AppColors.primary`.
   final Color? color;
 
   /// Duration of one full 360° rotation.
-  /// Defaults to [LoadingIndicatorTokens.rotationDuration] (1 333 ms).
+  /// Defaults to [LoadingIndicatorTokens.rotationDuration] (1 100 ms).
   final Duration? duration;
 
   /// Semantic label announced by screen readers.
@@ -109,17 +111,25 @@ class _AppLoadingIndicatorState extends State<AppLoadingIndicator>
     final colorScheme = Theme.of(context).colorScheme;
     final reduceMotion = MediaQuery.of(context).disableAnimations;
 
-    final arcColor =
-        widget.color ??
-        (appColors != null
-            ? LoadingIndicatorTokens.resolveColor(appColors)
-            : colorScheme.primary);
+    final Color arcColor;
+    final Color lightArcColor;
+
+    if (widget.color != null) {
+      arcColor = widget.color!;
+      lightArcColor = widget.color!.withValues(alpha: 0.5);
+    } else if (appColors != null) {
+      arcColor = LoadingIndicatorTokens.resolveColor(appColors);
+      lightArcColor = LoadingIndicatorTokens.resolveLightColor(appColors);
+    } else {
+      arcColor = colorScheme.primary;
+      lightArcColor = colorScheme.primary.withValues(alpha: 0.5);
+    }
 
     final size = widget.size ?? LoadingIndicatorTokens.defaultSize;
     final strokeWidth =
         widget.strokeWidth ?? LoadingIndicatorTokens.defaultStrokeWidth;
 
-    // When system animations are disabled, render a fixed rotation angle to
+    // When system animations are disabled, render a fixed position to
     // indicate loading state without motion.
     final rotationAnimation = reduceMotion
         ? const AlwaysStoppedAnimation<double>(0)
@@ -128,6 +138,7 @@ class _AppLoadingIndicatorState extends State<AppLoadingIndicator>
     final painter = LoadingIndicatorPainter._(
       rotationAnimation: rotationAnimation,
       arcColor: arcColor,
+      lightArcColor: lightArcColor,
       strokeWidth: strokeWidth,
     );
 
@@ -147,25 +158,34 @@ class _AppLoadingIndicatorState extends State<AppLoadingIndicator>
 
 /// `CustomPainter` for [AppLoadingIndicator].
 ///
-/// Renders a full-circle [SweepGradient] ring — opaque at the leading tip,
-/// fading to fully transparent around the rest of the circle — plus a small
-/// solid dot marking the leading tip. The whole shape rotates continuously.
+/// Draws a 270° arc whose [SweepGradient] transitions:
 ///
-/// The painter listens directly to the rotation controller (via its
-/// `repaint` listenable), so repainting never triggers a widget rebuild —
-/// only the `RenderCustomPaint` layer is dirtied.
+/// ```plaintext
+/// transparent → transparent → lightArcColor → arcColor
+/// ```
+///
+/// The arc sweeps clockwise, with the solid leading tip at the head (end of
+/// the sweep). `StrokeCap.round` creates a natural rounded end at the head
+/// while the transparent tail end is invisible. The entire arc rotates every
+/// frame via the [rotationAnimation] listenable — no widget rebuild occurs.
 class LoadingIndicatorPainter extends CustomPainter {
   LoadingIndicatorPainter._({
     required this.rotationAnimation,
     required this.arcColor,
+    required this.lightArcColor,
     required this.strokeWidth,
   }) : super(repaint: rotationAnimation);
 
   final Animation<double> rotationAnimation;
   final Color arcColor;
+  final Color lightArcColor;
   final double strokeWidth;
 
   static const double _twoPi = math.pi * 2;
+
+  // 270° arc — matches the iOS-style reference and the Figma design.
+  static const double _sweepAngle =
+      _twoPi * LoadingIndicatorTokens.sweepFraction;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -174,37 +194,40 @@ class LoadingIndicatorPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final rect = Rect.fromCircle(center: center, radius: radius);
 
-    // Leading tip starts at the top and sweeps clockwise as it rotates.
+    // Head starts at 12 o'clock (-π/2) and rotates clockwise each frame.
     final headAngle = -math.pi / 2 + rotationAnimation.value * _twoPi;
+    final tailAngle = headAngle - _sweepAngle;
 
-    canvas.drawCircle(
-      center,
-      radius,
+    canvas.drawArc(
+      rect,
+      tailAngle,
+      _sweepAngle,
+      false,
       Paint()
-        ..shader = SweepGradient(
-          startAngle: headAngle,
-          endAngle: headAngle + _twoPi,
-          colors: [arcColor, arcColor.withValues(alpha: 0)],
-        ).createShader(rect)
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
         ..strokeWidth = strokeWidth
-        ..style = PaintingStyle.stroke,
+        ..shader = SweepGradient(
+          startAngle: tailAngle,
+          endAngle: headAngle,
+          colors: [
+            Colors.transparent, // tail — round cap here is invisible
+            Colors.transparent,
+            lightArcColor, // gradient ramp begins
+            arcColor, // solid leading tip — round cap visible here
+          ],
+          stops: LoadingIndicatorTokens.gradientStops,
+        ).createShader(rect),
     );
-
-    final dotRadius = strokeWidth / 2;
-    final dotCenter = Offset(
-      center.dx + radius * math.cos(headAngle),
-      center.dy + radius * math.sin(headAngle),
-    );
-    canvas.drawCircle(dotCenter, dotRadius, Paint()..color = arcColor);
   }
 
-  /// Returns `true` only when a structural property (colour or stroke width)
-  /// changes. Animation-driven repaints are handled by the `repaint`
-  /// listenable passed to `super`, so animation ticks never trigger this
-  /// check.
+  /// Returns `true` only when a structural property changes. Animation-driven
+  /// repaints are handled by the `repaint` listenable passed to `super`, so
+  /// animation ticks never trigger this check.
   @override
   bool shouldRepaint(LoadingIndicatorPainter oldDelegate) =>
       oldDelegate.arcColor != arcColor ||
+      oldDelegate.lightArcColor != lightArcColor ||
       oldDelegate.strokeWidth != strokeWidth;
 
   @override

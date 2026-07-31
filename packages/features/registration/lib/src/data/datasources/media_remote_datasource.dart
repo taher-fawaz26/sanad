@@ -1,11 +1,17 @@
+import 'package:app_logger/app_logger.dart';
+import 'package:auth/src/domain/entities/email_auth_result.dart';
 import 'package:core/core.dart';
 import 'package:dio/dio.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:network/network.dart';
 import 'package:registration/src/data/endpoints/media_api_paths.dart';
+import 'package:registration/src/data/models/extraction_response.dart';
+import 'package:registration/src/data/models/extraction_result.dart';
 import 'package:registration/src/data/models/media_upload_response.dart';
+import 'package:registration/src/data/models/profile_completion_request.dart';
+import 'package:registration/src/data/models/profile_completion_response.dart';
 
-/// Remote data source for media uploads.
+/// Remote data source for media uploads and document extraction.
 abstract interface class MediaRemoteDataSource {
   TaskEither<Failure, MediaUploadResponse> uploadSingle({
     required String filePath,
@@ -17,6 +23,27 @@ abstract interface class MediaRemoteDataSource {
   });
 
   void cancelUpload(String uploadKey);
+
+  /// Calls `POST auth/extract` with the three uploaded media IDs and returns
+  /// the structured [ExtractionResult].
+  TaskEither<Failure, ExtractionResult> extractDocuments({
+    required String authorizationToken,
+    required String emiratesIdFrontId,
+    required String emiratesIdBackId,
+    String? tradeLicenseId,
+  });
+
+  /// Completes provider profile for an individual.
+  TaskEither<Failure, AuthenticatedResult> completeIndividualProfile({
+    required String authorizationToken,
+    required ProfileCompletionRequest request,
+  });
+
+  /// Completes provider profile for a company/organization.
+  TaskEither<Failure, AuthenticatedResult> completeCompanyProfile({
+    required String authorizationToken,
+    required ProfileCompletionRequest request,
+  });
 }
 
 class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
@@ -38,21 +65,27 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
   }) =>
       TaskEither.tryCatch(
         () async {
-          // Replace any prior in-flight upload for this slot.
           _cancelTokens[uploadKey]?.cancel();
           final cancelToken = CancelToken();
           _cancelTokens[uploadKey] = cancelToken;
+
+          appLogger.d(
+            'uploadSingle: path=$filePath, name=$fileName, '
+            'mime=$mimeType, endpoint=${MediaApiPaths.onboarding}, '
+            'fieldName=file',
+          );
 
           final formData = FormData.fromMap({
             'file': await MultipartFile.fromFile(
               filePath,
               filename: fileName,
+              contentType: DioMediaType.parse(mimeType),
             ),
           });
 
           try {
             final response = await _client.postMultipart<dynamic>(
-              MediaApiPaths.uploadSingle,
+              MediaApiPaths.onboarding,
               formData: formData,
               cancelToken: cancelToken,
               options: Options(
@@ -64,16 +97,28 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
               },
             );
 
+            appLogger.d(
+              'uploadSingle: response status=${response.statusCode}',
+            );
+
             final raw = response.data;
-            final map = raw is Map<String, dynamic>
-                ? (raw['data'] as Map<String, dynamic>? ?? raw)
-                : <String, dynamic>{};
+            final map = _parseResponse(raw);
+
+            appLogger.d('uploadSingle: parsed response=$map');
+
             return MediaUploadResponse.fromJson(map);
           } finally {
             _cancelTokens.remove(uploadKey);
           }
         },
-        (error, _) => ErrorMapper.mapError(error),
+        (error, stackTrace) {
+          appLogger.e(
+            'uploadSingle: EXCEPTION',
+            error: error,
+            stackTrace: stackTrace,
+          );
+          return ErrorMapper.mapError(error);
+        },
       );
 
   @override
@@ -82,5 +127,96 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
     if (token != null && !token.isCancelled) {
       token.cancel();
     }
+  }
+
+  @override
+  TaskEither<Failure, ExtractionResult> extractDocuments({
+    required String authorizationToken,
+    required String emiratesIdFrontId,
+    required String emiratesIdBackId,
+    String? tradeLicenseId,
+  }) =>
+      TaskEither.tryCatch(
+        () async {
+          final body = <String, dynamic>{
+            'emiratesIdFrontId': emiratesIdFrontId,
+            'emiratesIdBackId': emiratesIdBackId,
+            if (tradeLicenseId != null) 'tradeLicenseId': tradeLicenseId,
+          };
+
+          final response = await _client.post<dynamic>(
+            MediaApiPaths.extract,
+            data: body,
+            options: Options(
+              headers: {'Authorization': 'Bearer $authorizationToken'},
+            ),
+          );
+
+          final raw = response.data;
+          final map = raw is Map<String, dynamic> ? raw : <String, dynamic>{};
+          return ExtractionResponse.fromJson(
+            map,
+            includeTradeLicence: tradeLicenseId != null,
+          );
+        },
+        (error, _) => ErrorMapper.mapError(error),
+      );
+
+  @override
+  TaskEither<Failure, AuthenticatedResult> completeIndividualProfile({
+    required String authorizationToken,
+    required ProfileCompletionRequest request,
+  }) =>
+      TaskEither.tryCatch(
+        () async {
+          final response = await _client.post<dynamic>(
+            MediaApiPaths.individualProvider,
+            data: request.toJson(),
+            options: Options(
+              headers: {'Authorization': 'Bearer $authorizationToken'},
+            ),
+          );
+
+          final raw = response.data;
+          final map = raw is Map<String, dynamic> ? raw : <String, dynamic>{};
+          return ProfileCompletionResponse.fromJson(map);
+        },
+        (error, _) => ErrorMapper.mapError(error),
+      );
+
+  @override
+  TaskEither<Failure, AuthenticatedResult> completeCompanyProfile({
+    required String authorizationToken,
+    required ProfileCompletionRequest request,
+  }) =>
+      TaskEither.tryCatch(
+        () async {
+          final response = await _client.post<dynamic>(
+            MediaApiPaths.companyProvider,
+            data: request.toJson(),
+            options: Options(
+              headers: {'Authorization': 'Bearer $authorizationToken'},
+            ),
+          );
+
+          final raw = response.data;
+          final map = raw is Map<String, dynamic> ? raw : <String, dynamic>{};
+          return ProfileCompletionResponse.fromJson(map);
+        },
+        (error, _) => ErrorMapper.mapError(error),
+      );
+
+  /// Parses the onboarding upload response body.
+  static Map<String, dynamic> _parseResponse(dynamic raw) {
+    if (raw is Map<String, dynamic>) {
+      final data = raw['data'];
+      if (data is Map<String, dynamic>) return data;
+      return raw;
+    }
+    if (raw is List && raw.isNotEmpty) {
+      final first = raw.first;
+      if (first is Map<String, dynamic>) return first;
+    }
+    return <String, dynamic>{};
   }
 }

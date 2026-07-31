@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-/// A file successfully stored by `POST media/upload-single`.
+/// A file successfully stored by `POST media/onboarding`.
 ///
 /// Backend response is the source of truth — [id] and [url] are persisted on
 /// the corresponding uploadable asset as `remoteId` / `remoteUrl`.

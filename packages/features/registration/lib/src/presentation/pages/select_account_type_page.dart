@@ -24,54 +24,67 @@ class SelectAccountTypePage extends HookWidget {
     useEffect(() {
       if (extra is OnboardingArgs) {
         context.read<RegistrationCubit>().setOnboarding(
-              email: extra.email,
-              onboardingToken: extra.onboardingToken,
-            );
+          email: extra.email,
+          onboardingToken: extra.onboardingToken,
+        );
       }
       return null;
     }, [extra]);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        RegistrationHeader(
-          title: 'registration.account_type_title'.tr(),
-          subtitle: Text('registration.account_type_subtitle'.tr()),
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: IntrinsicHeight(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                RegistrationHeader(
+                  title: 'registration.account_type_title'.tr(),
+                  subtitle: Text('registration.account_type_subtitle'.tr()),
+                ),
+                SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
+                _AccountTypeCard(
+                  title: 'registration.organization'.tr(),
+                  description: 'registration.organization_desc'.tr(),
+                  iconPath: AppSvgs.registrationOrganization,
+                  type: RegistrationAccountType.organization,
+                  selected: selected.value,
+                  onTap: () =>
+                      selected.value = RegistrationAccountType.organization,
+                ),
+                SizedBox(height: responsiveDimension(AppSpacing.lg)),
+                _AccountTypeCard(
+                  title: 'registration.individual'.tr(),
+                  description: 'registration.individual_desc'.tr(),
+                  iconPath: AppSvgs.registrationIndividual,
+                  type: RegistrationAccountType.individual,
+                  selected: selected.value,
+                  onTap: () =>
+                      selected.value = RegistrationAccountType.individual,
+                ),
+                const Spacer(),
+                AppButton(
+                  label: 'registration.continue'.tr(),
+                  onPressed: selected.value == null
+                      ? null
+                      : () {
+                          final type = selected.value!;
+                          context.read<RegistrationCubit>().setAccountType(
+                            type,
+                          );
+                          context.push(
+                            type == RegistrationAccountType.organization
+                                ? RegistrationRoutes.organizationDetails
+                                : RegistrationRoutes.individualDetails,
+                          );
+                        },
+                ),
+              ],
+            ),
+          ),
         ),
-        SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-        _AccountTypeCard(
-          title: 'registration.organization'.tr(),
-          description: 'registration.organization_desc'.tr(),
-          iconPath: AppSvgs.registrationOrganization,
-          type: RegistrationAccountType.organization,
-          selected: selected.value,
-          onTap: () => selected.value = RegistrationAccountType.organization,
-        ),
-        SizedBox(height: responsiveDimension(AppSpacing.lg)),
-        _AccountTypeCard(
-          title: 'registration.individual'.tr(),
-          description: 'registration.individual_desc'.tr(),
-          iconPath: AppSvgs.registrationIndividual,
-          type: RegistrationAccountType.individual,
-          selected: selected.value,
-          onTap: () => selected.value = RegistrationAccountType.individual,
-        ),
-        const Spacer(),
-        AppButton(
-          label: 'registration.continue'.tr(),
-          onPressed: selected.value == null
-              ? null
-              : () {
-                  final type = selected.value!;
-                  context.read<RegistrationCubit>().setAccountType(type);
-                  context.push(
-                    type == RegistrationAccountType.organization
-                        ? RegistrationRoutes.organizationDetails
-                        : RegistrationRoutes.individualDetails,
-                  );
-                },
-        ),
-      ],
+      ),
     );
   }
 }

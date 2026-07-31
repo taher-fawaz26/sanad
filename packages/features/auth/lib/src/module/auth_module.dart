@@ -39,6 +39,9 @@ class AuthModule extends FeatureModule {
         path: AuthRoutes.login,
         builder: (context, state) => LoginPage(
           onOtpSent: (email) => context.push(AuthRoutes.otp, extra: email),
+          onAuthenticated: () => context.go(home),
+          onOnboarding: (email, token) =>
+              context.push(AuthRoutes.otp, extra: email),
         ),
       ),
     ];

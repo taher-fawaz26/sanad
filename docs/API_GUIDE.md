@@ -272,19 +272,19 @@ class OrdersRemoteDataSourceImpl implements OrdersRemoteDataSource {
 
 ---
 
-## Media upload (`POST media/upload-single`)
+## Media upload (`POST media/onboarding`)
 
 Used by registration (Emirates ID, trade licence) during onboarding.
 
 | Item | Detail |
 |------|--------|
-| Path | `media/upload-single` (`MediaApiPaths.uploadSingle`) |
+| Path | `media/onboarding` (`MediaApiPaths.onboarding`) |
 | Method | `POST` multipart (`field: file`) |
 | Client | `SecureDioClient.postMultipart` |
 | Auth | Onboarding Bearer via explicit `Authorization` header (not session `TokenManager`) |
 | Progress | Dio `onSendProgress` |
 | Cancel | Dio `CancelToken` keyed by document slot |
-| Response | `{ id, originalName, fileName, mimeType, size, type, url, createdAt }` → store `id`/`url` on `UploadableAsset.remoteId` / `remoteUrl` |
+| Response | `{ id, originalName, fileName, mimeType, size, type, url, createdAt }` |
 
 Package: `packages/features/registration` (`UploadSingleMediaUseCase`).
 

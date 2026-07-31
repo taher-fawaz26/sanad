@@ -126,11 +126,6 @@ abstract final class AppTheme {
           typography: typography,
           brightness: brightness,
         ),
-        BottomNavTokens.themeExtension(
-          colors: colors,
-          typography: typography,
-          brightness: brightness,
-        ),
         NavBarTokens.themeExtension(
           colors: colors,
           typography: typography,
@@ -209,11 +204,6 @@ abstract final class AppTheme {
         ),
       ),
       tabBarTheme: TabBarTokens.tabBarTheme(
-        colors: colors,
-        typography: typography,
-        brightness: brightness,
-      ),
-      bottomNavigationBarTheme: BottomNavTokens.bottomNavigationBarTheme(
         colors: colors,
         typography: typography,
         brightness: brightness,

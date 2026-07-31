@@ -1,4 +1,5 @@
 import 'package:app_assets/app_assets.dart';
+import 'package:app_logger/app_logger.dart';
 import 'package:asset_picker/asset_picker.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -7,195 +8,204 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:registration/src/presentation/cubit/registration_cubit.dart';
 import 'package:registration/src/presentation/cubit/registration_state.dart';
-import 'package:registration/src/presentation/flows/emirates_id_scan_flow.dart';
-import 'package:registration/src/presentation/models/emirates_id_scan_session.dart';
 import 'package:registration/src/presentation/models/registration_document_slot.dart';
 import 'package:registration/src/presentation/widgets/document_upload_card.dart';
-import 'package:registration/src/presentation/widgets/registration_header.dart';
 import 'package:registration/src/presentation/widgets/select_capture_method_sheet.dart';
 import 'package:registration/src/routes/registration_routes.dart';
 
-const _kIconSize = 48.0;
+// Figma: Identity Verification — node 2794:34425 (page layout).
+// Uses DocumentUploadCard for all states (empty, uploading, success, failed).
 
-/// Step 5 — Emirates ID front/back upload.
-///
-/// Figma: `Identity Verification` (`2794:34425` empty, `2982:16039` filled).
-/// Scan flow stores captures locally; camera/gallery/files upload immediately.
-/// Continue runs sequential upload then advances the sign-up flow.
-class IdentityVerificationPage extends StatelessWidget {
+class IdentityVerificationPage extends StatefulWidget {
   const IdentityVerificationPage({super.key});
 
-  EmiratesIdScanSide _scanSideFor(RegistrationDocumentSlot slot) =>
-      switch (slot) {
-        RegistrationDocumentSlot.emiratesIdFront => EmiratesIdScanSide.front,
-        RegistrationDocumentSlot.emiratesIdBack => EmiratesIdScanSide.back,
-        RegistrationDocumentSlot.tradeLicence =>
-          throw ArgumentError('not an Emirates ID slot'),
-      };
+  @override
+  State<IdentityVerificationPage> createState() =>
+      _IdentityVerificationPageState();
+}
 
-  bool _isUploading(RegistrationState state) =>
-      (state.emiratesIdFront?.isUploading ?? false) ||
-      (state.emiratesIdBack?.isUploading ?? false);
+class _IdentityVerificationPageState extends State<IdentityVerificationPage> {
+  bool _isPickingFront = false;
+  bool _isPickingBack = false;
 
-  Future<void> _capture(
-    BuildContext context,
-    RegistrationDocumentSlot slot,
-  ) async {
-    final theme = AssetPickerTheme.of(context);
-    final options = kRegistrationDocumentOptions.copyWith(
-      sheetTitle: 'registration.select_action'.tr(),
-    );
+  Future<void> _upload(RegistrationDocumentSlot slot) async {
+    if (_isPickingFront || _isPickingBack) return;
 
     final source = await showAssetSourceSheet(
       context: context,
-      options: options,
-      theme: theme,
+      options: kRegistrationEmiratesIdOptions,
+      theme: registrationPickerTheme(context),
     );
-    if (source == null || !context.mounted) return;
+    if (source == null || !mounted) return;
 
-    if (source == AssetSource.scanner) {
-      await EmiratesIdScanFlow.start(context);
-      return;
-    }
+    setState(() {
+      if (slot == RegistrationDocumentSlot.emiratesIdFront) {
+        _isPickingFront = true;
+      } else {
+        _isPickingBack = true;
+      }
+    });
 
     try {
-      final asset = await pickRegistrationAsset(source);
-      if (asset == null || !context.mounted) return;
-
-      await context.read<RegistrationCubit>().uploadDocument(
-            slot: slot,
-            asset: asset,
-          );
-    } on AssetPickerException {
-      if (!context.mounted) return;
-      showAppErrorSnackbar(
-        context: context,
-        title: 'registration.capture_failed'.tr(),
+      final result = await pickRegistrationAsset(
+        source,
+        kRegistrationEmiratesIdOptions,
       );
+      if (!mounted) return;
+      if (result == null || result.isEmpty) return;
+
+      final cubit = context.read<RegistrationCubit>();
+      final assets = result.assets;
+
+      for (final asset in assets) {
+        appLogger.d(
+          'Picked asset: ${asset.name}, '
+          'path=${asset.path}, '
+          'ext=${asset.extension}, '
+          'mime=${asset.mimeType}, '
+          'size=${asset.size} bytes, '
+          'type=${asset.assetType}',
+        );
+      }
+
+      if (assets.length > 1) {
+        cubit.setEmiratesIdLocal(front: assets[0], back: assets[1]);
+        await cubit.uploadEmiratesIdSequence();
+      } else if (slot == RegistrationDocumentSlot.emiratesIdFront) {
+        cubit.setEmiratesIdLocal(front: assets.first);
+        await cubit.uploadDocument(slot: slot, asset: assets.first);
+      } else {
+        cubit.setEmiratesIdLocal(back: assets.first);
+        await cubit.uploadDocument(slot: slot, asset: assets.first);
+      }
+    } on AssetPickerException catch (e, stackTrace) {
+      appLogger.e(
+        'Asset picker failed: ${e.message}',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      if (mounted) {
+        showAppErrorSnackbar(
+          context: context,
+          title: 'registration.capture_failed'.tr(),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPickingFront = false;
+          _isPickingBack = false;
+        });
+      }
     }
   }
 
-  Future<void> _replaceScanSide(
-    BuildContext context,
-    RegistrationDocumentSlot slot,
-  ) async {
-    await EmiratesIdScanFlow.start(
-      context,
-      retakeSide: _scanSideFor(slot),
-    );
-  }
+  void _clearSlot(RegistrationDocumentSlot slot) =>
+      context.read<RegistrationCubit>().clearDocument(slot);
 
-  Future<void> _continue(BuildContext context) async {
-    final cubit = context.read<RegistrationCubit>();
-    await cubit.uploadEmiratesIdSequence();
-    if (!context.mounted || !cubit.state.hasBothIdSides) return;
-
-    final isOrg = cubit.state.isOrganization;
-    await context.push(
-      isOrg ? RegistrationRoutes.tradeLicence : RegistrationRoutes.extracting,
+  void _continue() {
+    final state = context.read<RegistrationCubit>().state;
+    context.go(
+      state.isOrganization
+          ? RegistrationRoutes.tradeLicence
+          : RegistrationRoutes.extracting,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return BlocListener<RegistrationCubit, RegistrationState>(
-      listenWhen: (previous, current) =>
-          previous.lastUploadFailure != current.lastUploadFailure &&
-          current.lastUploadFailure != null,
+    return BlocConsumer<RegistrationCubit, RegistrationState>(
+      listenWhen: (prev, curr) =>
+          prev.lastUploadFailure != curr.lastUploadFailure &&
+          curr.lastUploadFailure != null,
       listener: (context, state) {
         final failure = state.lastUploadFailure;
         if (failure == null) return;
-        showAppErrorSnackbar(
-          context: context,
-          title: failure.tr(),
-        );
+        showAppErrorSnackbar(context: context, title: failure.tr());
         context.read<RegistrationCubit>().clearUploadFailure();
       },
-      child: BlocBuilder<RegistrationCubit, RegistrationState>(
-        builder: (context, state) {
-          final isUploading = _isUploading(state);
+      builder: (context, state) {
+        final canContinue = state.hasBothIdSides;
 
-          return AuthScreenShell(
-            onBack: () => context.pop(),
-            title: 'registration.identity_title'.tr(),
-            footer: AppButton(
-              label: 'registration.continue'.tr(),
-              isLoading: isUploading,
-              onPressed: state.hasBothIdSidesCaptured && !isUploading
-                  ? () => _continue(context)
-                  : null,
-            ),
+        return AuthScreenShell(
+          onBack: () => context.pop(),
+          title: 'registration.identity_title'.tr(),
+          footer: AppButton(
+            label: 'registration.continue'.tr(),
+            onPressed: canContinue ? _continue : null,
+          ),
+          child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                AppSvgPicture.asset(
+                Center(
+                  child: AppSvgPicture.asset(
                   AppSvgs.registrationIdentityScan,
-                  width: responsiveDimension(_kIconSize),
-                  height: responsiveDimension(_kIconSize),
+                  width: responsiveDimension(48),
+                  height: responsiveDimension(48),
                   colorFilter: ColorFilter.mode(
-                    colors.textPrimary,
+                    context.appColors.textPrimary,
                     BlendMode.srcIn,
                   ),
                 ),
-                SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-                RegistrationHeader(
-                  title: 'registration.identity_title'.tr(),
-                  subtitle: Text('registration.identity_subtitle'.tr()),
+              ),
+              SizedBox(height: responsiveDimension(AppSpacing.xxl)),
+              Text(
+                'registration.identity_title'.tr(),
+                textAlign: TextAlign.center,
+                style: context.appTypography.title2.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: context.appColors.textPrimary,
                 ),
-                SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-                DocumentUploadCard(
-                  title: 'registration.id_front'.tr(),
-                  uploadable: state.emiratesIdFront,
-                  onUpload: () => _capture(
-                    context,
-                    RegistrationDocumentSlot.emiratesIdFront,
-                  ),
-                  onReplace: () => _replaceScanSide(
-                    context,
-                    RegistrationDocumentSlot.emiratesIdFront,
-                  ),
-                  onRemove: () => context
-                      .read<RegistrationCubit>()
-                      .clearDocument(
-                        RegistrationDocumentSlot.emiratesIdFront,
-                      ),
-                  onCancel: () => context
-                      .read<RegistrationCubit>()
-                      .cancelDocumentUpload(
-                        RegistrationDocumentSlot.emiratesIdFront,
-                      ),
+              ),
+              SizedBox(height: responsiveDimension(AppSpacing.sm)),
+              Text(
+                'registration.identity_subtitle'.tr(),
+                textAlign: TextAlign.center,
+                style: context.appTypography.regularNormal.copyWith(
+                  color: context.appColors.textSecondary,
                 ),
-                SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-                DocumentUploadCard(
-                  title: 'registration.id_back'.tr(),
-                  uploadable: state.emiratesIdBack,
-                  onUpload: () => _capture(
-                    context,
-                    RegistrationDocumentSlot.emiratesIdBack,
-                  ),
-                  onReplace: () => _replaceScanSide(
-                    context,
-                    RegistrationDocumentSlot.emiratesIdBack,
-                  ),
-                  onRemove: () => context
-                      .read<RegistrationCubit>()
-                      .clearDocument(
-                        RegistrationDocumentSlot.emiratesIdBack,
-                      ),
-                  onCancel: () => context
-                      .read<RegistrationCubit>()
-                      .cancelDocumentUpload(
-                        RegistrationDocumentSlot.emiratesIdBack,
-                      ),
-                ),
-                SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-              ],
-            ),
-          );
-        },
-      ),
+              ),
+              SizedBox(height: responsiveDimension(AppSpacing.xxl)),
+              DocumentUploadCard(
+                title: 'registration.id_front'.tr(),
+                uploadable: state.emiratesIdFront,
+                onUpload: _isPickingFront
+                    ? () {}
+                    : () => _upload(RegistrationDocumentSlot.emiratesIdFront),
+                onCancel: () => context
+                    .read<RegistrationCubit>()
+                    .cancelDocumentUpload(
+                      RegistrationDocumentSlot.emiratesIdFront,
+                    ),
+                onReplace: () =>
+                    _upload(RegistrationDocumentSlot.emiratesIdFront),
+                onRemove: () =>
+                    _clearSlot(RegistrationDocumentSlot.emiratesIdFront),
+              ),
+              SizedBox(height: responsiveDimension(AppSpacing.xl)),
+              DocumentUploadCard(
+                title: 'registration.id_back'.tr(),
+                uploadable: state.emiratesIdBack,
+                onUpload: _isPickingBack
+                    ? () {}
+                    : () => _upload(RegistrationDocumentSlot.emiratesIdBack),
+                onCancel: () => context
+                    .read<RegistrationCubit>()
+                    .cancelDocumentUpload(
+                      RegistrationDocumentSlot.emiratesIdBack,
+                    ),
+                onReplace: () =>
+                    _upload(RegistrationDocumentSlot.emiratesIdBack),
+                onRemove: () =>
+                    _clearSlot(RegistrationDocumentSlot.emiratesIdBack),
+              ),
+              SizedBox(height: responsiveDimension(AppSpacing.xl)),
+            ],
+          ),
+        ),
+      );
+      },
     );
   }
 }

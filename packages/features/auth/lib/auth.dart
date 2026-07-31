@@ -15,6 +15,7 @@ export 'src/domain/usecases/check_signin_status_usecase.dart';
 export 'src/domain/usecases/delete_account_usecase.dart';
 export 'src/domain/usecases/logout_usecase.dart';
 export 'src/domain/usecases/request_email_otp_usecase.dart';
+export 'src/domain/usecases/sign_in_with_google_usecase.dart';
 export 'src/domain/usecases/usecase_params.dart';
 export 'src/domain/usecases/verify_email_otp_usecase.dart';
 export 'src/module/auth_module.dart';

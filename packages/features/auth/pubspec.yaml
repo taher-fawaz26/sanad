@@ -1,4 +1,4 @@
-﻿name: auth
+name: auth
 description: >
   Authentication — login, logout, OTP, token refresh, session, auth BLoC,
   auth status notifier, presentation pages, and routing.
@@ -13,8 +13,11 @@ environment:
 dependencies:
   core:
     path: ../../core
+  design_system:
+    path: ../../design_system
   easy_localization: ^3.0.8
   equatable: ^2.1.0
+  firebase_auth: ^5.5.3
   flutter:
     sdk: flutter
   flutter_bloc: ^9.1.1
@@ -22,15 +25,14 @@ dependencies:
   flutter_svg: ^2.0.9
   fpdart: ^1.2.0
   go_router: ^17.3.0
+  google_sign_in: ^6.2.1
   hive_ce: ^2.19.3
+  localization:
+    path: ../../localization
   network:
     path: ../../network
   storage:
     path: ../../storage
-  design_system:
-    path: ../../design_system
-  localization:
-    path: ../../localization
 
 dev_dependencies:
   bloc_test: ^10.0.0

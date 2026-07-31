@@ -7,26 +7,44 @@ import 'package:logger/logger.dart';
 /// Logs HTTP requests and responses in debug mode.
 ///
 /// **PII policy:** bodies on paths matching [sensitivePathFragments]
-/// (`auth`, `otp`, `password`, `verify`, `token`) are redacted entirely.
-/// On non-sensitive paths, keys matching [sensitiveKeys] are still redacted
-/// per-field so a stray secret in an unrelated payload doesn't leak.
+/// (`otp`, `password`, `verify`, `token`, `login`, `signin`, `signup`,
+/// `register`, `refresh`) are redacted entirely. On non-sensitive paths,
+/// keys matching [sensitiveKeys] are still redacted per-field so a stray
+/// secret in an unrelated payload doesn't leak.
 class LoggingInterceptor extends Interceptor {
   LoggingInterceptor({Logger? logger})
     : _logger = logger ?? Logger(printer: PrettyPrinter(methodCount: 0));
 
   final Logger _logger;
 
-  static const _kMaxChars = 600;
+  static const _kMaxChars = 1200;
+
+  /// Converts a [FormData] to a loggable map, showing field values and
+  /// file metadata (filename + size) without reading binary content.
+  static Map<String, dynamic> _formDataToMap(FormData fd) {
+    final out = <String, dynamic>{};
+    for (final entry in fd.fields) {
+      out[entry.key] = entry.value;
+    }
+    for (final entry in fd.files) {
+      out[entry.key] = '<file: ${entry.value.filename ?? 'unnamed'}>';
+    }
+    return out;
+  }
   static const redactedMarker = '••• redacted •••';
 
   /// Case-insensitive path substrings that force full-body redaction.
   @visibleForTesting
   static const sensitivePathFragments = <String>[
-    'auth',
     'otp',
     'password',
     'verify',
     'token',
+    'login',
+    'signin',
+    'signup',
+    'register',
+    'refresh',
   ];
 
   /// Case-insensitive keys whose values are always redacted, on any path.
@@ -116,6 +134,9 @@ class LoggingInterceptor extends Interceptor {
   static String preview(Object? data, {required bool sensitive}) {
     if (data == null) return 'null';
     if (sensitive) return redactedMarker;
+    if (data is FormData) {
+      return _truncate(jsonEncode(_redactMap(_formDataToMap(data))));
+    }
     if (data is Map) {
       return _truncate(jsonEncode(_redactMap(data)));
     }

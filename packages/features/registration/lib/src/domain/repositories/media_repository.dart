@@ -1,10 +1,14 @@
+import 'package:auth/src/domain/entities/email_auth_result.dart';
 import 'package:core/core.dart';
 import 'package:fpdart/fpdart.dart';
+import 'package:registration/src/data/models/extraction_result.dart';
+import 'package:registration/src/data/models/profile_completion_request.dart';
 import 'package:registration/src/domain/entities/media_file_entity.dart';
 
-/// Contract for single-file media uploads during onboarding.
+/// Contract for single-file media uploads and document extraction during
+/// onboarding.
 abstract interface class MediaRepository {
-  /// Uploads [filePath] as multipart field `file`.
+  /// Uploads [filePath] as multipart field `file` to `POST media/onboarding`.
   ///
   /// [authorizationToken] is the short-lived onboarding Bearer (not the
   /// session access token). [uploadKey] identifies the in-flight request so
@@ -21,4 +25,24 @@ abstract interface class MediaRepository {
 
   /// Cancels the in-flight upload registered under [uploadKey], if any.
   void cancelUpload(String uploadKey);
+
+  /// Calls `POST auth/extract` to extract structured data from uploaded IDs.
+  TaskEither<Failure, ExtractionResult> extractDocuments({
+    required String authorizationToken,
+    required String emiratesIdFrontId,
+    required String emiratesIdBackId,
+    String? tradeLicenseId,
+  });
+
+  /// Completes profile for an individual provider.
+  TaskEither<Failure, AuthenticatedResult> completeIndividualProfile({
+    required String authorizationToken,
+    required ProfileCompletionRequest request,
+  });
+
+  /// Completes profile for a company provider.
+  TaskEither<Failure, AuthenticatedResult> completeCompanyProfile({
+    required String authorizationToken,
+    required ProfileCompletionRequest request,
+  });
 }

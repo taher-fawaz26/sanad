@@ -29,6 +29,8 @@ class LoginPage extends HookWidget {
     required this.onOtpSent,
     super.key,
     this.onRegister,
+    this.onAuthenticated,
+    this.onOnboarding,
   });
 
   /// Called once the OTP has been dispatched — navigate to the OTP screen.
@@ -37,6 +39,12 @@ class LoginPage extends HookWidget {
   /// Opens the sign-up flow. When null, the "Sign up" row is hidden (apps
   /// without a registration flow).
   final VoidCallback? onRegister;
+
+  /// Called when Google Sign-In completes for an existing user.
+  final VoidCallback? onAuthenticated;
+
+  /// Called when Google Sign-In results in a new user needing onboarding.
+  final void Function(String email, String onboardingToken)? onOnboarding;
 
   @override
   Widget build(BuildContext context) {
@@ -53,10 +61,25 @@ class LoginPage extends HookWidget {
     }
 
     return BlocListener<AuthBloc, AuthState>(
+      listenWhen: (_, curr) =>
+          curr is AuthOtpSentState ||
+          curr is AuthOtpRequestFailureState ||
+          curr is AuthAuthenticatedState ||
+          curr is AuthOnboardingRequiredState ||
+          curr is AuthGoogleSignInFailureState,
       listener: (context, state) {
         if (state is AuthOtpSentState) {
           onOtpSent(state.email);
         } else if (state is AuthOtpRequestFailureState) {
+          showAppErrorSnackbar(
+            context: context,
+            title: state.failure.localizedMessage(),
+          );
+        } else if (state is AuthAuthenticatedState) {
+          onAuthenticated?.call();
+        } else if (state is AuthOnboardingRequiredState) {
+          onOnboarding?.call(state.email, state.onboardingToken);
+        } else if (state is AuthGoogleSignInFailureState) {
           showAppErrorSnackbar(
             context: context,
             title: state.failure.localizedMessage(),
@@ -67,9 +90,10 @@ class LoginPage extends HookWidget {
         title: 'auth.login_title'.tr(),
         child: Form(
           key: formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
               Text(
                 'auth.login_title'.tr(),
                 textAlign: TextAlign.center,
@@ -155,33 +179,45 @@ class LoginPage extends HookWidget {
                 ],
               ),
               SizedBox(height: responsiveDimension(AppSpacing.xl)),
-              OutlinedButton.icon(
-                onPressed: () {
-                  // TODO(auth): trigger Google OAuth
+              BlocBuilder<AuthBloc, AuthState>(
+                builder: (context, state) {
+                  final isLoading = state is AuthGoogleSignInLoadingState;
+                  return OutlinedButton.icon(
+                    onPressed: isLoading
+                        ? null
+                        : () => context
+                            .read<AuthBloc>()
+                            .add(AuthGoogleSignInEvent()),
+                    icon: SvgPicture.string(
+                      _googleLogoSvg,
+                      width: 24,
+                      height: 24,
+                    ),
+                    label: Text(
+                      'auth.google'.tr(),
+                      style: typography.regularNormal.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: colors.textPrimary,
+                      side: BorderSide(color: colors.border),
+                      padding: EdgeInsets.symmetric(
+                        vertical: responsiveDimension(AppSpacing.lg),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: AppRadius.circularMd,
+                      ),
+                    ),
+                  );
                 },
-                icon: SvgPicture.string(_googleLogoSvg, width: 24, height: 24),
-                label: Text(
-                  'auth.google'.tr(),
-                  style: typography.regularNormal.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: colors.textPrimary,
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: colors.textPrimary,
-                  side: BorderSide(color: colors.border),
-                  padding: EdgeInsets.symmetric(
-                    vertical: responsiveDimension(AppSpacing.lg),
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: AppRadius.circularMd,
-                  ),
-                ),
               ),
             ],
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }

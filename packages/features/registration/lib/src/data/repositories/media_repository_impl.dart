@@ -1,7 +1,10 @@
+import 'package:auth/src/domain/entities/email_auth_result.dart';
 import 'package:core/core.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:network/network.dart';
 import 'package:registration/src/data/datasources/media_remote_datasource.dart';
+import 'package:registration/src/data/models/extraction_result.dart';
+import 'package:registration/src/data/models/profile_completion_request.dart';
 import 'package:registration/src/domain/entities/media_file_entity.dart';
 import 'package:registration/src/domain/repositories/media_repository.dart';
 
@@ -19,20 +22,56 @@ class MediaRepositoryImpl implements MediaRepository {
     required String authorizationToken,
     required String uploadKey,
     void Function(double progress)? onProgress,
-  }) =>
-      _networkGuard.execute(
-        action: _remote
-            .uploadSingle(
-              filePath: filePath,
-              fileName: fileName,
-              mimeType: mimeType,
-              authorizationToken: authorizationToken,
-              uploadKey: uploadKey,
-              onProgress: onProgress,
-            )
-            .map((response) => response.toEntity()),
-      );
+  }) => _networkGuard.execute(
+    action: _remote
+        .uploadSingle(
+          filePath: filePath,
+          fileName: fileName,
+          mimeType: mimeType,
+          authorizationToken: authorizationToken,
+          uploadKey: uploadKey,
+          onProgress: onProgress,
+        )
+        .map((response) => response.toEntity()),
+  );
 
   @override
   void cancelUpload(String uploadKey) => _remote.cancelUpload(uploadKey);
+
+  @override
+  TaskEither<Failure, ExtractionResult> extractDocuments({
+    required String authorizationToken,
+    required String emiratesIdFrontId,
+    required String emiratesIdBackId,
+    String? tradeLicenseId,
+  }) => _networkGuard.execute(
+    action: _remote.extractDocuments(
+      authorizationToken: authorizationToken,
+      emiratesIdFrontId: emiratesIdFrontId,
+      emiratesIdBackId: emiratesIdBackId,
+      tradeLicenseId: tradeLicenseId,
+    ),
+  );
+
+  @override
+  TaskEither<Failure, AuthenticatedResult> completeIndividualProfile({
+    required String authorizationToken,
+    required ProfileCompletionRequest request,
+  }) => _networkGuard.execute(
+    action: _remote.completeIndividualProfile(
+      authorizationToken: authorizationToken,
+      request: request,
+    ),
+  );
+
+  @override
+  TaskEither<Failure, AuthenticatedResult> completeCompanyProfile({
+    required String authorizationToken,
+    required ProfileCompletionRequest request,
+  }) => _networkGuard.execute(
+    action: _remote.completeCompanyProfile(
+      authorizationToken: authorizationToken,
+      request: request,
+    ),
+  );
 }

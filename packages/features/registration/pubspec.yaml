@@ -10,6 +10,8 @@ environment:
 dependencies:
   app_assets:
     path: ../../app_assets
+  app_logger:
+    path: ../../app_logger
   asset_picker:
     path: ../../asset_picker
   auth:

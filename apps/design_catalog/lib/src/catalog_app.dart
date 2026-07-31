@@ -18,7 +18,7 @@ class CatalogApp extends StatelessWidget {
             WidgetbookTheme(name: 'Dark', data: AppTheme.dark()),
           ],
         ),
-        TextScaleAddon(min: 0.8, max: 1.4),
+        TextScaleAddon(min: 1, max: 2),
       ],
       directories: buildCatalogDirectories(),
       appBuilder: (context, child) => ScreenUtilInit(

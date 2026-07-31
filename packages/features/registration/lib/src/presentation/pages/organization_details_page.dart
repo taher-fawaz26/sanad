@@ -43,9 +43,10 @@ class OrganizationDetailsPage extends HookWidget {
 
     return Form(
       key: formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           AppSvgPicture.asset(
             AppSvgs.registrationCity,
             width: responsiveDimension(_kIconSize),
@@ -84,6 +85,7 @@ class OrganizationDetailsPage extends HookWidget {
             onPressed: submit,
           ),
         ],
+        ),
       ),
     );
   }

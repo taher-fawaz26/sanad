@@ -1,5 +1,6 @@
 import 'package:auth/src/data/datasources/auth_local_datasource.dart';
 import 'package:auth/src/data/datasources/auth_remote_datasource.dart';
+import 'package:auth/src/data/datasources/google_auth_datasource.dart';
 import 'package:auth/src/data/models/requests/email_otp_request.dart';
 import 'package:auth/src/data/models/requests/verify_email_otp_request.dart';
 import 'package:auth/src/domain/entities/email_auth_result.dart';
@@ -13,10 +14,22 @@ class AuthRepositoryImpl implements AuthRepository {
   const AuthRepositoryImpl(
     this._remoteDataSource,
     this._localDataSource,
+    this._googleDataSource,
   );
 
   final AuthRemoteDataSource _remoteDataSource;
   final AuthLocalDataSource _localDataSource;
+  final GoogleAuthDataSource _googleDataSource;
+
+  @override
+  TaskEither<Failure, EmailAuthResult> signInWithGoogle() =>
+      _googleDataSource.signInWithGoogle().chainFirst(
+            (result) => switch (result) {
+              AuthenticatedResult(:final user) =>
+                _localDataSource.saveUser(user),
+              OnboardingResult() => TaskEither.right(null),
+            },
+          );
 
   @override
   TaskEither<Failure, void> requestEmailOtp(RequestEmailOtpParams params) =>

@@ -1,8 +1,11 @@
+import 'package:app_logger/app_logger.dart';
 import 'package:asset_picker/asset_picker.dart';
+import 'package:auth/src/domain/entities/email_auth_result.dart';
 import 'package:core/core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:registration/src/data/models/extraction_result.dart';
-import 'package:registration/src/data/registration_simulation_service.dart';
+import 'package:registration/src/domain/usecases/complete_profile_usecase.dart';
+import 'package:registration/src/domain/usecases/extract_documents_usecase.dart';
 import 'package:registration/src/domain/usecases/upload_single_media_usecase.dart';
 import 'package:registration/src/presentation/cubit/registration_state.dart';
 import 'package:registration/src/presentation/models/registration_document_slot.dart';
@@ -14,13 +17,16 @@ import 'package:registration/src/presentation/models/registration_document_slot.
 class RegistrationCubit extends Cubit<RegistrationState> {
   RegistrationCubit({
     required UploadSingleMediaUseCase uploadMedia,
-    RegistrationSimulationService? service,
+    required ExtractDocumentsUseCase extractDocuments,
+    required CompleteProfileUseCase completeProfile,
   })  : _uploadMedia = uploadMedia,
-        _service = service ?? RegistrationSimulationService(),
+        _extractDocuments = extractDocuments,
+        _completeProfile = completeProfile,
         super(const RegistrationState());
 
   final UploadSingleMediaUseCase _uploadMedia;
-  final RegistrationSimulationService _service;
+  final ExtractDocumentsUseCase _extractDocuments;
+  final CompleteProfileUseCase _completeProfile;
 
   // ── Plain data setters ─────────────────────────────────────────────────────
 
@@ -75,8 +81,15 @@ class RegistrationCubit extends Cubit<RegistrationState> {
     required RegistrationDocumentSlot slot,
     required PickedAsset asset,
   }) async {
+    appLogger.d(
+      'uploadDocument: slot=${slot.name}, '
+      'file=${asset.name}, path=${asset.path}, '
+      'mime=${asset.mimeType}, size=${asset.size}',
+    );
+
     final token = state.onboardingToken;
     if (token == null || token.isEmpty) {
+      appLogger.e('uploadDocument: no onboarding token — aborting');
       emit(
         _withSlot(
           slot,
@@ -111,7 +124,10 @@ class RegistrationCubit extends Cubit<RegistrationState> {
 
     result.fold(
       (failure) {
-        // User cancelled — clear the slot so they can pick again.
+        appLogger.e(
+          'uploadDocument: FAILED slot=${slot.name}, '
+          'failure=${failure.runtimeType}: ${failure.message}',
+        );
         if (failure is NetworkFailure &&
             failure.message == 'errors.request_cancelled') {
           emit(_withSlot(slot, null));
@@ -128,6 +144,10 @@ class RegistrationCubit extends Cubit<RegistrationState> {
         );
       },
       (media) {
+        appLogger.d(
+          'uploadDocument: SUCCESS slot=${slot.name}, '
+          'remoteId=${media.id}, url=${media.url}',
+        );
         final current = _slotOf(slot);
         if (current == null) return;
         emit(
@@ -173,20 +193,157 @@ class RegistrationCubit extends Cubit<RegistrationState> {
     }
   }
 
-  // ── Simulated async steps ──────────────────────────────────────────────
+  // ── Document extraction ────────────────────────────────────────────────────
 
-  /// Runs the (simulated) document extraction, storing the result on the state.
-  Future<void> extractDocuments({ExtractionScenario? scenario}) async {
+  /// Calls `POST auth/extract` with the uploaded document IDs.
+  Future<void> extractDocuments() async {
+    final token = state.onboardingToken;
+    final frontId = state.emiratesIdFront?.remoteId;
+    final backId = state.emiratesIdBack?.remoteId;
+
+    if (token == null || frontId == null || backId == null) {
+      emit(
+        state.copyWith(
+          extraction: const ExtractionResult(
+            emiratesId: EmiratesIdResult.unclear(),
+          ),
+          extractionStatus: ExtractionStatus.done,
+        ),
+      );
+      return;
+    }
+
     emit(state.copyWith(extractionStatus: ExtractionStatus.extracting));
-    final result = await _service.extractDocuments(
-      includeTradeLicence: state.isOrganization,
-      scenario: scenario,
+
+    final result = await _extractDocuments(
+      ExtractDocumentsParams(
+        authorizationToken: token,
+        emiratesIdFrontId: frontId,
+        emiratesIdBackId: backId,
+        tradeLicenseId: state.isOrganization
+            ? state.tradeLicence?.remoteId
+            : null,
+      ),
+    ).run();
+
+    if (isClosed) return;
+
+    result.fold(
+      (_) => emit(
+        state.copyWith(
+          extraction: ExtractionResult(
+            emiratesId: const EmiratesIdResult.unclear(),
+            tradeLicence: state.isOrganization
+                ? const TradeLicenceResult.expired()
+                : null,
+          ),
+          extractionStatus: ExtractionStatus.done,
+        ),
+      ),
+      (extraction) => emit(
+        state.copyWith(
+          extraction: extraction,
+          extractionStatus: ExtractionStatus.done,
+        ),
+      ),
+      );
+  }
+
+  // ── Profile completion ─────────────────────────────────────────────────────
+
+  /// Completes provider profile by posting to the backend.
+  ///
+  /// Returns [AuthenticatedResult] on success which contains session tokens
+  /// that the auth layer can persist. On failure, emits a state with
+  /// [ProfileCompletionStatus.failed] and sets [lastUploadFailure].
+  Future<AuthenticatedResult?> completeProfile() async {
+    final token = state.onboardingToken;
+    final frontId = state.emiratesIdFront?.remoteId;
+    final backId = state.emiratesIdBack?.remoteId;
+
+    if (token == null || frontId == null || backId == null) {
+      appLogger.e('completeProfile: missing required data');
+      emit(
+        state.copyWith(
+          profileCompletionStatus: ProfileCompletionStatus.failed,
+          lastUploadFailure: 'errors.required_fields_missing',
+        ),
+      );
+      return null;
+    }
+
+    // Use extracted name as fallback if manual entry is empty.
+    final fullName = state.fullName.isNotEmpty
+        ? state.fullName
+        : (state.extraction?.emiratesId.fullNameEn ?? '');
+    
+    // Use extracted business name as fallback.
+    final businessName = state.businessName.isNotEmpty
+        ? state.businessName
+        : (state.extraction?.tradeLicence?.tradeNameEn ?? '');
+
+    appLogger.d(
+      'completeProfile: isOrganization=${state.isOrganization}, '
+      'fullName=$fullName, businessName=$businessName, '
+      'email=${state.email}',
     );
+
     emit(
       state.copyWith(
-        extraction: result,
-        extractionStatus: ExtractionStatus.done,
+        profileCompletionStatus: ProfileCompletionStatus.submitting,
+        lastUploadFailure: null,
       ),
+    );
+
+    final result = await _completeProfile(
+      CompleteProfileParams(
+        authorizationToken: token,
+        emiratesIdFrontId: frontId,
+        emiratesIdBackId: backId,
+        isOrganization: state.isOrganization,
+        tradeLicenseId:
+            state.isOrganization ? state.tradeLicence?.remoteId : null,
+        fullName: state.isOrganization
+            ? null
+            : (fullName.isNotEmpty ? fullName : null),
+        businessName: state.isOrganization
+            ? (businessName.isNotEmpty ? businessName : null)
+            : null,
+        representativeFullName: state.isOrganization
+            ? (state.representativeName.isNotEmpty
+                ? state.representativeName
+                : null)
+            : null,
+        representativeEmail: state.isOrganization
+            ? (state.email.isNotEmpty ? state.email : null)
+            : null,
+      ),
+    ).run();
+
+    if (isClosed) return null;
+
+    return result.fold(
+      (failure) {
+        appLogger.e(
+          'completeProfile: FAILED failure=${failure.runtimeType}: ${failure.message}',
+        );
+        emit(
+          state.copyWith(
+            profileCompletionStatus: ProfileCompletionStatus.failed,
+            lastUploadFailure: failure.message,
+          ),
+        );
+        return null;
+      },
+      (authResult) {
+        appLogger.d('completeProfile: SUCCESS');
+        emit(
+          state.copyWith(
+            profileCompletionStatus: ProfileCompletionStatus.done,
+          ),
+        );
+        return authResult;
+      },
     );
   }
 

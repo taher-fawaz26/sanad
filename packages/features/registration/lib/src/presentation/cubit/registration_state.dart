@@ -8,6 +8,9 @@ enum RegistrationAccountType { organization, individual }
 /// Lifecycle of the (simulated) "AI extraction" step.
 enum ExtractionStatus { idle, extracting, done }
 
+/// Lifecycle of the profile completion step.
+enum ProfileCompletionStatus { idle, submitting, done, failed }
+
 /// Immutable state carried across the whole sign-up flow by the cubit.
 ///
 /// A single instance lives for the duration of the `/signup` shell, so every
@@ -28,6 +31,7 @@ class RegistrationState extends Equatable {
     this.tradeLicence,
     this.extractionStatus = ExtractionStatus.idle,
     this.extraction,
+    this.profileCompletionStatus = ProfileCompletionStatus.idle,
     this.lastUploadFailure,
   });
 
@@ -54,6 +58,9 @@ class RegistrationState extends Equatable {
   // Async step status.
   final ExtractionStatus extractionStatus;
   final ExtractionResult? extraction;
+
+  // Profile completion status.
+  final ProfileCompletionStatus profileCompletionStatus;
 
   /// Last upload failure message key / prose for the page to snackbar once.
   final String? lastUploadFailure;
@@ -86,6 +93,7 @@ class RegistrationState extends Equatable {
     Object? tradeLicence = _sentinel,
     ExtractionStatus? extractionStatus,
     ExtractionResult? extraction,
+    ProfileCompletionStatus? profileCompletionStatus,
     Object? lastUploadFailure = _sentinel,
   }) =>
       RegistrationState(
@@ -106,6 +114,8 @@ class RegistrationState extends Equatable {
             : tradeLicence as UploadableAsset?,
         extractionStatus: extractionStatus ?? this.extractionStatus,
         extraction: extraction ?? this.extraction,
+        profileCompletionStatus:
+            profileCompletionStatus ?? this.profileCompletionStatus,
         lastUploadFailure: identical(lastUploadFailure, _sentinel)
             ? this.lastUploadFailure
             : lastUploadFailure as String?,
@@ -126,6 +136,7 @@ class RegistrationState extends Equatable {
         tradeLicence,
         extractionStatus,
         extraction,
+        profileCompletionStatus,
         lastUploadFailure,
       ];
 }

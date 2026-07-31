@@ -1,13 +1,20 @@
+import 'dart:async';
+
+import 'package:app_logger/app_logger.dart';
 import 'package:asset_picker/asset_picker.dart';
+import 'package:auth/auth.dart';
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:network/network.dart';
 import 'package:registration/src/data/models/extraction_result.dart';
 import 'package:registration/src/presentation/cubit/registration_cubit.dart';
 import 'package:registration/src/presentation/cubit/registration_state.dart';
 import 'package:registration/src/presentation/models/registration_document_slot.dart';
+import 'package:registration/src/presentation/widgets/profile_completion_error_dialog.dart';
 import 'package:registration/src/presentation/widgets/registration_header.dart';
 import 'package:registration/src/presentation/widgets/review_section_card.dart';
 import 'package:registration/src/presentation/widgets/select_capture_method_sheet.dart';
@@ -17,25 +24,87 @@ import 'package:registration/src/presentation/widgets/select_capture_method_shee
 /// Figma: `Review Information` (`3001:19131`) + error variant
 /// (`3001:19276`). Renders each document as a [ReviewSectionCard] whose tone
 /// reflects its extraction outcome. "Continue to Dashboard" unlocks only when
-/// every document extracted cleanly.
-class ReviewInformationPage extends StatelessWidget {
+/// every document extracted cleanly and posts to the profile completion API.
+class ReviewInformationPage extends StatefulWidget {
   const ReviewInformationPage({required this.homeRoute, super.key});
 
   /// Post-registration landing route (injected from the app via the module).
   final String homeRoute;
 
+  @override
+  State<ReviewInformationPage> createState() => _ReviewInformationPageState();
+}
+
+class _ReviewInformationPageState extends State<ReviewInformationPage> {
+  Future<void> _handleContinueToDashboard(BuildContext context) async {
+    final cubit = context.read<RegistrationCubit>();
+    final sessionManager = sl<SessionManager>();
+    final authStatusNotifier = sl<AuthStatusNotifier>();
+
+    if (!mounted) return;
+
+    // Show progress dialog (don't await — it resolves only on dismiss).
+    unawaited(
+      showAppProgressDialog(
+        context: context,
+        title: 'registration.completing_profile'.tr(),
+      ),
+    );
+
+    // Call the API.
+    final authResult = await cubit.completeProfile();
+
+    if (!mounted) return;
+
+    // Dismiss progress dialog.
+    dismissAppProgressDialog(context);
+
+    if (authResult != null) {
+      // Success: persist session tokens and update auth status.
+      await sessionManager.startSession(
+        accessToken: authResult.accessToken,
+        refreshToken: authResult.refreshToken,
+      );
+      authStatusNotifier.update(
+        AuthStatus.authenticated,
+        isProfileCompleted: authResult.user.isProfileCompleted,
+      );
+
+      if (mounted) {
+        context.go(widget.homeRoute);
+      }
+    } else {
+      // Failed: show error dialog.
+      if (!mounted) return;
+      final errorMessage = cubit.state.lastUploadFailure;
+      final retry = await showProfileCompletionErrorDialog(
+        context: context,
+        errorMessage: errorMessage,
+      );
+
+      if ((retry ?? false) && mounted) {
+        await _handleContinueToDashboard(context);
+      }
+    }
+  }
+
   Future<void> _replaceEmiratesId(BuildContext context) async {
     try {
-      final asset = await captureRegistrationDocument(context);
-      if (asset == null || !context.mounted) return;
+      final result = await captureRegistrationDocument(context);
+      if (result == null || result.isEmpty || !context.mounted) return;
       final cubit = context.read<RegistrationCubit>();
       await cubit.uploadDocument(
         slot: RegistrationDocumentSlot.emiratesIdFront,
-        asset: asset,
+        asset: result.assets.first,
       );
       if (!context.mounted) return;
       await cubit.extractDocuments();
-    } on AssetPickerException {
+    } on AssetPickerException catch (e, stackTrace) {
+      appLogger.e(
+        'Replace Emirates ID failed: ${e.message}',
+        error: e,
+        stackTrace: stackTrace,
+      );
       if (!context.mounted) return;
       showAppErrorSnackbar(
         context: context,
@@ -46,16 +115,21 @@ class ReviewInformationPage extends StatelessWidget {
 
   Future<void> _replaceTradeLicence(BuildContext context) async {
     try {
-      final asset = await captureRegistrationDocument(context);
-      if (asset == null || !context.mounted) return;
+      final result = await captureRegistrationDocument(context);
+      if (result == null || result.isEmpty || !context.mounted) return;
       final cubit = context.read<RegistrationCubit>();
       await cubit.uploadDocument(
         slot: RegistrationDocumentSlot.tradeLicence,
-        asset: asset,
+        asset: result.assets.first,
       );
       if (!context.mounted) return;
       await cubit.extractDocuments();
-    } on AssetPickerException {
+    } on AssetPickerException catch (e, stackTrace) {
+      appLogger.e(
+        'Replace trade licence failed: ${e.message}',
+        error: e,
+        stackTrace: stackTrace,
+      );
       if (!context.mounted) return;
       showAppErrorSnackbar(
         context: context,
@@ -74,37 +148,41 @@ class ReviewInformationPage extends StatelessWidget {
       return const Center(child: AppLoadingIndicator());
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        RegistrationHeader(
-          title: 'registration.review_title'.tr(),
-          subtitle: Text('registration.review_subtitle'.tr()),
-        ),
-        SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-        ReviewSectionCard(
-          title: 'registration.emirates_id_details'.tr(),
-          issue: extraction.emiratesId.issue,
-          fields: _emiratesIdFields(extraction.emiratesId),
-          thumbnail: state.emiratesIdFront?.asset,
-          onReplace: () => _replaceEmiratesId(context),
-        ),
-        if (extraction.tradeLicence != null) ...[
-          SizedBox(height: responsiveDimension(AppSpacing.xl)),
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          RegistrationHeader(
+            title: 'registration.review_title'.tr(),
+            subtitle: Text('registration.review_subtitle'.tr()),
+          ),
+          SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
           ReviewSectionCard(
-            title: 'registration.trade_licence_details'.tr(),
-            issue: extraction.tradeLicence!.issue,
-            fields: _tradeLicenceFields(extraction.tradeLicence!),
-            thumbnail: state.tradeLicence?.asset,
-            onReplace: () => _replaceTradeLicence(context),
+            title: 'registration.emirates_id_details'.tr(),
+            issue: extraction.emiratesId.issue,
+            fields: _emiratesIdFields(extraction.emiratesId),
+            thumbnail: state.emiratesIdFront?.asset,
+            onReplace: () => _replaceEmiratesId(context),
+          ),
+          if (extraction.tradeLicence != null) ...[
+            SizedBox(height: responsiveDimension(AppSpacing.xl)),
+            ReviewSectionCard(
+              title: 'registration.trade_licence_details'.tr(),
+              issue: extraction.tradeLicence!.issue,
+              fields: _tradeLicenceFields(extraction.tradeLicence!),
+              thumbnail: state.tradeLicence?.asset,
+              onReplace: () => _replaceTradeLicence(context),
+            ),
+          ],
+          SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
+          AppButtonPresets.primary(
+            label: 'registration.continue_to_dashboard'.tr(),
+            onPressed: extraction.allOk
+                ? () => _handleContinueToDashboard(context)
+                : null,
           ),
         ],
-        SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-        AppButtonPresets.primary(
-          label: 'registration.continue_to_dashboard'.tr(),
-          onPressed: extraction.allOk ? () => context.go(homeRoute) : null,
-        ),
-      ],
+      ),
     );
   }
 

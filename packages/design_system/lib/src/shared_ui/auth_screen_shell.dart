@@ -1,6 +1,7 @@
 import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 const _kGradientStart = Color(0xFF10412F);
 const _kExpandedHeight = 220.0;
@@ -96,33 +97,34 @@ class AuthScreenShell extends StatelessWidget {
                       title: title,
                     ),
                   ),
-                  // White rounded card. SliverFillRemaining gives its child a
-                  // tight height (the greater of the remaining viewport or the
-                  // content's own height) — short pages pin a trailing
-                  // `Spacer()` + button to the bottom, tall pages grow and
-                  // scroll. When a [footer] is present it owns the bottom safe
-                  // area instead of the card.
+                  // White rounded card. _IntrinsicBarrier returns 0 for
+                  // intrinsic height so LayoutBuilder descendants never
+                  // throw "does not support intrinsic dimensions".
+                  // SliverFillRemaining then gives tight constraints =
+                  // remaining viewport, keeping Spacer / Expanded working.
                   SliverFillRemaining(
                     hasScrollBody: false,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: colors.white,
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(cardRadius),
-                          topRight: Radius.circular(cardRadius),
-                        ),
-                      ),
-                      child: SafeArea(
-                        top: false,
-                        bottom: !hasFooter,
-                        child: Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            hPad,
-                            vPad,
-                            hPad,
-                            hasFooter ? 0 : vPad,
+                    child: _IntrinsicBarrier(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: colors.white,
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(cardRadius),
+                            topRight: Radius.circular(cardRadius),
                           ),
-                          child: child,
+                        ),
+                        child: SafeArea(
+                          top: false,
+                          bottom: !hasFooter,
+                          child: Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              hPad,
+                              vPad,
+                              hPad,
+                              hasFooter ? 0 : vPad,
+                            ),
+                            child: child,
+                          ),
                         ),
                       ),
                     ),
@@ -274,4 +276,28 @@ class _HeroFlexibleSpace extends StatelessWidget {
       },
     );
   }
+}
+
+/// Transparent proxy that returns 0 for intrinsic height queries.
+///
+/// [SliverFillRemaining] with `hasScrollBody: false` calls
+/// `getMaxIntrinsicHeight` on its child. If any descendant is a [LayoutBuilder]
+/// (which cannot answer intrinsic queries), Flutter throws. Placing this widget
+/// directly inside [SliverFillRemaining] intercepts that query and returns 0,
+/// so [SliverFillRemaining] falls back to the remaining viewport height as the
+/// tight layout extent — the correct behaviour for registration shell pages.
+class _IntrinsicBarrier extends SingleChildRenderObjectWidget {
+  const _IntrinsicBarrier({required super.child});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderIntrinsicBarrier();
+}
+
+class _RenderIntrinsicBarrier extends RenderProxyBox {
+  @override
+  double computeMinIntrinsicHeight(double width) => 0;
+
+  @override
+  double computeMaxIntrinsicHeight(double width) => 0;
 }

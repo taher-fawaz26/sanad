@@ -115,38 +115,45 @@ class DocumentUploadCard extends StatelessWidget {
                     uploadable: uploadable!,
                     onCancel: onCancel,
                   )
-                else if (_hasLocalAsset && uploadable != null)
-                  _FilledPreview(asset: uploadable!.asset)
                 else if (_failed && uploadable != null)
                   _FailedDropzone(uploadable: uploadable!)
+                else if (_hasLocalAsset && uploadable != null)
+                  _FilledPreview(asset: uploadable!.asset)
                 else
                   const _EmptyDropzone(),
                 SizedBox(height: responsiveDimension(AppSpacing.lg)),
-                if (_localPending) ...[
-                  AppButtonPresets.secondary(
-                    label: 'registration.replace_document'.tr(),
-                    onPressed: onReplace ?? onUpload,
-                  ),
-                  SizedBox(height: responsiveDimension(AppSpacing.md)),
-                  AppButtonPresets.outline(
-                    label: 'registration.remove_document'.tr(),
-                    onPressed: onRemove,
+                if (_localPending || _uploaded) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _CardActionButton(
+                          label: 'registration.replace_document'.tr(),
+                          icon: AppSvgs.registrationReplace,
+                          color: colors.primary,
+                          onPressed: onReplace ?? onUpload,
+                        ),
+                      ),
+                      SizedBox(width: responsiveDimension(AppSpacing.lg)),
+                      Expanded(
+                        child: _CardActionButton(
+                          label: 'registration.remove_document'.tr(),
+                          icon: AppSvgs.registrationRemove,
+                          color: colors.error,
+                          onPressed: onRemove,
+                        ),
+                      ),
+                    ],
                   ),
                 ] else
                   AppButton(
                     label: _buttonLabel,
                     onPressed: _uploading ? null : onUpload,
-                    type: _uploaded
-                        ? AppButtonType.secondary
-                        : AppButtonType.primary,
                     icon: AppSvgPicture.asset(
                       AppSvgs.cloudUpload,
                       width: responsiveDimension(ButtonTokens.iconSize),
                       height: responsiveDimension(ButtonTokens.iconSize),
                       colorFilter: ColorFilter.mode(
-                        _uploaded || _uploading
-                            ? colors.primary
-                            : colors.white,
+                        colors.white,
                         BlendMode.srcIn,
                       ),
                     ),
@@ -162,7 +169,6 @@ class DocumentUploadCard extends StatelessWidget {
 
   String get _buttonLabel {
     if (_failed) return 'registration.retry_upload'.tr();
-    if (_uploaded) return 'registration.change_doc'.tr();
     return 'registration.upload'.tr();
   }
 }
@@ -425,6 +431,7 @@ class _FailedDropzone extends StatelessWidget {
   }
 }
 
+/// Figma `2982:15847` / `2982:16112` — filled preview: thumbnail + file info.
 class _FilledPreview extends StatelessWidget {
   const _FilledPreview({required this.asset});
 
@@ -437,44 +444,115 @@ class _FilledPreview extends StatelessWidget {
     final radius = AppRadius.md;
     final isImage = asset.mimeType.startsWith('image/');
 
-    return SizedBox(
-      height: responsiveDimension(_kDropzoneHeight),
-      width: double.infinity,
-      child: ClipRRect(
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.gray50,
         borderRadius: BorderRadius.circular(radius),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: colors.gray50,
-            borderRadius: BorderRadius.circular(radius),
-            border: Border.all(color: colors.border),
-          ),
-          child: isImage
-              ? CapturedImage(asset: asset)
-              : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.description_outlined,
-                      size: responsiveDimension(32),
-                      color: colors.primary,
-                    ),
-                    SizedBox(height: responsiveDimension(AppSpacing.sm)),
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: responsiveDimension(AppSpacing.md),
-                      ),
-                      child: Text(
-                        asset.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: typography.smallNormal.copyWith(
-                          color: colors.textPrimary,
+        border: Border.all(color: colors.border),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(responsiveDimension(AppSpacing.lg)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(radius),
+              child: SizedBox(
+                height: responsiveDimension(148),
+                child: isImage
+                    ? CapturedImage(asset: asset)
+                    : ColoredBox(
+                        color: colors.gray100,
+                        child: Center(
+                          child: Icon(
+                            Icons.description_outlined,
+                            size: responsiveDimension(32),
+                            color: colors.primary,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
+              ),
+            ),
+            SizedBox(height: responsiveDimension(AppSpacing.lg)),
+            Text(
+              asset.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: typography.smallNormal.copyWith(
+                fontWeight: FontWeight.w600,
+                color: colors.textPrimary,
+              ),
+            ),
+            SizedBox(height: responsiveDimension(AppSpacing.xs)),
+            Text(
+              _formatSize(asset),
+              style: typography.tinyNormal.copyWith(
+                color: colors.textSecondary,
+              ),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+
+  static String _formatSize(PickedAsset asset) {
+    if (asset.sizeInMb >= 1.0) {
+      return '${asset.sizeInMb.toStringAsFixed(1)} MB';
+    }
+    return '${asset.sizeInKb.toStringAsFixed(0)} KB';
+  }
+}
+
+/// Outlined action button used in the Replace / Remove row.
+class _CardActionButton extends StatelessWidget {
+  const _CardActionButton({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onPressed,
+  });
+
+  final String label;
+  final String icon;
+  final Color color;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        side: BorderSide(color: color),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(responsiveDimension(48)),
+        ),
+        padding: EdgeInsets.symmetric(
+          horizontal: responsiveDimension(AppSpacing.lg),
+          vertical: responsiveDimension(AppSpacing.sm),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: context.appTypography.smallNormal.copyWith(
+                fontWeight: FontWeight.w500,
+                color: color,
+              ),
+            ),
+          ),
+          SizedBox(width: responsiveDimension(AppSpacing.sm)),
+          AppSvgPicture.asset(
+            icon,
+            width: responsiveDimension(18),
+            height: responsiveDimension(18),
+            colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+          ),
+        ],
       ),
     );
   }

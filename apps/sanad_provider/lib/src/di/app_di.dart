@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 import 'package:app_logger/app_logger.dart';
 import 'package:asset_picker/asset_picker.dart';
 import 'package:auth/auth.dart';
@@ -79,6 +81,17 @@ Future<void> configureDependencies() async {
         scannerNavigatorKey: providerRootNavigatorKey,
         documentScannerConfig: const DocumentScannerConfig(
           requireBothSides: false,
+          primaryColor: Color(0xFF26A68C),
+          showInstructionText: true,
+          screenTitle: 'Scan Emirates ID',
+          frontSideInstruction: 'Place the front inside the frame',
+          backSideInstruction: 'Place the back inside the frame',
+          frontSideTitle: 'Front Side',
+          backSideTitle: 'Back Side',
+          retakeButtonText: 'Retake Front Side',
+          nextButtonText: 'Scan Back Side',
+          previousButtonText: 'Retake Front Side',
+          saveButtonText: 'Continue',
         ),
       ),
     ),

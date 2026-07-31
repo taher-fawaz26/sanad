@@ -18,7 +18,9 @@
     "home": "Home",
     "requests": "Requests",
     "messages": "Messages",
-    "settings": "Settings"
+    "settings": "Settings",
+    "more": "More",
+    "create": "Create"
   },
   "settings": {
     "title": "Settings",
@@ -516,6 +518,7 @@
     "not_found": "The requested resource was not found.",
     "bad_request": "Invalid request. Please check your input.",
     "request_cancelled": "Request was cancelled.",
+    "connection_reset": "Upload failed. The file may be too large or the connection was interrupted. Please try again with a smaller file.",
     "secure_connection_failed": "Secure connection failed. Please try again.",
     "invalid_credentials": "Invalid credentials. Please try again.",
     "cache_error": "Failed to load cached data.",
@@ -577,22 +580,13 @@
     "choose_upload": "Choose how to upload your document",
     "choose_upload_hint": "Capture, Scan, or select from Gallery",
     "change_doc": "Change",
+    "replace": "Replace",
+    "remove": "Remove",
     "capture_failed": "Couldn't get that document. Please try again.",
     "select_action": "Select action",
     "upload_file": "Upload file",
-    "scan_capture": "Scan or capture",
+    "scan_capture": "Scan / Capture",
     "upload_gallery": "Upload from Gallery",
-    "review_photos_title": "Scan Emirates ID",
-    "review_photos_subtitle": "Please review your Emirates ID photos.",
-    "front_side": "Front Side",
-    "back_side": "Back Side",
-    "retake": "Retake",
-    "scan_front_preview_subtitle": "Make sure the front of your Emirates ID is clear and readable.",
-    "scan_back_preview_subtitle": "Make sure the back of your Emirates ID is clear and readable.",
-    "scan_back_side": "Scan Back Side",
-    "retake_front_side": "Retake Front Side",
-    "retake_back_side": "Retake Back Side",
-    "confirm_photos": "Looks Good",
     "trade_licence_title": "Trade Licence",
     "trade_licence_subtitle": "Upload your trade licence to verify your organization and complete registration.",
     "trade_licence_label": "Trade licence",
@@ -628,6 +622,9 @@
     "issuance_date": "Issuance Date",
     "legal_form": "Legal Form",
     "unified_reg_no": "Unified Reg. No.",
-    "unified_licence_no": "Unified Licence No."
+    "unified_licence_no": "Unified Licence No.",
+    "completing_profile": "Completing registration...",
+    "profile_complete_error_title": "Registration Failed",
+    "profile_complete_error_message": "We couldn't complete your registration. Please check your connection and try again."
   }
 }

@@ -109,7 +109,9 @@ class _AppTextFieldState extends State<AppTextField> {
             ],
             SizedBox(
               height: _fieldHeight,
-              child: TextField(
+              child: Material(
+                type: MaterialType.transparency,
+                child: TextField(
                 controller: widget.controller,
                 focusNode: widget.focusNode,
                 enabled: widget.enabled,
@@ -138,6 +140,7 @@ class _AppTextFieldState extends State<AppTextField> {
                   brightness: brightness,
                   hasError: hasError,
                 ),
+              ),
               ),
             ),
             if (hasError) ...[

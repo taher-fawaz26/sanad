@@ -1,4 +1,5 @@
 import 'package:app_assets/app_assets.dart';
+import 'package:design_catalog/src/components/bottom_nav_catalog.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:widgetbook/widgetbook.dart';
@@ -236,28 +237,7 @@ List<WidgetbookNode> buildCatalogDirectories() => [
               ),
             ],
           ),
-          WidgetbookComponent(
-            name: 'AppBottomNavBar',
-            useCases: [
-              WidgetbookUseCase(
-                name: 'Two tabs',
-                builder: (context) => AppBottomNavBar(
-                  currentIndex: 0,
-                  onTap: (_) {},
-                  items: const [
-                    AppBottomNavItem(
-                      iconAsset: AppSvgs.navHome,
-                      label: 'Home',
-                    ),
-                    AppBottomNavItem(
-                      iconAsset: AppSvgs.navSettings,
-                      label: 'Settings',
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          ...buildBottomNavCatalogEntries(),
         ],
       ),
       WidgetbookCategory(
