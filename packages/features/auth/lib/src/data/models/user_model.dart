@@ -4,36 +4,40 @@ import 'package:core/core.dart';
 
 class UserModel extends UserEntity implements EntityConverter<UserEntity> {
   const UserModel({
-    required super.sub,
-    required super.identifier,
-    required super.identifierType,
+    required super.id,
+    required super.email,
     required super.isVerified,
-    required super.isProfileCompleted,
+    required super.isActive,
     required super.type,
   });
 
-  factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
-        sub: json['sub'] as String,
-        identifier: json['identifier'] as String,
-        identifierType: json['identifierType'] as String,
-        isVerified: json['isVerified'] as bool,
-        isProfileCompleted: json['isProfileCompleted'] as bool,
-        type: UserType.fromString(json['type'] as String),
-      );
 
-  /// Constructs a [UserModel] from a decoded JWT payload.
-  ///
-  /// Used when restoring a session from a stored access token.
-  factory UserModel.fromToken(Map<String, dynamic> json) =>
-      UserModel.fromJson(json);
+  factory UserModel.fromJson(Map<String, dynamic> json) {
+    return UserModel(
+      id: json['id'] as String,
+      email: json['email'] as String,
+      isVerified: json['isVerified'] as bool,
+      isActive: json['isActive'] as bool?,
+      type: json['type'] is String
+          ? UserType.fromString(json['type'] as String)
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'email': email,
+    'isVerified': isVerified,
+    'isActive': isActive,
+    'type': type?.value,
+  };
 
   @override
   UserEntity toEntity() => UserEntity(
-        sub: sub,
-        identifier: identifier,
-        identifierType: identifierType,
-        isVerified: isVerified,
-        isProfileCompleted: isProfileCompleted,
-        type: type,
-      );
+    id: id,
+    email: email,
+    isVerified: isVerified,
+    isActive: isActive,
+    type: type,
+  );
 }

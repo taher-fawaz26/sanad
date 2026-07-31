@@ -1,5 +1,4 @@
 import 'package:app_assets/app_assets.dart';
-import 'package:app_logger/app_logger.dart';
 import 'package:asset_picker/asset_picker.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -57,17 +56,6 @@ class _IdentityVerificationPageState extends State<IdentityVerificationPage> {
       final cubit = context.read<RegistrationCubit>();
       final assets = result.assets;
 
-      for (final asset in assets) {
-        appLogger.d(
-          'Picked asset: ${asset.name}, '
-          'path=${asset.path}, '
-          'ext=${asset.extension}, '
-          'mime=${asset.mimeType}, '
-          'size=${asset.size} bytes, '
-          'type=${asset.assetType}',
-        );
-      }
-
       if (assets.length > 1) {
         cubit.setEmiratesIdLocal(front: assets[0], back: assets[1]);
         await cubit.uploadEmiratesIdSequence();
@@ -78,12 +66,7 @@ class _IdentityVerificationPageState extends State<IdentityVerificationPage> {
         cubit.setEmiratesIdLocal(back: assets.first);
         await cubit.uploadDocument(slot: slot, asset: assets.first);
       }
-    } on AssetPickerException catch (e, stackTrace) {
-      appLogger.e(
-        'Asset picker failed: ${e.message}',
-        error: e,
-        stackTrace: stackTrace,
-      );
+    } on AssetPickerException {
       if (mounted) {
         showAppErrorSnackbar(
           context: context,

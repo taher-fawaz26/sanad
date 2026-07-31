@@ -12,7 +12,8 @@ abstract final class EmailVerifyResponse {
     final accessToken = json['accessToken'] as String?;
     final user = (json['user'] as Map<String, dynamic>?) ?? const {};
 
-    final isAuthenticated = status == 'authenticated' ||
+    final isAuthenticated =
+        status == 'authenticated' ||
         (accessToken != null && accessToken.isNotEmpty);
 
     if (isAuthenticated) {
@@ -20,12 +21,13 @@ abstract final class EmailVerifyResponse {
         accessToken: accessToken ?? '',
         refreshToken: json['refreshToken'] as String? ?? '',
         user: UserEntity(
-          sub: user['id'] as String? ?? '',
-          identifier: user['email'] as String? ?? '',
-          identifierType: 'email',
+          id: user['id'] as String? ?? '',
+          email: user['email'] as String? ?? '',
           isVerified: user['isVerified'] as bool? ?? false,
-          isProfileCompleted: json['isProfileCreated'] as bool? ?? false,
-          type: _mapUserType(user['userType'] as String?),
+          isActive: user['isActive'] as bool? ?? false,
+          type: UserType.fromString(
+            user['type'] as String? ?? 'individualProvider',
+          ),
         ),
       );
     }
@@ -35,12 +37,5 @@ abstract final class EmailVerifyResponse {
       email: user['email'] as String? ?? '',
       userId: user['id'] as String? ?? '',
     );
-  }
-
-  /// Maps the backend `userType` (`client`, `individualProvider`,
-  /// `companyProvider`, `worker`, `admin`) onto the app's coarse
-  /// [UserType] (`client` vs `provider`).
-  static UserType _mapUserType(String? raw) {
-    return raw?.toLowerCase() == 'client' ? UserType.client : UserType.provider;
   }
 }

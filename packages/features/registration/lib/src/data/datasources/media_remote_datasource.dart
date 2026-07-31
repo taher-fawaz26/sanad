@@ -1,4 +1,3 @@
-import 'package:app_logger/app_logger.dart';
 import 'package:auth/src/domain/entities/email_auth_result.dart';
 import 'package:core/core.dart';
 import 'package:dio/dio.dart';
@@ -69,12 +68,6 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
           final cancelToken = CancelToken();
           _cancelTokens[uploadKey] = cancelToken;
 
-          appLogger.d(
-            'uploadSingle: path=$filePath, name=$fileName, '
-            'mime=$mimeType, endpoint=${MediaApiPaths.onboarding}, '
-            'fieldName=file',
-          );
-
           final formData = FormData.fromMap({
             'file': await MultipartFile.fromFile(
               filePath,
@@ -97,28 +90,15 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
               },
             );
 
-            appLogger.d(
-              'uploadSingle: response status=${response.statusCode}',
-            );
-
             final raw = response.data;
             final map = _parseResponse(raw);
-
-            appLogger.d('uploadSingle: parsed response=$map');
 
             return MediaUploadResponse.fromJson(map);
           } finally {
             _cancelTokens.remove(uploadKey);
           }
         },
-        (error, stackTrace) {
-          appLogger.e(
-            'uploadSingle: EXCEPTION',
-            error: error,
-            stackTrace: stackTrace,
-          );
-          return ErrorMapper.mapError(error);
-        },
+        (error, stackTrace) => ErrorMapper.mapError(error),
       );
 
   @override

@@ -1,5 +1,4 @@
 import 'package:app_assets/app_assets.dart';
-import 'package:app_logger/app_logger.dart';
 import 'package:asset_picker/asset_picker.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -32,12 +31,7 @@ class TradeLicencePage extends StatelessWidget {
             slot: RegistrationDocumentSlot.tradeLicence,
             asset: result.assets.first,
           );
-    } on AssetPickerException catch (e, stackTrace) {
-      appLogger.e(
-        'Trade licence picker failed: ${e.message}',
-        error: e,
-        stackTrace: stackTrace,
-      );
+    } on AssetPickerException {
       if (!context.mounted) return;
       showAppErrorSnackbar(
         context: context,

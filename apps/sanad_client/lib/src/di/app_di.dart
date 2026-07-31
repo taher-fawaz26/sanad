@@ -46,6 +46,4 @@ Future<void> configureDependencies() async {
     AuthModule(),
   ]);
   await moduleRegistry.initAll();
-
-  appLogger.i('[AppDI] sanad_client dependency injection configured');
 }

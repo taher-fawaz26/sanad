@@ -3,30 +3,27 @@ import 'package:equatable/equatable.dart';
 
 class UserEntity extends Equatable {
   const UserEntity({
-    required this.sub,
-    required this.identifier,
-    required this.identifierType,
+    required this.id,
+    required this.email,
     required this.isVerified,
-    required this.isProfileCompleted,
+    required this.isActive,
     required this.type,
   });
 
-  final String sub;
-  final String identifier;
-  final String identifierType;
+  final String id;
+  final String email;
   final bool isVerified;
-  final bool isProfileCompleted;
+  final bool? isActive;
 
   /// Whether this account is a service provider or a client.
-  final UserType type;
+  final UserType? type;
 
   @override
   List<Object?> get props => [
-        sub,
-        identifier,
-        identifierType,
-        isVerified,
-        isProfileCompleted,
-        type,
-      ];
+    id,
+    email,
+    isVerified,
+    isActive,
+    type,
+  ];
 }

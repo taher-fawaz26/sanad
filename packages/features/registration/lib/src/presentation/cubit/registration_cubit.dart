@@ -1,4 +1,3 @@
-import 'package:app_logger/app_logger.dart';
 import 'package:asset_picker/asset_picker.dart';
 import 'package:auth/src/domain/entities/email_auth_result.dart';
 import 'package:core/core.dart';
@@ -81,15 +80,8 @@ class RegistrationCubit extends Cubit<RegistrationState> {
     required RegistrationDocumentSlot slot,
     required PickedAsset asset,
   }) async {
-    appLogger.d(
-      'uploadDocument: slot=${slot.name}, '
-      'file=${asset.name}, path=${asset.path}, '
-      'mime=${asset.mimeType}, size=${asset.size}',
-    );
-
     final token = state.onboardingToken;
     if (token == null || token.isEmpty) {
-      appLogger.e('uploadDocument: no onboarding token — aborting');
       emit(
         _withSlot(
           slot,
@@ -124,10 +116,6 @@ class RegistrationCubit extends Cubit<RegistrationState> {
 
     result.fold(
       (failure) {
-        appLogger.e(
-          'uploadDocument: FAILED slot=${slot.name}, '
-          'failure=${failure.runtimeType}: ${failure.message}',
-        );
         if (failure is NetworkFailure &&
             failure.message == 'errors.request_cancelled') {
           emit(_withSlot(slot, null));
@@ -144,10 +132,6 @@ class RegistrationCubit extends Cubit<RegistrationState> {
         );
       },
       (media) {
-        appLogger.d(
-          'uploadDocument: SUCCESS slot=${slot.name}, '
-          'remoteId=${media.id}, url=${media.url}',
-        );
         final current = _slotOf(slot);
         if (current == null) return;
         emit(
@@ -262,7 +246,6 @@ class RegistrationCubit extends Cubit<RegistrationState> {
     final backId = state.emiratesIdBack?.remoteId;
 
     if (token == null || frontId == null || backId == null) {
-      appLogger.e('completeProfile: missing required data');
       emit(
         state.copyWith(
           profileCompletionStatus: ProfileCompletionStatus.failed,
@@ -281,12 +264,6 @@ class RegistrationCubit extends Cubit<RegistrationState> {
     final businessName = state.businessName.isNotEmpty
         ? state.businessName
         : (state.extraction?.tradeLicence?.tradeNameEn ?? '');
-
-    appLogger.d(
-      'completeProfile: isOrganization=${state.isOrganization}, '
-      'fullName=$fullName, businessName=$businessName, '
-      'email=${state.email}',
-    );
 
     emit(
       state.copyWith(
@@ -324,9 +301,6 @@ class RegistrationCubit extends Cubit<RegistrationState> {
 
     return result.fold(
       (failure) {
-        appLogger.e(
-          'completeProfile: FAILED failure=${failure.runtimeType}: ${failure.message}',
-        );
         emit(
           state.copyWith(
             profileCompletionStatus: ProfileCompletionStatus.failed,
@@ -336,7 +310,6 @@ class RegistrationCubit extends Cubit<RegistrationState> {
         return null;
       },
       (authResult) {
-        appLogger.d('completeProfile: SUCCESS');
         emit(
           state.copyWith(
             profileCompletionStatus: ProfileCompletionStatus.done,

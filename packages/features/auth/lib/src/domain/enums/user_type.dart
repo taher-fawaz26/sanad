@@ -4,8 +4,12 @@
 /// `POST /auth/register`. Responses and JWTs may use any casing;
 /// [fromString] normalizes case-insensitively.
 enum UserType {
-  provider('provider'),
-  client('client');
+  individualProvider('individualProvider'),
+  companyProvider('companyProvider'),
+  client('client'),
+  admin('admin'),
+  worker('worker')
+  ;
 
   const UserType(this.value);
 
@@ -22,5 +26,13 @@ enum UserType {
         '(case-insensitive).',
       ),
     );
+  }
+
+  static UserType fromJson(String value) {
+    return UserType.fromString(value);
+  }
+
+  static String toJson(UserType value) {
+    return value.value;
   }
 }

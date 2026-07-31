@@ -97,6 +97,4 @@ Future<void> configureDependencies() async {
     ),
   ]);
   await moduleRegistry.initAll();
-
-  appLogger.i('[AppDI] Dependency injection configured for sanad_provider');
 }

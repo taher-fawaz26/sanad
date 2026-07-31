@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:app_logger/app_logger.dart';
 import 'package:asset_picker/asset_picker.dart';
 import 'package:auth/auth.dart';
 import 'package:core/core.dart';
@@ -99,12 +98,7 @@ class _ReviewInformationPageState extends State<ReviewInformationPage> {
       );
       if (!context.mounted) return;
       await cubit.extractDocuments();
-    } on AssetPickerException catch (e, stackTrace) {
-      appLogger.e(
-        'Replace Emirates ID failed: ${e.message}',
-        error: e,
-        stackTrace: stackTrace,
-      );
+    } on AssetPickerException {
       if (!context.mounted) return;
       showAppErrorSnackbar(
         context: context,
@@ -124,12 +118,7 @@ class _ReviewInformationPageState extends State<ReviewInformationPage> {
       );
       if (!context.mounted) return;
       await cubit.extractDocuments();
-    } on AssetPickerException catch (e, stackTrace) {
-      appLogger.e(
-        'Replace trade licence failed: ${e.message}',
-        error: e,
-        stackTrace: stackTrace,
-      );
+    } on AssetPickerException {
       if (!context.mounted) return;
       showAppErrorSnackbar(
         context: context,

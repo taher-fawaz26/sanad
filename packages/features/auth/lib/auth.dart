@@ -7,6 +7,7 @@ export 'src/data/datasources/auth_local_datasource.dart'
     show AuthLocalDataSource;
 export 'src/data/models/adapter/user_adapter.dart';
 export 'src/di/auth_di.dart';
+export 'src/domain/entities/auth_profile_entity.dart';
 export 'src/domain/entities/email_auth_result.dart';
 export 'src/domain/entities/user_entity.dart';
 export 'src/domain/enums/user_type.dart';
