@@ -1,7 +1,8 @@
 # AppBottomNavBar
 
 Notch bottom navigation bar with 5 items and a center floating action button.
-Built entirely on [`animated_notch_bottom_bar`](https://pub.dev/packages/animated_notch_bottom_bar) package.
+Built on the Sanad fork of `curved_navigation_bar_pro` at
+[`packages/curved_navigation_bar_pro`](../../packages/curved_navigation_bar_pro).
 
 Figma reference: `Nab-Bar` (`3148:27106`)
 Dribbble reference: Notch bottom navigation design
@@ -11,9 +12,11 @@ Dribbble reference: Notch bottom navigation design
 - **5 navigation items** — 2 before center, 2 after center, 1 extra slot
 - **Center floating action** — elevated button with custom tap handler
 - **Smooth animations** — icon scale, opacity, and notch movement
-- **Full package API usage** — uses all available `animated_notch_bottom_bar` features
+- **Full package API usage** — uses `CurvedNavigationBarPro` with SVG widgets
 - **Theme-aware** — light/dark mode support via design tokens
-- **RTL support** — inherits from ambient `Directionality`
+- **RTL support** — the forked package mirrors FAB/notch physical X under
+  ambient `Directionality`. Callers always use semantic visual indices
+  (`0` = leading / Home). No app-layer index remapping.
 - **SVG icons** — loaded via `AppSvgPicture` from `app_assets`
 
 ## Import
@@ -25,41 +28,41 @@ import 'package:app_assets/app_assets.dart';
 
 ## Required Setup
 
-1. Create a `NotchBottomBarController` initialized with index 2 (center position)
-2. Pass exactly 5 items via the `items` parameter
-3. Wire selection through `currentIndex` and `onTap`
-4. Provide center FAB configuration via `centerAction`
+1. Pass exactly 5 items via the `items` parameter (index `2` = center slot)
+2. Wire selection through `currentIndex` and `onTap`
+3. Provide center FAB configuration via `centerAction`
 
-## Example
+## Provider app integration
+
+`sanad_provider` maps bar indices, shell branches, and routes from a single
+enum — [ProviderBottomNavDestination] — in
+`apps/sanad_provider/lib/src/routing/shell/provider_bottom_nav.dart`.
+
+Visual order: **Home · Messages · Requests (center FAB) · Services · Settings**.
+
+`MainShell` must not hardcode index conversions; use
+`ProviderBottomNavDestination.fromBarIndex` /
+`ProviderBottomNavDestination.fromShellBranch` instead.
+
+## Example (design catalog / generic)
 
 ```dart
-class MainShell extends StatefulWidget {
+class MainShell extends StatelessWidget {
   const MainShell({required this.navigationShell, super.key});
 
   final StatefulNavigationShell navigationShell;
 
   @override
-  State<MainShell> createState() => _MainShellState();
-}
-
-class _MainShellState extends State<MainShell> {
-  late final NotchBottomBarController _controller =
-      NotchBottomBarController(index: 2);
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: widget.navigationShell,
+      body: navigationShell,
       bottomNavigationBar: AppBottomNavBar(
-        controller: _controller,
-        currentIndex: widget.navigationShell.currentIndex,
-        onTap: (index) => widget.navigationShell.goBranch(index),
+        currentIndex: navigationShell.currentIndex,
+        onTap: (index) => navigationShell.goBranch(index),
         centerAction: AppBottomNavCenterAction(
           iconAsset: AppNavigationIcons.centerAction,
-          semanticLabel: 'nav.create'.tr(),
-          onTap: () {
-            // Handle center action
-          },
+          semanticLabel: 'nav.requests'.tr(),
+          onTap: () => navigationShell.goBranch(2),
         ),
         items: [
           AppBottomNavItem(
@@ -67,20 +70,20 @@ class _MainShellState extends State<MainShell> {
             label: 'nav.home'.tr(),
           ),
           AppBottomNavItem(
-            iconAsset: AppNavigationIcons.service,
-            label: 'nav.requests'.tr(),
-          ),
-          AppBottomNavItem(
             iconAsset: AppNavigationIcons.messages,
             label: 'nav.messages'.tr(),
           ),
           AppBottomNavItem(
-            iconAsset: AppNavigationIcons.settings,
-            label: 'nav.settings'.tr(),
+            iconAsset: AppNavigationIcons.centerAction,
+            label: 'nav.requests'.tr(),
           ),
           AppBottomNavItem(
-            iconAsset: AppNavigationIcons.home,
-            label: 'nav.more'.tr(),
+            iconAsset: AppNavigationIcons.service,
+            label: 'nav.service'.tr(),
+          ),
+          AppBottomNavItem(
+            iconAsset: AppNavigationIcons.settings,
+            label: 'nav.settings'.tr(),
           ),
         ],
       ),
@@ -95,7 +98,6 @@ class _MainShellState extends State<MainShell> {
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `controller` | `NotchBottomBarController` | Controller for notch animation — must be initialized with `index: 2` |
 | `items` | `List<AppBottomNavItem>` | Exactly 5 navigation items |
 | `currentIndex` | `int` | Currently selected item index (0-4) |
 | `onTap` | `ValueChanged<int>` | Called when an item is tapped (receives index 0-4) |
@@ -130,29 +132,13 @@ class _MainShellState extends State<MainShell> {
 
 ## Package Features Used
 
-The implementation uses every available feature from `animated_notch_bottom_bar`:
+The implementation wraps `CurvedNavigationBarPro` with Sanad tokens and SVG items:
 
-- ✅ `notchBottomBarController` — for notch position control
-- ✅ `bottomBarItems` — list of `BottomBarItem` configurations
-- ✅ `onTap` — tap callback
-- ✅ `color` — background color
-- ✅ `notchColor` — notch fill color
-- ✅ `durationInMilliSeconds` — animation duration
-- ✅ `bottomBarHeight` — bar height
-- ✅ `kBottomRadius` — notch bottom radius
-- ✅ `showTopRadius` — show bar top rounded corners
-- ✅ `showBottomRadius` — show bar bottom rounded corners
-- ✅ `removeMargins` — remove default margins
-- ✅ `elevation` — Material elevation
-- ✅ `shadowElevation` — shadow depth
-- ✅ `showShadow` — enable/disable shadow
-- ✅ `showBlurBottomBar` — background blur effect
-- ✅ `blurOpacity`, `blurFilterX`, `blurFilterY` — blur parameters
-- ✅ `kIconSize` — icon size
-- ✅ `topMargin` — top spacing
-- ✅ `circleMargin` — notch circle margin
-- ✅ `showLabel` — display labels
-- ✅ `itemLabelWidget` — custom label widgets
+- `CurvedNavigationBarPro` — animated curved notch + elastic FAB bubble
+- `CurvedNavigationItemPro.inactiveWidget` / `activeWidget` — SVG icons via `AppSvgPicture`
+- `backgroundColor`, `fabColor`, `activeColor`, `inactiveColor` — from `BottomNavTokens`
+- `barHeight`, `fabRadius`, `fabGap`, `fabSink`, `cornerRadius` — Figma geometry
+- `animationDuration`, `animationCurve` — from `AppDurations.notchBar`
 
 ## Design Tokens
 
@@ -160,11 +146,11 @@ All styling is controlled via `BottomNavTokens`:
 
 ### Layout Tokens
 - `bottomBarHeight: 72.0` — bar height
-- `kBottomRadius: 28.0` — notch corner radius
+- `kBottomRadius: 28.0` — top corner radius
 - `kIconSize: 24.0` — icon size
-- `topMargin: 12.0` — top spacing
-- `circleMargin: 8.0` — notch circle margin
-- `centerFabSize: 52.0` — center button size
+- `circleMargin: 8.0` — FAB/notch gap
+- `fabSink: 20.0` — FAB vertical sink
+- `centerFabSize: 52.0` — center bubble diameter
 
 ### Color Tokens
 - `backgroundColor()` — bar background (theme-dependent)
@@ -176,8 +162,6 @@ All styling is controlled via `BottomNavTokens`:
 
 ### Animation Tokens
 - `durationInMilliSeconds: 450` — from `AppDurations.notchBar`
-- `selectedIconScale: 1.1` — scale factor for selected icons
-- `unselectedIconOpacity: 0.72` — opacity for unselected items
 - `animationCurve: Curves.easeOutCubic` — animation easing
 
 ## Preview
@@ -209,7 +193,6 @@ Tests cover:
 - Center action tap
 - Item tap callbacks
 - Disabled item behavior
-- Controller locking
 - Dark theme rendering
 - Text scale factors (1.0x - 2.0x)
 
@@ -225,11 +208,12 @@ AppBottomNavBar(
 )
 ```
 
-**New API (5 items, no `leadingCount`)**:
+**New API (5 items, center at index 2)**:
 ```dart
 AppBottomNavBar(
-  controller: NotchBottomBarController(index: 2),  // ✅ Always index 2
+  currentIndex: 2,
   items: [item1, item2, item3, item4, item5],  // ✅ Exactly 5 items
+  centerAction: AppBottomNavCenterAction(...),
   // ...
 )
 ```
@@ -240,20 +224,20 @@ Key changes:
 - **No `textDirection` override** — uses ambient `Directionality`
 - **Simpler API** — removed internal slot mapping complexity
 
-## Package Limitations
+## Package Notes
 
-Current limitations of `animated_notch_bottom_bar` that cannot be customized:
+The Sanad fork of `curved_navigation_bar_pro` moves the FAB bubble to the
+selected tab and maps list index → physical slot for RTL:
 
-1. **Fixed notch shape** — circular notch only; cannot use custom shapes
-2. **Linear interpolation** — package uses linear animation; Figma uses custom easing
-3. **Icon-label gap** — fixed at 5dp (Figma uses 4dp)
-4. **Bar positioning** — requires manual padding adjustment to match Figma exactly
+- LTR: index `0` → left
+- RTL: index `0` → right (Row flips children; FAB/notch use mirrored X)
 
-All other aspects match the Figma design via proper token configuration.
+Index `2` remains the center action slot; use `centerAction` for its icon and
+tap handler. Upstream: https://pub.dev/packages/curved_navigation_bar_pro
 
 ## References
 
-- Package: https://pub.dev/packages/animated_notch_bottom_bar
+- Fork: `packages/curved_navigation_bar_pro`
 - Figma: `Nab-Bar` (`3148:27106`)
 - Icons: `packages/app_assets/lib/src/app_navigation_icons.dart`
 - Tokens: `packages/design_system/lib/src/theme/tokens/bottom_nav_tokens.dart`

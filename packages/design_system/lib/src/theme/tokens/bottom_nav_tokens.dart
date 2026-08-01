@@ -4,73 +4,48 @@ import 'package:design_system/src/theme/typography/app_typography.dart';
 import 'package:design_system/src/utils/constants/app_durations.dart';
 import 'package:flutter/material.dart';
 
-/// Design tokens for [AppBottomNavBar] mapped to `animated_notch_bottom_bar` API.
+/// Design tokens for [AppBottomNavBar] mapped to `curved_navigation_bar_pro`.
 ///
 /// Figma reference: `Nab-Bar` (`3148:27106`)
-/// Dribbble reference: Notch bottom navigation design
 abstract final class BottomNavTokens {
   BottomNavTokens._();
 
-  // ========== Package Parameters ==========
-
-  /// Bottom bar background color — package `color` parameter.
+  /// Bottom bar background color.
   static Color backgroundColor(AppColors colors, Brightness brightness) =>
       brightness == Brightness.dark ? colors.background : colors.surface;
 
-  /// Notch background color — package `notchColor` parameter.
-  static Color notchColor(AppColors colors, Brightness brightness) =>
-      backgroundColor(colors, brightness);
-
-  /// Animation duration — package `durationInMilliSeconds` parameter.
+  /// Animation duration for notch / bubble transitions.
   static int durationInMilliSeconds = AppDurations.notchBar.inMilliseconds;
 
-  /// Bar height — package `bottomBarHeight` parameter.
+  /// Bar height (excluding FAB protrusion).
   static const double bottomBarHeight = 72;
 
-  /// Notch bottom radius — package `kBottomRadius` parameter.
+  /// Top corner radius of the bar.
   static const double kBottomRadius = 28;
 
-  /// Show bar top radius — package `showTopRadius` parameter.
-  static const bool showTopRadius = true;
+  /// Horizontal inset for side items when corners are rounded.
+  static const double contentPadding = 12;
 
-  /// Show bar bottom radius — package `showBottomRadius` parameter.
-  static const bool showBottomRadius = true;
-
-  /// Remove margins — package `removeMargins` parameter.
-  static const bool removeMargins = true;
-
-  /// Shadow elevation — package `elevation` and `shadowElevation` parameters.
+  /// Shadow elevation.
   static const double elevation = 8;
 
-  /// Show shadow — package `showShadow` parameter.
-  static bool showShadow(Brightness brightness) =>
-      brightness == Brightness.light;
+  /// Drop shadow tint.
+  static const Color shadowColor = Color(0x2B05796B);
 
-  /// Show blur bottom bar — package `showBlurBottomBar` parameter.
-  static const bool showBlurBottomBar = false;
-
-  /// Blur opacity — package `blurOpacity` parameter (when blur is enabled).
-  static const double blurOpacity = 0;
-
-  /// Blur filter X — package `blurFilterX` parameter (when blur is enabled).
-  static const double blurFilterX = 0;
-
-  /// Blur filter Y — package `blurFilterY` parameter (when blur is enabled).
-  static const double blurFilterY = 0;
-
-  /// Icon size — package `kIconSize` parameter.
-  static const double kIconSize = 24;
-
-  /// Top margin — package `topMargin` parameter.
-  static const double topMargin = 12;
-
-  /// Circle margin — package `circleMargin` parameter.
+  /// Gap between FAB edge and notch arc.
   static const double circleMargin = 8;
 
-  /// Show label — package `showLabel` parameter.
-  static const bool showLabel = true;
+  /// How far the FAB centre sits below the bar top edge.
+  static const double fabSink = 20;
 
-  // ========== Item Style Tokens ==========
+  /// Shoulder fillet radius where the notch meets the flat bar.
+  static const double notchShoulderRadius = 12;
+
+  /// Side icon size.
+  static const double kIconSize = 24;
+
+  /// Whether labels are shown under icons.
+  static const bool showLabel = true;
 
   /// Label text style for selected items.
   static TextStyle selectedLabelStyle(
@@ -111,8 +86,6 @@ abstract final class BottomNavTokens {
         color: colors.textDisabled,
       );
 
-  // ========== Icon Colors ==========
-
   static Color selectedIconColor(AppColors colors) => colors.primary;
 
   static Color unselectedIconColor(AppColors colors, Brightness brightness) =>
@@ -122,9 +95,7 @@ abstract final class BottomNavTokens {
 
   static Color disabledIconColor(AppColors colors) => colors.textDisabled;
 
-  // ========== Center FAB Tokens ==========
-
-  /// Center FAB size.
+  /// Center FAB diameter.
   static const double centerFabSize = 52;
 
   /// Center FAB inactive color.
@@ -153,14 +124,6 @@ abstract final class BottomNavTokens {
       offset: Offset(0, 8),
     ),
   ];
-
-  // ========== Animation Tokens ==========
-
-  /// Selected icon scale factor.
-  static const double selectedIconScale = 1.1;
-
-  /// Unselected icon opacity.
-  static const double unselectedIconOpacity = 0.72;
 
   /// Animation curve for icon/label transitions.
   static const Curve animationCurve = Curves.easeOutCubic;

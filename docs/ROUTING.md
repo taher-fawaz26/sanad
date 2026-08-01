@@ -31,7 +31,7 @@ GoRouter(
 | `AuthRoutes` | `auth` | `/`, `/login`, `/register` |
 | `OtpRoutes` | `otp` | `/otp` |
 | `ForgotPasswordRoutes` | `forgot_password` | `/forgot-password`, `/forgot-password/reset` |
-| `AppRoutes` | `sanad_provider` | `/home`, `/requests`, `/messages`, `/settings`, `/branches`, `/branches/add` |
+| `AppRoutes` | `sanad_provider` | `/home`, `/messages`, `/requests`, `/services`, `/settings`, `/branches`, `/branches/add` |
 
 ## Auth Guard
 
@@ -46,10 +46,14 @@ Bottom-nav tabs via `StatefulShellRoute.indexedStack`:
 
 | Tab | Path | Page |
 |-----|------|------|
-| Home | `/home` | `HomePage` |
+| Home | `/home` | `ProviderHomePage` |
+| Messages | `/messages` | `ProviderMessagesPage` |
 | Requests | `/requests` | `RequestsPage` |
-| Messages | `/messages` | `MessagesPage` |
-| Settings | `/settings` | `SettingsPage` |
+| Services | `/services` | `ProviderServicesPage` |
+| Settings | `/settings` | `ProviderSettingsPage` |
+
+Branch order matches [ProviderBottomNavDestination] in
+`apps/sanad_provider/lib/src/routing/shell/provider_bottom_nav.dart`.
 
 ## Typed Navigation Extras
 

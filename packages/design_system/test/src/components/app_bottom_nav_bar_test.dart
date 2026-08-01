@@ -45,33 +45,29 @@ const _tabs = [
     label: 'Home',
   ),
   AppBottomNavItem(
-    iconAsset: AppNavigationIcons.service,
-    label: 'Service',
-  ),
-  // Index 2 reserved for center action
-  AppBottomNavItem(
     iconAsset: AppNavigationIcons.messages,
     label: 'Messages',
   ),
   AppBottomNavItem(
-    iconAsset: AppNavigationIcons.settings,
-    label: 'Settings',
+    iconAsset: AppNavigationIcons.centerAction,
+    label: 'Requests',
   ),
   AppBottomNavItem(
-    iconAsset: AppNavigationIcons.home,
-    label: 'More',
+    iconAsset: AppNavigationIcons.service,
+    label: 'Services',
+  ),
+  AppBottomNavItem(
+    iconAsset: AppNavigationIcons.settings,
+    label: 'Settings',
   ),
 ];
 
 void main() {
   group('AppBottomNavBar', () {
     testWidgets('renders 5 items and center action', (tester) async {
-      final controller = NotchBottomBarController(index: 2);
-
       await _pumpBottomNav(
         tester,
         AppBottomNavBar(
-          controller: controller,
           currentIndex: 0,
           onTap: (_) {},
           centerAction: AppBottomNavCenterAction(
@@ -87,18 +83,16 @@ void main() {
       expect(find.text('Service'), findsOneWidget);
       expect(find.text('Messages'), findsOneWidget);
       expect(find.text('Settings'), findsOneWidget);
-      expect(find.text('More'), findsOneWidget);
+      expect(find.text('Requests'), findsOneWidget);
       expect(find.byType(AppBottomNavBar), findsOneWidget);
     });
 
     testWidgets('invokes center action callback', (tester) async {
-      final controller = NotchBottomBarController(index: 2);
       var centerTapped = false;
 
       await _pumpBottomNav(
         tester,
         AppBottomNavBar(
-          controller: controller,
           currentIndex: 0,
           onTap: (_) {},
           centerAction: AppBottomNavCenterAction(
@@ -110,20 +104,18 @@ void main() {
         ),
       );
 
-      await tester.tap(find.bySemanticsLabel('Create'));
+      await tester.tap(find.text('Requests'));
       await tester.pumpAndSettle();
 
       expect(centerTapped, isTrue);
     });
 
     testWidgets('invokes item tap callback', (tester) async {
-      final controller = NotchBottomBarController(index: 2);
       var tappedIndex = -1;
 
       await _pumpBottomNav(
         tester,
         AppBottomNavBar(
-          controller: controller,
           currentIndex: 0,
           onTap: (index) => tappedIndex = index,
           centerAction: AppBottomNavCenterAction(
@@ -137,16 +129,13 @@ void main() {
       await tester.tap(find.text('Messages'));
       await tester.pumpAndSettle();
 
-      expect(tappedIndex, 2);
+      expect(tappedIndex, 1);
     });
 
     testWidgets('renders disabled side tab label', (tester) async {
-      final controller = NotchBottomBarController(index: 2);
-
       await _pumpBottomNav(
         tester,
         AppBottomNavBar(
-          controller: controller,
           currentIndex: 0,
           onTap: (_) {},
           centerAction: AppBottomNavCenterAction(
@@ -164,16 +153,16 @@ void main() {
               enabled: false,
             ),
             AppBottomNavItem(
+              iconAsset: AppNavigationIcons.centerAction,
+              label: 'Requests',
+            ),
+            AppBottomNavItem(
               iconAsset: AppNavigationIcons.messages,
               label: 'Messages',
             ),
             AppBottomNavItem(
               iconAsset: AppNavigationIcons.settings,
               label: 'Settings',
-            ),
-            AppBottomNavItem(
-              iconAsset: AppNavigationIcons.home,
-              label: 'More',
             ),
           ],
         ),
@@ -182,33 +171,10 @@ void main() {
       expect(find.text('Service'), findsOneWidget);
     });
 
-    testWidgets('keeps controller locked to center slot', (tester) async {
-      final controller = NotchBottomBarController(index: 2);
-
-      await _pumpBottomNav(
-        tester,
-        AppBottomNavBar(
-          controller: controller,
-          currentIndex: 1,
-          onTap: (_) {},
-          centerAction: AppBottomNavCenterAction(
-            iconAsset: AppNavigationIcons.centerAction,
-            onTap: () {},
-          ),
-          items: _tabs,
-        ),
-      );
-
-      expect(controller.index, 2);
-    });
-
     testWidgets('center FAB meets minimum touch target', (tester) async {
-      final controller = NotchBottomBarController(index: 2);
-
       await _pumpBottomNav(
         tester,
         AppBottomNavBar(
-          controller: controller,
           currentIndex: 0,
           onTap: (_) {},
           centerAction: AppBottomNavCenterAction(
@@ -226,12 +192,9 @@ void main() {
     });
 
     testWidgets('renders in dark theme', (tester) async {
-      final controller = NotchBottomBarController(index: 2);
-
       await _pumpBottomNav(
         tester,
         AppBottomNavBar(
-          controller: controller,
           currentIndex: 0,
           onTap: (_) {},
           centerAction: AppBottomNavCenterAction(
@@ -247,13 +210,11 @@ void main() {
     });
 
     testWidgets('does not allow center FAB tap when disabled', (tester) async {
-      final controller = NotchBottomBarController(index: 2);
       var centerTapped = false;
 
       await _pumpBottomNav(
         tester,
         AppBottomNavBar(
-          controller: controller,
           currentIndex: 0,
           onTap: (_) {},
           centerAction: AppBottomNavCenterAction(
@@ -266,20 +227,18 @@ void main() {
         ),
       );
 
-      await tester.tap(find.bySemanticsLabel('Create'));
+      await tester.tap(find.text('Requests'));
       await tester.pumpAndSettle();
 
       expect(centerTapped, isFalse);
     });
 
     testWidgets('does not allow disabled item tap', (tester) async {
-      final controller = NotchBottomBarController(index: 2);
       var tappedIndex = -1;
 
       await _pumpBottomNav(
         tester,
         AppBottomNavBar(
-          controller: controller,
           currentIndex: 0,
           onTap: (index) => tappedIndex = index,
           centerAction: AppBottomNavCenterAction(
@@ -297,16 +256,16 @@ void main() {
               enabled: false,
             ),
             AppBottomNavItem(
+              iconAsset: AppNavigationIcons.centerAction,
+              label: 'Requests',
+            ),
+            AppBottomNavItem(
               iconAsset: AppNavigationIcons.messages,
               label: 'Messages',
             ),
             AppBottomNavItem(
               iconAsset: AppNavigationIcons.settings,
               label: 'Settings',
-            ),
-            AppBottomNavItem(
-              iconAsset: AppNavigationIcons.home,
-              label: 'More',
             ),
           ],
         ),
@@ -322,12 +281,9 @@ void main() {
       testWidgets(
         'has no layout overflow at ${scale}x text scale',
         (tester) async {
-          final controller = NotchBottomBarController(index: 2);
-
           await _pumpBottomNav(
             tester,
             AppBottomNavBar(
-              controller: controller,
               currentIndex: 0,
               onTap: (_) {},
               centerAction: AppBottomNavCenterAction(
@@ -343,6 +299,55 @@ void main() {
         },
       );
     }
+
+    testWidgets('RTL forwards visual tap indices', (tester) async {
+      var tappedIndex = -1;
+
+      await _pumpBottomNav(
+        tester,
+        AppBottomNavBar(
+          currentIndex: 0,
+          onTap: (index) => tappedIndex = index,
+          centerAction: AppBottomNavCenterAction(
+            iconAsset: AppNavigationIcons.centerAction,
+            onTap: () {},
+          ),
+          items: _tabs,
+        ),
+        textDirection: TextDirection.rtl,
+      );
+
+      await tester.tap(find.text('Messages'));
+      await tester.pumpAndSettle();
+
+      expect(tappedIndex, 1);
+    });
+
+    testWidgets('RTL forwards center FAB tap as visual index 2', (
+      tester,
+    ) async {
+      var centerTapped = false;
+
+      await _pumpBottomNav(
+        tester,
+        AppBottomNavBar(
+          currentIndex: 0,
+          onTap: (_) {},
+          centerAction: AppBottomNavCenterAction(
+            iconAsset: AppNavigationIcons.centerAction,
+            semanticLabel: 'Create',
+            onTap: () => centerTapped = true,
+          ),
+          items: _tabs,
+        ),
+        textDirection: TextDirection.rtl,
+      );
+
+      await tester.tap(find.text('Requests'));
+      await tester.pumpAndSettle();
+
+      expect(centerTapped, isTrue);
+    });
   });
 
   group('BottomNavTokens', () {
@@ -360,9 +365,7 @@ void main() {
       expect(BottomNavTokens.kIconSize, 24.0);
       expect(BottomNavTokens.centerFabSize, 52.0);
       expect(BottomNavTokens.showLabel, isTrue);
-      expect(BottomNavTokens.removeMargins, isTrue);
-      expect(BottomNavTokens.showTopRadius, isTrue);
-      expect(BottomNavTokens.showBottomRadius, isTrue);
+      expect(BottomNavTokens.contentPadding, 12.0);
     });
   });
 }

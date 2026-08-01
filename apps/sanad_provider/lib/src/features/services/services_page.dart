@@ -8,7 +8,7 @@ class ProviderServicesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppNavBar(title: 'nav.services'.tr()),
+      appBar: AppNavBar(title: 'nav.service'.tr()),
       body: const Center(child: Text('Services')),
     );
   }

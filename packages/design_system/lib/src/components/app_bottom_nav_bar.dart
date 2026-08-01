@@ -1,13 +1,9 @@
-﻿import 'package:animated_notch_bottom_bar/animated_notch_bottom_bar/animated_notch_bottom_bar.dart';
+﻿import 'package:curved_navigation_bar_pro/curved_navigation_bar_pro.dart';
 import 'package:design_system/src/components/app_svg_picture.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
 import 'package:design_system/src/theme/tokens/bottom_nav_tokens.dart';
 import 'package:design_system/src/theme/typography/app_typography.dart';
 import 'package:flutter/material.dart';
-
-// Re-export package types for consumer convenience
-export 'package:animated_notch_bottom_bar/animated_notch_bottom_bar/animated_notch_bottom_bar.dart'
-    show NotchBottomBarController;
 
 /// Bottom navigation bar item configuration.
 @immutable
@@ -61,411 +57,224 @@ class AppBottomNavCenterAction {
   final bool enabled;
 }
 
-/// Creates a [NotchBottomBarController] with the notch at the center tab.
-///
-/// [AppBottomNavBar] always uses index 2 for its center action.
-NotchBottomBarController createAppBottomNavController() =>
-    NotchBottomBarController(index: 2);
+/// Visual index reserved for the center FAB slot in [AppBottomNavBar].
+const int kAppBottomNavCenterIndex = 2;
+
+/// Visual index reserved for the Settings action in [AppBottomNavBar].
+const int kAppBottomNavSettingsIndex = 4;
 
 /// Notch bottom navigation bar with 5 items and a center floating action.
 ///
-/// Built on top of `animated_notch_bottom_bar` package.
+/// Built on the Sanad fork of `curved_navigation_bar_pro`, which mirrors FAB
+/// and notch geometry under [Directionality.rtl].
 /// Figma reference: `Nab-Bar` (`3148:27106`)
 ///
-/// Usage:
-/// ```dart
-/// AppBottomNavBar(
-///   controller: NotchBottomBarController(index: 2), // Center index
-///   items: [item1, item2, item3, item4, item5],
-///   currentIndex: 0,
-///   onTap: (index) => print('Tapped $index'),
-///   centerAction: AppBottomNavCenterAction(
-///     iconAsset: AppNavigationIcons.centerAction,
-///     onTap: () => print('Center tapped'),
-///   ),
-/// )
-/// ```
-class AppBottomNavBar extends StatefulWidget {
+/// [currentIndex] and [onTap] use **visual / semantic** indices only:
+/// `0` Home, `1` Messages, `2` Requests (center FAB), `3` Services, `4` Settings.
+class AppBottomNavBar extends StatelessWidget {
   /// Creates a notch bottom navigation bar with 5 items.
   const AppBottomNavBar({
-    required this.controller,
     required this.items,
     required this.currentIndex,
     required this.onTap,
     required this.centerAction,
+    this.dimNonSettingsItems = false,
+    this.blockNonSettingsInteractions = false,
     super.key,
   }) : assert(items.length == 5, 'AppBottomNavBar requires exactly 5 items');
 
-  /// Controller for the notch animation — must be initialized with index 2.
-  final NotchBottomBarController controller;
-
-  /// List of 5 navigation items (2 before center, 2 after center, plus center).
+  /// List of 5 navigation items in visual order (leading → trailing).
   final List<AppBottomNavItem> items;
 
-  /// Currently selected item index (0-4).
+  /// Currently selected visual item index (0-4).
   final int currentIndex;
 
-  /// Called when an item is tapped (receives index 0-4).
+  /// Called when a side item is tapped; receives the visual index (0-4).
   final ValueChanged<int> onTap;
 
-  /// Configuration for the center floating action button.
+  /// Configuration for the center floating action button at visual index `2`.
   final AppBottomNavCenterAction centerAction;
 
-  @override
-  State<AppBottomNavBar> createState() => _AppBottomNavBarState();
-}
+  /// When true, all items except [kAppBottomNavSettingsIndex] render at 40% opacity.
+  final bool dimNonSettingsItems;
 
-class _AppBottomNavBarState extends State<AppBottomNavBar> {
-  @override
-  void initState() {
-    super.initState();
-    _ensureCenterNotch();
-  }
+  /// When true, taps on non-settings items are ignored.
+  final bool blockNonSettingsInteractions;
 
-  @override
-  void didUpdateWidget(covariant AppBottomNavBar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _ensureCenterNotch();
-  }
-
-  void _ensureCenterNotch() {
-    // Keep notch locked at center (index 2 for 5 items)
-    if (widget.controller.index != 2) {
-      widget.controller.index = 2;
+  void _handleTap(int index) {
+    if (blockNonSettingsInteractions &&
+        index != kAppBottomNavSettingsIndex) {
+      return;
     }
-  }
-
-  void _handleTap(int barIndex) {
-    if (barIndex == 2) {
-      // Center FAB tapped
-      if (widget.centerAction.enabled && widget.centerAction.onTap != null) {
-        widget.centerAction.onTap!();
+    if (index == kAppBottomNavCenterIndex) {
+      if (centerAction.enabled && centerAction.onTap != null) {
+        centerAction.onTap!();
       }
       return;
     }
 
-    // Regular item tapped
-    final item = widget.items[barIndex];
+    final item = items[index];
     if (item.enabled) {
-      widget.onTap(barIndex);
+      onTap(index);
     }
   }
 
-  List<BottomBarItem> _buildBarItems() {
+  Widget _svgIcon({
+    required String asset,
+    required Color color,
+    required double size,
+    required bool enabled,
+    double opacity = 1,
+  }) {
+    return Opacity(
+      opacity: enabled ? opacity : 0.5,
+      child: AppSvgPicture.asset(
+        asset,
+        width: size,
+        height: size,
+        colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+      ),
+    );
+  }
+
+  /// Untinted SVG for the FAB bubble — tint comes from package [activeIconColor].
+  Widget _fabActiveIcon({
+    required String asset,
+    required double size,
+    required bool enabled,
+    double opacity = 1,
+  }) {
+    return Opacity(
+      opacity: enabled ? opacity : 0.5,
+      child: AppSvgPicture.asset(
+        asset,
+        width: size,
+        height: size,
+      ),
+    );
+  }
+
+  CurvedNavigationItemPro _buildItem({
+    required AppBottomNavItem item,
+    required int index,
+    required AppColors colors,
+    required AppTypography typography,
+    required Brightness brightness,
+  }) {
+    final inactiveColor =
+        BottomNavTokens.unselectedIconColor(colors, brightness);
+    final iconSize = BottomNavTokens.kIconSize;
+    final fabIconSize = BottomNavTokens.centerFabSize * 0.46;
+    final dimOthers =
+        dimNonSettingsItems && index != kAppBottomNavSettingsIndex;
+    final itemOpacity = dimOthers ? 0.4 : 1.0;
+    final isCenterSlot = index == kAppBottomNavCenterIndex;
+
+    if (isCenterSlot) {
+      final centerEnabled = centerAction.enabled && centerAction.onTap != null;
+
+      return CurvedNavigationItemPro(
+        label: item.label,
+        inactiveWidget: _svgIcon(
+          asset: centerAction.iconAsset,
+          color: centerEnabled
+              ? inactiveColor
+              : BottomNavTokens.disabledIconColor(colors),
+          size: iconSize,
+          enabled: centerEnabled,
+          opacity: itemOpacity,
+        ),
+        activeWidget: _fabActiveIcon(
+          asset: centerAction.iconAsset,
+          size: fabIconSize,
+          enabled: centerEnabled,
+          opacity: itemOpacity,
+        ),
+      );
+    }
+
+    final enabled = item.enabled;
+
+    return CurvedNavigationItemPro(
+      label: item.label,
+      inactiveWidget: _svgIcon(
+        asset: item.iconAsset,
+        color: enabled
+            ? inactiveColor
+            : BottomNavTokens.disabledIconColor(colors),
+        size: iconSize,
+        enabled: enabled,
+        opacity: itemOpacity,
+      ),
+      activeWidget: _fabActiveIcon(
+        asset: item.iconAsset,
+        size: fabIconSize,
+        enabled: enabled,
+        opacity: itemOpacity,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final colors = context.appColors;
     final typography = context.appTypography;
     final brightness = Theme.of(context).brightness;
+    final fabRadius = BottomNavTokens.centerFabSize / 2;
 
-    return List.generate(5, (index) {
-      if (index == 2) {
-        // Center slot — invisible placeholder
-        return const BottomBarItem(
-          inActiveItem: SizedBox(
-            width: BottomNavTokens.kIconSize,
-            height: BottomNavTokens.kIconSize,
-          ),
-          activeItem: SizedBox(
-            width: BottomNavTokens.kIconSize,
-            height: BottomNavTokens.kIconSize,
-          ),
-        );
-      }
-
-      final item = widget.items[index];
-      final isSelected = index == widget.currentIndex;
-
-      return BottomBarItem(
-        inActiveItem: _AnimatedNavIcon(
-          asset: item.iconAsset,
-          label: item.label,
-          semanticLabel: item.semanticLabel,
-          selected: isSelected,
-          enabled: item.enabled,
-          colors: colors,
-          typography: typography,
-          brightness: brightness,
-        ),
-        activeItem: _AnimatedNavIcon(
-          asset: item.iconAsset,
-          label: item.label,
-          semanticLabel: item.semanticLabel,
-          selected: true,
-          enabled: item.enabled,
-          colors: colors,
-          typography: typography,
-          brightness: brightness,
-        ),
-        itemLabelWidget: _AnimatedNavLabel(
-          label: item.label,
-          selected: isSelected,
-          enabled: item.enabled,
-          colors: colors,
-          typography: typography,
-          brightness: brightness,
-        ),
-      );
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final brightness = Theme.of(context).brightness;
+    final fabColor = currentIndex == kAppBottomNavCenterIndex
+        ? (centerAction.selected
+            ? BottomNavTokens.centerFabActiveColor(colors, brightness)
+            : BottomNavTokens.centerFabInactiveColor(colors))
+        : BottomNavTokens.centerFabActiveColor(colors, brightness);
 
     return MediaQuery.withClampedTextScaling(
-        maxScaleFactor: 1,
-      child:       SafeArea(
+      maxScaleFactor: 1,
+      child: SafeArea(
         top: false,
-        child: SizedBox(
-          height: BottomNavTokens.bottomBarHeight + 29,
-          child: Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.topCenter,
-            children: [
-              // Base notch bar
-              Padding(
-                padding: const EdgeInsets.only(top: 14),
-                child: AnimatedNotchBottomBar(
-                  notchBottomBarController: widget.controller,
-                  bottomBarItems: _buildBarItems(),
-                  onTap: _handleTap,
-                  color: BottomNavTokens.backgroundColor(colors, brightness),
-                  notchColor: BottomNavTokens.notchColor(colors, brightness),
-                  durationInMilliSeconds:
-                      BottomNavTokens.durationInMilliSeconds,
-                  bottomBarHeight: BottomNavTokens.bottomBarHeight,
-                  kBottomRadius: BottomNavTokens.kBottomRadius,
-                  showTopRadius: BottomNavTokens.showTopRadius,
-                  showBottomRadius: BottomNavTokens.showBottomRadius,
-                  removeMargins: BottomNavTokens.removeMargins,
-                  elevation: BottomNavTokens.elevation,
-                  shadowElevation: BottomNavTokens.elevation,
-                  showShadow: BottomNavTokens.showShadow(brightness),
-                  showBlurBottomBar: BottomNavTokens.showBlurBottomBar,
-                  blurOpacity: BottomNavTokens.blurOpacity,
-                  blurFilterX: BottomNavTokens.blurFilterX,
-                  blurFilterY: BottomNavTokens.blurFilterY,
-                  kIconSize: BottomNavTokens.kIconSize,
-                  topMargin: BottomNavTokens.topMargin,
-                  circleMargin: BottomNavTokens.circleMargin,
-                  showLabel: BottomNavTokens.showLabel,
-                ),
-              ),
-
-              // Center floating action button overlay
-              Positioned(
-                top: 0,
-                child: _CenterActionButton(
-                  action: widget.centerAction,
-                  colors: colors,
-                  brightness: brightness,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Animated icon for navigation items.
-class _AnimatedNavIcon extends StatelessWidget {
-  const _AnimatedNavIcon({
-    required this.asset,
-    required this.label,
-    required this.semanticLabel,
-    required this.selected,
-    required this.enabled,
-    required this.colors,
-    required this.typography,
-    required this.brightness,
-  });
-
-  final String asset;
-  final String label;
-  final String? semanticLabel;
-  final bool selected;
-  final bool enabled;
-  final AppColors colors;
-  final AppTypography typography;
-  final Brightness brightness;
-
-  Color get _iconColor {
-    if (!enabled) {
-      return BottomNavTokens.disabledIconColor(colors);
-    }
-    return selected
-        ? BottomNavTokens.selectedIconColor(colors)
-        : BottomNavTokens.unselectedIconColor(colors, brightness);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: semanticLabel ?? label,
-      button: true,
-      enabled: enabled,
-      selected: selected,
-      child:       AnimatedScale(
-        scale: selected ? BottomNavTokens.selectedIconScale : 1,
-        duration: Duration(
-          milliseconds: BottomNavTokens.durationInMilliSeconds,
-        ),
-        curve: BottomNavTokens.animationCurve,
-        child: AnimatedOpacity(
-          opacity: selected ? 1 : BottomNavTokens.unselectedIconOpacity,
-          duration: Duration(
+        child: CurvedNavigationBarPro(
+          currentIndex: currentIndex.clamp(0, items.length - 1),
+          onTap: _handleTap,
+          backgroundColor: BottomNavTokens.backgroundColor(colors, brightness),
+          activeColor: BottomNavTokens.selectedIconColor(colors),
+          inactiveColor: BottomNavTokens.unselectedIconColor(colors, brightness),
+          fabColor: fabColor,
+          activeIconColor: BottomNavTokens.centerFabIconColor(colors),
+          barHeight: BottomNavTokens.bottomBarHeight,
+          fabRadius: fabRadius,
+          fabGap: BottomNavTokens.circleMargin,
+          fabSink: BottomNavTokens.fabSink,
+          notchShoulderRadius: BottomNavTokens.notchShoulderRadius,
+          cornerRadius: BottomNavTokens.kBottomRadius,
+          contentPadding: BottomNavTokens.contentPadding,
+          elevation: BottomNavTokens.elevation,
+          shadowColor: BottomNavTokens.shadowColor,
+          animationDuration: Duration(
             milliseconds: BottomNavTokens.durationInMilliSeconds,
           ),
-          curve: BottomNavTokens.animationCurve,
-          child: AppSvgPicture.asset(
-            asset,
-            width: BottomNavTokens.kIconSize,
-            height: BottomNavTokens.kIconSize,
-            colorFilter: ColorFilter.mode(_iconColor, BlendMode.srcIn),
+          animationCurve: BottomNavTokens.animationCurve,
+          activeTextStyle: BottomNavTokens.selectedLabelStyle(
+            typography,
+            colors,
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Animated label for navigation items.
-class _AnimatedNavLabel extends StatelessWidget {
-  const _AnimatedNavLabel({
-    required this.label,
-    required this.selected,
-    required this.enabled,
-    required this.colors,
-    required this.typography,
-    required this.brightness,
-  });
-
-  final String label;
-  final bool selected;
-  final bool enabled;
-  final AppColors colors;
-  final AppTypography typography;
-  final Brightness brightness;
-
-  TextStyle get _textStyle {
-    if (!enabled) {
-      return BottomNavTokens.disabledLabelStyle(typography, colors);
-    }
-    return selected
-        ? BottomNavTokens.selectedLabelStyle(typography, colors)
-        : BottomNavTokens.unselectedLabelStyle(
+          inactiveTextStyle: BottomNavTokens.unselectedLabelStyle(
             typography,
             colors,
             brightness,
-          );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedOpacity(
-      opacity: selected ? 1 : BottomNavTokens.unselectedIconOpacity,
-      duration: Duration(
-        milliseconds: BottomNavTokens.durationInMilliSeconds,
-      ),
-      curve: BottomNavTokens.animationCurve,
-      child: Text(
-        label,
-        style: _textStyle,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.center,
-      ),
-    );
-  }
-}
-
-/// Center floating action button.
-class _CenterActionButton extends StatelessWidget {
-  const _CenterActionButton({
-    required this.action,
-    required this.colors,
-    required this.brightness,
-  });
-
-  final AppBottomNavCenterAction action;
-  final AppColors colors;
-  final Brightness brightness;
-
-  Color get _fabColor {
-    if (!action.enabled) {
-      return BottomNavTokens.centerFabDisabledColor(colors);
-    }
-    return action.selected
-        ? BottomNavTokens.centerFabActiveColor(colors, brightness)
-        : BottomNavTokens.centerFabInactiveColor(colors);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = action.enabled && action.onTap != null;
-
-    return Semantics(
-      button: true,
-      enabled: enabled,
-      label: action.semanticLabel,
-      child:       AnimatedScale(
-        scale: action.selected ? 1.06 : 1,
-        duration: Duration(
-          milliseconds: BottomNavTokens.durationInMilliSeconds,
-        ),
-        curve: BottomNavTokens.animationCurve,
-        child: Material(
-          color: Colors.transparent,
-          shadowColor: Colors.transparent,
-          shape: const CircleBorder(),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: enabled ? action.onTap : null,
-            customBorder: const CircleBorder(),
-            splashColor: BottomNavTokens.centerFabIconColor(colors)
-                .withValues(alpha: 0.12),
-            highlightColor: BottomNavTokens.centerFabActiveColor(
-              colors,
-              brightness,
-            ).withValues(alpha: 0.24),
-            child: AnimatedContainer(
-              duration: Duration(
-                milliseconds: BottomNavTokens.durationInMilliSeconds,
-              ),
-              curve: BottomNavTokens.animationCurve,
-              width: BottomNavTokens.centerFabSize,
-              height: BottomNavTokens.centerFabSize,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _fabColor,
-                border: Border.all(
-                  color: BottomNavTokens.centerFabBorderColor(colors),
-                  width: 2,
-                ),
-                boxShadow: enabled ? BottomNavTokens.centerFabShadow : null,
-              ),
-              child: Center(
-                child: AnimatedOpacity(
-                  opacity: enabled ? 1 : 0.5,
-                  duration: Duration(
-                    milliseconds: BottomNavTokens.durationInMilliSeconds,
-                  ),
-                  curve: BottomNavTokens.animationCurve,
-                  child: AppSvgPicture.asset(
-                    action.iconAsset,
-                    width: BottomNavTokens.kIconSize,
-                    height: BottomNavTokens.kIconSize,
-                    colorFilter: ColorFilter.mode(
-                      BottomNavTokens.centerFabIconColor(colors),
-                      BlendMode.srcIn,
-                    ),
-                  ),
-                ),
-              ),
-            ),
           ),
+          showLabel: BottomNavTokens.showLabel,
+          inactiveIconSize: BottomNavTokens.kIconSize,
+          activeIconSize: fabRadius * 0.92,
+          items: [
+            for (var i = 0; i < items.length; i++)
+              _buildItem(
+                item: items[i],
+                index: i,
+                colors: colors,
+                typography: typography,
+                brightness: brightness,
+              ),
+          ],
         ),
       ),
     );

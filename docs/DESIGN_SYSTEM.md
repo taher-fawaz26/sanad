@@ -82,8 +82,9 @@ Key components exported from `design_system.dart`:
 
 ### AppBottomNavBar
 
-Figma `Nab-Bar` (`3148:27106`). Notch bottom navigation with a fixed center
-action, built on `animated_notch_bottom_bar` (official package, not forked).
+Figma `Nab-Bar` (`3148:27106`). Curved notch bottom navigation with a center
+action slot, built on the Sanad fork of `curved_navigation_bar_pro`
+(`packages/curved_navigation_bar_pro`) with RTL-aware FAB/notch geometry.
 
 Full usage guide: [`docs/components/APP_BOTTOM_NAV_BAR.md`](components/APP_BOTTOM_NAV_BAR.md)
 

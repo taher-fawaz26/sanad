@@ -7,8 +7,9 @@ abstract final class AppRoutes {
   AppRoutes._();
 
   static const String home = '/home';
-  static const String requests = '/requests';
   static const String messages = '/messages';
+  static const String requests = '/requests';
+  static const String services = '/services';
   static const String settings = '/settings';
 
   /// Full-screen offline page — Figma `1528:10165`. Pushed (not replaced)
@@ -22,8 +23,9 @@ abstract final class AppRoutes {
   /// source of truth.
   static const Set<String> protected = {
     home,
-    requests,
     messages,
+    requests,
+    services,
     settings,
   };
 }

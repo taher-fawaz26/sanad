@@ -18,6 +18,7 @@
     "home": "الرئيسية",
     "requests": "الطلبات",
     "messages": "الرسائل",
+    "service": "الخدمات",
     "settings": "الإعدادات",
     "more": "المزيد",
     "create": "إنشاء"
@@ -29,6 +30,8 @@
     "branches_coming_soon": "إدارة الفروع قادمة قريباً",
     "tab_organization": "إعدادات المؤسسة",
     "tab_settings": "الإعدادات",
+    "general_settings": "الإعدادات العامة",
+    "account_settings": "إعدادات الحساب",
     "coming_soon": "قريباً",
     "stat_team_count": "144",
     "stat_team_label": "الفريق",

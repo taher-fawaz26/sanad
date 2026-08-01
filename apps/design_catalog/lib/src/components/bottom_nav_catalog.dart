@@ -17,14 +17,14 @@ List<WidgetbookNode> buildBottomNavCatalogEntries() => [
             ),
           ),
           WidgetbookUseCase(
-            name: 'Light — Service selected',
+            name: 'Light — Messages selected',
             builder: (context) => const BottomNavCatalogDemo(
               currentIndex: 1,
               centerSelected: false,
             ),
           ),
           WidgetbookUseCase(
-            name: 'Light — Messages selected',
+            name: 'Light — Services selected',
             builder: (context) => const BottomNavCatalogDemo(
               currentIndex: 3,
               centerSelected: false,
@@ -76,21 +76,20 @@ const _defaultItems = [
     label: 'Home',
   ),
   AppBottomNavItem(
-    iconAsset: AppNavigationIcons.service,
-    label: 'Service',
-  ),
-  // Index 2 is reserved for center action
-  AppBottomNavItem(
     iconAsset: AppNavigationIcons.messages,
     label: 'Messages',
   ),
   AppBottomNavItem(
-    iconAsset: AppNavigationIcons.settings,
-    label: 'Settings',
+    iconAsset: AppNavigationIcons.centerAction,
+    label: 'Requests',
   ),
   AppBottomNavItem(
-    iconAsset: AppNavigationIcons.home, // Using home icon as 5th placeholder
-    label: 'More',
+    iconAsset: AppNavigationIcons.service,
+    label: 'Services',
+  ),
+  AppBottomNavItem(
+    iconAsset: AppNavigationIcons.settings,
+    label: 'Settings',
   ),
 ];
 
@@ -100,20 +99,20 @@ const _arabicItems = [
     label: 'الرئيسية',
   ),
   AppBottomNavItem(
-    iconAsset: AppNavigationIcons.service,
-    label: 'الخدمات',
-  ),
-  AppBottomNavItem(
     iconAsset: AppNavigationIcons.messages,
     label: 'الرسائل',
   ),
   AppBottomNavItem(
-    iconAsset: AppNavigationIcons.settings,
-    label: 'الإعدادات',
+    iconAsset: AppNavigationIcons.centerAction,
+    label: 'الطلبات',
   ),
   AppBottomNavItem(
-    iconAsset: AppNavigationIcons.home,
-    label: 'المزيد',
+    iconAsset: AppNavigationIcons.service,
+    label: 'الخدمات',
+  ),
+  AppBottomNavItem(
+    iconAsset: AppNavigationIcons.settings,
+    label: 'الإعدادات',
   ),
 ];
 
@@ -153,8 +152,6 @@ class BottomNavCatalogDemo extends StatefulWidget {
 }
 
 class _BottomNavCatalogDemoState extends State<BottomNavCatalogDemo> {
-  late final _controller = createAppBottomNavController();
-
   late int _selectedIndex = widget.currentIndex;
 
   @override
@@ -185,7 +182,6 @@ class _BottomNavCatalogDemoState extends State<BottomNavCatalogDemo> {
   @override
   Widget build(BuildContext context) {
     final bar = AppBottomNavBar(
-      controller: _controller,
       currentIndex: _selectedIndex,
       onTap: (index) => setState(() => _selectedIndex = index),
       centerAction: AppBottomNavCenterAction(

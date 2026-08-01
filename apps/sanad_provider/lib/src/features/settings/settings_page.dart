@@ -9,16 +9,33 @@ import 'package:go_router/go_router.dart';
 import 'package:invitation/invitation.dart';
 import 'package:workers/workers.dart';
 
-/// Figma `setting` (`1546:8548`) — Organization Settings dashboard.
+/// Provider settings page — Organization / Account tabs.
 class ProviderSettingsPage extends StatefulWidget {
-  const ProviderSettingsPage({super.key});
+  const ProviderSettingsPage({this.initialTab = 0, super.key});
+
+  /// `0` = General (organization) settings, `1` = Account settings.
+  final int initialTab;
 
   @override
   State<ProviderSettingsPage> createState() => _ProviderSettingsPageState();
 }
 
 class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
-  int _selectedTab = 0;
+  late int _selectedTab;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedTab = widget.initialTab.clamp(0, 1);
+  }
+
+  @override
+  void didUpdateWidget(covariant ProviderSettingsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialTab != widget.initialTab) {
+      setState(() => _selectedTab = widget.initialTab.clamp(0, 1));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -10,6 +10,7 @@ import 'package:sanad_provider/src/di/app_di.dart';
 import 'package:sanad_provider/src/features/home/home_page.dart';
 import 'package:sanad_provider/src/features/messages/messages_page.dart';
 import 'package:sanad_provider/src/features/requests/requests_page.dart';
+import 'package:sanad_provider/src/features/services/services_page.dart';
 import 'package:sanad_provider/src/features/settings/settings_page.dart';
 import 'package:sanad_provider/src/routing/app_routes.dart';
 import 'package:sanad_provider/src/routing/provider_navigator.dart';
@@ -101,14 +102,6 @@ GoRouter buildProviderRouter() {
               StatefulShellBranch(
                 routes: [
                   GoRoute(
-                    path: AppRoutes.requests,
-                    builder: (context, state) => const RequestsPage(),
-                  ),
-                ],
-              ),
-              StatefulShellBranch(
-                routes: [
-                  GoRoute(
                     path: AppRoutes.messages,
                     builder: (context, state) => const ProviderMessagesPage(),
                   ),
@@ -117,8 +110,30 @@ GoRouter buildProviderRouter() {
               StatefulShellBranch(
                 routes: [
                   GoRoute(
+                    path: AppRoutes.requests,
+                    builder: (context, state) => const RequestsPage(),
+                  ),
+                ],
+              ),
+              StatefulShellBranch(
+                routes: [
+                  GoRoute(
+                    path: AppRoutes.services,
+                    builder: (context, state) => const ProviderServicesPage(),
+                  ),
+                ],
+              ),
+              StatefulShellBranch(
+                routes: [
+                  GoRoute(
                     path: AppRoutes.settings,
-                    builder: (context, state) => const ProviderSettingsPage(),
+                    builder: (context, state) {
+                      final tabQuery = state.uri.queryParameters['tab'];
+                      final tab = int.tryParse(tabQuery ?? '') ?? 0;
+                      return ProviderSettingsPage(
+                        initialTab: tab.clamp(0, 1),
+                      );
+                    },
                   ),
                 ],
               ),

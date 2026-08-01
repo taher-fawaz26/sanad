@@ -18,6 +18,7 @@
     "home": "Home",
     "requests": "Requests",
     "messages": "Messages",
+    "service": "Services",
     "settings": "Settings",
     "more": "More",
     "create": "Create"
@@ -29,6 +30,8 @@
     "branches_coming_soon": "Branches management is coming soon",
     "tab_organization": "Organization Settings",
     "tab_settings": "Settings",
+    "general_settings": "General Settings",
+    "account_settings": "Account Settings",
     "coming_soon": "Coming soon",
     "stat_team_count": "144",
     "stat_team_label": "Team",
