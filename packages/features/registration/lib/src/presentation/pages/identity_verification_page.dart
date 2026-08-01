@@ -9,6 +9,8 @@ import 'package:registration/src/presentation/cubit/registration_cubit.dart';
 import 'package:registration/src/presentation/cubit/registration_state.dart';
 import 'package:registration/src/presentation/models/registration_document_slot.dart';
 import 'package:registration/src/presentation/widgets/document_upload_card.dart';
+import 'package:registration/src/presentation/widgets/registration_logo.dart';
+import 'package:registration/src/presentation/widgets/registration_sliver_shell.dart';
 import 'package:registration/src/presentation/widgets/select_capture_method_sheet.dart';
 import 'package:registration/src/routes/registration_navigation.dart';
 import 'package:registration/src/routes/registration_routes.dart';
@@ -110,23 +112,27 @@ class _IdentityVerificationPageState extends State<IdentityVerificationPage> {
       },
       builder: (context, state) {
         final canContinue = state.hasBothIdSides;
+        final title = 'registration.identity_title'.tr();
 
-        return AuthScreenShell(
+        return RegistrationSliverShell(
           onBack: () => RegistrationNavigation.popStep(
             context,
             registrationState: context.read<RegistrationCubit>().state,
           ),
-          title: 'registration.identity_title'.tr(),
+          headerBuilder: (context, t) => RegistrationLogo(
+            collapseProgress: t,
+            collapsedTitle: title,
+            reserveLeadingSpace: true,
+          ),
           footer: AppButton(
             label: 'registration.continue'.tr(),
             onPressed: canContinue ? _continue : null,
           ),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: AppSvgPicture.asset(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: AppSvgPicture.asset(
                   AppSvgs.registrationIdentityScan,
                   width: responsiveDimension(48),
                   height: responsiveDimension(48),
@@ -138,7 +144,7 @@ class _IdentityVerificationPageState extends State<IdentityVerificationPage> {
               ),
               SizedBox(height: responsiveDimension(AppSpacing.xxl)),
               Text(
-                'registration.identity_title'.tr(),
+                title,
                 textAlign: TextAlign.center,
                 style: context.appTypography.title2.copyWith(
                   fontWeight: FontWeight.w700,
@@ -187,11 +193,9 @@ class _IdentityVerificationPageState extends State<IdentityVerificationPage> {
                 onRemove: () =>
                     _clearSlot(RegistrationDocumentSlot.emiratesIdBack),
               ),
-              SizedBox(height: responsiveDimension(AppSpacing.xl)),
             ],
           ),
-        ),
-      );
+        );
       },
     );
   }

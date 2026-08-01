@@ -40,8 +40,9 @@ class RegistrationModule extends FeatureModule {
 
   /// Steps rendered inside the white [AuthScreenShell] card by this module.
   ///
-  /// The identity-verification and trade-licence steps are intentionally
-  /// excluded: they wrap themselves in [AuthScreenShell] to pin the footer.
+  /// Identity verification and trade licence are excluded: they self-wrap in
+  /// RegistrationSliverShell (or AuthScreenShell until migrated) so the
+  /// footer can be pinned above the scroll area via a measured overlay.
   static const Set<String> _authShellSteps = {
     RegistrationRoutes.selectAccountType,
     RegistrationRoutes.organizationDetails,
