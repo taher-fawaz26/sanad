@@ -88,6 +88,10 @@ class _Header extends StatelessWidget {
           'registration.image_unclear'.tr(),
           AppStatusBadgeType.warning,
         ),
+      DocumentIssue.alreadyRegistered => (
+          'registration.emirates_id_already_registered'.tr(),
+          AppStatusBadgeType.alert,
+        ),
       DocumentIssue.expiredLicence => (
           'registration.expired'.tr(),
           AppStatusBadgeType.alert,
@@ -208,10 +212,15 @@ class _ErrorBanner extends StatelessWidget {
           'registration.expired'.tr(),
           'registration.expired_message'.tr(),
         ),
-      _ => (
+      DocumentIssue.alreadyRegistered => (
+          'registration.emirates_id_already_registered'.tr(),
+          'registration.emirates_id_already_registered_message'.tr(),
+        ),
+      DocumentIssue.imageUnclear => (
           'registration.image_unclear'.tr(),
           'registration.image_unclear_message'.tr(),
         ),
+      DocumentIssue.none => ('', ''),
     };
 
     return DecoratedBox(

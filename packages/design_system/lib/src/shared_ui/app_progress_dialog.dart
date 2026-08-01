@@ -1,4 +1,4 @@
-import 'package:design_system/src/components/app_loading_indicator.dart';
+import 'package:design_system/design_system.dart';
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/spacing/responsive_spacing.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
@@ -49,7 +49,6 @@ class AppProgressDialog extends StatelessWidget {
           children: [
             AppLoadingIndicator(
               size: responsiveDimension(indicatorSize),
-              strokeWidth: responsiveDimension(6),
             ),
             SizedBox(height: gap),
             Text(

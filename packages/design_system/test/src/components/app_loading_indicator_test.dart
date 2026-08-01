@@ -18,64 +18,104 @@ Future<void> _pump(WidgetTester tester, Widget child) async {
   );
 }
 
-Future<void> _pumpWithDisabledAnimations(
-  WidgetTester tester,
-  Widget child,
-) async {
-  await tester.pumpWidget(
-    ScreenUtilInit(
-      designSize: const Size(360, 800),
-      minTextAdapt: true,
-      builder: (_, __) => MaterialApp(
-        theme: AppTheme.light(),
-        home: MediaQuery(
-          data: const MediaQueryData(disableAnimations: true),
-          child: Scaffold(body: Center(child: child)),
-        ),
-      ),
-    ),
-  );
-}
-
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 void main() {
-  group('AppLoadingIndicator', () {
-    // ── Rendering ────────────────────────────────────────────────────────────
-
-    testWidgets('renders without throwing', (tester) async {
-      await _pump(tester, const AppLoadingIndicator());
-      expect(find.byType(AppLoadingIndicator), findsOneWidget);
+  group('AppLoadingIndicator.generateFramePaths', () {
+    test('generates zero-padded sprite paths from index 0', () {
+      expect(
+        AppLoadingIndicator.generateFramePaths(frameCount: 7),
+        [
+          'assets/lottie/sprite_000.png',
+          'assets/lottie/sprite_001.png',
+          'assets/lottie/sprite_002.png',
+          'assets/lottie/sprite_003.png',
+          'assets/lottie/sprite_004.png',
+          'assets/lottie/sprite_005.png',
+          'assets/lottie/sprite_006.png',
+        ],
+      );
     });
 
-    testWidgets('renders a CustomPaint with correct outer size (default)', (
-      tester,
-    ) async {
-      await _pump(tester, const AppLoadingIndicator());
-      final sizedBox = tester.widget<SizedBox>(
-        find.descendant(
-          of: find.byType(AppLoadingIndicator),
-          matching: find.byType(SizedBox),
+    test('supports custom folder and prefix', () {
+      expect(
+        AppLoadingIndicator.generateFramePaths(
+          frameCount: 2,
+          assetFolder: 'assets/loading',
+          assetPrefix: 'frame_',
         ),
+        [
+          'assets/loading/frame_000.png',
+          'assets/loading/frame_001.png',
+        ],
       );
-      expect(sizedBox.width, LoadingIndicatorTokens.defaultSize);
-      expect(sizedBox.height, LoadingIndicatorTokens.defaultSize);
+    });
+  });
+
+  group('AppLoadingIndicator', () {
+    testWidgets('renders without throwing', (tester) async {
+      await _pump(tester, const AppLoadingIndicator());
+
+      expect(find.byType(AppLoadingIndicator), findsOneWidget);
+      expect(find.byType(Image), findsOneWidget);
     });
 
     testWidgets('respects custom size', (tester) async {
-      await _pump(tester, const AppLoadingIndicator(size: 24));
+      await _pump(tester, const AppLoadingIndicator(size: 64));
+
       final sizedBox = tester.widget<SizedBox>(
         find.descendant(
           of: find.byType(AppLoadingIndicator),
           matching: find.byType(SizedBox),
         ),
       );
-      expect(sizedBox.width, 24.0);
-      expect(sizedBox.height, 24.0);
+      expect(sizedBox.width, 64.0);
+      expect(sizedBox.height, 64.0);
+    });
+
+    testWidgets('uses AnimatedBuilder for frame updates', (tester) async {
+      await _pump(tester, const AppLoadingIndicator());
+
+      expect(
+        find.descendant(
+          of: find.byType(AppLoadingIndicator),
+          matching: find.byType(AnimatedBuilder),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('loads first generated sprite path by default', (tester) async {
+      await _pump(tester, const AppLoadingIndicator());
+
+      final image = tester.widget<Image>(find.byType(Image));
+      expect(image.image, isA<AssetImage>());
+      expect(
+        (image.image as AssetImage).assetName,
+        'assets/lottie/sprite_0000.png',
+      );
+    });
+
+    testWidgets('advances displayed frame over time', (tester) async {
+      await _pump(
+        tester,
+        const AppLoadingIndicator(duration: Duration(milliseconds: 500)),
+      );
+
+      final imageBefore = tester.widget<Image>(find.byType(Image));
+      final assetBefore = (imageBefore.image as AssetImage).assetName;
+
+      await tester.pump(const Duration(milliseconds: 200));
+
+      final imageAfter = tester.widget<Image>(find.byType(Image));
+      final assetAfter = (imageAfter.image as AssetImage).assetName;
+
+      expect(assetAfter, isNot(equals(assetBefore)));
     });
 
     testWidgets('contains a RepaintBoundary', (tester) async {
       await _pump(tester, const AppLoadingIndicator());
+
       expect(
         find.descendant(
           of: find.byType(AppLoadingIndicator),
@@ -83,189 +123,6 @@ void main() {
         ),
         findsOneWidget,
       );
-    });
-
-    testWidgets('contains a CustomPaint', (tester) async {
-      await _pump(tester, const AppLoadingIndicator());
-      expect(
-        find.descendant(
-          of: find.byType(AppLoadingIndicator),
-          matching: find.byType(CustomPaint),
-        ),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('painter is a LoadingIndicatorPainter', (tester) async {
-      await _pump(tester, const AppLoadingIndicator());
-      final customPaint = tester.widget<CustomPaint>(
-        find.descendant(
-          of: find.byType(AppLoadingIndicator),
-          matching: find.byType(CustomPaint),
-        ),
-      );
-      expect(customPaint.painter, isA<LoadingIndicatorPainter>());
-    });
-
-    // ── Colour ───────────────────────────────────────────────────────────────
-
-    testWidgets('uses custom arc color when provided', (tester) async {
-      await _pump(
-        tester,
-        const AppLoadingIndicator(color: Colors.red),
-      );
-      final customPaint = tester.widget<CustomPaint>(
-        find.descendant(
-          of: find.byType(AppLoadingIndicator),
-          matching: find.byType(CustomPaint),
-        ),
-      );
-      final painter = customPaint.painter! as LoadingIndicatorPainter;
-      expect(painter.arcColor, Colors.red);
-    });
-
-    testWidgets('uses theme primary color as arc color by default', (
-      tester,
-    ) async {
-      await _pump(tester, const AppLoadingIndicator());
-      final context = tester.element(find.byType(AppLoadingIndicator));
-      final appColors = Theme.of(context).extension<AppColors>()!;
-
-      final customPaint = tester.widget<CustomPaint>(
-        find.descendant(
-          of: find.byType(AppLoadingIndicator),
-          matching: find.byType(CustomPaint),
-        ),
-      );
-      final painter = customPaint.painter! as LoadingIndicatorPainter;
-      expect(painter.arcColor, appColors.primary);
-    });
-
-    // ── Stroke width ─────────────────────────────────────────────────────────
-
-    testWidgets('uses custom strokeWidth when provided', (tester) async {
-      await _pump(tester, const AppLoadingIndicator(strokeWidth: 2.0));
-      final customPaint = tester.widget<CustomPaint>(
-        find.descendant(
-          of: find.byType(AppLoadingIndicator),
-          matching: find.byType(CustomPaint),
-        ),
-      );
-      final painter = customPaint.painter! as LoadingIndicatorPainter;
-      expect(painter.strokeWidth, 2.0);
-    });
-
-    // ── Semantics ────────────────────────────────────────────────────────────
-
-    testWidgets('has a default semantic label', (tester) async {
-      await _pump(tester, const AppLoadingIndicator());
-      expect(
-        tester.getSemantics(find.byType(AppLoadingIndicator)),
-        matchesSemantics(label: 'Loading'),
-      );
-    });
-
-    testWidgets('respects custom semanticsLabel', (tester) async {
-      await _pump(
-        tester,
-        const AppLoadingIndicator(semanticsLabel: 'Please wait'),
-      );
-      expect(
-        tester.getSemantics(find.byType(AppLoadingIndicator)),
-        matchesSemantics(label: 'Please wait'),
-      );
-    });
-
-    // ── Accessibility: reduce motion ─────────────────────────────────────────
-
-    testWidgets('renders a static arc when disableAnimations is true', (
-      tester,
-    ) async {
-      await _pumpWithDisabledAnimations(
-        tester,
-        const AppLoadingIndicator(),
-      );
-
-      // Widget still renders correctly
-      expect(find.byType(AppLoadingIndicator), findsOneWidget);
-      expect(
-        find.descendant(
-          of: find.byType(AppLoadingIndicator),
-          matching: find.byType(CustomPaint),
-        ),
-        findsOneWidget,
-      );
-    });
-
-    // ── Animation ────────────────────────────────────────────────────────────
-
-    testWidgets('animates — painter values change over time', (tester) async {
-      await _pump(tester, const AppLoadingIndicator());
-
-      final customPaintFinder = find.descendant(
-        of: find.byType(AppLoadingIndicator),
-        matching: find.byType(CustomPaint),
-      );
-
-      final painterBefore =
-          tester.widget<CustomPaint>(customPaintFinder).painter!
-              as LoadingIndicatorPainter;
-      final rotationBefore = painterBefore.rotationAnimation.value;
-
-      // Advance time so the rotation controller ticks.
-      await tester.pump(const Duration(milliseconds: 200));
-
-      final painterAfter =
-          tester.widget<CustomPaint>(customPaintFinder).painter!
-              as LoadingIndicatorPainter;
-      final rotationAfter = painterAfter.rotationAnimation.value;
-
-      // The rotation value must have advanced.
-      expect(rotationAfter, isNot(equals(rotationBefore)));
-    });
-
-    // ── didUpdateWidget ───────────────────────────────────────────────────────
-
-    testWidgets('updates strokeController duration on duration change', (
-      tester,
-    ) async {
-      const initialDuration = Duration(milliseconds: 1500);
-      const newDuration = Duration(milliseconds: 800);
-
-      final notifier = ValueNotifier<Duration>(initialDuration);
-
-      await tester.pumpWidget(
-        ScreenUtilInit(
-          designSize: const Size(360, 800),
-          minTextAdapt: true,
-          builder: (_, __) => MaterialApp(
-            theme: AppTheme.light(),
-            home: Scaffold(
-              body: ValueListenableBuilder<Duration>(
-                valueListenable: notifier,
-                builder: (_, duration, __) =>
-                    AppLoadingIndicator(duration: duration),
-              ),
-            ),
-          ),
-        ),
-      );
-
-      expect(find.byType(AppLoadingIndicator), findsOneWidget);
-
-      notifier.value = newDuration;
-      await tester.pump();
-
-      expect(find.byType(AppLoadingIndicator), findsOneWidget);
-    });
-
-    // ── No CircularProgressIndicator dependency ───────────────────────────────
-
-    testWidgets('does not use CircularProgressIndicator internally', (
-      tester,
-    ) async {
-      await _pump(tester, const AppLoadingIndicator());
-      expect(find.byType(CircularProgressIndicator), findsNothing);
     });
   });
 }

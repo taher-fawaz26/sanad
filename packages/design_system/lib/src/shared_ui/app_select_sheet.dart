@@ -1,7 +1,8 @@
+import 'package:design_system/design_system.dart';
 import 'package:design_system/src/components/app_action_sheet.dart';
 import 'package:design_system/src/components/app_button.dart';
 import 'package:design_system/src/components/app_divider.dart';
-import 'package:design_system/src/components/app_loading_indicator.dart';
+
 import 'package:design_system/src/components/app_search_field.dart';
 import 'package:design_system/src/spacing/responsive_spacing.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
@@ -15,12 +16,13 @@ import 'package:flutter/material.dart';
 /// [onTap] toggles the item — pass it directly to the row widget's `onTap`
 /// so the row's own InkWell handles the ripple (avoids double-ripple when the
 /// row widget wraps its own InkWell, e.g. [AppTableRow]).
-typedef SelectSheetItemBuilder<T> = Widget Function(
-  BuildContext context,
-  T item,
-  bool isSelected,
-  VoidCallback onTap,
-);
+typedef SelectSheetItemBuilder<T> =
+    Widget Function(
+      BuildContext context,
+      T item,
+      bool isSelected,
+      VoidCallback onTap,
+    );
 
 /// Returns true when [item] should be shown for the given [query].
 typedef SelectSheetFilter<T> = bool Function(T item, String query);
@@ -50,9 +52,9 @@ class AppSelectSheet<T> extends StatefulWidget {
     this.searchVariant = AppSearchFieldVariant.flat,
     this.maxHeightFraction = 0.55,
   }) : assert(
-          items != null || loadItems != null,
-          'Provide either items or loadItems.',
-        );
+         items != null || loadItems != null,
+         'Provide either items or loadItems.',
+       );
 
   final String title;
   final String confirmLabel;
@@ -146,22 +148,24 @@ class _AppSelectSheetState<T> extends State<AppSelectSheet<T>> {
   }
 
   void _toggle(String id) => setState(() {
-        if (_selectedIds.contains(id)) {
-          _selectedIds.remove(id);
-        } else {
-          _selectedIds.add(id);
-        }
-      });
+    if (_selectedIds.contains(id)) {
+      _selectedIds.remove(id);
+    } else {
+      _selectedIds.add(id);
+    }
+  });
 
   void _confirm() {
-    final selected =
-        _allItems.where((item) => _selectedIds.contains(widget.getId(item))).toList();
+    final selected = _allItems
+        .where((item) => _selectedIds.contains(widget.getId(item)))
+        .toList();
     Navigator.of(context).pop(selected);
   }
 
   @override
   Widget build(BuildContext context) {
-    final maxHeight = MediaQuery.sizeOf(context).height * widget.maxHeightFraction;
+    final maxHeight =
+        MediaQuery.sizeOf(context).height * widget.maxHeightFraction;
 
     return AppActionSheet(
       title: widget.title,
@@ -202,7 +206,8 @@ class _AppSelectSheetState<T> extends State<AppSelectSheet<T>> {
     if (_isLoading) return const Center(child: AppLoadingIndicator());
 
     if (_error != null) {
-      final message = widget.errorTextBuilder?.call(_error!) ?? _error.toString();
+      final message =
+          widget.errorTextBuilder?.call(_error!) ?? _error.toString();
       return Center(
         child: Padding(
           padding: EdgeInsets.all(AppSpacing.xl),

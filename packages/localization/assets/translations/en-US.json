@@ -603,6 +603,8 @@
     "trade_licence_information": "Trade License Information",
     "extracted_success": "Extracted successfully",
     "image_unclear": "Image Unclear",
+    "emirates_id_already_registered": "Already Registered",
+    "emirates_id_already_registered_message": "This Emirates ID is already registered to another account. Please use a different ID or contact support.",
     "expired": "Expired",
     "image_unclear_message": "Please upload a clearer image with all details visible.",
     "expired_message": "This trade license has expired. Upload a valid trade license to continue verification.",

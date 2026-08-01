@@ -189,6 +189,11 @@ class _DocumentScannerHostPage extends StatelessWidget {
             requireBothSides: options.requireBothSides || c.requireBothSides,
             enableAutoCapture: c.enableAutoCapture,
             buttonStyle: buttonStyle,
+            uiMode: DocumentCameraUIMode.overlay,
+            frameStyle: DocumentCameraFrameStyle(
+              frameBorder: Border.all(color: primary!, width: 2),
+            ),
+
             titleStyle: titleStyle,
             instructionStyle: instructionStyle,
             sideIndicatorStyle: sideIndicatorStyle,

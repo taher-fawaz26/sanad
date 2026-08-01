@@ -213,14 +213,9 @@ class RegistrationCubit extends Cubit<RegistrationState> {
     if (isClosed) return;
 
     result.fold(
-      (_) => emit(
+      (failure) => emit(
         state.copyWith(
-          extraction: ExtractionResult(
-            emiratesId: const EmiratesIdResult.unclear(),
-            tradeLicence: state.isOrganization
-                ? const TradeLicenceResult.expired()
-                : null,
-          ),
+          extraction: _extractionFromFailure(failure),
           extractionStatus: ExtractionStatus.done,
         ),
       ),
@@ -231,6 +226,14 @@ class RegistrationCubit extends Cubit<RegistrationState> {
         ),
       ),
       );
+  }
+
+  ExtractionResult _extractionFromFailure(Failure failure) {
+    final emiratesId = failure is ConflictFailure
+        ? const EmiratesIdResult.alreadyRegistered()
+        : const EmiratesIdResult.unclear();
+
+    return ExtractionResult(emiratesId: emiratesId);
   }
 
   // ── Profile completion ─────────────────────────────────────────────────────

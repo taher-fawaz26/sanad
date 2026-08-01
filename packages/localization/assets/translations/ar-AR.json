@@ -603,6 +603,8 @@
     "trade_licence_information": "معلومات الرخصة التجارية",
     "extracted_success": "تم الاستخراج بنجاح",
     "image_unclear": "صورة غير واضحة",
+    "emirates_id_already_registered": "مسجّلة مسبقًا",
+    "emirates_id_already_registered_message": "هذه الهوية الإماراتية مسجّلة بالفعل في حساب آخر. يرجى استخدام هوية مختلفة أو التواصل مع الدعم.",
     "expired": "منتهية",
     "image_unclear_message": "الرجاء رفع صورة أوضح تظهر فيها كل التفاصيل.",
     "expired_message": "انتهت صلاحية هذه الرخصة التجارية. قم برفع رخصة سارية لمتابعة التحقق.",

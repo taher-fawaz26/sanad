@@ -39,6 +39,9 @@ enum DocumentIssue {
   /// The photo was too blurry / cropped to read reliably (Figma "Image Unclear").
   imageUnclear,
 
+  /// The Emirates ID is already linked to another account (HTTP 409).
+  alreadyRegistered,
+
   /// The trade licence is past its expiry date (Figma "Expired").
   expiredLicence,
 }
@@ -79,6 +82,19 @@ class EmiratesIdResult extends Equatable {
           expiryDate: '',
           gender: '',
           issue: DocumentIssue.imageUnclear,
+        );
+
+  /// The Emirates ID belongs to an account that already exists (HTTP 409).
+  const EmiratesIdResult.alreadyRegistered()
+      : this(
+          fullNameEn: '',
+          fullNameAr: '',
+          idNumber: '',
+          nationality: '',
+          dateOfBirth: '',
+          expiryDate: '',
+          gender: '',
+          issue: DocumentIssue.alreadyRegistered,
         );
 
   final String fullNameEn;

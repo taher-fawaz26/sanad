@@ -1,4 +1,4 @@
-import 'package:design_system/src/components/app_loading_indicator.dart';
+import 'package:design_system/design_system.dart';
 import 'package:design_system/src/spacing/responsive_spacing.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
 import 'package:design_system/src/theme/tokens/button_tokens.dart';
@@ -44,8 +44,7 @@ class _AppButtonState extends State<AppButton> {
   bool _pressed = false;
 
   bool get _hasIcon =>
-      widget.icon != null &&
-      widget.iconPosition != AppButtonIconPosition.none;
+      widget.icon != null && widget.iconPosition != AppButtonIconPosition.none;
 
   @override
   Widget build(BuildContext context) {
@@ -119,8 +118,6 @@ class _AppButtonState extends State<AppButton> {
       return Center(
         child: AppLoadingIndicator(
           size: ButtonTokens.iconBoxSize(),
-          strokeWidth: 2,
-          color: textStyle.color,
         ),
       );
     }
@@ -152,37 +149,37 @@ class _AppButtonState extends State<AppButton> {
     return switch (widget.iconPosition) {
       // Figma `Icon Position=Side` (`731:3785`) — icon + label centered as a group.
       AppButtonIconPosition.center => Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              iconWidget,
-              SizedBox(width: AppSpacing.sm),
-              Flexible(child: labelWidget),
-            ],
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            iconWidget,
+            SizedBox(width: AppSpacing.sm),
+            Flexible(child: labelWidget),
+          ],
         ),
+      ),
       // Figma `Icon Position=Left` — icon at leading edge, label centered.
       AppButtonIconPosition.left => Stack(
-          alignment: Alignment.center,
-          children: [
-            Center(child: labelWidget),
-            Positioned(
-              left: 0,
-              child: iconWidget,
-            ),
-          ],
-        ),
+        alignment: Alignment.center,
+        children: [
+          Center(child: labelWidget),
+          Positioned(
+            left: 0,
+            child: iconWidget,
+          ),
+        ],
+      ),
       // Figma `Icon Position=Right` — icon at trailing edge, label centered.
       AppButtonIconPosition.right => Stack(
-          alignment: Alignment.center,
-          children: [
-            Center(child: labelWidget),
-            Positioned(
-              right: 0,
-              child: iconWidget,
-            ),
-          ],
-        ),
+        alignment: Alignment.center,
+        children: [
+          Center(child: labelWidget),
+          Positioned(
+            right: 0,
+            child: iconWidget,
+          ),
+        ],
+      ),
       AppButtonIconPosition.none => Center(child: labelWidget),
     };
   }

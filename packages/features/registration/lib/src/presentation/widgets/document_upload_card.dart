@@ -350,10 +350,7 @@ class _UploadingDropzone extends StatelessWidget {
                     SizedBox(
                       width: responsiveDimension(_kLoaderSize),
                       height: responsiveDimension(_kLoaderSize),
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: colors.primary,
-                      ),
+                      child: const AppLoadingIndicator(size: _kLoaderSize),
                     ),
                     SizedBox(width: responsiveDimension(AppSpacing.sm)),
                     Text(
