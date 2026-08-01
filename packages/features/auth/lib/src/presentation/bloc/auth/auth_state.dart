@@ -158,3 +158,27 @@ class AuthCheckSignInStatusFailureState extends AuthState {
   @override
   List<Object?> get props => [message];
 }
+
+// ─── Validate Email ──────────────────────────────────────────────────────────
+
+class AuthValidateEmailLoadingState extends AuthState {
+  const AuthValidateEmailLoadingState();
+}
+
+class AuthValidateEmailSuccessState extends AuthState {
+  const AuthValidateEmailSuccessState(this.emailExists);
+
+  final bool emailExists;
+
+  @override
+  List<Object?> get props => [emailExists];
+}
+
+class AuthValidateEmailFailureState extends AuthState {
+  const AuthValidateEmailFailureState(this.failure);
+
+  final Failure failure;
+
+  @override
+  List<Object?> get props => [failure];
+}

@@ -63,7 +63,7 @@ class SelectAccountTypePage extends HookWidget {
                   onTap: () =>
                       selected.value = RegistrationAccountType.individual,
                 ),
-                const Spacer(),
+                SizedBox(height: responsiveDimension(AppSpacing.lg)),
                 AppButton(
                   label: 'registration.continue'.tr(),
                   onPressed: selected.value == null

@@ -24,6 +24,7 @@ extension FailureMessageX on Failure {
     BusinessRuleFailure() => 'errors.business_rule',
     ConflictFailure() => 'errors.conflict',
     RateLimitFailure() => 'errors.rate_limit',
+    EmailNotValidFailure() => 'errors.email_not_valid',
   };
 }
 
@@ -43,6 +44,7 @@ extension FailureKindX on Failure {
   bool get isBusinessRule => this is BusinessRuleFailure;
   bool get isConflict => this is ConflictFailure;
   bool get isRateLimit => this is RateLimitFailure;
+  bool get isEmailNotValid => this is EmailNotValidFailure;
 
   /// Whether retrying the same operation could plausibly succeed.
   ///

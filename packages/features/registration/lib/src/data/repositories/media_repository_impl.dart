@@ -1,4 +1,4 @@
-import 'package:auth/src/domain/entities/email_auth_result.dart';
+import 'package:auth/auth.dart';
 import 'package:core/core.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:network/network.dart';
@@ -54,7 +54,7 @@ class MediaRepositoryImpl implements MediaRepository {
   );
 
   @override
-  TaskEither<Failure, AuthenticatedResult> completeIndividualProfile({
+  TaskEither<Failure, AuthSessionEntity> completeIndividualProfile({
     required String authorizationToken,
     required ProfileCompletionRequest request,
   }) => _networkGuard.execute(
@@ -65,7 +65,7 @@ class MediaRepositoryImpl implements MediaRepository {
   );
 
   @override
-  TaskEither<Failure, AuthenticatedResult> completeCompanyProfile({
+  TaskEither<Failure, AuthSessionEntity> completeCompanyProfile({
     required String authorizationToken,
     required ProfileCompletionRequest request,
   }) => _networkGuard.execute(

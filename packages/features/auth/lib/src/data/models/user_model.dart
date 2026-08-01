@@ -13,14 +13,14 @@ class UserModel extends UserEntity implements EntityConverter<UserEntity> {
 
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    // Live API uses `userType`; older payloads may still send `type`.
+    final typeRaw = json['userType'] ?? json['type'];
     return UserModel(
       id: json['id'] as String,
       email: json['email'] as String,
       isVerified: json['isVerified'] as bool,
       isActive: json['isActive'] as bool?,
-      type: json['type'] is String
-          ? UserType.fromString(json['type'] as String)
-          : null,
+      type: typeRaw is String ? UserType.fromString(typeRaw) : null,
     );
   }
 
@@ -29,7 +29,7 @@ class UserModel extends UserEntity implements EntityConverter<UserEntity> {
     'email': email,
     'isVerified': isVerified,
     'isActive': isActive,
-    'type': type?.value,
+    'userType': type?.value,
   };
 
   @override

@@ -1,5 +1,5 @@
 import 'package:asset_picker/asset_picker.dart';
-import 'package:auth/src/domain/entities/email_auth_result.dart';
+import 'package:auth/auth.dart' show AuthSessionEntity;
 import 'package:core/core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:registration/src/data/models/extraction_result.dart';
@@ -237,10 +237,10 @@ class RegistrationCubit extends Cubit<RegistrationState> {
 
   /// Completes provider profile by posting to the backend.
   ///
-  /// Returns [AuthenticatedResult] on success which contains session tokens
+  /// Returns [AuthSessionEntity] on success which contains session tokens
   /// that the auth layer can persist. On failure, emits a state with
   /// [ProfileCompletionStatus.failed] and sets [lastUploadFailure].
-  Future<AuthenticatedResult?> completeProfile() async {
+  Future<AuthSessionEntity?> completeProfile() async {
     final token = state.onboardingToken;
     final frontId = state.emiratesIdFront?.remoteId;
     final backId = state.emiratesIdBack?.remoteId;

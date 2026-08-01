@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:auth/src/auth/auth_status.dart';
 import 'package:auth/src/auth/auth_status_notifier.dart';
-import 'package:auth/src/domain/entities/email_auth_result.dart';
+import 'package:auth/src/domain/entities/auth_response_entity.dart';
 import 'package:auth/src/domain/entities/user_entity.dart';
 import 'package:auth/src/domain/usecases/check_signin_status_usecase.dart';
 import 'package:auth/src/domain/usecases/delete_account_usecase.dart';
@@ -10,6 +10,7 @@ import 'package:auth/src/domain/usecases/logout_usecase.dart';
 import 'package:auth/src/domain/usecases/request_email_otp_usecase.dart';
 import 'package:auth/src/domain/usecases/sign_in_with_google_usecase.dart';
 import 'package:auth/src/domain/usecases/usecase_params.dart';
+import 'package:auth/src/domain/usecases/validate_email_usecase.dart';
 import 'package:auth/src/domain/usecases/verify_email_otp_usecase.dart';
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
@@ -29,21 +30,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required AuthCheckSignInStatusUseCase checkSignInStatusUseCase,
     required AuthStatusNotifier authStatusNotifier,
     required SignInWithGoogleUseCase signInWithGoogleUseCase,
-  })  : _requestOtpUseCase = requestOtpUseCase,
-        _verifyOtpUseCase = verifyOtpUseCase,
-        _logoutUseCase = logoutUseCase,
-        _deleteAccountUseCase = deleteAccountUseCase,
-        _sessionManager = sessionManager,
-        _checkSignInStatusUseCase = checkSignInStatusUseCase,
-        _authStatusNotifier = authStatusNotifier,
-        _signInWithGoogleUseCase = signInWithGoogleUseCase,
-        super(const AuthInitialState()) {
+    required ValidateEmailUseCase validateEmailUseCase,
+  }) : _requestOtpUseCase = requestOtpUseCase,
+       _verifyOtpUseCase = verifyOtpUseCase,
+       _logoutUseCase = logoutUseCase,
+       _deleteAccountUseCase = deleteAccountUseCase,
+       _sessionManager = sessionManager,
+       _checkSignInStatusUseCase = checkSignInStatusUseCase,
+       _authStatusNotifier = authStatusNotifier,
+       _signInWithGoogleUseCase = signInWithGoogleUseCase,
+       _validateEmailUseCase = validateEmailUseCase,
+       super(const AuthInitialState()) {
     on<AuthRequestOtpEvent>(_requestOtp);
     on<AuthVerifyOtpEvent>(_verifyOtp);
     on<AuthLogoutEvent>(_logout);
     on<AuthDeleteAccountEvent>(_deleteAccount);
     on<AuthCheckSignInStatusEvent>(_checkSignInStatus);
     on<AuthGoogleSignInEvent>(_signInWithGoogle);
+    on<AuthValidateEmailEvent>(_validateEmail);
   }
 
   final RequestEmailOtpUseCase _requestOtpUseCase;
@@ -54,13 +58,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthCheckSignInStatusUseCase _checkSignInStatusUseCase;
   final AuthStatusNotifier _authStatusNotifier;
   final SignInWithGoogleUseCase _signInWithGoogleUseCase;
-
+  final ValidateEmailUseCase _validateEmailUseCase;
   Future<void> _requestOtp(
     AuthRequestOtpEvent event,
     Emitter<AuthState> emit,
   ) async {
     emit(const AuthOtpRequestLoadingState());
-
     final result = await _requestOtpUseCase
         .call(RequestEmailOtpParams(email: event.email))
         .run();
@@ -68,6 +71,49 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     result.match(
       (failure) => emit(AuthOtpRequestFailureState(failure)),
       (_) => emit(AuthOtpSentState(event.email)),
+    );
+  }
+
+  Future<void> _validateEmail(
+    AuthValidateEmailEvent event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthValidateEmailLoadingState());
+
+    final validateResult = await _validateEmailUseCase
+        .call(ValidateEmailParams(email: event.email))
+        .run();
+    validateResult.match(
+      (failure) => emit(AuthValidateEmailFailureState(failure)),
+      (emailAvailable) {
+        final emailExists = !emailAvailable;
+        if (event.isLogin && emailExists) {
+          emit(
+            AuthValidateEmailSuccessState(
+              emailExists,
+            ),
+          );
+
+          return;
+        } else if (event.isLogin && !emailExists) {
+          emit(
+            const AuthValidateEmailFailureState(
+              EmailNotValidFailure(message: 'errors.email_not_found'),
+            ),
+          );
+          return;
+        } else if (!event.isLogin && emailExists) {
+          emit(
+            const AuthValidateEmailFailureState(
+              EmailNotValidFailure(message: 'errors.email_not_valid'),
+            ),
+          );
+          return;
+        } else {
+          emit(AuthValidateEmailSuccessState(emailExists));
+          return;
+        }
+      },
     );
   }
 
@@ -83,26 +129,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     await result.match(
       (failure) async => emit(AuthOtpVerifyFailureState(failure)),
-      (outcome) async {
-        switch (outcome) {
-          case AuthenticatedResult(
-              :final accessToken,
-              :final refreshToken,
-              :final user,
-            ):
+      (response) async {
+        switch (response) {
+          case AuthSessionEntity(
+            :final accessToken,
+            :final refreshToken,
+            :final user,
+            :final isProfileCreated,
+          ):
             await _sessionManager.startSession(
               accessToken: accessToken,
               refreshToken: refreshToken,
             );
             _authStatusNotifier.update(
               AuthStatus.authenticated,
-              isProfileCompleted: user.isProfileCompleted,
+              isProfileCompleted: isProfileCreated,
             );
             emit(AuthAuthenticatedState(user));
-          case OnboardingResult(:final email, :final onboardingToken):
+          case OnboardingAuthEntity(:final onboardingToken, :final user):
             emit(
               AuthOnboardingRequiredState(
-                email: email,
+                email: user.email,
                 onboardingToken: onboardingToken,
               ),
             );
@@ -165,8 +212,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(const AuthCheckSignInStatusLoadingState());
 
-    final result =
-        await _checkSignInStatusUseCase.call(const NoParams()).run();
+    final result = await _checkSignInStatusUseCase.call(const NoParams()).run();
 
     await result.match(
       (l) async {
@@ -188,9 +234,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           return;
         }
         emit(AuthCheckSignInStatusSuccessState(user));
+        // Locally persisted users are only saved after an authenticated
+        // session — treat restored sessions as profile-complete.
         _authStatusNotifier.update(
           AuthStatus.authenticated,
-          isProfileCompleted: user.isProfileCompleted,
+          isProfileCompleted: true,
         );
       },
     );
@@ -202,31 +250,31 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(const AuthGoogleSignInLoadingState());
 
-    final result =
-        await _signInWithGoogleUseCase.call(const NoParams()).run();
+    final result = await _signInWithGoogleUseCase.call(const NoParams()).run();
 
     await result.match(
       (failure) async => emit(AuthGoogleSignInFailureState(failure)),
-      (outcome) async {
-        switch (outcome) {
-          case AuthenticatedResult(
-              :final accessToken,
-              :final refreshToken,
-              :final user,
-            ):
+      (response) async {
+        switch (response) {
+          case AuthSessionEntity(
+            :final accessToken,
+            :final refreshToken,
+            :final user,
+            :final isProfileCreated,
+          ):
             await _sessionManager.startSession(
               accessToken: accessToken,
               refreshToken: refreshToken,
             );
             _authStatusNotifier.update(
               AuthStatus.authenticated,
-              isProfileCompleted: user.isProfileCompleted,
+              isProfileCompleted: isProfileCreated,
             );
             emit(AuthAuthenticatedState(user));
-          case OnboardingResult(:final email, :final onboardingToken):
+          case OnboardingAuthEntity(:final onboardingToken, :final user):
             emit(
               AuthOnboardingRequiredState(
-                email: email,
+                email: user.email,
                 onboardingToken: onboardingToken,
               ),
             );
@@ -236,10 +284,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   static UserEntity? _userFromState(AuthState state) => switch (state) {
-        AuthAuthenticatedState(:final user) => user,
-        AuthCheckSignInStatusSuccessState(:final user) => user,
-        AuthDeleteAccountLoadingState(:final user) => user,
-        AuthDeleteAccountFailureState(:final user) => user,
-        _ => null,
-      };
+    AuthAuthenticatedState(:final user) => user,
+    AuthCheckSignInStatusSuccessState(:final user) => user,
+    AuthDeleteAccountLoadingState(:final user) => user,
+    AuthDeleteAccountFailureState(:final user) => user,
+    _ => null,
+  };
 }

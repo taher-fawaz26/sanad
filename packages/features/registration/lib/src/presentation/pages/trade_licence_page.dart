@@ -11,6 +11,7 @@ import 'package:registration/src/presentation/models/registration_document_slot.
 import 'package:registration/src/presentation/widgets/document_upload_card.dart';
 import 'package:registration/src/presentation/widgets/registration_header.dart';
 import 'package:registration/src/presentation/widgets/select_capture_method_sheet.dart';
+import 'package:registration/src/routes/registration_navigation.dart';
 import 'package:registration/src/routes/registration_routes.dart';
 
 const _kIconSize = 48.0;
@@ -60,14 +61,21 @@ class TradeLicencePage extends StatelessWidget {
       child: BlocBuilder<RegistrationCubit, RegistrationState>(
         builder: (context, state) {
           return AuthScreenShell(
-            onBack: () => context.pop(),
+            onBack: () => RegistrationNavigation.popStep(
+              context,
+              registrationState: context.read<RegistrationCubit>().state,
+            ),
             title: 'registration.trade_licence_title'.tr(),
             footer: Row(
               children: [
                 Expanded(
                   child: AppButtonPresets.secondary(
                     label: 'registration.back'.tr(),
-                    onPressed: () => context.pop(),
+                    onPressed: () => RegistrationNavigation.popStep(
+                      context,
+                      registrationState:
+                          context.read<RegistrationCubit>().state,
+                    ),
                   ),
                 ),
                 SizedBox(width: responsiveDimension(AppSpacing.md)),

@@ -1,5 +1,5 @@
 import 'package:auth/src/di/auth_di.dart';
-import 'package:auth/src/presentation/pages/login_page.dart';
+import 'package:auth/src/presentation/pages/auth_page.dart';
 import 'package:auth/src/presentation/pages/splash_page.dart';
 import 'package:auth/src/routes/auth_routes.dart';
 import 'package:core/core.dart';
@@ -7,8 +7,8 @@ import 'package:go_router/go_router.dart';
 
 /// Auth feature module — DI and routes.
 ///
-/// Contributes the splash and (email-only) login routes. The shared OTP route
-/// is composed by each app via `AuthShell.otpRoute` so the app can wire its own
+/// Contributes the splash and email auth routes. The shared OTP route is
+/// composed by each app via `AuthShell.otpRoute` so the app can wire its own
 /// post-verification navigation (dashboard vs onboarding).
 class AuthModule extends FeatureModule {
   @override
@@ -37,7 +37,17 @@ class AuthModule extends FeatureModule {
       ),
       GoRoute(
         path: AuthRoutes.login,
-        builder: (context, state) => LoginPage(
+        builder: (context, state) => AuthPage(
+          onOtpSent: (email) => context.push(AuthRoutes.otp, extra: email),
+          onAuthenticated: () => context.go(home),
+          onOnboarding: (email, token) =>
+              context.push(AuthRoutes.otp, extra: email),
+        ),
+      ),
+      GoRoute(
+        path: AuthRoutes.signUp,
+        builder: (context, state) => AuthPage(
+          initialIsLogin: false,
           onOtpSent: (email) => context.push(AuthRoutes.otp, extra: email),
           onAuthenticated: () => context.go(home),
           onOnboarding: (email, token) =>

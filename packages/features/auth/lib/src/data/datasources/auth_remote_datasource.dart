@@ -1,8 +1,10 @@
 import 'package:auth/src/data/endpoints/auth_api_paths.dart';
-import 'package:auth/src/data/models/email_verify_response.dart';
+import 'package:auth/src/data/models/auth_response_model.dart';
 import 'package:auth/src/data/models/requests/email_otp_request.dart';
+import 'package:auth/src/data/models/requests/validate_email_request.dart';
 import 'package:auth/src/data/models/requests/verify_email_otp_request.dart';
-import 'package:auth/src/domain/entities/email_auth_result.dart';
+import 'package:auth/src/data/models/responses/validate_email_response.dart';
+import 'package:auth/src/domain/entities/auth_response_entity.dart';
 import 'package:core/core.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:network/network.dart';
@@ -14,13 +16,14 @@ abstract class AuthRemoteDataSource {
 
   /// Verifies the OTP and resolves to either an authenticated session or an
   /// onboarding hand-off.
-  TaskEither<Failure, EmailAuthResult> verifyEmailOtp(
+  TaskEither<Failure, AuthResponseEntity> verifyEmailOtp(
     VerifyEmailOtpRequest model,
   );
 
   TaskEither<Failure, void> logout();
 
   TaskEither<Failure, void> deleteAccount({required String userSub});
+  TaskEither<Failure, bool> validateEmail(ValidateEmailRequest model);
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -38,23 +41,21 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       );
 
   @override
-  TaskEither<Failure, EmailAuthResult> verifyEmailOtp(
+  TaskEither<Failure, AuthResponseEntity> verifyEmailOtp(
     VerifyEmailOtpRequest model,
-  ) =>
-      _apiClient.request<EmailAuthResult>(
-        path: AuthApiPaths.emailVerify,
-        method: RequestMethod.post,
-        body: model.toMap(),
-        parser: (data) =>
-            EmailVerifyResponse.fromJson(data as Map<String, dynamic>),
-      );
+  ) => _apiClient.request<AuthResponseEntity>(
+    path: AuthApiPaths.emailVerify,
+    method: RequestMethod.post,
+    body: model.toMap(),
+    parser: (data) => AuthResponseModel.fromJson(data as Map<String, dynamic>),
+  );
 
   @override
   TaskEither<Failure, void> logout() => _apiClient.request<void>(
-        path: AuthApiPaths.logout,
-        method: RequestMethod.post,
-        parser: (_) {},
-      );
+    path: AuthApiPaths.logout,
+    method: RequestMethod.post,
+    parser: (_) {},
+  );
 
   @override
   TaskEither<Failure, void> deleteAccount({required String userSub}) =>
@@ -62,5 +63,16 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         path: AuthApiPaths.userDelete(userSub),
         method: RequestMethod.delete,
         parser: (_) {},
+      );
+
+  @override
+  TaskEither<Failure, bool> validateEmail(ValidateEmailRequest model) =>
+      _apiClient.request<bool>(
+        path: AuthApiPaths.validateEmail,
+        method: RequestMethod.post,
+        body: model.toMap(),
+        parser: (data) => ValidateEmailResponseModel.fromJson(
+          data as Map<String, dynamic>,
+        ).emailAvailable,
       );
 }

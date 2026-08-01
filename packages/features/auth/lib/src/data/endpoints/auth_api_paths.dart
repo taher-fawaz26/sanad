@@ -8,6 +8,7 @@ abstract final class AuthApiPaths {
   static const String emailVerify = 'auth/email/verify';
 
   static const String logout = 'auth/logout';
+  static const String validateEmail = 'auth/validate-info';
 
   /// Google OAuth — exchange a Firebase ID token for a SANAD session.
   static const String googleSignIn = 'auth/social';

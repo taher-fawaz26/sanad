@@ -1,4 +1,4 @@
-import 'package:auth/src/domain/entities/email_auth_result.dart';
+import 'package:auth/auth.dart' show AuthSessionEntity;
 import 'package:core/core.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:registration/src/data/models/extraction_result.dart';
@@ -35,13 +35,13 @@ abstract interface class MediaRepository {
   });
 
   /// Completes profile for an individual provider.
-  TaskEither<Failure, AuthenticatedResult> completeIndividualProfile({
+  TaskEither<Failure, AuthSessionEntity> completeIndividualProfile({
     required String authorizationToken,
     required ProfileCompletionRequest request,
   });
 
   /// Completes profile for a company provider.
-  TaskEither<Failure, AuthenticatedResult> completeCompanyProfile({
+  TaskEither<Failure, AuthSessionEntity> completeCompanyProfile({
     required String authorizationToken,
     required ProfileCompletionRequest request,
   });

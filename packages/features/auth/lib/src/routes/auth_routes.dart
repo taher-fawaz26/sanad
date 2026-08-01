@@ -9,4 +9,7 @@ abstract final class AuthRoutes {
   /// Shared passwordless OTP screen (Sign In + Sign Up). Expects the email
   /// address as the route `extra`.
   static const otp = '/otp';
+
+  /// Sign-up email entry — first step before the shared OTP screen.
+  static const signUp = '/signup';
 }

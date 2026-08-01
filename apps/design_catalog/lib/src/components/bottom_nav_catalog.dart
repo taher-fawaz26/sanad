@@ -3,6 +3,7 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:widgetbook/widgetbook.dart';
 
+
 /// Widgetbook entries for [AppBottomNavBar].
 List<WidgetbookNode> buildBottomNavCatalogEntries() => [
       WidgetbookComponent(
@@ -152,9 +153,7 @@ class BottomNavCatalogDemo extends StatefulWidget {
 }
 
 class _BottomNavCatalogDemoState extends State<BottomNavCatalogDemo> {
-  late final NotchBottomBarController _controller = NotchBottomBarController(
-    index: 2, // Center index for 5 items
-  );
+  late final _controller = createAppBottomNavController();
 
   late int _selectedIndex = widget.currentIndex;
 

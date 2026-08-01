@@ -1,4 +1,4 @@
-import 'package:auth/src/domain/entities/email_auth_result.dart';
+import 'package:auth/src/domain/entities/auth_response_entity.dart';
 import 'package:auth/src/domain/entities/user_entity.dart';
 import 'package:auth/src/domain/usecases/usecase_params.dart';
 import 'package:core/core.dart';
@@ -10,12 +10,13 @@ abstract class AuthRepository {
 
   /// Verifies the email OTP, resolving to an authenticated session or an
   /// onboarding hand-off.
-  TaskEither<Failure, EmailAuthResult> verifyEmailOtp(
+  TaskEither<Failure, AuthResponseEntity> verifyEmailOtp(
     VerifyEmailOtpParams params,
   );
 
-  TaskEither<Failure, EmailAuthResult> signInWithGoogle();
+  TaskEither<Failure, AuthResponseEntity> signInWithGoogle();
   TaskEither<Failure, void> logout();
   TaskEither<Failure, UserEntity?> checkSignInStatus();
   TaskEither<Failure, void> deleteAccount(DeleteAccountParams params);
+  TaskEither<Failure, bool> validateEmail(ValidateEmailParams params);
 }

@@ -1,6 +1,6 @@
 import 'package:auth/src/data/endpoints/auth_api_paths.dart';
-import 'package:auth/src/data/models/email_verify_response.dart';
-import 'package:auth/src/domain/entities/email_auth_result.dart';
+import 'package:auth/src/data/models/auth_response_model.dart';
+import 'package:auth/src/domain/entities/auth_response_entity.dart';
 import 'package:core/core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fpdart/fpdart.dart';
@@ -9,7 +9,7 @@ import 'package:network/network.dart';
 
 // ignore: one_member_abstracts — consistent with AuthRemoteDataSource pattern
 abstract class GoogleAuthDataSource {
-  TaskEither<Failure, EmailAuthResult> signInWithGoogle();
+  TaskEither<Failure, AuthResponseEntity> signInWithGoogle();
 }
 
 class GoogleAuthDataSourceImpl implements GoogleAuthDataSource {
@@ -26,7 +26,7 @@ class GoogleAuthDataSourceImpl implements GoogleAuthDataSource {
   final FirebaseAuth _firebaseAuth;
 
   @override
-  TaskEither<Failure, EmailAuthResult> signInWithGoogle() =>
+  TaskEither<Failure, AuthResponseEntity> signInWithGoogle() =>
       TaskEither<Failure, String>.tryCatch(
         () async {
           final googleUser = await _googleSignIn.signIn();
@@ -56,12 +56,12 @@ class GoogleAuthDataSourceImpl implements GoogleAuthDataSource {
           return NetworkFailure(message: error.toString());
         },
       ).flatMap(
-        (firebaseToken) => _apiClient.request<EmailAuthResult>(
+        (firebaseToken) => _apiClient.request<AuthResponseEntity>(
           path: AuthApiPaths.googleSignIn,
           method: RequestMethod.post,
           body: {'strategy': 'google', 'firebaseTokenId': firebaseToken},
           parser: (data) =>
-              EmailVerifyResponse.fromJson(data as Map<String, dynamic>),
+              AuthResponseModel.fromJson(data as Map<String, dynamic>),
         ),
       );
 }

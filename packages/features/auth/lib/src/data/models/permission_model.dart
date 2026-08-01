@@ -1,14 +1,12 @@
-/// Permission entry returned on authenticated session responses.
-class PermissionModel {
-  const PermissionModel({
-    required this.name,
-    this.resource,
-    this.action,
-  });
+import 'package:auth/src/domain/entities/permission_entity.dart';
 
-  final String name;
-  final String? resource;
-  final String? action;
+/// Data model for [PermissionEntity] — inherits fields, adds JSON I/O.
+class PermissionModel extends PermissionEntity {
+  const PermissionModel({
+    required super.name,
+    super.resource,
+    super.action,
+  });
 
   factory PermissionModel.fromJson(Map<String, dynamic> json) {
     return PermissionModel(
@@ -21,8 +19,8 @@ class PermissionModel {
   }
 
   Map<String, dynamic> toJson() => {
-    'name': name,
-    if (resource != null) 'resource': resource,
-    if (action != null) 'action': action,
-  };
+        'name': name,
+        if (resource != null) 'resource': resource,
+        if (action != null) 'action': action,
+      };
 }

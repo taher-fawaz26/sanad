@@ -528,7 +528,9 @@
     "location": "Your location could not be determined. Please check location permissions.",
     "validation": "Please check your input and try again.",
     "unverified_user": "Please verify your account to continue.",
-    "unauthorized_role": "You do not have permission to perform this action."
+    "unauthorized_role": "You do not have permission to perform this action.",
+    "email_not_valid": "This email is already in use.",
+    "email_not_found": "No account found with this email. Please sign up."
   },
   "registration": {
     "sign_up_title": "Sign Up Account",

@@ -10,6 +10,7 @@ import 'package:registration/src/presentation/cubit/registration_state.dart';
 import 'package:registration/src/presentation/models/registration_document_slot.dart';
 import 'package:registration/src/presentation/widgets/document_upload_card.dart';
 import 'package:registration/src/presentation/widgets/select_capture_method_sheet.dart';
+import 'package:registration/src/routes/registration_navigation.dart';
 import 'package:registration/src/routes/registration_routes.dart';
 
 // Figma: Identity Verification — node 2794:34425 (page layout).
@@ -111,7 +112,10 @@ class _IdentityVerificationPageState extends State<IdentityVerificationPage> {
         final canContinue = state.hasBothIdSides;
 
         return AuthScreenShell(
-          onBack: () => context.pop(),
+          onBack: () => RegistrationNavigation.popStep(
+            context,
+            registrationState: context.read<RegistrationCubit>().state,
+          ),
           title: 'registration.identity_title'.tr(),
           footer: AppButton(
             label: 'registration.continue'.tr(),

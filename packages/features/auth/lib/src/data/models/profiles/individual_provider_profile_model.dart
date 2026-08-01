@@ -12,11 +12,11 @@ class IndividualProviderProfileModel extends IndividualProviderProfileEntity {
 
   factory IndividualProviderProfileModel.fromJson(Map<String, dynamic> json) {
     return IndividualProviderProfileModel(
-      id: json['id'] as String,
-      fullName: json['fullName'] as String,
-      email: json['email'] as String,
-      emiratesId: json['emiratesId'] as String,
-      isReviewed: json['isReviewed'] as bool,
+      id: json['id'] as String? ?? '',
+      fullName: json['fullName'] as String? ?? '',
+      email: json['email'] as String? ?? '',
+      emiratesId: json['emiratesId'] as String? ?? '',
+      isReviewed: json['isReviewed'] as bool? ?? false,
     );
   }
 

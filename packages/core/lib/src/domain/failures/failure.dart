@@ -111,6 +111,10 @@ class UnauthorizedRoleFailure extends Failure {
   });
 }
 
+class EmailNotValidFailure extends Failure {
+  const EmailNotValidFailure({required super.message, super.code});
+}
+
 /// A business-rule violation reported by the backend (e.g. "Cannot delete the
 /// only branch"). Distinct from input [ValidationFailure]: the input was
 /// well-formed but the operation is not permitted in the current domain state.

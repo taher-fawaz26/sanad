@@ -1,4 +1,4 @@
-import 'package:auth/src/domain/entities/email_auth_result.dart';
+import 'package:auth/auth.dart';
 import 'package:core/core.dart';
 import 'package:dio/dio.dart';
 import 'package:fpdart/fpdart.dart';
@@ -33,13 +33,13 @@ abstract interface class MediaRemoteDataSource {
   });
 
   /// Completes provider profile for an individual.
-  TaskEither<Failure, AuthenticatedResult> completeIndividualProfile({
+  TaskEither<Failure, AuthSessionEntity> completeIndividualProfile({
     required String authorizationToken,
     required ProfileCompletionRequest request,
   });
 
   /// Completes provider profile for a company/organization.
-  TaskEither<Failure, AuthenticatedResult> completeCompanyProfile({
+  TaskEither<Failure, AuthSessionEntity> completeCompanyProfile({
     required String authorizationToken,
     required ProfileCompletionRequest request,
   });
@@ -143,7 +143,7 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
       );
 
   @override
-  TaskEither<Failure, AuthenticatedResult> completeIndividualProfile({
+  TaskEither<Failure, AuthSessionEntity> completeIndividualProfile({
     required String authorizationToken,
     required ProfileCompletionRequest request,
   }) =>
@@ -165,7 +165,7 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
       );
 
   @override
-  TaskEither<Failure, AuthenticatedResult> completeCompanyProfile({
+  TaskEither<Failure, AuthSessionEntity> completeCompanyProfile({
     required String authorizationToken,
     required ProfileCompletionRequest request,
   }) =>

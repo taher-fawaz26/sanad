@@ -5,7 +5,6 @@
 abstract final class RegistrationRoutes {
   RegistrationRoutes._();
 
-  static const signUpEmail = '/signup';
   static const selectAccountType = '/signup/account-type';
 
   /// Organization path — business + representative details.

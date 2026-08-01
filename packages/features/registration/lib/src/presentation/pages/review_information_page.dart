@@ -66,7 +66,7 @@ class _ReviewInformationPageState extends State<ReviewInformationPage> {
       );
       authStatusNotifier.update(
         AuthStatus.authenticated,
-        isProfileCompleted: authResult.user.isProfileCompleted,
+        isProfileCompleted: authResult.isProfileCreated,
       );
 
       if (mounted) {

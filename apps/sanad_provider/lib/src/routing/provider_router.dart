@@ -34,10 +34,9 @@ GoRouter buildProviderRouter() {
       if (route is GoRoute && route.path == AuthRoutes.login)
         GoRoute(
           path: AuthRoutes.login,
-          builder: (context, state) => LoginPage(
+          builder: (context, state) => AuthPage(
             onOtpSent: (email) =>
                 context.push(AuthRoutes.otp, extra: email),
-            onRegister: () => context.push(RegistrationRoutes.signUpEmail),
             onAuthenticated: () => context.go(AppRoutes.home),
             onOnboarding: (email, token) => context.go(
               RegistrationRoutes.selectAccountType,

@@ -15,6 +15,8 @@ import 'package:core/core.dart';
 import 'package:network/network.dart';
 import 'package:storage/storage.dart';
 
+import 'package:auth/src/domain/usecases/validate_email_usecase.dart';
+
 class AuthDI {
   AuthDI._();
 
@@ -53,6 +55,9 @@ class AuthDI {
       ..registerLazySingleton(
         () => SignInWithGoogleUseCase(sl<AuthRepository>()),
       )
+      ..registerLazySingleton(
+        () => ValidateEmailUseCase(sl<AuthRepository>()),
+      )
       ..registerFactory(
         () => AuthBloc(
           requestOtpUseCase: sl<RequestEmailOtpUseCase>(),
@@ -63,6 +68,7 @@ class AuthDI {
           checkSignInStatusUseCase: sl<AuthCheckSignInStatusUseCase>(),
           authStatusNotifier: sl<AuthStatusNotifier>(),
           signInWithGoogleUseCase: sl<SignInWithGoogleUseCase>(),
+          validateEmailUseCase: sl<ValidateEmailUseCase>(),
         ),
       );
   }

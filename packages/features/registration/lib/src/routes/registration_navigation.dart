@@ -1,0 +1,52 @@
+import 'package:auth/auth.dart';
+import 'package:flutter/widgets.dart';
+import 'package:go_router/go_router.dart';
+import 'package:registration/src/presentation/cubit/registration_state.dart';
+import 'package:registration/src/routes/registration_routes.dart';
+
+/// Back-navigation helpers for the sign-up flow.
+///
+/// Several steps are reached via [GoRouter.go], so [GoRouter.pop] is not
+/// always available. [popStep] falls back to the previous route in the flow.
+abstract final class RegistrationNavigation {
+  RegistrationNavigation._();
+
+  /// Pops when possible; otherwise navigates to the previous sign-up step.
+  static void popStep(
+    BuildContext context, {
+    RegistrationState? registrationState,
+  }) {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+
+    final fallback = _fallbackRoute(
+      GoRouterState.of(context).uri.path,
+      registrationState,
+    );
+    if (fallback != null) {
+      context.go(fallback);
+    }
+  }
+
+  static String? _fallbackRoute(
+    String path,
+    RegistrationState? registrationState,
+  ) {
+    return switch (path) {
+      RegistrationRoutes.selectAccountType => AuthRoutes.login,
+      RegistrationRoutes.organizationDetails =>
+        RegistrationRoutes.selectAccountType,
+      RegistrationRoutes.individualDetails =>
+        RegistrationRoutes.selectAccountType,
+      RegistrationRoutes.identityVerification =>
+        registrationState?.isOrganization ?? false
+            ? RegistrationRoutes.organizationDetails
+            : RegistrationRoutes.individualDetails,
+      RegistrationRoutes.tradeLicence =>
+        RegistrationRoutes.identityVerification,
+      _ => null,
+    };
+  }
+}

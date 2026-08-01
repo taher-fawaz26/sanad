@@ -29,3 +29,12 @@ class DeleteAccountParams extends Equatable {
   @override
   List<Object?> get props => [userSub];
 }
+
+class ValidateEmailParams extends Equatable {
+  const ValidateEmailParams({required this.email});
+
+  final String email;
+
+  @override
+  List<Object?> get props => [email];
+}

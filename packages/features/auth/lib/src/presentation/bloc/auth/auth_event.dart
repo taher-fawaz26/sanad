@@ -42,3 +42,13 @@ class AuthDeleteAccountEvent extends AuthEvent {
 class AuthCheckSignInStatusEvent extends AuthEvent {}
 
 class AuthGoogleSignInEvent extends AuthEvent {}
+
+class AuthValidateEmailEvent extends AuthEvent {
+  const AuthValidateEmailEvent({required this.email, required this.isLogin});
+
+  final String email;
+  final bool isLogin;
+
+  @override
+  List<Object?> get props => [email];
+}

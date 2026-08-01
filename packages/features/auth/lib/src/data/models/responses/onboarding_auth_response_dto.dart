@@ -1,18 +1,14 @@
 import 'package:auth/src/data/models/user_model.dart';
+import 'package:auth/src/domain/entities/auth_response_entity.dart';
 
-class OnboardingAuthResponseModel {
-  final String status;
-  final String onboardingToken;
-  final bool isEmailVerified;
-  final bool isProfileCreated;
-  final UserModel user;
-
+/// Data model for [OnboardingAuthEntity] — inherits fields, adds JSON I/O.
+class OnboardingAuthResponseModel extends OnboardingAuthEntity {
   const OnboardingAuthResponseModel({
-    required this.status,
-    required this.onboardingToken,
-    required this.isEmailVerified,
-    required this.isProfileCreated,
-    required this.user,
+    required super.status,
+    required super.onboardingToken,
+    required super.isEmailVerified,
+    required super.isProfileCreated,
+    required super.user,
   });
 
   factory OnboardingAuthResponseModel.fromJson(Map<String, dynamic> json) {
@@ -28,10 +24,10 @@ class OnboardingAuthResponseModel {
   }
 
   Map<String, dynamic> toJson() => {
-    'status': status,
-    'onboardingToken': onboardingToken,
-    'isEmailVerified': isEmailVerified,
-    'isProfileCreated': isProfileCreated,
-    'user': user.toJson(),
-  };
+        'status': status,
+        'onboardingToken': onboardingToken,
+        'isEmailVerified': isEmailVerified,
+        'isProfileCreated': isProfileCreated,
+        'user': (user as UserModel).toJson(),
+      };
 }

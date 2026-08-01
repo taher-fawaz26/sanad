@@ -14,16 +14,17 @@ import 'package:registration/src/presentation/pages/individual_details_page.dart
 import 'package:registration/src/presentation/pages/organization_details_page.dart';
 import 'package:registration/src/presentation/pages/review_information_page.dart';
 import 'package:registration/src/presentation/pages/select_account_type_page.dart';
-import 'package:registration/src/presentation/pages/sign_up_email_page.dart';
 import 'package:registration/src/presentation/pages/trade_licence_page.dart';
+import 'package:registration/src/routes/registration_navigation.dart';
 import 'package:registration/src/routes/registration_routes.dart';
 
 /// Wires up the sign-up flow.
 ///
 /// A [ShellRoute] wraps all sub-routes so a single [RegistrationCubit] is
-/// created once when the user enters `/signup` and disposed automatically when
-/// they leave the entire flow. Card steps are wrapped in [AuthScreenShell];
-/// the full-screen extraction step renders its own gradient scaffold.
+/// created once when the user enters a `/signup/*` registration step and
+/// disposed automatically when they leave the entire flow. Card steps are
+/// wrapped in [AuthScreenShell]; the full-screen extraction step renders its
+/// own gradient scaffold.
 class RegistrationModule extends FeatureModule {
   @override
   String get name => 'registration';
@@ -42,7 +43,6 @@ class RegistrationModule extends FeatureModule {
   /// The identity-verification and trade-licence steps are intentionally
   /// excluded: they wrap themselves in [AuthScreenShell] to pin the footer.
   static const Set<String> _authShellSteps = {
-    RegistrationRoutes.signUpEmail,
     RegistrationRoutes.selectAccountType,
     RegistrationRoutes.organizationDetails,
     RegistrationRoutes.individualDetails,
@@ -58,7 +58,6 @@ class RegistrationModule extends FeatureModule {
 
   /// Title shown in the collapsed hero bar for each step.
   static const Map<String, String> _stepTitles = {
-    RegistrationRoutes.signUpEmail: 'registration.sign_up_title',
     RegistrationRoutes.selectAccountType: 'registration.account_type_title',
     RegistrationRoutes.organizationDetails: 'registration.org_details_title',
     RegistrationRoutes.individualDetails:
@@ -83,7 +82,9 @@ class RegistrationModule extends FeatureModule {
               ),
               child: useAuthShell
                   ? AuthScreenShell(
-                      onBack: showBack ? () => context.pop() : null,
+                      onBack: showBack
+                          ? () => RegistrationNavigation.popStep(context)
+                          : null,
                       title: titleKey?.tr(),
                       child: child,
                     )
@@ -91,10 +92,6 @@ class RegistrationModule extends FeatureModule {
             );
           },
           routes: [
-            GoRoute(
-              path: RegistrationRoutes.signUpEmail,
-              builder: (context, state) => const SignUpEmailPage(),
-            ),
             GoRoute(
               path: RegistrationRoutes.selectAccountType,
               builder: (context, state) => const SelectAccountTypePage(),

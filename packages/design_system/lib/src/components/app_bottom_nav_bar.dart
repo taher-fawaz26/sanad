@@ -61,6 +61,12 @@ class AppBottomNavCenterAction {
   final bool enabled;
 }
 
+/// Creates a [NotchBottomBarController] with the notch at the center tab.
+///
+/// [AppBottomNavBar] always uses index 2 for its center action.
+NotchBottomBarController createAppBottomNavController() =>
+    NotchBottomBarController(index: 2);
+
 /// Notch bottom navigation bar with 5 items and a center floating action.
 ///
 /// Built on top of `animated_notch_bottom_bar` package.

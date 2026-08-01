@@ -1,4 +1,4 @@
-import 'package:auth/src/domain/entities/email_auth_result.dart';
+import 'package:auth/auth.dart' show AuthSessionEntity;
 import 'package:core/core.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:registration/src/data/models/profile_completion_request.dart';
@@ -36,13 +36,13 @@ class CompleteProfileParams {
 /// Completes the provider profile by posting to either the individual or
 /// company endpoint based on account type.
 class CompleteProfileUseCase
-    extends UseCase<AuthenticatedResult, CompleteProfileParams> {
+    extends UseCase<AuthSessionEntity, CompleteProfileParams> {
   CompleteProfileUseCase(this._repository);
 
   final MediaRepository _repository;
 
   @override
-  TaskEither<Failure, AuthenticatedResult> call(CompleteProfileParams params) {
+  TaskEither<Failure, AuthSessionEntity> call(CompleteProfileParams params) {
     final request = ProfileCompletionRequest(
       emiratesIdFrontId: params.emiratesIdFrontId,
       emiratesIdBackId: params.emiratesIdBackId,
