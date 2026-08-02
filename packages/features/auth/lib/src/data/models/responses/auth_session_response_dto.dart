@@ -1,14 +1,13 @@
 import 'package:auth/src/data/models/auth_profile_factory.dart';
 import 'package:auth/src/data/models/permission_model.dart';
 import 'package:auth/src/data/models/user_model.dart';
-import 'package:auth/src/domain/entities/auth_profile_entity.dart';
 import 'package:auth/src/domain/entities/auth_response_entity.dart';
 import 'package:auth/src/domain/entities/permission_entity.dart';
 import 'package:auth/src/domain/enums/user_type.dart';
 
 /// Data model for [AuthSessionEntity] — inherits fields, adds JSON I/O.
 ///
-/// [AuthSessionEntity.profile] is typed as [AuthProfileEntity]; the concrete
+/// [AuthSessionEntity.profile] is typed as [AuthProfileEntity?]; the concrete
 /// model is chosen from `user.type` via [AuthProfileFactory] (Swagger `oneOf`).
 class AuthSessionResponseModel extends AuthSessionEntity {
   const AuthSessionResponseModel({
@@ -18,12 +17,19 @@ class AuthSessionResponseModel extends AuthSessionEntity {
     required super.isEmailVerified,
     required super.isProfileCreated,
     required super.user,
-    required super.profile,
     required super.permissions,
+    super.profile,
   });
 
   factory AuthSessionResponseModel.fromJson(Map<String, dynamic> json) {
-    final userJson = json['user'] as Map<String, dynamic>;
+    final rawUser = json['user'] as Map<String, dynamic>;
+    // Live verify payload may omit `user.isVerified` and only send top-level
+    // `isEmailVerified` — copy it onto the user map before parsing.
+    final userJson = Map<String, dynamic>.from(rawUser)
+      ..putIfAbsent(
+        'isVerified',
+        () => json['isEmailVerified'] as bool? ?? false,
+      );
     final user = UserModel.fromJson(userJson);
     final typeRaw = userJson['userType'] ?? userJson['type'];
     final type = user.type ??
@@ -33,6 +39,14 @@ class AuthSessionResponseModel extends AuthSessionEntity {
                 'Auth session user is missing userType/type.',
               )));
 
+    final rawProfile = json['profile'];
+    final profile = rawProfile is Map
+        ? AuthProfileFactory.fromJson(
+            type: type,
+            json: Map<String, dynamic>.from(rawProfile),
+          )
+        : null;
+
     return AuthSessionResponseModel(
       accessToken: json['accessToken'] as String,
       refreshToken: json['refreshToken'] as String,
@@ -40,10 +54,7 @@ class AuthSessionResponseModel extends AuthSessionEntity {
       isEmailVerified: json['isEmailVerified'] as bool,
       isProfileCreated: json['isProfileCreated'] as bool,
       user: user,
-      profile: AuthProfileFactory.fromJson(
-        type: type,
-        json: json['profile'] as Map<String, dynamic>,
-      ),
+      profile: profile,
       permissions: _parsePermissions(json['permissions'] as List<dynamic>?),
     );
   }
@@ -55,7 +66,7 @@ class AuthSessionResponseModel extends AuthSessionEntity {
         'isEmailVerified': isEmailVerified,
         'isProfileCreated': isProfileCreated,
         'user': (user as UserModel).toJson(),
-        'profile': AuthProfileFactory.toJson(profile),
+        if (profile != null) 'profile': AuthProfileFactory.toJson(profile!),
         'permissions': permissions
             .cast<PermissionModel>()
             .map((e) => e.toJson())

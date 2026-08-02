@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:auth/src/auth/auth_status.dart';
 import 'package:auth/src/auth/auth_status_notifier.dart';
@@ -14,6 +15,7 @@ import 'package:auth/src/domain/usecases/validate_email_usecase.dart';
 import 'package:auth/src/domain/usecases/verify_email_otp_usecase.dart';
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:network/network.dart';
 
@@ -128,7 +130,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         .run();
 
     await result.match(
-      (failure) async => emit(AuthOtpVerifyFailureState(failure)),
+      (failure) async {
+        if (kDebugMode) {
+          developer.log(
+            'OTP verify failed: ${failure.runtimeType} '
+            'message=${failure.message} metadata=${failure.metadata}',
+            name: 'AuthBloc',
+          );
+        }
+        emit(AuthOtpVerifyFailureState(failure));
+      },
       (response) async {
         switch (response) {
           case AuthSessionEntity(

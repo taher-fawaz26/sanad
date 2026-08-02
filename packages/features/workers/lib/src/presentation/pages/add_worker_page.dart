@@ -22,6 +22,7 @@ class _AddWorkerPageState extends State<AddWorkerPage> {
   final _formBodyKey = GlobalKey<WorkerFormBodyState>();
 
   bool _showValidationErrors = false;
+  bool _isFormComplete = false;
   var _submittingDialogVisible = false;
 
   @override
@@ -48,6 +49,10 @@ class _AddWorkerPageState extends State<AddWorkerPage> {
                     key: _formBodyKey,
                     formKey: _formKey,
                     showValidationErrors: _showValidationErrors,
+                    onCompletenessChanged: (complete) {
+                      if (_isFormComplete == complete) return;
+                      setState(() => _isFormComplete = complete);
+                    },
                   ),
                 ),
               ),
@@ -59,7 +64,9 @@ class _AddWorkerPageState extends State<AddWorkerPage> {
                 child: BlocBuilder<AddWorkerBloc, AddWorkerState>(
                   builder: (context, state) => AppButton(
                     label: 'workers.add_worker.invite_button'.tr(),
-                    onPressed: state.isLoading ? null : _onSubmit,
+                    onPressed: state.isLoading || !_isFormComplete
+                        ? null
+                        : _onSubmit,
                   ),
                 ),
               ),

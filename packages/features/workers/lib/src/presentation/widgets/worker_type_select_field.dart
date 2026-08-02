@@ -9,6 +9,7 @@ class WorkerTypeSelectField extends StatelessWidget {
     required this.selectedType,
     required this.onTypeSelected,
     this.enabled = true,
+    this.isRequired = false,
     this.errorText,
     super.key,
   });
@@ -16,6 +17,7 @@ class WorkerTypeSelectField extends StatelessWidget {
   final WorkerType? selectedType;
   final ValueChanged<WorkerType>? onTypeSelected;
   final bool enabled;
+  final bool isRequired;
   final String? errorText;
 
   @override
@@ -26,6 +28,7 @@ class WorkerTypeSelectField extends StatelessWidget {
       hint: 'workers.add_worker.type_hint'.tr(),
       errorText: errorText,
       enabled: enabled,
+      isRequired: isRequired,
       onTap: enabled ? () => _openPicker(context) : null,
     );
   }

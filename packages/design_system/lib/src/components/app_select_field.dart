@@ -1,4 +1,5 @@
 import 'package:app_assets/app_assets.dart';
+import 'package:design_system/src/components/app_field_label.dart';
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/spacing/responsive_spacing.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
@@ -17,6 +18,7 @@ class AppSelectField extends StatelessWidget {
     this.prefix,
     this.onTap,
     this.enabled = true,
+    this.isRequired = false,
     this.showChevron = true,
     this.errorText,
   });
@@ -27,6 +29,9 @@ class AppSelectField extends StatelessWidget {
   final Widget? prefix;
   final VoidCallback? onTap;
   final bool enabled;
+
+  /// When `true`, appends a red `*` after the label.
+  final bool isRequired;
   final bool showChevron;
 
   /// When non-null, the field renders with an error border and this
@@ -72,9 +77,9 @@ class AppSelectField extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            label,
-            style: FieldTokens.labelStyle(typography, colors, brightness),
+          AppFieldLabel(
+            label: label,
+            isRequired: isRequired,
           ),
           SizedBox(height: labelGap),
           Material(

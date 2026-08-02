@@ -4,12 +4,10 @@ import 'package:maps/src/domain/entities/city_entity.dart';
 import 'package:maps/src/domain/failures/locations_failure.dart';
 import 'package:maps/src/domain/repositories/locations_repository.dart';
 
-/// Resolves the single supported country automatically, then fetches its
-/// cities.
+/// Resolves the supported country automatically, then fetches its cities.
 ///
-/// - 0 countries returned  → [LocationsNoCountryFailure]
-/// - 1 country returned    → cities are fetched and returned
-/// - >1 countries returned → [LocationsMultiCountryFailure] (no picker yet)
+/// - 0 countries returned → [LocationsNoCountryFailure]
+/// - ≥1 countries returned → cities for [List.first] are fetched and returned
 class GetCitiesUseCase implements UseCase<List<CityEntity>, NoParams> {
   const GetCitiesUseCase(this._repository);
 
@@ -21,9 +19,13 @@ class GetCitiesUseCase implements UseCase<List<CityEntity>, NoParams> {
         if (countries.isEmpty) {
           return TaskEither.left(const LocationsNoCountryFailure());
         }
-        if (countries.length > 1) {
-          return TaskEither.left(const LocationsMultiCountryFailure());
-        }
-        return _repository.getCities(countryId: countries.first.id);
+
+        // Product decision:
+        // The Provider application currently operates only in the UAE.
+        // If multiple country records are returned by the backend,
+        // always use the first country and continue loading cities.
+        // Multi-country support will be implemented in the future.
+        final country = countries.first;
+        return _repository.getCities(countryId: country.id);
       });
 }

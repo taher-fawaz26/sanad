@@ -76,7 +76,7 @@ Semantic colors: `LightColors` / `DarkColors` → `AppColors` ThemeExtension
 
 Key components exported from `design_system.dart`:
 
-- **Input:** `AppTextField`, `AppSelectField`, `AppPhoneField`, `AppSearchField`, `AppFieldAction`
+- **Input:** `AppTextField`, `AppSelectField`, `AppPhoneField`, `AppSearchField`, `AppFieldAction`, `AppFieldLabel` — pass `isRequired: true` on text/phone/select fields for a red `*` after the label
 - **Action:** `AppButton`, `AppButtonGroup`, `AppIconButton`
 - **Navigation:** `AppNavBar`, `AppLargeNavBar`, `AppBottomNavBar`, `AppTabBar`
 

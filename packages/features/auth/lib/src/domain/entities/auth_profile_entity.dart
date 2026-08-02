@@ -55,23 +55,27 @@ class CompanyProviderProfileEntity extends AuthProfileEntity {
     required this.id,
     required this.businessName,
     required this.businessEmail,
-    required this.tradeLicenseNumber,
     required this.representativeFullName,
     required this.representativeEmail,
-    required this.representativeEmiratesId,
     required this.emiratesIdFrontId,
     required this.emiratesIdBackId,
     required this.tradeLicenseId,
     required this.isReviewed,
+    this.tradeLicenseNumber,
+    this.representativeEmiratesId,
   });
 
   final String id;
   final String businessName;
   final String businessEmail;
-  final String tradeLicenseNumber;
+
+  /// Nullable per Swagger `CompanyProviderAuthProfileResponseDto`.
+  final String? tradeLicenseNumber;
   final String representativeFullName;
   final String representativeEmail;
-  final String representativeEmiratesId;
+
+  /// Nullable per Swagger `CompanyProviderAuthProfileResponseDto`.
+  final String? representativeEmiratesId;
   final String emiratesIdFrontId;
   final String emiratesIdBackId;
   final String tradeLicenseId;

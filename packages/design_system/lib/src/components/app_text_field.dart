@@ -1,3 +1,4 @@
+import 'package:design_system/src/components/app_field_label.dart';
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
 import 'package:design_system/src/theme/colors/field_tokens.dart';
@@ -25,6 +26,7 @@ class AppTextField extends StatefulWidget {
     this.enabled = true,
     this.readOnly = false,
     this.autofocus = false,
+    this.isRequired = false,
     this.keyboardType,
     this.textInputAction,
     this.onChanged,
@@ -48,6 +50,9 @@ class AppTextField extends StatefulWidget {
   final bool enabled;
   final bool readOnly;
   final bool autofocus;
+
+  /// When `true` and [label] is set, appends a red `*` after the label.
+  final bool isRequired;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final ValueChanged<String>? onChanged;
@@ -101,9 +106,9 @@ class _AppTextFieldState extends State<AppTextField> {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (widget.label != null) ...[
-              Text(
-                widget.label!,
-                style: FieldTokens.labelStyle(typography, colors, brightness),
+              AppFieldLabel(
+                label: widget.label!,
+                isRequired: widget.isRequired,
               ),
               SizedBox(height: _labelGap),
             ],

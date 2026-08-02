@@ -70,21 +70,22 @@ void main() {
     );
 
     test(
-      'returns LocationsMultiCountryFailure when >1 countries returned',
+      'fetches cities for the first country when multiple are returned',
       () async {
         when(
           () => repository.getCountries(),
         ).thenReturn(TaskEither.right([uaeCountry, otherCountry]));
+        when(
+          () => repository.getCities(countryId: uaeCountry.id),
+        ).thenReturn(TaskEither.right(cities));
 
         final result = await useCase(const NoParams()).run();
 
-        expect(result.isLeft(), true);
-        result.fold(
-          (f) => expect(f, isA<LocationsMultiCountryFailure>()),
-          (_) => fail('expected Left'),
-        );
+        expect(result.isRight(), true);
+        expect(result.getOrElse((_) => []), cities);
+        verify(() => repository.getCities(countryId: uaeCountry.id)).called(1);
         verifyNever(
-          () => repository.getCities(countryId: any(named: 'countryId')),
+          () => repository.getCities(countryId: otherCountry.id),
         );
       },
     );

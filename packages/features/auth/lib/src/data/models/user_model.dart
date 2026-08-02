@@ -18,7 +18,9 @@ class UserModel extends UserEntity implements EntityConverter<UserEntity> {
     return UserModel(
       id: json['id'] as String,
       email: json['email'] as String,
-      isVerified: json['isVerified'] as bool,
+      // `auth/email/verify` may omit this on `user` and only send
+      // top-level `isEmailVerified` — session parser fills it before call.
+      isVerified: (json['isVerified'] as bool?) ?? false,
       isActive: json['isActive'] as bool?,
       type: typeRaw is String ? UserType.fromString(typeRaw) : null,
     );

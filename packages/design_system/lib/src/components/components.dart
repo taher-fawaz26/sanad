@@ -17,6 +17,7 @@ export 'app_date_picker.dart';
 export 'app_divider.dart';
 export 'app_feature_icon.dart';
 export 'app_field_action.dart';
+export 'app_field_label.dart';
 export 'app_grouped_key_value_list.dart';
 export 'app_key_value_card.dart';
 export 'app_list_card.dart';

@@ -39,9 +39,11 @@ class OnboardingAuthEntity extends AuthResponseEntity {
       ];
 }
 
-/// Authenticated session (`status: authenticated`) — tokens + profile.
+/// Authenticated session (`status: authenticated`) — tokens + optional profile.
 ///
 /// [profile] is itself a Swagger `oneOf`, resolved via [AuthProfileEntity].
+/// Some endpoints (e.g. `auth/email/verify`) omit `profile` even when
+/// [isProfileCreated] is true; callers must tolerate a null [profile].
 class AuthSessionEntity extends AuthResponseEntity {
   const AuthSessionEntity({
     required this.accessToken,
@@ -50,8 +52,8 @@ class AuthSessionEntity extends AuthResponseEntity {
     required this.isEmailVerified,
     required this.isProfileCreated,
     required this.user,
-    required this.profile,
     required this.permissions,
+    this.profile,
   });
 
   final String accessToken;
@@ -60,7 +62,7 @@ class AuthSessionEntity extends AuthResponseEntity {
   final bool isEmailVerified;
   final bool isProfileCreated;
   final UserEntity user;
-  final AuthProfileEntity profile;
+  final AuthProfileEntity? profile;
   final List<PermissionEntity> permissions;
 
   @override

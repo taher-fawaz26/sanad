@@ -39,7 +39,7 @@ class AppLoadingIndicator extends StatefulWidget {
   const AppLoadingIndicator({
     super.key,
     this.size = 48,
-    this.duration = const Duration(milliseconds: 700),
+    this.duration = const Duration(milliseconds: 500),
     this.frameCount = 7,
     this.assetFolder = 'assets/lottie',
     this.assetPrefix = 'sprite_',

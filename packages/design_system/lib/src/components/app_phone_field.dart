@@ -1,5 +1,6 @@
 import 'package:app_assets/app_assets.dart';
 import 'package:core/core.dart';
+import 'package:design_system/src/components/app_field_label.dart';
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/spacing/responsive_spacing.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
@@ -22,6 +23,7 @@ class AppPhoneField extends StatefulWidget {
     this.hint,
     this.onChanged,
     this.enabled = true,
+    this.isRequired = false,
     this.countryFlagAsset = AppSvgs.flagAe,
     this.countryCode = '+971',
     this.onCountryTap,
@@ -33,6 +35,9 @@ class AppPhoneField extends StatefulWidget {
   final String? hint;
   final ValueChanged<String>? onChanged;
   final bool enabled;
+
+  /// When `true`, appends a red `*` after the label.
+  final bool isRequired;
   final String countryFlagAsset;
 
   /// Dial code shown after the flag (Figma `+971`).
@@ -109,9 +114,9 @@ class _AppPhoneFieldState extends State<AppPhoneField> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          widget.label,
-          style: FieldTokens.labelStyle(typography, colors, brightness),
+        AppFieldLabel(
+          label: widget.label,
+          isRequired: widget.isRequired,
         ),
         SizedBox(height: labelGap),
         SizedBox(

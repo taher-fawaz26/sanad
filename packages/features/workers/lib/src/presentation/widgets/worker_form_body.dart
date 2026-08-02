@@ -24,6 +24,7 @@ class WorkerFormBody extends StatefulWidget {
     this.requireContact = true,
     this.emailReadOnly = false,
     this.typeReadOnly = false,
+    this.onCompletenessChanged,
     super.key,
   });
 
@@ -43,6 +44,9 @@ class WorkerFormBody extends StatefulWidget {
 
   /// When true, worker type cannot be changed.
   final bool typeReadOnly;
+
+  /// Fires when [WorkerFormBodyState.isComplete] changes.
+  final ValueChanged<bool>? onCompletenessChanged;
 
   @override
   State<WorkerFormBody> createState() => WorkerFormBodyState();
@@ -65,11 +69,24 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
 
   late WorkerType? type = widget.initialType;
 
+  bool _wasComplete = false;
+
   bool get isTypeValid => type != null;
 
   /// Phone is valid when contact is optional, or when it normalizes to a
   /// valid UAE number.
   bool get isPhoneValid => !widget.requireContact || phone != null;
+
+  /// All required fields are filled (and contact fields are valid when
+  /// [WorkerFormBody.requireContact] is true).
+  bool get isComplete {
+    if (fullName.isEmpty || jobTitle.isEmpty || type == null) return false;
+    if (widget.requireContact) {
+      if (_validateEmail(emailController.text) != null) return false;
+      if (!isPhoneValid) return false;
+    }
+    return true;
+  }
 
   String get fullName => fullNameController.text.trim();
 
@@ -86,12 +103,37 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
   String get jobTitle => jobTitleController.text.trim();
 
   @override
+  void initState() {
+    super.initState();
+    fullNameController.addListener(_onFieldChanged);
+    emailController.addListener(_onFieldChanged);
+    phoneController.addListener(_onFieldChanged);
+    jobTitleController.addListener(_onFieldChanged);
+    _wasComplete = isComplete;
+  }
+
+  @override
   void dispose() {
-    fullNameController.dispose();
-    emailController.dispose();
-    phoneController.dispose();
-    jobTitleController.dispose();
+    fullNameController
+      ..removeListener(_onFieldChanged)
+      ..dispose();
+    emailController
+      ..removeListener(_onFieldChanged)
+      ..dispose();
+    phoneController
+      ..removeListener(_onFieldChanged)
+      ..dispose();
+    jobTitleController
+      ..removeListener(_onFieldChanged)
+      ..dispose();
     super.dispose();
+  }
+
+  void _onFieldChanged() {
+    final complete = isComplete;
+    if (complete == _wasComplete) return;
+    _wasComplete = complete;
+    widget.onCompletenessChanged?.call(complete);
   }
 
   /// Reserved demo domains the backend's email service (Resend in test mode)
@@ -144,6 +186,7 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
             controller: fullNameController,
             label: 'workers.add_worker.full_name_label'.tr(),
             hint: 'workers.add_worker.full_name_hint'.tr(),
+            isRequired: true,
             validator: (value) => (value?.trim().isEmpty ?? true)
                 ? 'workers.add_worker.validation_required'.tr()
                 : null,
@@ -156,6 +199,7 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
             keyboardType: TextInputType.emailAddress,
             readOnly: widget.emailReadOnly,
             enabled: !widget.emailReadOnly,
+            isRequired: widget.requireContact,
             validator: _validateEmail,
           ),
           SizedBox(height: AppSpacing.md),
@@ -163,6 +207,7 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
             label: 'workers.add_worker.phone_label'.tr(),
             controller: phoneController,
             hint: 'workers.add_worker.phone_hint'.tr(),
+            isRequired: widget.requireContact,
             errorText: _phoneErrorText,
           ),
           SizedBox(height: AppSpacing.md),
@@ -170,6 +215,7 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
             controller: jobTitleController,
             label: 'workers.add_worker.job_title_label'.tr(),
             hint: 'workers.add_worker.job_title_hint'.tr(),
+            isRequired: true,
             validator: (value) => (value?.trim().isEmpty ?? true)
                 ? 'workers.add_worker.validation_required'.tr()
                 : null,
@@ -177,9 +223,13 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
           SizedBox(height: AppSpacing.md),
           WorkerTypeSelectField(
             selectedType: type,
+            isRequired: true,
             onTypeSelected: widget.typeReadOnly
                 ? null
-                : (value) => setState(() => type = value),
+                : (value) {
+                    setState(() => type = value);
+                    _onFieldChanged();
+                  },
             enabled: !widget.typeReadOnly,
             errorText: widget.showValidationErrors && type == null
                 ? 'workers.add_worker.validation_required'.tr()

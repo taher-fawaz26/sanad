@@ -55,6 +55,14 @@ List<WidgetbookNode> buildCatalogDirectories() => [
                   hint: 'you@example.com',
                 ),
               ),
+              WidgetbookUseCase(
+                name: 'Required',
+                builder: (context) => const AppTextField(
+                  label: 'Email',
+                  hint: 'you@example.com',
+                  isRequired: true,
+                ),
+              ),
             ],
           ),
           WidgetbookComponent(
@@ -63,6 +71,13 @@ List<WidgetbookNode> buildCatalogDirectories() => [
               WidgetbookUseCase(
                 name: 'Default',
                 builder: (context) => const AppPhoneField(label: 'Phone'),
+              ),
+              WidgetbookUseCase(
+                name: 'Required',
+                builder: (context) => const AppPhoneField(
+                  label: 'Phone',
+                  isRequired: true,
+                ),
               ),
             ],
           ),
@@ -83,6 +98,14 @@ List<WidgetbookNode> buildCatalogDirectories() => [
                 builder: (context) => const AppSelectField(
                   label: 'Country',
                   value: 'UAE',
+                ),
+              ),
+              WidgetbookUseCase(
+                name: 'Required',
+                builder: (context) => const AppSelectField(
+                  label: 'Country',
+                  value: 'UAE',
+                  isRequired: true,
                 ),
               ),
             ],
