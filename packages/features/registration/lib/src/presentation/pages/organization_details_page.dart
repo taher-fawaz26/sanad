@@ -20,24 +20,25 @@ class OrganizationDetailsPage extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.read<RegistrationCubit>().state;
-    final businessNameController =
-        useTextEditingController(text: state.businessName);
-    final representativeNameController =
-        useTextEditingController(text: state.representativeName);
+    final businessNameController = useTextEditingController(
+      text: state.businessName,
+    );
+    final representativeNameController = useTextEditingController(
+      text: state.representativeName,
+    );
     final formKey = useMemoized(GlobalKey<FormState>.new);
     final colors = context.appColors;
 
-    String? required(String? value) =>
-        (value == null || value.trim().isEmpty)
-            ? 'registration.field_required'.tr()
-            : null;
+    String? required(String? value) => (value == null || value.trim().isEmpty)
+        ? 'registration.field_required'.tr()
+        : null;
 
     void submit() {
       if (!(formKey.currentState?.validate() ?? false)) return;
       context.read<RegistrationCubit>().setOrganizationDetails(
-            businessName: businessNameController.text.trim(),
-            representativeName: representativeNameController.text.trim(),
-          );
+        businessName: businessNameController.text.trim(),
+        representativeName: representativeNameController.text.trim(),
+      );
       context.push(RegistrationRoutes.identityVerification);
     }
 
@@ -47,44 +48,47 @@ class OrganizationDetailsPage extends HookWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-          AppSvgPicture.asset(
-            AppSvgs.registrationCity,
-            width: responsiveDimension(_kIconSize),
-            height: responsiveDimension(_kIconSize),
-            colorFilter: ColorFilter.mode(colors.textPrimary, BlendMode.srcIn),
-          ),
-          SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-          RegistrationHeader(
-            title: 'registration.org_details_title'.tr(),
-            subtitle: Text('registration.org_details_subtitle'.tr()),
-          ),
-          SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-          AppTextField(
-            controller: businessNameController,
-            label: 'registration.business_name'.tr(),
-            hint: 'registration.business_name_hint'.tr(),
-            textInputAction: TextInputAction.next,
-            textCapitalization: TextCapitalization.words,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
-            validator: required,
-          ),
-          SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-          AppTextField(
-            controller: representativeNameController,
-            label: 'registration.representative_name'.tr(),
-            hint: 'registration.representative_name_hint'.tr(),
-            textInputAction: TextInputAction.done,
-            textCapitalization: TextCapitalization.words,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
-            validator: required,
-            onSubmitted: (_) => submit(),
-          ),
-          SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-          AppButton(
-            label: 'registration.continue'.tr(),
-            onPressed: submit,
-          ),
-        ],
+            AppSvgPicture.asset(
+              AppSvgs.registrationCity,
+              width: responsiveDimension(_kIconSize),
+              height: responsiveDimension(_kIconSize),
+              colorFilter: ColorFilter.mode(
+                colors.textPrimary,
+                BlendMode.srcIn,
+              ),
+            ),
+            SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
+            RegistrationHeader(
+              title: 'registration.org_details_title'.tr(),
+              subtitle: Text('registration.org_details_subtitle'.tr()),
+            ),
+            SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
+            AppTextField(
+              controller: businessNameController,
+              label: 'registration.business_name'.tr(),
+              hint: 'registration.business_name_hint'.tr(),
+              textInputAction: TextInputAction.next,
+              textCapitalization: TextCapitalization.words,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              validator: required,
+            ),
+            SizedBox(height: responsiveDimension(AppSpacing.lg)),
+            AppTextField(
+              controller: representativeNameController,
+              label: 'registration.representative_name'.tr(),
+              hint: 'registration.representative_name_hint'.tr(),
+              textInputAction: TextInputAction.done,
+              textCapitalization: TextCapitalization.words,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              validator: required,
+              onSubmitted: (_) => submit(),
+            ),
+            SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
+            AppButton(
+              label: 'registration.continue'.tr(),
+              onPressed: submit,
+            ),
+          ],
         ),
       ),
     );

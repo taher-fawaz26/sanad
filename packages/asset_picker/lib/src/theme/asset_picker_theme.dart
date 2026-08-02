@@ -1,3 +1,4 @@
+import 'package:app_assets/app_assets.dart';
 import 'package:asset_picker/src/domain/enums/asset_source.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
@@ -7,15 +8,15 @@ import 'package:flutter/material.dart';
 @immutable
 class AssetPickerTexts {
   const AssetPickerTexts({
-    this.sheetTitle = 'Add attachment',
+    this.sheetTitle = 'Select action',
     this.cancel = 'Cancel',
     this.cameraLabel = 'Camera',
     this.cameraDescription = 'Take a new photo',
-    this.galleryLabel = 'Gallery',
+    this.galleryLabel = 'Upload from Gallery',
     this.galleryDescription = 'Choose from your library',
-    this.filesLabel = 'Files',
+    this.filesLabel = 'Upload file',
     this.filesDescription = 'Browse documents and files',
-    this.scannerLabel = 'Scan document',
+    this.scannerLabel = 'Scan or capture',
     this.scannerDescription = 'Scan a physical document',
   });
 
@@ -47,22 +48,22 @@ class AssetPickerTexts {
   };
 }
 
-/// Leading icons for each source. Swap individual icons or the whole set.
+/// Leading SVG icons for each source — Figma `2947:14236`.
 @immutable
 class AssetPickerIcons {
   const AssetPickerIcons({
-    this.camera = Icons.photo_camera_outlined,
-    this.gallery = Icons.photo_library_outlined,
-    this.files = Icons.folder_open_outlined,
-    this.scanner = Icons.document_scanner_outlined,
+    this.camera = AppSvgs.assetPickerScanCapture,
+    this.gallery = AppSvgs.assetPickerGallery,
+    this.files = AppSvgs.assetPickerUploadFile,
+    this.scanner = AppSvgs.assetPickerScanCapture,
   });
 
-  final IconData camera;
-  final IconData gallery;
-  final IconData files;
-  final IconData scanner;
+  final String camera;
+  final String gallery;
+  final String files;
+  final String scanner;
 
-  IconData iconFor(AssetSource source) => switch (source) {
+  String iconPathFor(AssetSource source) => switch (source) {
     AssetSource.camera => camera,
     AssetSource.gallery => gallery,
     AssetSource.files => files,
@@ -79,9 +80,10 @@ class AssetPickerColors {
     required this.title,
     required this.subtitle,
     required this.icon,
-    required this.iconBackground,
     required this.dragHandle,
     required this.divider,
+    required this.rowDivider,
+    required this.cancel,
     required this.destructive,
   });
 
@@ -89,9 +91,10 @@ class AssetPickerColors {
   final Color title;
   final Color subtitle;
   final Color icon;
-  final Color iconBackground;
   final Color dragHandle;
   final Color divider;
+  final Color rowDivider;
+  final Color cancel;
   final Color destructive;
 }
 
@@ -100,7 +103,8 @@ class AssetPickerColors {
 /// It mirrors the application's design system: call [AssetPickerTheme.of] to
 /// build a theme whose colors, typography, spacing and radii come straight
 /// from `context.appColors` / `context.appTypography` / `AppSpacing` /
-/// `AppRadius`. Every field can be overridden without forking the widgets.
+/// `ActionSheetTokens`. Every field can be overridden without forking the
+/// widgets.
 @immutable
 class AssetPickerTheme {
   const AssetPickerTheme({
@@ -110,16 +114,16 @@ class AssetPickerTheme {
     required this.titleStyle,
     required this.subtitleStyle,
     required this.tileTitleStyle,
-    required this.tileSubtitleStyle,
+    required this.cancelStyle,
     required this.sheetRadius,
-    required this.tileRadius,
-    required this.contentPadding,
-    required this.tilePadding,
-    required this.tileGap,
-    required this.iconSize,
-    required this.iconContainerSize,
+    required this.horizontalPadding,
+    required this.itemHeight,
+    required this.cancelHeight,
+    required this.leadingIconSize,
+    required this.itemHorizontalGap,
     required this.dragHandleWidth,
     required this.dragHandleHeight,
+    required this.dragHandleTopPadding,
     this.showDragHandle = true,
   });
 
@@ -136,50 +140,50 @@ class AssetPickerTheme {
   }) {
     final appColors = context.appColors;
     final typography = context.appTypography;
+    final brightness = Theme.of(context).brightness;
+    final actionSpec = ActionSheetTokens.resolve(
+      colors: appColors,
+      typography: typography,
+      brightness: brightness,
+    );
+    final bottomSpec = BottomSheetTokens.resolve(
+      colors: appColors,
+      typography: typography,
+      brightness: brightness,
+    );
+    final isDark = brightness == Brightness.dark;
 
     return AssetPickerTheme(
       colors:
           colors ??
           AssetPickerColors(
-            surface: appColors.surface,
+            surface: actionSpec.surfaceColor,
             title: appColors.textPrimary,
             subtitle: appColors.textSecondary,
-            icon: appColors.primary,
-            iconBackground: appColors.selectedContainer,
-            dragHandle: appColors.divider,
-            divider: appColors.divider,
+            icon: appColors.textPrimary,
+            dragHandle: bottomSpec.dragHandleColor,
+            divider: actionSpec.dividerColor,
+            rowDivider: isDark ? appColors.gray700 : appColors.gray50,
+            cancel: actionSpec.cancelStyle.color ?? appColors.textMuted,
             destructive: appColors.error,
           ),
       texts: texts ?? const AssetPickerTexts(),
       icons: icons ?? const AssetPickerIcons(),
-      titleStyle: typography.title3.copyWith(color: appColors.textPrimary),
+      titleStyle: actionSpec.titleStyle,
       subtitleStyle: typography.smallNormal.copyWith(
         color: appColors.textSecondary,
       ),
-      tileTitleStyle: typography.largeNormal.copyWith(
-        color: appColors.textPrimary,
-        fontWeight: FontWeight.w500,
-      ),
-      tileSubtitleStyle: typography.smallNormal.copyWith(
-        color: appColors.textSecondary,
-      ),
-      sheetRadius: AppRadius.circularLg,
-      tileRadius: AppRadius.circularMd,
-      contentPadding: EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.sm,
-        AppSpacing.lg,
-        AppSpacing.lg,
-      ),
-      tilePadding: EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.md,
-      ),
-      tileGap: AppSpacing.md,
-      iconSize: 24,
-      iconContainerSize: 44,
-      dragHandleWidth: 40,
-      dragHandleHeight: 4,
+      tileTitleStyle: actionSpec.itemStyle,
+      cancelStyle: actionSpec.cancelStyle.copyWith(fontWeight: FontWeight.w500),
+      sheetRadius: actionSpec.topRadius,
+      horizontalPadding: actionSpec.horizontalPadding,
+      itemHeight: actionSpec.itemHeight,
+      cancelHeight: AppDimension.buttonMd,
+      leadingIconSize: actionSpec.leadingIconSize,
+      itemHorizontalGap: actionSpec.itemHorizontalGap,
+      dragHandleWidth: bottomSpec.dragHandleWidth,
+      dragHandleHeight: bottomSpec.dragHandleHeight,
+      dragHandleTopPadding: bottomSpec.dragHandleTopPadding,
       showDragHandle: showDragHandle,
     );
   }
@@ -193,7 +197,7 @@ class AssetPickerTheme {
   /// Per-source leading icons.
   final AssetPickerIcons icons;
 
-  /// Style for the optional header title above the picker.
+  /// Style for the sheet title.
   final TextStyle titleStyle;
 
   /// Style for the optional header subtitle.
@@ -202,33 +206,31 @@ class AssetPickerTheme {
   /// Style for a source row's primary label.
   final TextStyle tileTitleStyle;
 
-  /// Style for a source row's supporting description.
-  final TextStyle tileSubtitleStyle;
+  /// Style for the cancel action.
+  final TextStyle cancelStyle;
 
   /// Corner radius of the bottom sheet.
   final BorderRadius sheetRadius;
 
-  /// Corner radius of the leading icon container in a row.
-  final BorderRadius tileRadius;
+  /// Horizontal inset for title, rows, and cancel.
+  final double horizontalPadding;
 
-  /// Padding around the sheet content.
-  final EdgeInsets contentPadding;
+  /// Height of each source row — Figma `56px`.
+  final double itemHeight;
 
-  /// Padding inside each source row.
-  final EdgeInsets tilePadding;
+  /// Height of the cancel row — Figma `48px`.
+  final double cancelHeight;
+
+  /// Size of the leading glyph — Figma `24px`.
+  final double leadingIconSize;
 
   /// Horizontal gap between a row's icon and its text.
-  final double tileGap;
-
-  /// Size of the leading glyph.
-  final double iconSize;
-
-  /// Size of the rounded container behind the leading glyph.
-  final double iconContainerSize;
+  final double itemHorizontalGap;
 
   /// Drag-handle dimensions.
   final double dragHandleWidth;
   final double dragHandleHeight;
+  final double dragHandleTopPadding;
 
   /// Whether to render the drag handle at the top of the sheet.
   final bool showDragHandle;

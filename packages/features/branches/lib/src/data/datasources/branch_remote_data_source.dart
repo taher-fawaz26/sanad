@@ -110,13 +110,18 @@ class BranchRemoteDataSourceImpl implements BranchRemoteDataSource {
       _apiClient.request<List<BranchAvailabilityEntity>>(
         path: BranchApiPaths.companySchedule,
         method: RequestMethod.get,
-        parser: (data) => (data as List<dynamic>)
-            .map(
-              (e) => BranchAvailabilityDto.fromJson(
-                e as Map<String, dynamic>,
-              ).toDomain(),
-            )
-            .toList(),
+        parser: (data) {
+          final map = data as Map<String, dynamic>;
+          final list = map['availability'] as List<dynamic>?;
+          if (list == null) return [];
+          return list
+              .map(
+                (e) => BranchAvailabilityDto.fromJson(
+                  e as Map<String, dynamic>,
+                ).toDomain(),
+              )
+              .toList();
+        },
       );
 
   @override

@@ -194,4 +194,16 @@ abstract final class AppSvgs {
 
   /// Remove document — Identity Verification success actions.
   static const String registrationRemove = '$_base/registration_remove.svg';
+
+  // ── Asset picker action sheet (`2947:14236`) ───────────────────────────────
+
+  /// Cloud upload — asset picker "Upload file" row (`2947:14240`).
+  static const String assetPickerUploadFile = '$_base/asset_picker_upload_file.svg';
+
+  /// Scan viewfinder — asset picker "Scan or capture" row (`2947:14241`).
+  static const String assetPickerScanCapture =
+      '$_base/asset_picker_scan_capture.svg';
+
+  /// Gallery with add — asset picker "Upload from Gallery" row (`2947:14242`).
+  static const String assetPickerGallery = '$_base/asset_picker_gallery.svg';
 }

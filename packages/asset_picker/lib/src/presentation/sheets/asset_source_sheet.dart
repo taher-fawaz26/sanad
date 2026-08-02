@@ -2,9 +2,12 @@ import 'package:asset_picker/src/domain/entities/asset_picker_options.dart';
 import 'package:asset_picker/src/domain/enums/asset_source.dart';
 import 'package:asset_picker/src/presentation/widgets/asset_picker_tile.dart';
 import 'package:asset_picker/src/theme/asset_picker_theme.dart';
+import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
 /// A design-system bottom sheet that lets the user choose an [AssetSource].
+///
+/// Figma `Menu` action sheet (`2947:14236`).
 ///
 /// The sheet **generates itself** from [AssetPickerOptions]: it renders exactly
 /// one row per enabled source (`allowCamera`, `allowGallery`, `allowFiles`,
@@ -22,7 +25,8 @@ class AssetSourceSheet extends StatelessWidget {
   final AssetPickerOptions options;
   final AssetPickerTheme theme;
 
-  /// The enabled sources, in presentation order: files → scanner → gallery → camera.
+  /// Enabled sources in presentation order:
+  /// files → scanner → gallery → camera.
   List<AssetSource> get _enabledSources => [
     if (options.allowFiles) AssetSource.files,
     if (options.allowScanner) AssetSource.scanner,
@@ -36,49 +40,59 @@ class AssetSourceSheet extends StatelessWidget {
     final sources = _enabledSources;
     final title = options.sheetTitle ?? theme.texts.sheetTitle;
     final subtitle = options.subtitle;
-    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
 
     return Material(
       color: colors.surface,
-      borderRadius: const BorderRadius.only(
-        topLeft: Radius.circular(24),
-        topRight: Radius.circular(24),
-      ),
+      borderRadius: theme.sheetRadius,
       clipBehavior: Clip.antiAlias,
       child: SafeArea(
         top: false,
-        child: Padding(
-          padding: EdgeInsets.only(bottom: bottomInset),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (theme.showDragHandle) _DragHandle(theme: theme),
-              Padding(
-                padding: theme.contentPadding,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: theme.titleStyle),
-                    if (subtitle != null && subtitle.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(subtitle, style: theme.subtitleStyle),
-                    ],
-                    const SizedBox(height: 8),
-                    for (var i = 0; i < sources.length; i++) ...[
-                      if (i > 0) Divider(height: 1, color: colors.divider),
-                      AssetPickerTile(
-                        source: sources[i],
-                        theme: theme,
-                        onTap: () => Navigator.of(context).pop(sources[i]),
-                      ),
-                    ],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (theme.showDragHandle) _DragHandle(theme: theme),
+            SizedBox(height: AppSpacing.lg),
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: theme.horizontalPadding,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: theme.titleStyle),
+                  if (subtitle != null && subtitle.isNotEmpty) ...[
+                    SizedBox(height: AppSpacing.xs),
+                    Text(subtitle, style: theme.subtitleStyle),
                   ],
+                ],
+              ),
+            ),
+            for (var i = 0; i < sources.length; i++)
+              AssetPickerTile(
+                source: sources[i],
+                theme: theme,
+                showBottomBorder: i < sources.length - 1,
+                onTap: () => Navigator.of(context).pop(sources[i]),
+              ),
+            Divider(height: 1, color: colors.divider),
+            Material(
+              color: colors.surface,
+              child: InkWell(
+                onTap: () => Navigator.of(context).pop(),
+                child: SizedBox(
+                  height: theme.cancelHeight,
+                  child: Center(
+                    child: Text(
+                      theme.texts.cancel,
+                      style: theme.cancelStyle,
+                    ),
+                  ),
                 ),
               ),
-            ],
-          ),
+            ),
+            SizedBox(height: AppSpacing.lg),
+          ],
         ),
       ),
     );
@@ -92,15 +106,18 @@ class _DragHandle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 12, bottom: 4),
-      child: Center(
-        child: Container(
-          width: theme.dragHandleWidth,
-          height: theme.dragHandleHeight,
-          decoration: BoxDecoration(
-            color: theme.colors.dragHandle,
-            borderRadius: BorderRadius.circular(theme.dragHandleHeight),
+    return SizedBox(
+      height: responsiveDimension(24),
+      child: Padding(
+        padding: EdgeInsets.only(top: theme.dragHandleTopPadding),
+        child: Center(
+          child: Container(
+            width: theme.dragHandleWidth,
+            height: theme.dragHandleHeight,
+            decoration: BoxDecoration(
+              color: theme.colors.dragHandle,
+              borderRadius: BorderRadius.circular(theme.dragHandleHeight),
+            ),
           ),
         ),
       ),
@@ -115,13 +132,20 @@ Future<AssetSource?> showAssetSourceSheet({
   required AssetPickerOptions options,
   required AssetPickerTheme theme,
 }) {
+  final appColors = context.appColors;
+  final typography = context.appTypography;
+  final brightness = Theme.of(context).brightness;
+  final actionSpec = ActionSheetTokens.resolve(
+    colors: appColors,
+    typography: typography,
+    brightness: brightness,
+  );
+
   return showModalBottomSheet<AssetSource>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    // The sheet renders its own drag handle (see [theme.showDragHandle]).
-    // Disable Material's built-in handle so it isn't drawn twice when the
-    // app-wide BottomSheetThemeData enables showDragHandle.
+    barrierColor: actionSpec.barrierColor,
     showDragHandle: false,
     builder: (_) => AssetSourceSheet(options: options, theme: theme),
   );

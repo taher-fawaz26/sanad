@@ -111,48 +111,57 @@ class _AccountTypeCard extends StatelessWidget {
     final isSelected = selected == type;
     final colors = context.appColors;
     final typography = context.appTypography;
+    final accentColor = isSelected ? colors.link : colors.textPrimary;
 
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: EdgeInsets.symmetric(
-          horizontal: responsiveDimension(AppSpacing.xl),
-          vertical: responsiveDimension(AppSpacing.lg),
+          horizontal: AppSpacing.xxl,
+          vertical: AppSpacing.lg,
         ),
         decoration: BoxDecoration(
-          color: colors.surface,
+          color: isSelected ? colors.primary50 : colors.gray50,
           border: Border.all(
-            color: isSelected ? colors.primary : colors.border,
+            color: isSelected ? colors.primary : colors.slate100,
             width: isSelected ? 2 : 1,
           ),
-          borderRadius: AppRadius.circularMd,
+          borderRadius: BorderRadius.circular(AppDimension.radiusProfileCard),
         ),
         child: Column(
           children: [
-            AppSvgPicture.asset(
-              iconPath,
-              width: responsiveDimension(28),
-              height: responsiveDimension(28),
-              colorFilter: ColorFilter.mode(
-                isSelected ? colors.primary : colors.textSecondary,
-                BlendMode.srcIn,
-              ),
+            Column(
+              children: [
+                AppSvgPicture.asset(
+                  iconPath,
+                  width: AppDimension.iconMenu,
+                  height: AppDimension.iconMenu,
+                  colorFilter: ColorFilter.mode(
+                    accentColor,
+                    BlendMode.srcIn,
+                  ),
+                ),
+                SizedBox(height: AppSpacing.md),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: typography.regularNormal.copyWith(
+                    fontWeight: FontWeight.w500,
+                    height: 16 / 16,
+                    color: accentColor,
+                  ),
+                ),
+              ],
             ),
-            SizedBox(height: responsiveDimension(AppSpacing.sm)),
-            Text(
-              title,
-              style: typography.regularNormal.copyWith(
-                fontWeight: FontWeight.w600,
-                color: colors.textPrimary,
-              ),
-            ),
-            SizedBox(height: responsiveDimension(4)),
+            SizedBox(height: AppSpacing.md),
             Text(
               description,
               textAlign: TextAlign.center,
-              style: typography.smallNormal.copyWith(
-                color: colors.textSecondary,
+              style: typography.tinyNormal.copyWith(
+                height: 16 / 12,
+                color: colors.slate500,
               ),
             ),
           ],
