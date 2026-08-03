@@ -30,6 +30,7 @@ class _MainShellState extends State<MainShell> {
   }
 
   void _goBranch(ProviderBottomNavDestination destination) {
+    _bottomNavController.collapse();
     widget.navigationShell.goBranch(
       destination.shellBranchIndex,
       initialLocation:
@@ -50,7 +51,23 @@ class _MainShellState extends State<MainShell> {
 
     return Scaffold(
       extendBody: true,
-      body: widget.navigationShell,
+      body: ListenableBuilder(
+        listenable: _bottomNavController.isExpanded,
+        builder: (context, _) {
+          return Stack(
+            children: [
+              widget.navigationShell,
+              if (_bottomNavController.expanded)
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTap: _bottomNavController.collapse,
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
       floatingActionButtonLocation: BottomNavExpandableCenter.fabLocation,
       floatingActionButton: BottomNavExpandableCenter(
         actions: actions,
@@ -58,6 +75,15 @@ class _MainShellState extends State<MainShell> {
         controller: _bottomNavController,
         theme: theme,
         onActionSelected: _goBranch,
+        fabBuilder: (context, {required selectedItem, required isExpanded, required onPressed, required theme, required actions}) {
+          return ProviderBottomNavItems.centerFabFace(
+            context,
+            selectedItem: selectedItem,
+            isExpanded: isExpanded,
+            theme: theme,
+            actions: actions,
+          );
+        },
       ),
       bottomNavigationBar: BottomNavBar(
         destinations: destinations,

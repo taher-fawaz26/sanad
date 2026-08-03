@@ -55,15 +55,16 @@ class CircularMenuItem extends StatelessWidget {
     this.badgeColor,
     this.child,
     this.semanticLabel,
-  })  : assert(padding >= 0.0),
-        assert(margin >= 0.0);
+  }) : assert(padding >= 0.0),
+       assert(margin >= 0.0);
 
   Widget _buildCircularMenuItem(BuildContext context) {
     return Container(
       margin: EdgeInsets.all(margin),
       decoration: BoxDecoration(
         color: Colors.transparent,
-        boxShadow: boxShadow ??
+        boxShadow:
+            boxShadow ??
             [
               BoxShadow(
                 color: color ?? Theme.of(context).primaryColor,
@@ -78,7 +79,8 @@ class CircularMenuItem extends StatelessWidget {
           child: InkWell(
             child: Padding(
               padding: EdgeInsets.all(padding),
-              child: child ??
+              child:
+                  child ??
                   (animatedIcon == null
                       ? Icon(
                           icon,
@@ -177,17 +179,20 @@ class _Badge extends StatelessWidget {
                   child: Text(
                     label ?? '',
                     textAlign: TextAlign.center,
-                    style: textStyle ??
+                    style:
+                        textStyle ??
                         TextStyle(
-                            fontSize: 10,
-                            color: textColor ??
-                                Theme.of(context).colorScheme.secondary),
+                          fontSize: 10,
+                          color:
+                              textColor ??
+                              Theme.of(context).colorScheme.secondary,
+                        ),
                   ),
                 ),
               ),
             ),
           ),
-        )
+        ),
       ],
     );
   }

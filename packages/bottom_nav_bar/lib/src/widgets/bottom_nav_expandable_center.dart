@@ -78,66 +78,112 @@ class _BottomNavExpandableCenterState<T>
   @override
   Widget build(BuildContext context) {
     final theme = widget.theme;
-    final fabColor = theme.resolveFabBackgroundColor(context);
-    final fabForeground = theme.resolveFabForegroundColor(context);
+    final fabClosedColor = theme.resolveFabBackgroundColor(context);
+    final fabOpenColor = theme.resolveFabOpenBackgroundColor(context);
     final fabPadding = (theme.fabSize - theme.iconSize) / 2;
-    final fabShadow = [
-      BoxShadow(
-        color: Colors.black.withValues(alpha: 0.25),
-        blurRadius: 4,
-        offset: const Offset(0, 2),
-      ),
-    ];
 
-    return SizedBox(
-      width: theme.fanDistance * 2 + theme.fabSize,
-      height: theme.fanDistance + theme.fabSize,
-      child: CircularMenu(
-        key: _menuKey,
-        alignment: Alignment.bottomCenter,
-        radius: theme.fanDistance,
-        animationDuration: theme.animationDuration,
-        curve: Curves.easeOut,
-        reverseCurve: Curves.easeIn,
-        toggleButtonColor: fabColor,
-        toggleButtonSize: theme.iconSize,
-        toggleButtonPadding: fabPadding,
-        toggleButtonMargin: 0,
-        toggleButtonIconColor: fabForeground,
-        toggleButtonBoxShadow: fabShadow,
-        toggleButtonChild: _buildClosedFace(context),
-        onOpen: () => notifyBottomNavOpened(widget.controller),
-        onClose: () => notifyBottomNavClosed(widget.controller),
-        items: [
-          for (final action in widget.actions)
-            CircularMenuItem(
-              onTap: () {
-                widget.controller.collapse();
-                widget.onActionSelected(action.item);
-              },
-              color: fabColor,
-              padding: fabPadding,
-              margin: 0,
-              iconSize: theme.iconSize,
-              boxShadow: fabShadow,
-              semanticLabel: action.semanticLabel ?? action.label,
-              child: action.iconBuilder(context, selected: true),
-            ),
-        ],
-      ),
+    return ListenableBuilder(
+      listenable: widget.controller.isExpanded,
+      builder: (context, _) {
+        final expanded = widget.controller.expanded;
+        final menuWidth = expanded
+            ? theme.fanDistance * 3 + theme.fabSize
+            : theme.fabSize * 1.3;
+        final menuHeight = expanded
+            ? theme.fanDistance * 0 + theme.fabSize * .8
+            : theme.fabSize * 1.25;
+        final fabShadow = _buildFabShadows(context, expanded: expanded);
+
+        return SizedBox(
+          width: menuWidth,
+          height: menuHeight,
+          child: CircularMenu(
+            key: _menuKey,
+            alignment: Alignment.bottomCenter,
+            radius: theme.fanDistance,
+            animationDuration: theme.animationDuration,
+            curve: Curves.easeOut,
+            reverseCurve: Curves.easeIn,
+            toggleButtonColor: fabClosedColor,
+            toggleButtonOpenColor: fabOpenColor,
+            toggleButtonSize: theme.iconSize,
+            toggleButtonPadding: fabPadding,
+            toggleButtonMargin: 0,
+            toggleButtonBoxShadow: fabShadow,
+            toggleButtonChild: _buildToggleFace(context, isExpanded: false),
+            toggleButtonOpenChild: _buildToggleFace(context, isExpanded: true),
+            onOpen: () => notifyBottomNavOpened(widget.controller),
+            onClose: () => notifyBottomNavClosed(widget.controller),
+            items: [
+              for (final action in widget.actions)
+                CircularMenuItem(
+                  onTap: () {
+                    widget.controller.collapse();
+                    widget.onActionSelected(action.item);
+                  },
+                  color: fabClosedColor,
+                  padding: fabPadding,
+                  margin: 0,
+                  iconSize: theme.iconSize,
+                  boxShadow: fabShadow,
+                  semanticLabel: action.semanticLabel ?? action.label,
+                  child: action.iconBuilder(context, selected: true),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildClosedFace(BuildContext context) {
+  List<BoxShadow> _buildFabShadows(
+    BuildContext context, {
+    required bool expanded,
+  }) {
+    final theme = widget.theme;
+    final shadows = <BoxShadow>[
+      BoxShadow(
+        color: Colors.black.withValues(alpha: 0.14),
+        blurRadius: 3,
+        offset: const Offset(0, 3),
+      ),
+    ];
+
+    if (!expanded) {
+      final glowColor = theme.resolveFabGlowColor(context);
+      if (glowColor != null) {
+        shadows.add(
+          BoxShadow(
+            color: glowColor,
+            blurRadius: theme.fabGlowBlur,
+            spreadRadius: theme.fabGlowSpread,
+            offset: Offset.zero,
+          ),
+        );
+      }
+    }
+
+    return shadows;
+  }
+
+  Widget _buildToggleFace(BuildContext context, {required bool isExpanded}) {
     final builder = widget.fabBuilder;
     if (builder != null) {
       return builder(
         context,
         selectedItem: widget.selectedItem,
-        isExpanded: widget.controller.expanded,
+        isExpanded: isExpanded,
         onPressed: widget.controller.toggle,
         theme: widget.theme,
         actions: widget.actions,
+      );
+    }
+
+    if (isExpanded) {
+      return Icon(
+        Icons.close,
+        color: widget.theme.resolveFabForegroundColor(context),
+        size: widget.theme.iconSize,
       );
     }
 

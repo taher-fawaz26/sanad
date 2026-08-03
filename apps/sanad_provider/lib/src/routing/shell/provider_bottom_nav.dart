@@ -58,13 +58,22 @@ enum ProviderBottomNavDestination {
     return values[branchIndex];
   }
 
-  /// SVG icon asset for this destination.
+  /// SVG icon asset for this destination (unselected / outline).
   String get iconAsset => switch (this) {
         home => AppNavigationIcons.home,
         messages => AppNavigationIcons.messages,
         requests => AppNavigationIcons.centerAction,
         services => AppNavigationIcons.service,
         settings => AppNavigationIcons.settings,
+      };
+
+  /// SVG icon asset when this destination is selected (filled variants).
+  String? get selectedIconAsset => switch (this) {
+        home => AppNavigationIcons.homeSelected,
+        settings => AppNavigationIcons.settingsSelected,
+        services => AppNavigationIcons.serviceFilled,
+        requests => AppNavigationIcons.requestsFilled,
+        messages => AppNavigationIcons.messagesFilled,
       };
 
   /// Localized label key for this destination.

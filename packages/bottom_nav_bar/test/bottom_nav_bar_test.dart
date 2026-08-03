@@ -75,6 +75,42 @@ void main() {
       expect(find.text('Settings'), findsOneWidget);
     });
 
+    testWidgets('renders custom painted notch bar', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            floatingActionButtonLocation:
+                BottomNavExpandableCenter.fabLocation,
+            bottomNavigationBar: BottomNavBar<_Dest>(
+              destinations: const [
+                BottomNavDestination(
+                  item: _Dest.home,
+                  label: 'Home',
+                  iconBuilder: _icon,
+                ),
+                BottomNavDestination(
+                  item: _Dest.settings,
+                  label: 'Settings',
+                  iconBuilder: _icon,
+                ),
+              ],
+              selectedItem: _Dest.home,
+              theme: const BottomNavThemeData(),
+              onDestinationSelected: (_) {},
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        find.descendant(
+          of: find.byType(BottomNavBar<_Dest>),
+          matching: find.byType(CustomPaint),
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('respects large text scale', (tester) async {
       await tester.pumpWidget(
         MaterialApp(

@@ -2,13 +2,21 @@
 ///
 /// Load with `AppSvgPicture.asset(AppNavigationIcons.x)` inside design-system
 /// components. Legacy aliases also exist on [AppSvgs].
-abstract final class AppNavigationIcons {  AppNavigationIcons._();
+abstract final class AppNavigationIcons {
+  AppNavigationIcons._();
 
   static const String _base = 'assets/icons/navigation';
 
   static const String home = '$_base/home.svg';
+  static const String homeSelected = '$_base/home_selected.svg';
   static const String service = '$_base/service.svg';
+  static const String serviceFilled = '$_base/service_filled.svg';
   static const String messages = '$_base/messages.svg';
+  static const String messagesFilled = '$_base/messages_filled.svg';
   static const String settings = '$_base/settings.svg';
+  static const String settingsSelected = '$_base/settings_selected.svg';
   static const String centerAction = '$_base/center_action.svg';
+  static const String requestsFilled = '$_base/requests_filled.svg';
+  static const String expandClosed = '$_base/expand_closed.svg';
+  static const String expandOpen = '$_base/expand_open.svg';
 }

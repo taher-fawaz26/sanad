@@ -10,6 +10,11 @@ class BottomNavThemeData {
     this.fabSize = 52,
     this.cornerRadius = 24,
     this.notchMargin = 8,
+    this.notchShoulderRadius = 12,
+    this.fabSink,
+    this.fabGlowColor,
+    this.fabGlowBlur = 12,
+    this.fabGlowSpread = 0,
     this.horizontalInset = 16,
     this.bottomInset = 8,
     this.contentPadding = 12,
@@ -25,6 +30,8 @@ class BottomNavThemeData {
     this.unselectedColor,
     this.fabBackgroundColor,
     this.fabForegroundColor,
+    this.fabOpenBackgroundColor,
+    this.fabOpenForegroundColor,
     this.labelStyle,
     this.selectedLabelStyle,
   });
@@ -40,6 +47,22 @@ class BottomNavThemeData {
 
   /// Gap between FAB and notch edge.
   final double notchMargin;
+
+  /// Shoulder fillet radius where the notch meets the flat bar top edge.
+  final double notchShoulderRadius;
+
+  /// Vertical center of the notch arc relative to the bar top edge.
+  /// Defaults to [fabSize] / 2 when unset.
+  final double? fabSink;
+
+  /// Primary glow color beneath the collapsed FAB; no glow when null.
+  final Color? fabGlowColor;
+
+  /// Blur radius for the collapsed FAB glow.
+  final double fabGlowBlur;
+
+  /// Spread radius for the collapsed FAB glow.
+  final double fabGlowSpread;
 
   /// Horizontal margin outside the bar.
   final double horizontalInset;
@@ -86,6 +109,13 @@ class BottomNavThemeData {
   /// Center control foreground; falls back to [ColorScheme.onPrimary].
   final Color? fabForegroundColor;
 
+  /// Center control background when the menu is open; falls back to [barColor].
+  final Color? fabOpenBackgroundColor;
+
+  /// Center control foreground when the menu is open; falls back to
+  /// [ColorScheme.onSurface].
+  final Color? fabOpenForegroundColor;
+
   /// Label style for unselected destinations.
   final TextStyle? labelStyle;
 
@@ -116,6 +146,27 @@ class BottomNavThemeData {
   Color resolveFabForegroundColor(BuildContext context) =>
       fabForegroundColor ?? Theme.of(context).colorScheme.onPrimary;
 
+  /// Resolves [fabOpenBackgroundColor] using Material [Theme] when unset.
+  Color resolveFabOpenBackgroundColor(BuildContext context) =>
+      fabOpenBackgroundColor ?? resolveBarColor(context);
+
+  /// Resolves [fabOpenForegroundColor] using Material [Theme] when unset.
+  Color resolveFabOpenForegroundColor(BuildContext context) =>
+      fabOpenForegroundColor ?? Theme.of(context).colorScheme.onSurface;
+
+  /// Notch arc radius derived from [fabSize] and [notchMargin].
+  double get notchRadius => fabSize / 2 + notchMargin;
+
+  /// Resolved vertical center of the notch arc.
+  double resolveFabSink() => fabSink ?? fabSize / 2;
+
+  /// Resolved glow color for the collapsed FAB, or null when disabled.
+  Color? resolveFabGlowColor(BuildContext context) {
+    final glow = fabGlowColor;
+    if (glow == null) return null;
+    return glow;
+  }
+
   /// Resolves destination label style for the given selection state.
   TextStyle resolveLabelStyle(BuildContext context, {required bool selected}) {
     final base = Theme.of(context).textTheme.labelSmall;
@@ -138,6 +189,11 @@ class BottomNavThemeData {
     double? fabSize,
     double? cornerRadius,
     double? notchMargin,
+    double? notchShoulderRadius,
+    double? fabSink,
+    Color? fabGlowColor,
+    double? fabGlowBlur,
+    double? fabGlowSpread,
     double? horizontalInset,
     double? bottomInset,
     double? contentPadding,
@@ -146,6 +202,11 @@ class BottomNavThemeData {
     double? elevation,
     double? fanDistance,
     double? fanAngle,
+    double? collapsedFabSlotWidthFactor,
+    double? collapsedFabSlotHeightFactor,
+    double? expandedFabSlotWidthFanMultiplier,
+    double? expandedFabSlotHeightFanMultiplier,
+    double? expandedFabSlotHeightFabFactor,
     Duration? animationDuration,
     Color? barColor,
     Color? shadowColor,
@@ -153,6 +214,8 @@ class BottomNavThemeData {
     Color? unselectedColor,
     Color? fabBackgroundColor,
     Color? fabForegroundColor,
+    Color? fabOpenBackgroundColor,
+    Color? fabOpenForegroundColor,
     TextStyle? labelStyle,
     TextStyle? selectedLabelStyle,
   }) {
@@ -161,6 +224,11 @@ class BottomNavThemeData {
       fabSize: fabSize ?? this.fabSize,
       cornerRadius: cornerRadius ?? this.cornerRadius,
       notchMargin: notchMargin ?? this.notchMargin,
+      notchShoulderRadius: notchShoulderRadius ?? this.notchShoulderRadius,
+      fabSink: fabSink ?? this.fabSink,
+      fabGlowColor: fabGlowColor ?? this.fabGlowColor,
+      fabGlowBlur: fabGlowBlur ?? this.fabGlowBlur,
+      fabGlowSpread: fabGlowSpread ?? this.fabGlowSpread,
       horizontalInset: horizontalInset ?? this.horizontalInset,
       bottomInset: bottomInset ?? this.bottomInset,
       contentPadding: contentPadding ?? this.contentPadding,
@@ -176,6 +244,10 @@ class BottomNavThemeData {
       unselectedColor: unselectedColor ?? this.unselectedColor,
       fabBackgroundColor: fabBackgroundColor ?? this.fabBackgroundColor,
       fabForegroundColor: fabForegroundColor ?? this.fabForegroundColor,
+      fabOpenBackgroundColor:
+          fabOpenBackgroundColor ?? this.fabOpenBackgroundColor,
+      fabOpenForegroundColor:
+          fabOpenForegroundColor ?? this.fabOpenForegroundColor,
       labelStyle: labelStyle ?? this.labelStyle,
       selectedLabelStyle: selectedLabelStyle ?? this.selectedLabelStyle,
     );
