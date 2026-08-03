@@ -2,6 +2,7 @@ import 'package:auth/auth.dart' show AuthSessionEntity;
 import 'package:core/core.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:registration/src/data/models/profile_completion_request.dart';
+import 'package:registration/src/domain/provider_type/provider_type_spec.dart';
 import 'package:registration/src/domain/repositories/media_repository.dart';
 
 /// Parameters for completing provider profile.
@@ -10,7 +11,7 @@ class CompleteProfileParams {
     required this.authorizationToken,
     required this.emiratesIdFrontId,
     required this.emiratesIdBackId,
-    required this.isOrganization,
+    required this.providerType,
     this.tradeLicenseId,
     this.fullName,
     this.businessName,
@@ -21,20 +22,22 @@ class CompleteProfileParams {
   final String authorizationToken;
   final String emiratesIdFrontId;
   final String emiratesIdBackId;
-  final bool isOrganization;
 
-  // Individual provider fields.
+  /// Determines the submit endpoint and the UI flow (org vs individual).
+  final ProviderTypeSpec providerType;
+
+  // Individual-provider fields.
   final String? fullName;
 
-  // Company provider fields.
+  // Organisation-provider fields.
   final String? tradeLicenseId;
   final String? businessName;
   final String? representativeFullName;
   final String? representativeEmail;
 }
 
-/// Completes the provider profile by posting to either the individual or
-/// company endpoint based on account type.
+/// Completes the provider profile by posting to the endpoint defined by
+/// [CompleteProfileParams.providerType].
 class CompleteProfileUseCase
     extends UseCase<AuthSessionEntity, CompleteProfileParams> {
   CompleteProfileUseCase(this._repository);
@@ -53,16 +56,10 @@ class CompleteProfileUseCase
       representativeEmail: params.representativeEmail,
     );
 
-    if (params.isOrganization) {
-      return _repository.completeCompanyProfile(
-        authorizationToken: params.authorizationToken,
-        request: request,
-      );
-    } else {
-      return _repository.completeIndividualProfile(
-        authorizationToken: params.authorizationToken,
-        request: request,
-      );
-    }
+    return _repository.completeProfile(
+      authorizationToken: params.authorizationToken,
+      endpoint: params.providerType.profileEndpoint,
+      request: request,
+    );
   }
 }

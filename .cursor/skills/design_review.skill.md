@@ -10,7 +10,7 @@ Review UI code for Design System compliance.
 ## Component Audit
 
 - [ ] Every interactive element uses DS components (`AppButton`, `AppTextField`, `AppSelectField`)
-- [ ] Navigation uses `AppNavBar`, `AppLargeNavBar`, `AppBottomNavBar`
+- [ ] Navigation uses `AppNavBar`, `AppLargeNavBar`
 - [ ] Sections use `AppSection` with correct tone
 - [ ] No custom-built equivalents of DS components
 

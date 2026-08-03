@@ -1,3 +1,4 @@
+import 'package:auth/auth.dart' show AuthStatus, AuthStatusNotifier;
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -69,6 +70,15 @@ class RegistrationModule extends FeatureModule {
   @override
   List<RouteBase> routes(FeatureRouteContext routeContext) => [
         ShellRoute(
+          // Guard: bounce an already-authenticated user out of registration
+          // (e.g. hard-back after profile completion) before anything builds.
+          redirect: (context, state) {
+            final auth = sl<AuthStatusNotifier>();
+            if (auth.status == AuthStatus.authenticated) {
+              return routeContext.homeRoute;
+            }
+            return null;
+          },
           builder: (context, state, child) {
             final path = state.uri.path;
             final useAuthShell = _authShellSteps.contains(path);

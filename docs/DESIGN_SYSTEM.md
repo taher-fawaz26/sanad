@@ -78,23 +78,10 @@ Key components exported from `design_system.dart`:
 
 - **Input:** `AppTextField`, `AppSelectField`, `AppPhoneField`, `AppSearchField`, `AppFieldAction`, `AppFieldLabel` — pass `isRequired: true` on text/phone/select fields for a red `*` after the label
 - **Action:** `AppButton`, `AppButtonGroup`, `AppIconButton`
-- **Navigation:** `AppNavBar`, `AppLargeNavBar`, `AppBottomNavBar`, `AppTabBar`
+- **Navigation:** `AppNavBar`, `AppLargeNavBar`, `AppTabBar`
 
-### AppBottomNavBar
-
-Figma `Nab-Bar` (`3148:27106`). Curved notch bottom navigation with a center
-action slot, built on the Sanad fork of `curved_navigation_bar_pro`
-(`packages/curved_navigation_bar_pro`) with RTL-aware FAB/notch geometry.
-
-Full usage guide: [`docs/components/APP_BOTTOM_NAV_BAR.md`](components/APP_BOTTOM_NAV_BAR.md)
-
-| Concern | Detail |
-|---|---|
-| Icons | `AppNavigationIcons` (`app_assets`) via `AppSvgPicture` |
-| Tokens | `BottomNavTokens`, `AppBottomNavTheme` |
-| RTL | Tab order mirrors under `Directionality` |
-| Text scale | Labels clamped to 1× for layout stability; semantics unchanged |
-| Catalog | `apps/design_catalog` → Navigation → AppBottomNavBar |
+Provider shell navigation composes the `bottom_nav_bar` package in
+`apps/sanad_provider/lib/src/routing/shell/main_shell.dart` — not in `design_system`.
 
 - **Display:** `AppSection`, `AppStatusBadge`, `AppChip`, `AppAvatar`, `AppKeyValueCard`
 - **Feedback:** `AppSnackbar`, `AppProgressBar`, `AppPopover`

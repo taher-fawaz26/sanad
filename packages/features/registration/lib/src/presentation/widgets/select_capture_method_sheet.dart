@@ -2,6 +2,12 @@ import 'package:asset_picker/asset_picker.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
+/// 10 MB upload ceiling for registration documents.
+///
+/// Keeps on-device memory in check and prevents accidental huge-file uploads
+/// to the OCR API, which typically rejects files above this threshold anyway.
+const _kMaxDocumentFileSize = 10 * 1024 * 1024; // 10 MB
+
 /// Options for Emirates ID capture: scanner (front + back), gallery, files.
 /// Camera is intentionally excluded — only 3 sources per Figma.
 const kRegistrationEmiratesIdOptions = AssetPickerOptions(
@@ -11,6 +17,7 @@ const kRegistrationEmiratesIdOptions = AssetPickerOptions(
   allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
   requireBothSides: true,
   loadBytes: true,
+  maxFileSize: _kMaxDocumentFileSize,
 );
 
 /// Options for general document capture (trade licence, single-sided).
@@ -20,6 +27,7 @@ const kRegistrationDocumentOptions = AssetPickerOptions(
   allowScanner: true,
   allowedAssetTypes: [AssetType.image, AssetType.pdf],
   allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
+  maxFileSize: _kMaxDocumentFileSize,
 );
 
 /// Builds an [AssetPickerTheme] with registration-specific bottom-sheet labels.

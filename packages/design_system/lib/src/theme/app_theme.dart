@@ -5,7 +5,6 @@ import 'package:design_system/src/theme/colors/app_colors.dart';
 import 'package:design_system/src/theme/colors/dark_colors.dart';
 import 'package:design_system/src/theme/colors/field_tokens.dart';
 import 'package:design_system/src/theme/colors/light_colors.dart';
-import 'package:design_system/src/theme/tokens/bottom_nav_tokens.dart';
 import 'package:design_system/src/theme/tokens/bottom_sheet_tokens.dart';
 import 'package:design_system/src/theme/tokens/button_tokens.dart';
 import 'package:design_system/src/theme/tokens/checkbox_tokens.dart';

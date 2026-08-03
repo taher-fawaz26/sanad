@@ -4,30 +4,16 @@ import 'package:sanad_provider/src/routing/shell/provider_bottom_nav.dart';
 
 void main() {
   group('ProviderBottomNavDestination', () {
-    test('bar indices match visual order', () {
-      expect(ProviderBottomNavDestination.home.barIndex, 0);
-      expect(ProviderBottomNavDestination.messages.barIndex, 1);
-      expect(ProviderBottomNavDestination.requests.barIndex, 2);
-      expect(ProviderBottomNavDestination.services.barIndex, 3);
-      expect(ProviderBottomNavDestination.settings.barIndex, 4);
+    test('shell branch indices match enum order', () {
+      expect(ProviderBottomNavDestination.home.shellBranchIndex, 0);
+      expect(ProviderBottomNavDestination.messages.shellBranchIndex, 1);
+      expect(ProviderBottomNavDestination.requests.shellBranchIndex, 2);
+      expect(ProviderBottomNavDestination.services.shellBranchIndex, 3);
+      expect(ProviderBottomNavDestination.settings.shellBranchIndex, 4);
     });
 
-    test('shell branch indices align with bar indices', () {
+    test('fromShellBranch round-trips all destinations', () {
       for (final destination in ProviderBottomNavDestination.values) {
-        expect(
-          destination.shellBranchIndex,
-          destination.barIndex,
-          reason: '${destination.name} branch/bar mismatch',
-        );
-      }
-    });
-
-    test('fromBarIndex and fromShellBranch round-trip', () {
-      for (final destination in ProviderBottomNavDestination.values) {
-        expect(
-          ProviderBottomNavDestination.fromBarIndex(destination.barIndex),
-          destination,
-        );
         expect(
           ProviderBottomNavDestination.fromShellBranch(
             destination.shellBranchIndex,
@@ -45,23 +31,25 @@ void main() {
       expect(ProviderBottomNavDestination.settings.route, AppRoutes.settings);
     });
 
-    test('requests uses center FAB slot', () {
-      expect(ProviderBottomNavDestination.requests.isCenterFab, isTrue);
-      expect(ProviderBottomNavDestination.centerFabBarIndex, 2);
-      expect(ProviderBottomNavDestination.home.isCenterFab, isFalse);
+    test('permanent tabs are home and settings only', () {
+      expect(ProviderBottomNavDestination.permanentTabs, [
+        ProviderBottomNavDestination.home,
+        ProviderBottomNavDestination.settings,
+      ]);
+      expect(ProviderBottomNavDestination.home.isPermanentTab, isTrue);
+      expect(ProviderBottomNavDestination.settings.isPermanentTab, isTrue);
+      expect(ProviderBottomNavDestination.messages.isPermanentTab, isFalse);
     });
 
-    test('settings opens expandable menu instead of navigating on tap', () {
-      expect(ProviderBottomNavDestination.settings.opensExpandableMenu, isTrue);
-      expect(ProviderBottomNavDestination.settings.navigatesOnTap, isFalse);
-      expect(ProviderBottomNavDestination.settingsBarIndex, 4);
-    });
-
-    test('non-navigating destinations are settings only', () {
-      final nonNavigating = ProviderBottomNavDestination.values
-          .where((destination) => !destination.navigatesOnTap)
-          .toList();
-      expect(nonNavigating, [ProviderBottomNavDestination.settings]);
+    test('fab actions are services requests messages in order', () {
+      expect(ProviderBottomNavDestination.fabActions, [
+        ProviderBottomNavDestination.services,
+        ProviderBottomNavDestination.requests,
+        ProviderBottomNavDestination.messages,
+      ]);
+      for (final action in ProviderBottomNavDestination.fabActions) {
+        expect(action.isFabAction, isTrue);
+      }
     });
   });
 }

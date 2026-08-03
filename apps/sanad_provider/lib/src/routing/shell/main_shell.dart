@@ -1,11 +1,9 @@
-import 'package:app_assets/app_assets.dart';
-import 'package:design_system/design_system.dart';
-import 'package:easy_localization/easy_localization.dart';
+import 'package:bottom_nav_bar/bottom_nav_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sanad_provider/src/routing/app_routes.dart';
 import 'package:sanad_provider/src/routing/shell/provider_bottom_nav.dart';
-import 'package:sanad_provider/src/routing/shell/settings_expandable_menu.dart';
+import 'package:sanad_provider/src/routing/shell/provider_bottom_nav_items.dart';
+import 'package:sanad_provider/src/routing/shell/provider_bottom_nav_theme.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({required this.navigationShell, super.key});
@@ -17,22 +15,17 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
-  final _settingsMenuController = SettingsExpandableMenuController();
-  late final Widget _settingsMenu;
+  late final BottomNavController _bottomNavController;
 
   @override
   void initState() {
     super.initState();
-    _settingsMenu = SettingsExpandableMenu(
-      controller: _settingsMenuController,
-      onGeneralSettings: () => _navigateToSettingsTab(0),
-      onAccountSettings: () => _navigateToSettingsTab(1),
-    );
+    _bottomNavController = BottomNavController();
   }
 
   @override
   void dispose() {
-    _settingsMenuController.dispose();
+    _bottomNavController.dispose();
     super.dispose();
   }
 
@@ -44,84 +37,34 @@ class _MainShellState extends State<MainShell> {
     );
   }
 
-  void _toggleSettingsMenu() => _settingsMenuController.toggle();
-
-  void _closeSettingsMenu() => _settingsMenuController.close();
-
-  void _navigateToSettingsTab(int tab) {
-    _closeSettingsMenu();
-    context.go('${AppRoutes.settings}?tab=$tab');
-  }
-
-  void _onBarTap(int barIndex) {
-    final destination = ProviderBottomNavDestination.fromBarIndex(barIndex);
-    if (destination == null) return;
-
-    if (destination.opensExpandableMenu) {
-      _toggleSettingsMenu();
-      return;
-    }
-
-    if (destination.navigatesOnTap) {
-      _goBranch(destination);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final activeDestination = ProviderBottomNavDestination.fromShellBranch(
-      widget.navigationShell.currentIndex,
-    );
-    final currentBarIndex = activeDestination?.barIndex ?? 0;
+          widget.navigationShell.currentIndex,
+        ) ??
+        ProviderBottomNavDestination.home;
 
-    return ValueListenableBuilder<bool>(
-      valueListenable: _settingsMenuController.isExpanded,
-      child: _settingsMenu,
-      builder: (context, isSettingsExpanded, settingsMenu) {
-        return Scaffold(
-          floatingActionButtonLocation: _settingsMenuController.fabLocation,
-          floatingActionButton: settingsMenu,
-          body: Stack(
-            fit: StackFit.expand,
-            children: [
-              widget.navigationShell,
-              Positioned.fill(
-                child: IgnorePointer(
-                  ignoring: !isSettingsExpanded,
-                  child: AnimatedOpacity(
-                    opacity: isSettingsExpanded ? 1 : 0,
-                    duration: SettingsExpandableMenu.animationDuration,
-                    curve: Curves.easeOutCubic,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: _closeSettingsMenu,
-                      child: ColoredBox(
-                        color: Colors.black.withValues(alpha: 0.08),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          bottomNavigationBar: AppBottomNavBar(
-            currentIndex: currentBarIndex,
-            dimNonSettingsItems: isSettingsExpanded,
-            blockNonSettingsInteractions: isSettingsExpanded,
-            onTap: _onBarTap,
-            centerAction: AppBottomNavCenterAction(
-              iconAsset: AppNavigationIcons.centerAction,
-              semanticLabel: 'nav.requests'.tr(),
-              selected:
-                  activeDestination == ProviderBottomNavDestination.requests,
-              onTap: isSettingsExpanded
-                  ? null
-                  : () => _goBranch(ProviderBottomNavDestination.requests),
-            ),
-            items: ProviderBottomNavDestination.items(),
-          ),
-        );
-      },
+    final theme = providerBottomNavTheme(context);
+    final destinations = ProviderBottomNavItems.destinations(context);
+    final actions = ProviderBottomNavItems.actions(context);
+
+    return Scaffold(
+      extendBody: true,
+      body: widget.navigationShell,
+      floatingActionButtonLocation: BottomNavExpandableCenter.fabLocation,
+      floatingActionButton: BottomNavExpandableCenter(
+        actions: actions,
+        selectedItem: activeDestination,
+        controller: _bottomNavController,
+        theme: theme,
+        onActionSelected: _goBranch,
+      ),
+      bottomNavigationBar: BottomNavBar(
+        destinations: destinations,
+        selectedItem: activeDestination,
+        theme: theme,
+        onDestinationSelected: _goBranch,
+      ),
     );
   }
 }

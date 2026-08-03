@@ -14,8 +14,6 @@ dependencies:
   core:
     path: ../core
   cupertino_icons: ^1.0.8
-  curved_navigation_bar_pro:
-    path: ../curved_navigation_bar_pro
   equatable: ^2.1.0
   flutter:
     sdk: flutter

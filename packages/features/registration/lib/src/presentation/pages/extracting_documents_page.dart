@@ -34,43 +34,56 @@ class ExtractingDocumentsPage extends HookWidget {
       return null;
     }, const []);
 
-    return BlocListener<RegistrationCubit, RegistrationState>(
-      listenWhen: (prev, curr) =>
-          prev.extractionStatus != curr.extractionStatus,
+    return BlocConsumer<RegistrationCubit, RegistrationState>(
+      listenWhen: (prev, curr) => prev.phase != curr.phase,
       listener: (context, state) {
-        if (state.extractionStatus == ExtractionStatus.done) {
+        if (state.phase is PhaseExtractionDone) {
           context.pushReplacement(RegistrationRoutes.reviewInformation);
         }
       },
-      child: RegistrationGradientScaffold(
-        child: Column(
-          children: [
-            SizedBox(height: responsiveDimension(AppSpacing.xxxxl)),
-            AppSvgPicture.asset(
-              AppSvgs.sanadLogo,
-              width: responsiveDimension(160),
-              height: responsiveDimension(52),
+      builder: (context, state) {
+        if (state.phase is PhaseExtractionFailed) {
+          return Scaffold(
+            body: AppNetworkFailureState(
+              title: 'registration.extraction_failed_title'.tr(),
+              description: 'registration.extraction_failed_retry'.tr(),
+              retryLabel: 'empty_states.retry'.tr(),
+              onRetry: () =>
+                  context.read<RegistrationCubit>().extractDocuments(),
             ),
-            const Spacer(),
-            _ExtractingOrb(animation: animation, color: colors.primary300),
-            const Spacer(),
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: responsiveDimension(AppSpacing.xl),
+          );
+        }
+
+        return RegistrationGradientScaffold(
+          child: Column(
+            children: [
+              SizedBox(height: responsiveDimension(AppSpacing.xxxxl)),
+              AppSvgPicture.asset(
+                AppSvgs.sanadLogo,
+                width: responsiveDimension(160),
+                height: responsiveDimension(52),
               ),
-              child: Text(
-                'registration.extracting'.tr(),
-                textAlign: TextAlign.center,
-                style: typography.regularNormal.copyWith(
-                  color: colors.white,
-                  fontWeight: FontWeight.w500,
+              const Spacer(),
+              _ExtractingOrb(animation: animation, color: colors.primary300),
+              const Spacer(),
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: responsiveDimension(AppSpacing.xl),
+                ),
+                child: Text(
+                  'registration.extracting'.tr(),
+                  textAlign: TextAlign.center,
+                  style: typography.regularNormal.copyWith(
+                    color: colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
-            ),
-            SizedBox(height: responsiveDimension(AppSpacing.xxxxl)),
-          ],
-        ),
-      ),
+              SizedBox(height: responsiveDimension(AppSpacing.xxxxl)),
+            ],
+          ),
+        );
+      },
     );
   }
 }

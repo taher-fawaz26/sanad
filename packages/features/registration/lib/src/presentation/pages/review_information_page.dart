@@ -6,10 +6,12 @@ import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:network/network.dart';
 import 'package:registration/src/data/models/extraction_result.dart';
+import 'package:registration/src/domain/failures/registration_failure.dart';
 import 'package:registration/src/presentation/cubit/registration_cubit.dart';
 import 'package:registration/src/presentation/cubit/registration_state.dart';
 import 'package:registration/src/presentation/models/registration_document_slot.dart';
@@ -17,6 +19,7 @@ import 'package:registration/src/presentation/widgets/profile_completion_error_d
 import 'package:registration/src/presentation/widgets/registration_header.dart';
 import 'package:registration/src/presentation/widgets/review_section_card.dart';
 import 'package:registration/src/presentation/widgets/select_capture_method_sheet.dart';
+import 'package:registration/src/routes/registration_routes.dart';
 
 /// Step 9 — review the extracted document information.
 ///
@@ -75,7 +78,10 @@ class _ReviewInformationPageState extends State<ReviewInformationPage> {
     } else {
       // Failed: show error dialog.
       if (!mounted) return;
-      final errorMessage = cubit.state.lastUploadFailure;
+      final profileFailure = cubit.state.failure;
+      final errorMessage = profileFailure is ProfileFailure
+          ? profileFailure.messageKey
+          : null;
       final retry = await showProfileCompletionErrorDialog(
         context: context,
         errorMessage: errorMessage,
@@ -132,8 +138,16 @@ class _ReviewInformationPageState extends State<ReviewInformationPage> {
     final state = context.watch<RegistrationCubit>().state;
     final extraction = state.extraction;
 
-    if (extraction == null ||
-        state.extractionStatus == ExtractionStatus.extracting) {
+    if (extraction == null && state.phase is PhaseIdle) {
+      // User arrived here without going through extraction — redirect to start.
+      // SizedBox.shrink avoids a visible flash before the post-frame redirect.
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.go(RegistrationRoutes.selectAccountType);
+      });
+      return const SizedBox.shrink();
+    }
+
+    if (extraction == null || state.phase is PhaseExtracting) {
       return const Center(child: AppLoadingIndicator());
     }
 

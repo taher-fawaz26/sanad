@@ -34,7 +34,6 @@ export 'tokens/avatar_stack_tokens.dart'
     show AvatarStackStyleSpec, AvatarStackTokens;
 export 'tokens/avatar_tokens.dart'
     show AppAvatarSize, AvatarStyleSpec, AvatarTokens;
-export 'tokens/bottom_nav_tokens.dart' show BottomNavTokens;
 export 'tokens/bottom_sheet_tokens.dart'
     show BottomSheetStyleSpec, BottomSheetTokens;
 export 'tokens/button_group_tokens.dart'

@@ -34,15 +34,14 @@ abstract interface class MediaRepository {
     String? tradeLicenseId,
   });
 
-  /// Completes profile for an individual provider.
-  TaskEither<Failure, AuthSessionEntity> completeIndividualProfile({
+  /// Completes the provider profile.
+  ///
+  /// [endpoint] is the type-specific path (`auth/profile/individual-provider`,
+  /// `auth/profile/company-provider`, etc.) supplied by [ProviderTypeSpec].
+  /// Adding a new provider type requires no change to this interface.
+  TaskEither<Failure, AuthSessionEntity> completeProfile({
     required String authorizationToken,
-    required ProfileCompletionRequest request,
-  });
-
-  /// Completes profile for a company provider.
-  TaskEither<Failure, AuthSessionEntity> completeCompanyProfile({
-    required String authorizationToken,
+    required String endpoint,
     required ProfileCompletionRequest request,
   });
 }

@@ -533,7 +533,8 @@
     "unverified_user": "يرجى التحقق من حسابك للمتابعة.",
     "unauthorized_role": "ليس لديك صلاحية للقيام بهذا الإجراء.",
     "email_not_valid": "هذا البريد الإلكتروني مستخدم بالفعل.",
-    "email_not_found": "لا يوجد حساب بهذا البريد الإلكتروني. يرجى إنشاء حساب."
+    "email_not_found": "لا يوجد حساب بهذا البريد الإلكتروني. يرجى إنشاء حساب.",
+    "required_fields_missing": "المعلومات المطلوبة غير مكتملة. يرجى العودة وإكمال جميع الخطوات."
   },
   "registration": {
     "sign_up_title": "إنشاء حساب",
@@ -632,6 +633,8 @@
     "unified_licence_no": "رقم الرخصة الموحّد",
     "completing_profile": "جاري إكمال التسجيل...",
     "profile_complete_error_title": "فشل التسجيل",
-    "profile_complete_error_message": "تعذّر إكمال تسجيلك. تحقق من اتصالك بالإنترنت وحاول مرة أخرى."
+    "profile_complete_error_message": "تعذّر إكمال تسجيلك. تحقق من اتصالك بالإنترنت وحاول مرة أخرى.",
+    "extraction_failed_title": "فشل الاستخراج",
+    "extraction_failed_retry": "فشل استخراج بيانات المستند. تحقق من اتصالك بالإنترنت وحاول مرة أخرى."
   }
 }

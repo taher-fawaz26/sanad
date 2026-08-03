@@ -41,6 +41,7 @@
 | Package | Description | Status |
 |---------|-------------|--------|
 | `design_system` | Theme, colors, typography, tokens, primitive components (`components/`), and higher-level composed UI (`shared_ui/`) | Active |
+| `bottom_nav_bar` | Reusable bottom navigation bar with expandable center actions (app-agnostic; theme via `BottomNavThemeData`) | Active |
 | `localization` | EasyLocalization, TranslateBloc, validation keys | Active |
 | `shared_blocs` | Backwards-compat re-export facade | Active |
 

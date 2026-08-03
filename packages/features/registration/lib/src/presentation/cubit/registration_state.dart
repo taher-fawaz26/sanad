@@ -1,15 +1,55 @@
 import 'package:asset_picker/asset_picker.dart';
 import 'package:equatable/equatable.dart';
 import 'package:registration/src/data/models/extraction_result.dart';
+import 'package:registration/src/domain/failures/registration_failure.dart';
+import 'package:registration/src/domain/provider_type/provider_type_spec.dart';
 
-/// Account type the registering user selects on the third step.
-enum RegistrationAccountType { organization, individual }
+/// Single async-operation state machine for the sign-up flow.
+///
+/// Replaces the former `ExtractionStatus` + `ProfileCompletionStatus` pair,
+/// which could represent impossible combinations (both failed simultaneously).
+/// Exactly one phase is active at any moment.
+sealed class RegistrationAsyncPhase extends Equatable {
+  const RegistrationAsyncPhase();
 
-/// Lifecycle of the (simulated) "AI extraction" step.
-enum ExtractionStatus { idle, extracting, done }
+  @override
+  List<Object?> get props => [];
+}
 
-/// Lifecycle of the profile completion step.
-enum ProfileCompletionStatus { idle, submitting, done, failed }
+/// No async operation is active — waiting for user input or navigation.
+final class PhaseIdle extends RegistrationAsyncPhase {
+  const PhaseIdle();
+}
+
+/// AI document extraction is running.
+final class PhaseExtracting extends RegistrationAsyncPhase {
+  const PhaseExtracting();
+}
+
+/// Extraction completed — results available in [RegistrationState.extraction].
+final class PhaseExtractionDone extends RegistrationAsyncPhase {
+  const PhaseExtractionDone();
+}
+
+/// Extraction failed — see [RegistrationState.failure] for the reason.
+final class PhaseExtractionFailed extends RegistrationAsyncPhase {
+  const PhaseExtractionFailed();
+}
+
+/// Profile completion API call is in progress.
+final class PhaseSubmitting extends RegistrationAsyncPhase {
+  const PhaseSubmitting();
+}
+
+/// Profile completion succeeded — registration is complete.
+final class PhaseSubmissionDone extends RegistrationAsyncPhase {
+  const PhaseSubmissionDone();
+}
+
+/// Profile completion failed — see [RegistrationState.failure].
+final class PhaseSubmissionFailed extends RegistrationAsyncPhase {
+  const PhaseSubmissionFailed();
+}
 
 /// Immutable state carried across the whole sign-up flow by the cubit.
 ///
@@ -22,17 +62,16 @@ class RegistrationState extends Equatable {
   const RegistrationState({
     this.email = '',
     this.onboardingToken,
-    this.accountType,
+    this.providerType,
     this.businessName = '',
     this.representativeName = '',
     this.fullName = '',
     this.emiratesIdFront,
     this.emiratesIdBack,
     this.tradeLicence,
-    this.extractionStatus = ExtractionStatus.idle,
+    this.phase = const PhaseIdle(),
     this.extraction,
-    this.profileCompletionStatus = ProfileCompletionStatus.idle,
-    this.lastUploadFailure,
+    this.failure,
   });
 
   final String email;
@@ -41,13 +80,15 @@ class RegistrationState extends Equatable {
   /// authorize the profile-creation calls that complete onboarding.
   final String? onboardingToken;
 
-  final RegistrationAccountType? accountType;
+  /// The selected provider type, which determines the UI flow and submit
+  /// endpoint. Null until the user has selected an account type.
+  final ProviderTypeSpec? providerType;
 
-  // Organization path.
+  // Organization-path fields.
   final String businessName;
   final String representativeName;
 
-  // Individual path.
+  // Individual-path fields.
   final String fullName;
 
   // Captured documents (upload pipeline state).
@@ -55,18 +96,17 @@ class RegistrationState extends Equatable {
   final UploadableAsset? emiratesIdBack;
   final UploadableAsset? tradeLicence;
 
-  // Async step status.
-  final ExtractionStatus extractionStatus;
+  /// Current async phase of the sign-up flow.
+  final RegistrationAsyncPhase phase;
+
   final ExtractionResult? extraction;
 
-  // Profile completion status.
-  final ProfileCompletionStatus profileCompletionStatus;
+  /// Current typed failure, cleared once the UI has consumed it.
+  final RegistrationFailure? failure;
 
-  /// Last upload failure message key / prose for the page to snackbar once.
-  final String? lastUploadFailure;
-
-  bool get isOrganization =>
-      accountType == RegistrationAccountType.organization;
+  /// Whether the selected provider type follows the organisation flow
+  /// (org-details form + trade-licence step).
+  bool get isOrganization => providerType?.requiresTradeLicence ?? false;
 
   /// True once both Emirates ID sides have been uploaded successfully.
   bool get hasBothIdSides =>
@@ -84,22 +124,23 @@ class RegistrationState extends Equatable {
   RegistrationState copyWith({
     String? email,
     String? onboardingToken,
-    RegistrationAccountType? accountType,
+    Object? providerType = _sentinel,
     String? businessName,
     String? representativeName,
     String? fullName,
     Object? emiratesIdFront = _sentinel,
     Object? emiratesIdBack = _sentinel,
     Object? tradeLicence = _sentinel,
-    ExtractionStatus? extractionStatus,
+    RegistrationAsyncPhase? phase,
     ExtractionResult? extraction,
-    ProfileCompletionStatus? profileCompletionStatus,
-    Object? lastUploadFailure = _sentinel,
+    Object? failure = _sentinel,
   }) =>
       RegistrationState(
         email: email ?? this.email,
         onboardingToken: onboardingToken ?? this.onboardingToken,
-        accountType: accountType ?? this.accountType,
+        providerType: identical(providerType, _sentinel)
+            ? this.providerType
+            : providerType as ProviderTypeSpec?,
         businessName: businessName ?? this.businessName,
         representativeName: representativeName ?? this.representativeName,
         fullName: fullName ?? this.fullName,
@@ -112,13 +153,11 @@ class RegistrationState extends Equatable {
         tradeLicence: identical(tradeLicence, _sentinel)
             ? this.tradeLicence
             : tradeLicence as UploadableAsset?,
-        extractionStatus: extractionStatus ?? this.extractionStatus,
+        phase: phase ?? this.phase,
         extraction: extraction ?? this.extraction,
-        profileCompletionStatus:
-            profileCompletionStatus ?? this.profileCompletionStatus,
-        lastUploadFailure: identical(lastUploadFailure, _sentinel)
-            ? this.lastUploadFailure
-            : lastUploadFailure as String?,
+        failure: identical(failure, _sentinel)
+            ? this.failure
+            : failure as RegistrationFailure?,
       );
 
   static const Object _sentinel = Object();
@@ -127,16 +166,15 @@ class RegistrationState extends Equatable {
   List<Object?> get props => [
         email,
         onboardingToken,
-        accountType,
+        providerType,
         businessName,
         representativeName,
         fullName,
         emiratesIdFront,
         emiratesIdBack,
         tradeLicence,
-        extractionStatus,
+        phase,
         extraction,
-        profileCompletionStatus,
-        lastUploadFailure,
+        failure,
       ];
 }

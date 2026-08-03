@@ -12,11 +12,11 @@ workspace:
   - apps/design_catalog
   - packages/analytics
   - packages/app_assets
+  - packages/bottom_nav_bar
   - packages/app_logger
   - packages/asset_picker
   - packages/config
   - packages/core
-  - packages/curved_navigation_bar_pro
   - packages/design_system
   - packages/device
   - packages/features/auth

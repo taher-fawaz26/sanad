@@ -5,8 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
+import 'package:registration/src/domain/provider_type/provider_type_registry.dart';
+import 'package:registration/src/domain/provider_type/provider_type_spec.dart';
 import 'package:registration/src/presentation/cubit/registration_cubit.dart';
-import 'package:registration/src/presentation/cubit/registration_state.dart';
 import 'package:registration/src/presentation/models/onboarding_args.dart';
 import 'package:registration/src/presentation/widgets/registration_header.dart';
 import 'package:registration/src/routes/registration_routes.dart';
@@ -16,7 +17,7 @@ class SelectAccountTypePage extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selected = useState<RegistrationAccountType?>(null);
+    final selected = useState<ProviderTypeSpec?>(null);
 
     // Seed the verified email + onboarding token handed over by the auth OTP
     // flow (this is the first registration step for a new user).
@@ -48,20 +49,19 @@ class SelectAccountTypePage extends HookWidget {
                   title: 'registration.organization'.tr(),
                   description: 'registration.organization_desc'.tr(),
                   iconPath: AppSvgs.registrationOrganization,
-                  type: RegistrationAccountType.organization,
+                  spec: ProviderTypeRegistry.company,
                   selected: selected.value,
-                  onTap: () =>
-                      selected.value = RegistrationAccountType.organization,
+                  onTap: () => selected.value = ProviderTypeRegistry.company,
                 ),
                 SizedBox(height: responsiveDimension(AppSpacing.lg)),
                 _AccountTypeCard(
                   title: 'registration.individual'.tr(),
                   description: 'registration.individual_desc'.tr(),
                   iconPath: AppSvgs.registrationIndividual,
-                  type: RegistrationAccountType.individual,
+                  spec: ProviderTypeRegistry.individual,
                   selected: selected.value,
                   onTap: () =>
-                      selected.value = RegistrationAccountType.individual,
+                      selected.value = ProviderTypeRegistry.individual,
                 ),
                 SizedBox(height: responsiveDimension(AppSpacing.lg)),
                 AppButton(
@@ -69,12 +69,12 @@ class SelectAccountTypePage extends HookWidget {
                   onPressed: selected.value == null
                       ? null
                       : () {
-                          final type = selected.value!;
-                          context.read<RegistrationCubit>().setAccountType(
-                            type,
-                          );
+                          final spec = selected.value!;
+                          context
+                              .read<RegistrationCubit>()
+                              .setProviderType(spec);
                           context.push(
-                            type == RegistrationAccountType.organization
+                            spec.requiresTradeLicence
                                 ? RegistrationRoutes.organizationDetails
                                 : RegistrationRoutes.individualDetails,
                           );
@@ -94,7 +94,7 @@ class _AccountTypeCard extends StatelessWidget {
     required this.title,
     required this.description,
     required this.iconPath,
-    required this.type,
+    required this.spec,
     required this.selected,
     required this.onTap,
   });
@@ -102,13 +102,13 @@ class _AccountTypeCard extends StatelessWidget {
   final String title;
   final String description;
   final String iconPath;
-  final RegistrationAccountType type;
-  final RegistrationAccountType? selected;
+  final ProviderTypeSpec spec;
+  final ProviderTypeSpec? selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final isSelected = selected == type;
+    final isSelected = identical(selected, spec);
     final colors = context.appColors;
     final typography = context.appTypography;
     final accentColor = isSelected ? colors.link : colors.textPrimary;

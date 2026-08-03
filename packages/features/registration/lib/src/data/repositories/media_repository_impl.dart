@@ -54,23 +54,14 @@ class MediaRepositoryImpl implements MediaRepository {
   );
 
   @override
-  TaskEither<Failure, AuthSessionEntity> completeIndividualProfile({
+  TaskEither<Failure, AuthSessionEntity> completeProfile({
     required String authorizationToken,
+    required String endpoint,
     required ProfileCompletionRequest request,
   }) => _networkGuard.execute(
-    action: _remote.completeIndividualProfile(
+    action: _remote.completeProfile(
       authorizationToken: authorizationToken,
-      request: request,
-    ),
-  );
-
-  @override
-  TaskEither<Failure, AuthSessionEntity> completeCompanyProfile({
-    required String authorizationToken,
-    required ProfileCompletionRequest request,
-  }) => _networkGuard.execute(
-    action: _remote.completeCompanyProfile(
-      authorizationToken: authorizationToken,
+      endpoint: endpoint,
       request: request,
     ),
   );

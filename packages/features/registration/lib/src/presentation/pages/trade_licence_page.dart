@@ -5,6 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:registration/src/domain/failures/registration_failure.dart';
 import 'package:registration/src/presentation/cubit/registration_cubit.dart';
 import 'package:registration/src/presentation/cubit/registration_state.dart';
 import 'package:registration/src/presentation/models/registration_document_slot.dart';
@@ -47,16 +48,16 @@ class TradeLicencePage extends StatelessWidget {
 
     return BlocListener<RegistrationCubit, RegistrationState>(
       listenWhen: (previous, current) =>
-          previous.lastUploadFailure != current.lastUploadFailure &&
-          current.lastUploadFailure != null,
+          previous.failure != current.failure &&
+          current.failure is UploadFailure,
       listener: (context, state) {
-        final failure = state.lastUploadFailure;
-        if (failure == null) return;
+        final failure = state.failure;
+        if (failure is! UploadFailure) return;
         showAppErrorSnackbar(
           context: context,
-          title: failure.tr(),
+          title: failure.messageKey.tr(),
         );
-        context.read<RegistrationCubit>().clearUploadFailure();
+        context.read<RegistrationCubit>().clearFailure();
       },
       child: BlocBuilder<RegistrationCubit, RegistrationState>(
         builder: (context, state) {

@@ -533,7 +533,8 @@
     "unverified_user": "Please verify your account to continue.",
     "unauthorized_role": "You do not have permission to perform this action.",
     "email_not_valid": "This email is already in use.",
-    "email_not_found": "No account found with this email. Please sign up."
+    "email_not_found": "No account found with this email. Please sign up.",
+    "required_fields_missing": "Required information is incomplete. Please go back and complete all steps."
   },
   "registration": {
     "sign_up_title": "Sign Up Account",
@@ -632,6 +633,8 @@
     "unified_licence_no": "Unified Licence No.",
     "completing_profile": "Completing registration...",
     "profile_complete_error_title": "Registration Failed",
-    "profile_complete_error_message": "We couldn't complete your registration. Please check your connection and try again."
+    "profile_complete_error_message": "We couldn't complete your registration. Please check your connection and try again.",
+    "extraction_failed_title": "Extraction Failed",
+    "extraction_failed_retry": "Failed to extract document information. Please check your connection and try again."
   }
 }

@@ -32,15 +32,10 @@ abstract interface class MediaRemoteDataSource {
     String? tradeLicenseId,
   });
 
-  /// Completes provider profile for an individual.
-  TaskEither<Failure, AuthSessionEntity> completeIndividualProfile({
+  /// Completes provider profile by posting to [endpoint].
+  TaskEither<Failure, AuthSessionEntity> completeProfile({
     required String authorizationToken,
-    required ProfileCompletionRequest request,
-  });
-
-  /// Completes provider profile for a company/organization.
-  TaskEither<Failure, AuthSessionEntity> completeCompanyProfile({
-    required String authorizationToken,
+    required String endpoint,
     required ProfileCompletionRequest request,
   });
 }
@@ -143,36 +138,15 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
       );
 
   @override
-  TaskEither<Failure, AuthSessionEntity> completeIndividualProfile({
+  TaskEither<Failure, AuthSessionEntity> completeProfile({
     required String authorizationToken,
+    required String endpoint,
     required ProfileCompletionRequest request,
   }) =>
       TaskEither.tryCatch(
         () async {
           final response = await _client.post<dynamic>(
-            MediaApiPaths.individualProvider,
-            data: request.toJson(),
-            options: Options(
-              headers: {'Authorization': 'Bearer $authorizationToken'},
-            ),
-          );
-
-          final raw = response.data;
-          final map = raw is Map<String, dynamic> ? raw : <String, dynamic>{};
-          return ProfileCompletionResponse.fromJson(map);
-        },
-        (error, _) => ErrorMapper.mapError(error),
-      );
-
-  @override
-  TaskEither<Failure, AuthSessionEntity> completeCompanyProfile({
-    required String authorizationToken,
-    required ProfileCompletionRequest request,
-  }) =>
-      TaskEither.tryCatch(
-        () async {
-          final response = await _client.post<dynamic>(
-            MediaApiPaths.companyProvider,
+            endpoint,
             data: request.toJson(),
             options: Options(
               headers: {'Authorization': 'Bearer $authorizationToken'},

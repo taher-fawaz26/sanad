@@ -3,6 +3,8 @@ import 'package:auth/auth.dart' show AuthSessionEntity;
 import 'package:core/core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:registration/src/data/models/extraction_result.dart';
+import 'package:registration/src/domain/failures/registration_failure.dart';
+import 'package:registration/src/domain/provider_type/provider_type_spec.dart';
 import 'package:registration/src/domain/usecases/complete_profile_usecase.dart';
 import 'package:registration/src/domain/usecases/extract_documents_usecase.dart';
 import 'package:registration/src/domain/usecases/upload_single_media_usecase.dart';
@@ -38,8 +40,8 @@ class RegistrationCubit extends Cubit<RegistrationState> {
   }) =>
       emit(state.copyWith(email: email, onboardingToken: onboardingToken));
 
-  void setAccountType(RegistrationAccountType type) =>
-      emit(state.copyWith(accountType: type));
+  void setProviderType(ProviderTypeSpec type) =>
+      emit(state.copyWith(providerType: type));
 
   void setOrganizationDetails({
     required String businessName,
@@ -55,8 +57,7 @@ class RegistrationCubit extends Cubit<RegistrationState> {
   void setFullName(String fullName) =>
       emit(state.copyWith(fullName: fullName));
 
-  void clearUploadFailure() =>
-      emit(state.copyWith(lastUploadFailure: null));
+  void clearFailure() => emit(state.copyWith(failure: null));
 
   /// Stores locally captured Emirates ID sides without uploading.
   void setEmiratesIdLocal({PickedAsset? front, PickedAsset? back}) {
@@ -86,14 +87,16 @@ class RegistrationCubit extends Cubit<RegistrationState> {
         _withSlot(
           slot,
           asset.toUploadable().markFailed('errors.unauthorized'),
-        ).copyWith(lastUploadFailure: 'errors.unauthorized'),
+        ).copyWith(
+          failure: const UploadFailure(messageKey: 'errors.unauthorized'),
+        ),
       );
       return;
     }
 
     emit(
       _withSlot(slot, asset.toUploadable().markUploading()).copyWith(
-        lastUploadFailure: null,
+        failure: null,
       ),
     );
 
@@ -127,7 +130,7 @@ class RegistrationCubit extends Cubit<RegistrationState> {
         );
         emit(
           _withSlot(slot, failed).copyWith(
-            lastUploadFailure: failure.message,
+            failure: UploadFailure(messageKey: failure.message),
           ),
         );
       },
@@ -188,16 +191,22 @@ class RegistrationCubit extends Cubit<RegistrationState> {
     if (token == null || frontId == null || backId == null) {
       emit(
         state.copyWith(
-          extraction: const ExtractionResult(
-            emiratesId: EmiratesIdResult.unclear(),
+          phase: const PhaseExtractionFailed(),
+          failure: const ExtractionFailure(
+            messageKey: 'errors.required_fields_missing',
+            kind: ExtractionFailureKind.missingToken,
           ),
-          extractionStatus: ExtractionStatus.done,
         ),
       );
       return;
     }
 
-    emit(state.copyWith(extractionStatus: ExtractionStatus.extracting));
+    emit(
+      state.copyWith(
+        phase: const PhaseExtracting(),
+        failure: null,
+      ),
+    );
 
     final result = await _extractDocuments(
       ExtractDocumentsParams(
@@ -213,27 +222,41 @@ class RegistrationCubit extends Cubit<RegistrationState> {
     if (isClosed) return;
 
     result.fold(
-      (failure) => emit(
-        state.copyWith(
-          extraction: _extractionFromFailure(failure),
-          extractionStatus: ExtractionStatus.done,
-        ),
-      ),
+      (failure) {
+        if (failure is ConflictFailure) {
+          // 409: this Emirates ID is already linked to another account.
+          emit(
+            state.copyWith(
+              extraction: const ExtractionResult(
+                emiratesId: EmiratesIdResult.alreadyRegistered(),
+              ),
+              phase: const PhaseExtractionDone(),
+              failure: null,
+            ),
+          );
+        } else {
+          // Network/server error — not an OCR issue. Show retry, not "blurry image".
+          emit(
+            state.copyWith(
+              phase: const PhaseExtractionFailed(),
+              failure: ExtractionFailure(
+                messageKey: failure.message,
+                kind: failure is NetworkFailure
+                    ? ExtractionFailureKind.network
+                    : ExtractionFailureKind.server,
+              ),
+            ),
+          );
+        }
+      },
       (extraction) => emit(
         state.copyWith(
           extraction: extraction,
-          extractionStatus: ExtractionStatus.done,
+          phase: const PhaseExtractionDone(),
+          failure: null,
         ),
       ),
-      );
-  }
-
-  ExtractionResult _extractionFromFailure(Failure failure) {
-    final emiratesId = failure is ConflictFailure
-        ? const EmiratesIdResult.alreadyRegistered()
-        : const EmiratesIdResult.unclear();
-
-    return ExtractionResult(emiratesId: emiratesId);
+    );
   }
 
   // ── Profile completion ─────────────────────────────────────────────────────
@@ -241,18 +264,22 @@ class RegistrationCubit extends Cubit<RegistrationState> {
   /// Completes provider profile by posting to the backend.
   ///
   /// Returns [AuthSessionEntity] on success which contains session tokens
-  /// that the auth layer can persist. On failure, emits a state with
-  /// [ProfileCompletionStatus.failed] and sets [lastUploadFailure].
+  /// that the auth layer can persist. On failure, emits [PhaseSubmissionFailed]
+  /// and sets [RegistrationState.failure] to a [ProfileFailure].
   Future<AuthSessionEntity?> completeProfile() async {
     final token = state.onboardingToken;
     final frontId = state.emiratesIdFront?.remoteId;
     final backId = state.emiratesIdBack?.remoteId;
+    final providerType = state.providerType;
 
-    if (token == null || frontId == null || backId == null) {
+    if (token == null || frontId == null || backId == null ||
+        providerType == null) {
       emit(
         state.copyWith(
-          profileCompletionStatus: ProfileCompletionStatus.failed,
-          lastUploadFailure: 'errors.required_fields_missing',
+          phase: const PhaseSubmissionFailed(),
+          failure: const ProfileFailure(
+            messageKey: 'errors.required_fields_missing',
+          ),
         ),
       );
       return null;
@@ -270,8 +297,8 @@ class RegistrationCubit extends Cubit<RegistrationState> {
 
     emit(
       state.copyWith(
-        profileCompletionStatus: ProfileCompletionStatus.submitting,
-        lastUploadFailure: null,
+        phase: const PhaseSubmitting(),
+        failure: null,
       ),
     );
 
@@ -280,7 +307,7 @@ class RegistrationCubit extends Cubit<RegistrationState> {
         authorizationToken: token,
         emiratesIdFrontId: frontId,
         emiratesIdBackId: backId,
-        isOrganization: state.isOrganization,
+        providerType: providerType,
         tradeLicenseId:
             state.isOrganization ? state.tradeLicence?.remoteId : null,
         fullName: state.isOrganization
@@ -306,18 +333,14 @@ class RegistrationCubit extends Cubit<RegistrationState> {
       (failure) {
         emit(
           state.copyWith(
-            profileCompletionStatus: ProfileCompletionStatus.failed,
-            lastUploadFailure: failure.message,
+            phase: const PhaseSubmissionFailed(),
+            failure: ProfileFailure(messageKey: failure.message),
           ),
         );
         return null;
       },
       (authResult) {
-        emit(
-          state.copyWith(
-            profileCompletionStatus: ProfileCompletionStatus.done,
-          ),
-        );
+        emit(state.copyWith(phase: const PhaseSubmissionDone()));
         return authResult;
       },
     );

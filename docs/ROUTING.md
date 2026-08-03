@@ -55,6 +55,13 @@ Bottom-nav tabs via `StatefulShellRoute.indexedStack`:
 Branch order matches [ProviderBottomNavDestination] in
 `apps/sanad_provider/lib/src/routing/shell/provider_bottom_nav.dart`.
 
+The bottom bar shows **Home** and **Settings** only. **Services**, **Requests**,
+and **Messages** are reachable from the center expandable FAB in `MainShell`.
+
+UI comes from the `bottom_nav_bar` package; the provider app maps
+`ProviderBottomNavDestination` to package models and injects Sanad theme tokens via
+`provider_bottom_nav_theme.dart` and `provider_bottom_nav_items.dart`.
+
 ## Typed Navigation Extras
 
 ```dart
