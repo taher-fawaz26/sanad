@@ -3,6 +3,7 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:maps/src/domain/entities/city_entity.dart';
 import 'package:maps/src/domain/usecases/get_cities_usecase.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// A form field that displays the currently selected [CityEntity] and opens
 /// a searchable bottom-sheet picker when tapped.
@@ -57,18 +58,16 @@ class CitySelectField extends StatelessWidget {
       localizedName != null ? localizedName!(city) : city.nameEn;
 
   Future<void> _openPicker(BuildContext context) async {
-    final result = await showModalBottomSheet<CityEntity>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      barrierColor: const Color(0x80000000),
-      builder: (_) => _CityPickerSheet(
+    final result = await SheetNavigator.push<CityEntity>(
+      context,
+      _CityPickerSheet(
         title: pickerTitle,
         searchHint: searchHint,
         emptyLabel: emptyLabel,
         retryLabel: retryLabel,
         localizedName: localizedName,
       ),
+      settings: const SheetRouteSettings(sheetSize: SheetSize.expanded),
     );
     if (result != null) {
       onCitySelected(result);

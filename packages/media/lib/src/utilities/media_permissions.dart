@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/widgets.dart';
 import 'package:media/src/models/media_source.dart';
 import 'package:permissions/permissions.dart';
@@ -17,10 +18,34 @@ abstract final class MediaPermissions {
     switch (source) {
       case AssetSource.camera:
       case AssetSource.scanner:
-        final result = await Permissions.ensureCamera(context: context);
+        final result = await Permissions.ensure(
+          PermissionType.camera,
+          context: context,
+          explanation: PermissionExplanation(
+            title: 'permissions.camera_title'.tr(),
+            description: 'permissions.camera_description'.tr(),
+            icon: PermissionIcons().forType(PermissionType.camera),
+            allowLabel: 'permissions.allow'.tr(),
+            denyLabel: 'permissions.deny'.tr(),
+            openSettingsLabel: 'permissions.open_settings'.tr(),
+            cancelLabel: 'permissions.cancel'.tr(),
+          ),
+        );
         return result.isGranted;
       case AssetSource.gallery:
-        final result = await Permissions.ensureGallery(context: context);
+        final result = await Permissions.ensure(
+          PermissionType.gallery,
+          context: context,
+          explanation: PermissionExplanation(
+            title: 'permissions.gallery_title'.tr(),
+            description: 'permissions.gallery_description'.tr(),
+            icon: PermissionIcons().forType(PermissionType.gallery),
+            allowLabel: 'permissions.allow'.tr(),
+            denyLabel: 'permissions.deny'.tr(),
+            openSettingsLabel: 'permissions.open_settings'.tr(),
+            cancelLabel: 'permissions.cancel'.tr(),
+          ),
+        );
         return result.isGranted;
       case AssetSource.files:
         return true;

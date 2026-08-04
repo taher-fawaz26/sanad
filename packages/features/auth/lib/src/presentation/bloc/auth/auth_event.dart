@@ -17,17 +17,6 @@ class AuthRequestOtpEvent extends AuthEvent {
   List<Object?> get props => [email];
 }
 
-/// Verify the [otp] entered for [email].
-class AuthVerifyOtpEvent extends AuthEvent {
-  const AuthVerifyOtpEvent({required this.email, required this.otp});
-
-  final String email;
-  final String otp;
-
-  @override
-  List<Object?> get props => [email, otp];
-}
-
 class AuthLogoutEvent extends AuthEvent {}
 
 class AuthDeleteAccountEvent extends AuthEvent {

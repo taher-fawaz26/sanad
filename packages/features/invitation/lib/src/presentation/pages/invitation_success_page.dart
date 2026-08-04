@@ -50,8 +50,10 @@ class InvitationSuccessPage extends StatelessWidget {
                         AppSvgs.badgeCheck,
                         width: 32,
                         height: 32,
-                        colorFilter:
-                            ColorFilter.mode(colors.primary, BlendMode.srcIn),
+                        colorFilter: ColorFilter.mode(
+                          colors.primary,
+                          BlendMode.srcIn,
+                        ),
                       ),
                     ),
                   ),

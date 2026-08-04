@@ -33,6 +33,10 @@ dependencies:
     path: ../../media
   network:
     path: ../../network
+  otp:
+    path: ../otp
+  sheet_navigation:
+    path: ../../sheet_navigation
   workers:
     path: ../workers
 

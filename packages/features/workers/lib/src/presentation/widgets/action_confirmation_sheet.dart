@@ -1,5 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Shared destructive/warning action row used in bottom sheet action lists
 /// (e.g. suspend, delete, cancel invitation).
@@ -68,10 +69,9 @@ Future<bool?> showWorkerConfirmationSheet({
   AppButtonType actionType = AppButtonType.primary,
   bool destructive = false,
 }) {
-  return showAppBottomSheet<bool>(
-    context: context,
-    padChild: false,
-    child: AppConfirmationContent(
+  return SheetNavigator.push<bool>(
+    context,
+    AppConfirmationContent(
       title: title,
       description: description,
       actionLabel: actionLabel,
@@ -80,6 +80,10 @@ Future<bool?> showWorkerConfirmationSheet({
       destructive: destructive,
       onConfirm: () => Navigator.of(context).pop(true),
       onCancel: () => Navigator.of(context).pop(false),
+    ),
+    settings: const SheetRouteSettings(
+      sheetSize: SheetSize.expanded,
+      padChild: false,
     ),
   );
 }

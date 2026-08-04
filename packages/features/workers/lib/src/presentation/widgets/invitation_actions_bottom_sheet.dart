@@ -4,6 +4,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 import 'package:workers/src/domain/entities/invitation_entity.dart';
 import 'package:workers/src/domain/entities/invitation_status.dart';
 import 'package:workers/src/presentation/bloc/invitation_action/invitation_action_cubit.dart';
@@ -30,15 +31,18 @@ Future<void> showInvitationActionsBottomSheet({
   final cubit = context.read<InvitationActionCubit>();
   final pageContext = context;
 
-  return showAppBottomSheet<void>(
-    context: context,
-    padChild: false,
-    child: BlocProvider.value(
+  return SheetNavigator.push<void>(
+    context,
+    BlocProvider.value(
       value: cubit,
       child: _InvitationActionsSheetBody(
         invitation: invitation,
         pageContext: pageContext,
       ),
+    ),
+    settings: const SheetRouteSettings(
+      sheetSize: SheetSize.expanded,
+      padChild: false,
     ),
   );
 }

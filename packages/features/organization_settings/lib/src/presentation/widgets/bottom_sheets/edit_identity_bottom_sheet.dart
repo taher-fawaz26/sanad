@@ -2,6 +2,7 @@ import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Shows the edit identity bottom sheet.
 ///
@@ -12,9 +13,9 @@ Future<String?> showEditIdentityBottomSheet({
   String? initialDescription,
   VoidCallback? onEnhanceWithAi,
 }) {
-  return showAppBottomSheet<String>(
-    context: context,
-    child: _EditIdentitySheetBody(
+  return SheetNavigator.push<String>(
+    context,
+    _EditIdentitySheetBody(
       initialDescription: initialDescription,
       onEnhanceWithAi: onEnhanceWithAi,
     ),

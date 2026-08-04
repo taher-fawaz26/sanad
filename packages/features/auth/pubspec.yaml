@@ -31,6 +31,8 @@ dependencies:
     path: ../../localization
   network:
     path: ../../network
+  otp:
+    path: ../otp
   storage:
     path: ../../storage
 

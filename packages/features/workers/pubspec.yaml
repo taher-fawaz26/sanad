@@ -27,6 +27,8 @@ dependencies:
     path: ../../localization
   network:
     path: ../../network
+  sheet_navigation:
+    path: ../../sheet_navigation
 
 dev_dependencies:
   bloc_test: ^10.0.0

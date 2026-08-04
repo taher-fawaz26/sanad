@@ -22,6 +22,10 @@ class PermissionExplanation extends Equatable {
     required this.title,
     required this.description,
     required this.icon,
+    this.allowLabel,
+    this.denyLabel,
+    this.openSettingsLabel,
+    this.cancelLabel,
   });
 
   /// Short, localized headline (e.g. "Camera access").
@@ -33,18 +37,50 @@ class PermissionExplanation extends Equatable {
   /// Icon representing the permission.
   final IconData icon;
 
+  /// Overrides the "Allow" button label for this specific call.
+  /// Falls back to [PermissionTexts.allowButtonLabel] when null.
+  final String? allowLabel;
+
+  /// Overrides the "Deny" button label for this specific call.
+  /// Falls back to [PermissionTexts.denyButtonLabel] when null.
+  final String? denyLabel;
+
+  /// Overrides the "Open Settings" button label in the permanently-denied sheet.
+  /// Falls back to [PermissionTexts.openSettingsButtonLabel] when null.
+  final String? openSettingsLabel;
+
+  /// Overrides the "Cancel" button label in the permanently-denied sheet.
+  /// Falls back to [PermissionTexts.cancelButtonLabel] when null.
+  final String? cancelLabel;
+
   PermissionExplanation copyWith({
     String? title,
     String? description,
     IconData? icon,
+    String? allowLabel,
+    String? denyLabel,
+    String? openSettingsLabel,
+    String? cancelLabel,
   }) {
     return PermissionExplanation(
       title: title ?? this.title,
       description: description ?? this.description,
       icon: icon ?? this.icon,
+      allowLabel: allowLabel ?? this.allowLabel,
+      denyLabel: denyLabel ?? this.denyLabel,
+      openSettingsLabel: openSettingsLabel ?? this.openSettingsLabel,
+      cancelLabel: cancelLabel ?? this.cancelLabel,
     );
   }
 
   @override
-  List<Object?> get props => [title, description, icon];
+  List<Object?> get props => [
+    title,
+    description,
+    icon,
+    allowLabel,
+    denyLabel,
+    openSettingsLabel,
+    cancelLabel,
+  ];
 }

@@ -1,8 +1,13 @@
+import 'dart:async';
+
 import 'package:app_assets/app_assets.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:fpdart/fpdart.dart' hide State;
+import 'package:otp/otp.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Saved contact values returned from [showEditContactInformationBottomSheet].
 @immutable
@@ -18,20 +23,51 @@ class ContactInformationResult {
 
 /// Shows the edit contact information bottom sheet — Figma `3809:18010`.
 ///
-/// Returns updated [ContactInformationResult] when the user taps Save,
-/// or `null` if dismissed without saving.
+/// Returns updated [ContactInformationResult] when the user taps Save, or
+/// `null` if dismissed without saving. When the email is changed, Save opens
+/// the shared OTP flow (`OtpFlow.start`) before the new value is returned —
+/// this is the reference integration of `sheet_navigation` + `otp`: this
+/// sheet morphs to fullscreen while the OTP sheet is presented on top of it.
+///
+/// **Known limitation:** there is no backend endpoint yet for confirming an
+/// organization email change, so [_OrganizationEmailOtpVerifier] mocks the
+/// request/verify round-trip (matching the pattern used by the `invitation`
+/// package). Swap it for a real `OtpVerifier` once the endpoint exists — no
+/// other code here needs to change.
 Future<ContactInformationResult?> showEditContactInformationBottomSheet({
   required BuildContext context,
   String? initialPhone,
   String? initialEmail,
 }) {
-  return showAppBottomSheet<ContactInformationResult>(
-    context: context,
-    child: _EditContactInformationSheetBody(
+  return SheetNavigator.push<ContactInformationResult>(
+    context,
+    _EditContactInformationSheetBody(
       initialPhone: initialPhone,
       initialEmail: initialEmail,
     ),
+    settings: const SheetRouteSettings(sheetSize: SheetSize.expanded),
   );
+}
+
+/// Mocks verifying a new organization email until the real endpoint exists.
+class _OrganizationEmailOtpVerifier implements OtpVerifier<void> {
+  const _OrganizationEmailOtpVerifier();
+
+  @override
+  TaskEither<Failure, OtpDelivery> requestCode() {
+    return TaskEither<Failure, OtpDelivery>(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      return right(const OtpDelivery());
+    });
+  }
+
+  @override
+  TaskEither<Failure, void> verifyCode(String code) {
+    return TaskEither<Failure, void>(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      return right(null);
+    });
+  }
 }
 
 class _EditContactInformationSheetBody extends StatefulWidget {
@@ -91,14 +127,32 @@ class _EditContactInformationSheetBodyState
       UaePhoneValidator.isValid(_phoneController.text) &&
       EmailValidator.isValid(_emailController.text);
 
-  void _submit() {
-    if (!_canSave) return;
-    Navigator.of(context).pop(
-      ContactInformationResult(
-        phone: _phoneController.text.trim(),
-        email: _emailController.text.trim(),
-      ),
-    );
+  bool _verifying = false;
+
+  Future<void> _submit() async {
+    if (!_canSave || _verifying) return;
+    final phone = _phoneController.text.trim();
+    final email = _emailController.text.trim();
+
+    if (email != (widget.initialEmail ?? '')) {
+      setState(() => _verifying = true);
+      final result = await OtpFlow.start<void>(
+        context,
+        OtpFlowConfig<void>.email(
+          destination: email,
+          purpose: OtpPurpose.changeEmail,
+          verifier: const _OrganizationEmailOtpVerifier(),
+        ),
+      );
+      if (!mounted) return;
+      setState(() => _verifying = false);
+      if (!result.isVerified) return;
+    }
+
+    if (!mounted) return;
+    Navigator.of(
+      context,
+    ).pop(ContactInformationResult(phone: phone, email: email));
   }
 
   @override
@@ -122,7 +176,10 @@ class _EditContactInformationSheetBodyState
           SizedBox(height: AppSpacing.xl),
           AppButton(
             label: 'settings.save_button'.tr(),
-            onPressed: _canSave ? _submit : null,
+            isLoading: _verifying,
+            onPressed: _canSave && !_verifying
+                ? () => unawaited(_submit())
+                : null,
           ),
         ],
       ),

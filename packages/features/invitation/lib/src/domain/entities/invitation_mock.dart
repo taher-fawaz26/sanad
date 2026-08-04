@@ -4,7 +4,8 @@ import 'package:equatable/equatable.dart';
 /// used elsewhere in the app (`worker` | `manager`).
 enum InvitationRole {
   worker,
-  manager;
+  manager
+  ;
 
   /// Localization key for the role label (`invitation.role_worker` /
   /// `invitation.role_manager`).

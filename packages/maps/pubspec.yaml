@@ -29,6 +29,8 @@ dependencies:
     path: ../network
   permissions:
     path: ../permissions
+  sheet_navigation:
+    path: ../sheet_navigation
 
 dev_dependencies:
   bloc_test: ^10.0.0

@@ -5,6 +5,7 @@ import 'package:maps/src/presentation/models/location_picker_labels.dart';
 import 'package:maps/src/presentation/models/location_picker_result.dart';
 import 'package:maps/src/presentation/models/map_configuration.dart';
 import 'package:maps/src/presentation/widgets/map_location_picker.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 Future<LocationPickerResult?> showLocationPickerSheet(
   BuildContext context, {
@@ -15,9 +16,9 @@ Future<LocationPickerResult?> showLocationPickerSheet(
   MapConfiguration configuration = const MapConfiguration(),
   Widget? pinMarker,
 }) {
-  return showAppModalSheet<LocationPickerResult>(
-    context: context,
-    child: Builder(
+  return SheetNavigator.push<LocationPickerResult>(
+    context,
+    Builder(
       // Scrollable so locale/text-scale variance (e.g. taller Arabic line
       // heights) scrolls instead of overflowing the sheet's fixed height.
       builder: (sheetContext) => SingleChildScrollView(
@@ -58,5 +59,6 @@ Future<LocationPickerResult?> showLocationPickerSheet(
         ),
       ),
     ),
+    settings: const SheetRouteSettings(sheetSize: SheetSize.expanded),
   );
 }

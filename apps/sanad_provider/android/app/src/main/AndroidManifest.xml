@@ -5,6 +5,12 @@
 
     <!-- Camera — required to capture identity documents during registration -->
     <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Gallery / Photo access — required for cover and profile image selection -->
+    <!-- READ_MEDIA_IMAGES is the API 33+ (Android 13+) replacement for READ_EXTERNAL_STORAGE -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <!-- READ_EXTERNAL_STORAGE is only needed on Android 12 and below -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application

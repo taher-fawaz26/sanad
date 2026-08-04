@@ -26,6 +26,8 @@ dependencies:
   image: ^4.5.0
   permissions:
     path: ../permissions
+  sheet_navigation:
+    path: ../sheet_navigation
 
 dev_dependencies:
   flutter_test:

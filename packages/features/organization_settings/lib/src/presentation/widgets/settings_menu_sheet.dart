@@ -4,17 +4,19 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:organization_settings/src/routes/organization_settings_routes.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Settings menu opened from the bottom-nav Settings tab — Figma `3829:5902`.
 Future<void> showSettingsMenuSheet(BuildContext context) {
   // Capture the shell context — the sheet runs in a new route.
   final shellContext = context;
 
-  return showAppBottomSheet<void>(
-    context: context,
-    showDragHandle: false,
-    padChild: false,
-    child: _SettingsMenuSheetBody(shellContext: shellContext),
+  return SheetNavigator.push<void>(
+    context,
+    _SettingsMenuSheetBody(shellContext: shellContext),
+    settings: const SheetRouteSettings(
+      enableDrag: false,
+    ),
   );
 }
 
@@ -47,7 +49,7 @@ class _SettingsMenuSheetBody extends StatelessWidget {
               color: colors.gray400,
             ),
             onTap: () {
-              Navigator.of(context).pop();
+              SheetNavigator.pop(context);
               shellContext.go(OrganizationSettingsRoutes.hub);
             },
           ),
@@ -61,7 +63,7 @@ class _SettingsMenuSheetBody extends StatelessWidget {
               color: colors.gray400,
             ),
             onTap: () {
-              Navigator.of(context).pop();
+              SheetNavigator.pop(context);
               shellContext.push(AccountSettingsRoutes.hub);
             },
           ),

@@ -1,0 +1,27 @@
+name: sheet_navigation
+description: >
+  Reusable bottom-sheet navigation infrastructure — a custom PopupRoute that
+  lets nested sheets expand the previous sheet to fullscreen as a new one is
+  pushed (LinkedIn-style). No feature owns this; every feature consumes it.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+  flutter: ">=3.19.0"
+
+dependencies:
+  core:
+    path: ../core
+  design_system:
+    path: ../design_system
+  flutter:
+    sdk: flutter
+  go_router: ^17.3.0
+
+dev_dependencies:
+  flutter_screenutil: ^5.9.3
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: ^9.0.0

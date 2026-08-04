@@ -1,6 +1,12 @@
 import 'dart:async';
 
+import 'package:auth/src/auth/auth_status_notifier.dart';
+import 'package:auth/src/domain/entities/auth_response_entity.dart';
+import 'package:auth/src/domain/usecases/request_email_otp_usecase.dart';
+import 'package:auth/src/domain/usecases/verify_email_otp_usecase.dart';
+import 'package:auth/src/domain/verifiers/auth_otp_verifier.dart';
 import 'package:auth/src/presentation/bloc/auth/auth_bloc.dart';
+import 'package:core/core.dart' show sl;
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/gestures.dart';
@@ -9,14 +15,22 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
+import 'package:network/network.dart';
 
 const _kResendCooldown = 60;
 
 /// Shared passwordless OTP screen (Figma `sign in` / OTP, `3026:19710`).
 ///
-/// Reached identically from Sign In and Sign Up. Verifies the emailed code via
-/// [AuthBloc]; on success it either hands off to [onAuthenticated] (existing
-/// user) or [onOnboarding] (new user continuing registration).
+/// Reached identically from Sign In and Sign Up. Requesting the initial/
+/// resend code still goes through [AuthBloc] (`AuthRequestOtpEvent`) — that
+/// part of the flow is untouched. Verifying the code goes through
+/// [AuthOtpVerifier] (the `otp` package's injected-verifier contract)
+/// directly rather than a Bloc event, since `otp` owns the one verification
+/// state machine in the app now — but this screen's own layout, header,
+/// timer, and error/success handling are unchanged from before that
+/// refactor. This is deliberate: the auth OTP screen is part of an already
+/// approved onboarding design and must not be replaced by the generic OTP
+/// sheet/page used everywhere else.
 class EmailOtpPage extends HookWidget {
   const EmailOtpPage({
     required this.email,
@@ -38,8 +52,20 @@ class EmailOtpPage extends HookWidget {
     final controller = useTextEditingController();
     final secondsLeft = useState(_kResendCooldown);
     final canResend = useState(false);
+    final isVerifying = useState(false);
     final colors = context.appColors;
     final typography = context.appTypography;
+
+    final verifier = useMemoized(
+      () => AuthOtpVerifier(
+        email: email,
+        requestEmailOtp: sl<RequestEmailOtpUseCase>(),
+        verifyEmailOtp: sl<VerifyEmailOtpUseCase>(),
+        sessionManager: sl<SessionManager>(),
+        authStatusNotifier: sl<AuthStatusNotifier>(),
+      ),
+      [email],
+    );
 
     useEffect(() {
       final timer = Timer.periodic(const Duration(seconds: 1), (t) {
@@ -62,7 +88,7 @@ class EmailOtpPage extends HookWidget {
       }
     }
 
-    void submit() {
+    Future<void> submit() async {
       if (controller.text.trim().length < kDefaultOtpLength) {
         showAppErrorSnackbar(
           context: context,
@@ -70,9 +96,25 @@ class EmailOtpPage extends HookWidget {
         );
         return;
       }
-      context.read<AuthBloc>().add(
-            AuthVerifyOtpEvent(email: email, otp: controller.text.trim()),
-          );
+      if (isVerifying.value) return;
+      isVerifying.value = true;
+      final result = await verifier.verifyCode(controller.text.trim()).run();
+      if (!context.mounted) return;
+      isVerifying.value = false;
+      result.match(
+        (failure) => showAppErrorSnackbar(
+          context: context,
+          title: failure.localizedMessage(),
+        ),
+        (response) {
+          switch (response) {
+            case AuthSessionEntity():
+              onAuthenticated();
+            case OnboardingAuthEntity(:final onboardingToken, :final user):
+              onOnboarding(user.email, onboardingToken);
+          }
+        },
+      );
     }
 
     void resend() {
@@ -89,18 +131,6 @@ class EmailOtpPage extends HookWidget {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         switch (state) {
-          case AuthAuthenticatedState():
-            onAuthenticated();
-          case AuthOnboardingRequiredState(
-              :final email,
-              :final onboardingToken,
-            ):
-            onOnboarding(email, onboardingToken);
-          case AuthOtpVerifyFailureState(:final failure):
-            showAppErrorSnackbar(
-              context: context,
-              title: failure.localizedMessage(),
-            );
           case AuthOtpSentState():
             showAppSnackbar(
               context: context,
@@ -125,92 +155,87 @@ class EmailOtpPage extends HookWidget {
             children: [
               Text(
                 'auth.otp_title'.tr(),
-              textAlign: TextAlign.center,
-              style: typography.title2.copyWith(
-                fontWeight: FontWeight.w600,
-                color: colors.textPrimary,
-              ),
-            ),
-            SizedBox(height: responsiveDimension(AppSpacing.sm)),
-            Text.rich(
-              textAlign: TextAlign.center,
-              TextSpan(
-                style: typography.regularNormal.copyWith(
-                  color: colors.textSecondary,
-                ),
-                children: [
-                  TextSpan(text: '${'auth.otp_subtitle'.tr()}\n'),
-                  TextSpan(
-                    text: email,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const TextSpan(text: ' '),
-                  TextSpan(
-                    text: 'auth.change'.tr(),
-                    style: TextStyle(
-                      color: colors.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    recognizer: TapGestureRecognizer()..onTap = changeEmail,
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-            Center(
-              child: AppOtpField(
-                controller: controller,
-                autofocus: true,
-                onCompleted: (_) => submit(),
-              ),
-            ),
-            SizedBox(height: responsiveDimension(AppSpacing.xl)),
-            BlocBuilder<AuthBloc, AuthState>(
-              builder: (context, state) {
-                final isLoading = state is AuthOtpVerifyLoadingState;
-                return AppButton(
-                  label: 'auth.verify'.tr(),
-                  isLoading: isLoading,
-                  onPressed: isLoading ? null : submit,
-                );
-              },
-            ),
-            SizedBox(height: responsiveDimension(AppSpacing.xl)),
-            if (!canResend.value)
-              Center(
-                child: Text(
-                  '$minutes:$seconds',
-                  style: typography.regularNormal.copyWith(
-                    color: colors.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
+                textAlign: TextAlign.center,
+                style: typography.title2.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: colors.textPrimary,
                 ),
               ),
-            SizedBox(height: responsiveDimension(AppSpacing.xl)),
-            Center(
-              child: Text.rich(
+              SizedBox(height: responsiveDimension(AppSpacing.sm)),
+              Text.rich(
+                textAlign: TextAlign.center,
                 TextSpan(
                   style: typography.regularNormal.copyWith(
                     color: colors.textSecondary,
                   ),
                   children: [
-                    TextSpan(text: 'auth.otp_not_received'.tr()),
+                    TextSpan(text: '${'auth.otp_subtitle'.tr()}\n'),
                     TextSpan(
-                      text: 'auth.resend'.tr(),
+                      text: email,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const TextSpan(text: ' '),
+                    TextSpan(
+                      text: 'auth.change'.tr(),
                       style: TextStyle(
-                        color: canResend.value
-                            ? colors.primary
-                            : colors.textMuted,
+                        color: colors.primary,
                         fontWeight: FontWeight.w600,
                       ),
-                      recognizer: canResend.value
-                          ? (TapGestureRecognizer()..onTap = resend)
-                          : null,
+                      recognizer: TapGestureRecognizer()..onTap = changeEmail,
                     ),
                   ],
                 ),
               ),
-            ),
+              SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
+              Center(
+                child: AppOtpField(
+                  controller: controller,
+                  autofocus: true,
+                  onCompleted: (_) => submit(),
+                ),
+              ),
+              SizedBox(height: responsiveDimension(AppSpacing.xl)),
+              AppButton(
+                label: 'auth.verify'.tr(),
+                isLoading: isVerifying.value,
+                onPressed: isVerifying.value ? null : submit,
+              ),
+              SizedBox(height: responsiveDimension(AppSpacing.xl)),
+              if (!canResend.value)
+                Center(
+                  child: Text(
+                    '$minutes:$seconds',
+                    style: typography.regularNormal.copyWith(
+                      color: colors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              SizedBox(height: responsiveDimension(AppSpacing.xl)),
+              Center(
+                child: Text.rich(
+                  TextSpan(
+                    style: typography.regularNormal.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                    children: [
+                      TextSpan(text: 'auth.otp_not_received'.tr()),
+                      TextSpan(
+                        text: 'auth.resend'.tr(),
+                        style: TextStyle(
+                          color: canResend.value
+                              ? colors.primary
+                              : colors.textMuted,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        recognizer: canResend.value
+                            ? (TapGestureRecognizer()..onTap = resend)
+                            : null,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),

@@ -48,10 +48,11 @@ class PermissionHandlerProvider {
     return switch (type) {
       PermissionType.camera => ph.Permission.camera,
       PermissionType.photos => ph.Permission.photos,
-      // On iOS, "gallery" and "photos" both map to the Photos library.
-      // On Android, gallery uses READ_EXTERNAL_STORAGE / READ_MEDIA_IMAGES.
-      PermissionType.gallery =>
-        Platform.isIOS ? ph.Permission.photos : ph.Permission.storage,
+      // permission_handler ≥10.2 routes Permission.photos to READ_MEDIA_IMAGES
+      // on Android 13+ (API 33+) and READ_EXTERNAL_STORAGE on older versions.
+      // Permission.storage maps to READ_EXTERNAL_STORAGE only, which Android
+      // marks permanentlyDenied immediately on API 33+ — never use it for gallery.
+      PermissionType.gallery => ph.Permission.photos,
       PermissionType.storage => ph.Permission.storage,
       // iOS has no separate documents permission (document picker handles it
       // in-UI). On Android we request MANAGE_EXTERNAL_STORAGE.

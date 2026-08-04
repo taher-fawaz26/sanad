@@ -1,6 +1,7 @@
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// An action the user chose from the media action sheet.
 enum MediaAction { view, gallery, files, camera, remove }
@@ -25,10 +26,12 @@ class MediaActionsSheet extends StatelessWidget {
     required bool hasMedia,
     bool allowRemove = true,
   }) {
-    return showAppBottomSheet<MediaAction>(
-      context: context,
-      title: title,
-      child: MediaActionsSheet(hasMedia: hasMedia, allowRemove: allowRemove),
+    return SheetNavigator.push<MediaAction>(
+      context,
+      MediaActionsSheet(hasMedia: hasMedia, allowRemove: allowRemove),
+      settings: SheetRouteSettings(
+        title: title,
+      ),
     );
   }
 

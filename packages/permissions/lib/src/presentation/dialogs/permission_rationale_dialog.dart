@@ -29,9 +29,9 @@ class PermissionRationaleDialog {
       child: PermissionDialogContent(
         explanation: resolved,
         theme: theme,
-        primaryLabel: theme.texts.allowButtonLabel,
+        primaryLabel: resolved.allowLabel ?? theme.texts.allowButtonLabel,
         primaryAction: () => Navigator.of(context).pop(true),
-        secondaryLabel: theme.texts.denyButtonLabel,
+        secondaryLabel: resolved.denyLabel ?? theme.texts.denyButtonLabel,
         secondaryAction: () => Navigator.of(context).pop(false),
       ),
     );

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer' as developer;
 
 import 'package:auth/src/auth/auth_status.dart';
 import 'package:auth/src/auth/auth_status_notifier.dart';
@@ -12,10 +11,8 @@ import 'package:auth/src/domain/usecases/request_email_otp_usecase.dart';
 import 'package:auth/src/domain/usecases/sign_in_with_google_usecase.dart';
 import 'package:auth/src/domain/usecases/usecase_params.dart';
 import 'package:auth/src/domain/usecases/validate_email_usecase.dart';
-import 'package:auth/src/domain/usecases/verify_email_otp_usecase.dart';
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:network/network.dart';
 
@@ -25,7 +22,6 @@ part 'auth_state.dart';
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc({
     required RequestEmailOtpUseCase requestOtpUseCase,
-    required VerifyEmailOtpUseCase verifyOtpUseCase,
     required AuthLogoutUseCase logoutUseCase,
     required DeleteAccountUseCase deleteAccountUseCase,
     required SessionManager sessionManager,
@@ -34,7 +30,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required SignInWithGoogleUseCase signInWithGoogleUseCase,
     required ValidateEmailUseCase validateEmailUseCase,
   }) : _requestOtpUseCase = requestOtpUseCase,
-       _verifyOtpUseCase = verifyOtpUseCase,
        _logoutUseCase = logoutUseCase,
        _deleteAccountUseCase = deleteAccountUseCase,
        _sessionManager = sessionManager,
@@ -44,7 +39,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
        _validateEmailUseCase = validateEmailUseCase,
        super(const AuthInitialState()) {
     on<AuthRequestOtpEvent>(_requestOtp);
-    on<AuthVerifyOtpEvent>(_verifyOtp);
     on<AuthLogoutEvent>(_logout);
     on<AuthDeleteAccountEvent>(_deleteAccount);
     on<AuthCheckSignInStatusEvent>(_checkSignInStatus);
@@ -53,7 +47,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   final RequestEmailOtpUseCase _requestOtpUseCase;
-  final VerifyEmailOtpUseCase _verifyOtpUseCase;
   final AuthLogoutUseCase _logoutUseCase;
   final DeleteAccountUseCase _deleteAccountUseCase;
   final SessionManager _sessionManager;
@@ -114,56 +107,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         } else {
           emit(AuthValidateEmailSuccessState(emailExists));
           return;
-        }
-      },
-    );
-  }
-
-  Future<void> _verifyOtp(
-    AuthVerifyOtpEvent event,
-    Emitter<AuthState> emit,
-  ) async {
-    emit(const AuthOtpVerifyLoadingState());
-
-    final result = await _verifyOtpUseCase
-        .call(VerifyEmailOtpParams(email: event.email, otp: event.otp))
-        .run();
-
-    await result.match(
-      (failure) async {
-        if (kDebugMode) {
-          developer.log(
-            'OTP verify failed: ${failure.runtimeType} '
-            'message=${failure.message} metadata=${failure.metadata}',
-            name: 'AuthBloc',
-          );
-        }
-        emit(AuthOtpVerifyFailureState(failure));
-      },
-      (response) async {
-        switch (response) {
-          case AuthSessionEntity(
-            :final accessToken,
-            :final refreshToken,
-            :final user,
-            :final isProfileCreated,
-          ):
-            await _sessionManager.startSession(
-              accessToken: accessToken,
-              refreshToken: refreshToken,
-            );
-            _authStatusNotifier.update(
-              AuthStatus.authenticated,
-              isProfileCompleted: isProfileCreated,
-            );
-            emit(AuthAuthenticatedState(user));
-          case OnboardingAuthEntity(:final onboardingToken, :final user):
-            emit(
-              AuthOnboardingRequiredState(
-                email: user.email,
-                onboardingToken: onboardingToken,
-              ),
-            );
         }
       },
     );

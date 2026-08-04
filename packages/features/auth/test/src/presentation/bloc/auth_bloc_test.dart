@@ -2,8 +2,6 @@
 
 import 'package:auth/src/auth/auth_status.dart';
 import 'package:auth/src/auth/auth_status_notifier.dart';
-import 'package:auth/src/domain/entities/auth_profile_entity.dart';
-import 'package:auth/src/domain/entities/auth_response_entity.dart';
 import 'package:auth/src/domain/entities/user_entity.dart';
 import 'package:auth/src/domain/enums/user_type.dart';
 import 'package:auth/src/domain/usecases/check_signin_status_usecase.dart';
@@ -11,9 +9,8 @@ import 'package:auth/src/domain/usecases/delete_account_usecase.dart';
 import 'package:auth/src/domain/usecases/logout_usecase.dart';
 import 'package:auth/src/domain/usecases/request_email_otp_usecase.dart';
 import 'package:auth/src/domain/usecases/sign_in_with_google_usecase.dart';
-import 'package:auth/src/domain/usecases/validate_email_usecase.dart';
 import 'package:auth/src/domain/usecases/usecase_params.dart';
-import 'package:auth/src/domain/usecases/verify_email_otp_usecase.dart';
+import 'package:auth/src/domain/usecases/validate_email_usecase.dart';
 import 'package:auth/src/presentation/bloc/auth/auth_bloc.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:core/core.dart';
@@ -27,8 +24,6 @@ import 'package:network/network.dart';
 class _MockRequestOtpUseCase extends Mock implements RequestEmailOtpUseCase {}
 
 class _MockValidateEmailUseCase extends Mock implements ValidateEmailUseCase {}
-
-class _MockVerifyOtpUseCase extends Mock implements VerifyEmailOtpUseCase {}
 
 class _MockLogoutUseCase extends Mock implements AuthLogoutUseCase {}
 
@@ -54,39 +49,12 @@ const _tUser = UserEntity(
   type: UserType.client,
 );
 
-const _tProfile = ClientProfileEntity(
-  id: 'profile-1',
-  fullName: 'Test User',
-  email: _tEmail,
-  emiratesId: '784-0000-0000000-0',
-);
-
-const _tAuthenticated = AuthSessionEntity(
-  accessToken: 'access-token',
-  refreshToken: 'refresh-token',
-  status: 'authenticated',
-  isEmailVerified: true,
-  isProfileCreated: true,
-  user: _tUser,
-  profile: _tProfile,
-  permissions: [],
-);
-
-const _tOnboarding = OnboardingAuthEntity(
-  status: 'onboarding',
-  onboardingToken: 'onboarding-token',
-  isEmailVerified: true,
-  isProfileCreated: false,
-  user: _tUser,
-);
-
 const _tFailure = ServerFailure(message: 'server_error');
 
 // ── Tests ──────────────────────────────────────────────────────────────────
 
 void main() {
   late _MockRequestOtpUseCase requestOtpUseCase;
-  late _MockVerifyOtpUseCase verifyOtpUseCase;
   late _MockLogoutUseCase logoutUseCase;
   late _MockDeleteAccountUseCase deleteAccountUseCase;
   late _MockSessionManager sessionManager;
@@ -96,7 +64,6 @@ void main() {
   late _MockValidateEmailUseCase validateEmailUseCase;
   AuthBloc buildBloc() => AuthBloc(
     requestOtpUseCase: requestOtpUseCase,
-    verifyOtpUseCase: verifyOtpUseCase,
     logoutUseCase: logoutUseCase,
     deleteAccountUseCase: deleteAccountUseCase,
     sessionManager: sessionManager,
@@ -109,14 +76,12 @@ void main() {
   setUpAll(() {
     registerFallbackValue(const RequestEmailOtpParams(email: ''));
     registerFallbackValue(const ValidateEmailParams(email: ''));
-    registerFallbackValue(const VerifyEmailOtpParams(email: '', otp: ''));
     registerFallbackValue(const DeleteAccountParams(userSub: ''));
     registerFallbackValue(const NoParams());
   });
 
   setUp(() {
     requestOtpUseCase = _MockRequestOtpUseCase();
-    verifyOtpUseCase = _MockVerifyOtpUseCase();
     logoutUseCase = _MockLogoutUseCase();
     deleteAccountUseCase = _MockDeleteAccountUseCase();
     sessionManager = _MockSessionManager();
@@ -181,7 +146,7 @@ void main() {
         build: () {
           when(
             () => validateEmailUseCase(any()),
-          ).thenReturn(TaskEither.right(true));
+          ).thenReturn(TaskEither.right(false));
           return buildBloc();
         },
         act: (bloc) => bloc.add(
@@ -198,7 +163,7 @@ void main() {
         build: () {
           when(
             () => validateEmailUseCase(any()),
-          ).thenReturn(TaskEither.right(false));
+          ).thenReturn(TaskEither.right(true));
           return buildBloc();
         },
         act: (bloc) => bloc.add(
@@ -219,7 +184,7 @@ void main() {
         build: () {
           when(
             () => validateEmailUseCase(any()),
-          ).thenReturn(TaskEither.right(false));
+          ).thenReturn(TaskEither.right(true));
           return buildBloc();
         },
         act: (bloc) => bloc.add(
@@ -236,7 +201,7 @@ void main() {
         build: () {
           when(
             () => validateEmailUseCase(any()),
-          ).thenReturn(TaskEither.right(true));
+          ).thenReturn(TaskEither.right(false));
           return buildBloc();
         },
         act: (bloc) => bloc.add(
@@ -253,81 +218,9 @@ void main() {
       );
     });
 
-    // ── Verify OTP ─────────────────────────────────────────────────────────
-
-    group('AuthVerifyOtpEvent', () {
-      blocTest<AuthBloc, AuthState>(
-        'existing user → [loading, authenticated] + session started',
-        build: () {
-          when(
-            () => verifyOtpUseCase(any()),
-          ).thenReturn(TaskEither.right(_tAuthenticated));
-          return buildBloc();
-        },
-        act: (bloc) =>
-            bloc.add(const AuthVerifyOtpEvent(email: _tEmail, otp: '12345')),
-        expect: () => [
-          isA<AuthOtpVerifyLoadingState>(),
-          isA<AuthAuthenticatedState>().having((s) => s.user, 'user', _tUser),
-        ],
-        verify: (_) {
-          expect(authStatusNotifier.status, AuthStatus.authenticated);
-          verify(
-            () => sessionManager.startSession(
-              accessToken: 'access-token',
-              refreshToken: 'refresh-token',
-            ),
-          ).called(1);
-        },
-      );
-
-      blocTest<AuthBloc, AuthState>(
-        'new user → [loading, onboardingRequired] and no session',
-        build: () {
-          when(
-            () => verifyOtpUseCase(any()),
-          ).thenReturn(TaskEither.right(_tOnboarding));
-          return buildBloc();
-        },
-        act: (bloc) =>
-            bloc.add(const AuthVerifyOtpEvent(email: _tEmail, otp: '12345')),
-        expect: () => [
-          isA<AuthOtpVerifyLoadingState>(),
-          isA<AuthOnboardingRequiredState>()
-              .having((s) => s.email, 'email', _tEmail)
-              .having((s) => s.onboardingToken, 'token', 'onboarding-token'),
-        ],
-        verify: (_) {
-          expect(authStatusNotifier.status, AuthStatus.unknown);
-          verifyNever(
-            () => sessionManager.startSession(
-              accessToken: any(named: 'accessToken'),
-              refreshToken: any(named: 'refreshToken'),
-            ),
-          );
-        },
-      );
-
-      blocTest<AuthBloc, AuthState>(
-        'emits [loading, failure] when verification fails',
-        build: () {
-          when(
-            () => verifyOtpUseCase(any()),
-          ).thenReturn(TaskEither.left(_tFailure));
-          return buildBloc();
-        },
-        act: (bloc) =>
-            bloc.add(const AuthVerifyOtpEvent(email: _tEmail, otp: '00000')),
-        expect: () => [
-          isA<AuthOtpVerifyLoadingState>(),
-          isA<AuthOtpVerifyFailureState>().having(
-            (s) => s.failure.message,
-            'failure.message',
-            'server_error',
-          ),
-        ],
-      );
-    });
+    // Email OTP verification (session start, onboarding hand-off) is now
+    // owned by `AuthOtpVerifier` — see auth_otp_verifier_test.dart. `AuthBloc`
+    // no longer has a verify-OTP event/state pair.
 
     // ── Logout ───────────────────────────────────────────────────────────
 

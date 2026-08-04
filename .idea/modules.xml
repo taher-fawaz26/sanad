@@ -19,6 +19,7 @@
 <module fileurl="file://$PROJECT_DIR$/packages/features/invitation/melos_invitation.iml" filepath="$PROJECT_DIR$/packages/features/invitation/melos_invitation.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/localization/melos_localization.iml" filepath="$PROJECT_DIR$/packages/localization/melos_localization.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/maps/melos_maps.iml" filepath="$PROJECT_DIR$/packages/maps/melos_maps.iml"/>
+<module fileurl="file://$PROJECT_DIR$/packages/media/melos_media.iml" filepath="$PROJECT_DIR$/packages/media/melos_media.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/network/melos_network.iml" filepath="$PROJECT_DIR$/packages/network/melos_network.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/notifications/melos_notifications.iml" filepath="$PROJECT_DIR$/packages/notifications/melos_notifications.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/features/organization_settings/melos_organization_settings.iml" filepath="$PROJECT_DIR$/packages/features/organization_settings/melos_organization_settings.iml"/>

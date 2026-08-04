@@ -6,6 +6,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
 import 'package:workers/src/presentation/bloc/invitations_list/invitations_list_bloc.dart';
 import 'package:workers/src/presentation/bloc/workers_list/workers_list_bloc.dart';
@@ -42,15 +43,16 @@ Future<void> showWorkerSearchSheet(
   final workersList = context.read<WorkersListBloc>();
   final invitationsList = context.read<InvitationsListBloc>();
 
-  final result = await showAppModalSheet<_SearchSheetResult>(
-    context: context,
-    child: MultiBlocProvider(
+  final result = await SheetNavigator.push<_SearchSheetResult>(
+    context,
+    MultiBlocProvider(
       providers: [
         BlocProvider.value(value: workersList),
         BlocProvider.value(value: invitationsList),
       ],
       child: _WorkerSearchSheetBody(scope: scope),
     ),
+    settings: const SheetRouteSettings(sheetSize: SheetSize.expanded),
   );
 
   // Only reset when the user actually typed something — clearing an already

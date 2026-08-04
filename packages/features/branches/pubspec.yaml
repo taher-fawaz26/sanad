@@ -32,6 +32,8 @@ dependencies:
     path: ../../network
   services:
     path: ../services
+  sheet_navigation:
+    path: ../../sheet_navigation
   workers:
     path: ../workers
   url_launcher: ^6.3.1

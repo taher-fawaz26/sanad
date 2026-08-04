@@ -4,6 +4,7 @@ import 'package:asset_picker/src/presentation/widgets/asset_picker_tile.dart';
 import 'package:asset_picker/src/theme/asset_picker_theme.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// A design-system bottom sheet that lets the user choose an [AssetSource].
 ///
@@ -132,21 +133,12 @@ Future<AssetSource?> showAssetSourceSheet({
   required AssetPickerOptions options,
   required AssetPickerTheme theme,
 }) {
-  final appColors = context.appColors;
-  final typography = context.appTypography;
-  final brightness = Theme.of(context).brightness;
-  final actionSpec = ActionSheetTokens.resolve(
-    colors: appColors,
-    typography: typography,
-    brightness: brightness,
-  );
-
-  return showModalBottomSheet<AssetSource>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    barrierColor: actionSpec.barrierColor,
-    showDragHandle: false,
-    builder: (_) => AssetSourceSheet(options: options, theme: theme),
+  return SheetNavigator.push<AssetSource>(
+    context,
+    AssetSourceSheet(options: options, theme: theme),
+    settings: const SheetRouteSettings(
+      enableDrag: false,
+      padChild: false,
+    ),
   );
 }

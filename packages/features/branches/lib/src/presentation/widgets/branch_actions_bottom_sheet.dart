@@ -7,6 +7,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Figma `Views / Bottom Sheets` branch actions (`287:7642`).
 Future<void> showBranchActionsBottomSheet({
@@ -18,15 +19,15 @@ Future<void> showBranchActionsBottomSheet({
   final bloc = context.read<BranchesBloc>();
   final pageContext = context;
 
-  return showAppBottomSheet<void>(
-    context: context,
-    padChild: false,
-    child: BlocProvider.value(
+  return SheetNavigator.push<void>(
+    context,
+    BlocProvider.value(
       value: bloc,
-      child: _BranchActionsSheetBody(
-        branch: branch,
-        pageContext: pageContext,
-      ),
+      child: _BranchActionsSheetBody(branch: branch, pageContext: pageContext),
+    ),
+    settings: const SheetRouteSettings(
+      sheetSize: SheetSize.expanded,
+      padChild: false,
     ),
   );
 }

@@ -9,6 +9,7 @@ import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 class BranchManagerPickerField extends StatelessWidget {
   const BranchManagerPickerField({
@@ -37,16 +38,15 @@ class BranchManagerPickerField extends StatelessWidget {
   }
 
   Future<void> _openPicker(BuildContext context) async {
-    final selected = await showModalBottomSheet<BranchManagerEntity>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => _ManagerPickerSheet(
+    final selected = await SheetNavigator.push<BranchManagerEntity>(
+      context,
+      _ManagerPickerSheet(
         title: 'branches.add_branch.branch_manager'.tr(),
         cancelLabel: 'branches.add_branch.cancel'.tr(),
         searchHint: 'branches.add_branch.manager_search_hint'.tr(),
         loadMoreLabel: 'branches.add_branch.load_more'.tr(),
       ),
+      settings: const SheetRouteSettings(sheetSize: SheetSize.expanded),
     );
     if (selected != null) {
       onManagerSelected(selected);

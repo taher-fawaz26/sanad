@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maps/maps.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Figma Coverage area full screen (`194:5435`).
 class CoverageAreaPage extends StatefulWidget {
@@ -76,9 +77,9 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
 
   Future<void> _openSearchSheet(BuildContext context) async {
     final bloc = context.read<LocationPickerBloc>();
-    final selected = await showAppModalSheet<PlacePrediction>(
-      context: context,
-      child: BlocProvider.value(
+    final selected = await SheetNavigator.push<PlacePrediction>(
+      context,
+      BlocProvider.value(
         value: bloc,
         child: BlocBuilder<LocationPickerBloc, LocationPickerState>(
           builder: (context, state) => PlaceSearchSheetBody(
@@ -99,6 +100,7 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
           ),
         ),
       ),
+      settings: const SheetRouteSettings(sheetSize: SheetSize.expanded),
     );
     bloc.add(const LocationPickerPredictionsCleared());
     if (selected != null) {

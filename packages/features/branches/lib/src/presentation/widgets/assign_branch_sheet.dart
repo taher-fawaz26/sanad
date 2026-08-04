@@ -7,6 +7,7 @@ import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:localization/localization.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 import 'package:workers/workers.dart';
 
 class BranchesWorkerBranchAssigner implements WorkerBranchAssigner {
@@ -18,12 +19,10 @@ class BranchesWorkerBranchAssigner implements WorkerBranchAssigner {
     required WorkerEntity worker,
     required ValueChanged<WorkerEntity> onWorkerUpdated,
   }) {
-    return showAppBottomSheet<void>(
-      context: context,
-      child: _AssignBranchSheetBody(
-        worker: worker,
-        onWorkerUpdated: onWorkerUpdated,
-      ),
+    return SheetNavigator.push<void>(
+      context,
+      _AssignBranchSheetBody(worker: worker, onWorkerUpdated: onWorkerUpdated),
+      settings: const SheetRouteSettings(sheetSize: SheetSize.expanded),
     );
   }
 }

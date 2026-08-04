@@ -10,6 +10,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// What the user did inside the search sheet, reported back through the
 /// modal's result so navigation always happens after the sheet has fully
@@ -40,12 +41,10 @@ class _StartAddBranch extends _SearchSheetResult {
 Future<void> showBranchSearchSheet(BuildContext context) async {
   final bloc = context.read<BranchesBloc>();
 
-  final result = await showAppModalSheet<_SearchSheetResult>(
-    context: context,
-    child: BlocProvider.value(
-      value: bloc,
-      child: const _BranchSearchSheetBody(),
-    ),
+  final result = await SheetNavigator.push<_SearchSheetResult>(
+    context,
+    BlocProvider.value(value: bloc, child: const _BranchSearchSheetBody()),
+    settings: const SheetRouteSettings(sheetSize: SheetSize.expanded),
   );
 
   bloc.add(const BranchesSearchChangedEvent(''));

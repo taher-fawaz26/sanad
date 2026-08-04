@@ -4,6 +4,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
 import 'package:workers/src/domain/entities/worker_status.dart';
 import 'package:workers/src/presentation/bloc/worker_action/worker_action_cubit.dart';
@@ -33,18 +34,18 @@ Future<void> showWorkerActionsBottomSheet({
   final actionCubit = context.read<WorkerActionCubit>();
   final pageContext = context;
 
-  return showAppBottomSheet<void>(
-    context: context,
-    padChild: false,
-    child: MultiBlocProvider(
+  return SheetNavigator.push<void>(
+    context,
+    MultiBlocProvider(
       providers: [
         BlocProvider.value(value: listBloc),
         BlocProvider.value(value: actionCubit),
       ],
-      child: _WorkerActionsSheetBody(
-        worker: worker,
-        pageContext: pageContext,
-      ),
+      child: _WorkerActionsSheetBody(worker: worker, pageContext: pageContext),
+    ),
+    settings: const SheetRouteSettings(
+      sheetSize: SheetSize.expanded,
+      padChild: false,
     ),
   );
 }

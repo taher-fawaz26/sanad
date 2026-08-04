@@ -36,11 +36,8 @@ class AuthOtpRequestFailureState extends AuthState {
   List<Object?> get props => [failure];
 }
 
-// ─── Verify OTP ─────────────────────────────────────────────────────────────
-
-class AuthOtpVerifyLoadingState extends AuthState {
-  const AuthOtpVerifyLoadingState();
-}
+// ─── Post-authentication (reached via `otp`'s AuthOtpVerifier, or Google
+// sign-in) ───────────────────────────────────────────────────────────────
 
 /// Existing user — session started, navigate to the dashboard.
 class AuthAuthenticatedState extends AuthState {
@@ -64,15 +61,6 @@ class AuthOnboardingRequiredState extends AuthState {
 
   @override
   List<Object?> get props => [email, onboardingToken];
-}
-
-class AuthOtpVerifyFailureState extends AuthState {
-  const AuthOtpVerifyFailureState(this.failure);
-
-  final Failure failure;
-
-  @override
-  List<Object?> get props => [failure];
 }
 
 // ─── Logout ─────────────────────────────────────────────────────────────────

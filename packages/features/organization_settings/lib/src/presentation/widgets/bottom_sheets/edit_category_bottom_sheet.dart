@@ -2,6 +2,7 @@ import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// A selectable category option shown inside [EditCategoryBottomSheet].
 @immutable
@@ -22,23 +23,17 @@ Future<Set<String>?> showEditCategoryBottomSheet({
   required List<CategoryOption> categories,
   Set<String> initialSelectedIds = const {},
 }) {
-  final colors = context.appColors;
-  final typography = context.appTypography;
-  final brightness = Theme.of(context).brightness;
-  final spec = ActionSheetTokens.resolve(
-    colors: colors,
-    typography: typography,
-    brightness: brightness,
-  );
-
-  return showModalBottomSheet<Set<String>>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    barrierColor: spec.barrierColor,
-    builder: (_) => EditCategoryBottomSheet(
+  // AppActionSheet renders its own drag handle, padding, and surface — don't
+  // double them up with SheetScaffold's chrome.
+  return SheetNavigator.push<Set<String>>(
+    context,
+    EditCategoryBottomSheet(
       categories: categories,
       initialSelectedIds: initialSelectedIds,
+    ),
+    settings: const SheetRouteSettings(
+      enableDrag: false,
+      padChild: false,
     ),
   );
 }
@@ -53,7 +48,6 @@ class EditCategoryBottomSheet extends StatefulWidget {
     super.key,
     this.initialSelectedIds = const {},
   });
-
 
   final List<CategoryOption> categories;
   final Set<String> initialSelectedIds;

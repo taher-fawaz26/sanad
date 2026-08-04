@@ -9,13 +9,12 @@ import 'package:auth/src/domain/usecases/delete_account_usecase.dart';
 import 'package:auth/src/domain/usecases/logout_usecase.dart';
 import 'package:auth/src/domain/usecases/request_email_otp_usecase.dart';
 import 'package:auth/src/domain/usecases/sign_in_with_google_usecase.dart';
+import 'package:auth/src/domain/usecases/validate_email_usecase.dart';
 import 'package:auth/src/domain/usecases/verify_email_otp_usecase.dart';
 import 'package:auth/src/presentation/bloc/auth/auth_bloc.dart';
 import 'package:core/core.dart';
 import 'package:network/network.dart';
 import 'package:storage/storage.dart';
-
-import 'package:auth/src/domain/usecases/validate_email_usecase.dart';
 
 class AuthDI {
   AuthDI._();
@@ -61,7 +60,6 @@ class AuthDI {
       ..registerFactory(
         () => AuthBloc(
           requestOtpUseCase: sl<RequestEmailOtpUseCase>(),
-          verifyOtpUseCase: sl<VerifyEmailOtpUseCase>(),
           logoutUseCase: sl<AuthLogoutUseCase>(),
           deleteAccountUseCase: sl<DeleteAccountUseCase>(),
           sessionManager: sl<SessionManager>(),

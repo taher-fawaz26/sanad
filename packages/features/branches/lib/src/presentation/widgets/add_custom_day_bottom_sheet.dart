@@ -2,6 +2,7 @@ import 'package:branches/src/presentation/utils/branch_schedule_formatter.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 class AddCustomDayResult {
   const AddCustomDayResult({
@@ -20,10 +21,12 @@ Future<AddCustomDayResult?> showAddCustomDayBottomSheet({
   required BuildContext context,
   required List<String> availableDays,
 }) {
-  return showAppBottomSheet<AddCustomDayResult>(
-    context: context,
-    title: 'branches.add_branch.add_custom_day_title'.tr(),
-    child: _AddCustomDaySheetBody(availableDays: availableDays),
+  return SheetNavigator.push<AddCustomDayResult>(
+    context,
+    _AddCustomDaySheetBody(availableDays: availableDays),
+    settings: SheetRouteSettings(
+      title: 'branches.add_branch.add_custom_day_title'.tr(),
+    ),
   );
 }
 

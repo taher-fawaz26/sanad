@@ -18,6 +18,7 @@ import 'package:maps/src/presentation/widgets/map_control_bar.dart';
 import 'package:maps/src/presentation/widgets/map_zoom_controls.dart';
 import 'package:maps/src/presentation/widgets/place_search_sheet_body.dart';
 import 'package:maps/src/widgets/app_google_map.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Reusable map picker that returns a single generic result.
 ///
@@ -81,9 +82,9 @@ class _MapAreaPickerState extends State<MapAreaPicker> {
   /// prediction-selected flow, which animates the camera once.
   Future<void> _openSearchSheet(BuildContext context) async {
     final bloc = context.read<MapAreaPickerBloc>();
-    final selected = await showAppModalSheet<PlacePrediction>(
-      context: context,
-      child: BlocProvider.value(
+    final selected = await SheetNavigator.push<PlacePrediction>(
+      context,
+      BlocProvider.value(
         value: bloc,
         child: BlocBuilder<MapAreaPickerBloc, MapAreaPickerState>(
           builder: (context, state) => PlaceSearchSheetBody(
@@ -104,6 +105,7 @@ class _MapAreaPickerState extends State<MapAreaPicker> {
           ),
         ),
       ),
+      settings: const SheetRouteSettings(sheetSize: SheetSize.expanded),
     );
     bloc.add(const MapAreaPickerPredictionsCleared());
     if (selected != null) {
@@ -408,11 +410,9 @@ Future<MapAreaPickerResult?> showMapAreaPicker(
   Widget? pinMarker,
   bool requirePlaceId = false,
 }) {
-  return showAppBottomSheet<MapAreaPickerResult>(
-    context: context,
-    title: labels.title,
-    showDragHandle: false,
-    child: Builder(
+  return SheetNavigator.push<MapAreaPickerResult>(
+    context,
+    Builder(
       builder: (sheetContext) => MapAreaPicker(
         labels: labels,
         existingLocation: existingLocation,
@@ -424,6 +424,11 @@ Future<MapAreaPickerResult?> showMapAreaPicker(
         requirePlaceId: requirePlaceId,
         onConfirmed: (result) => Navigator.of(sheetContext).pop(result),
       ),
+    ),
+    settings: SheetRouteSettings(
+      sheetSize: SheetSize.expanded,
+      title: labels.title,
+      enableDrag: false,
     ),
   );
 }

@@ -48,16 +48,14 @@ layer_order:
       - device
       - test_verify
   - tier: 3
-    packages: [maps, asset_picker]
+    packages: [maps, asset_picker, sheet_navigation, otp]
   - tier: 4
     packages: [auth, services, workers, change_password]
   - tier: 5
-    packages: [otp]
-  - tier: 6
     packages: [forgot_password, invitation, registration]
-  - tier: 7
+  - tier: 6
     packages: [branches]
-  - tier: 8
+  - tier: 7
     packages: [sanad_client, sanad_provider, design_catalog]
 
 # Within-package layer import rules (enforced by scan_imports.dart)

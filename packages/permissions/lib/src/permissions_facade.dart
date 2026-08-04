@@ -302,6 +302,7 @@ abstract final class Permissions {
           permissionType: type,
           theme: theme,
           onOpenSettings: _service.openSettings,
+          explanation: explanation,
         );
       }
     }

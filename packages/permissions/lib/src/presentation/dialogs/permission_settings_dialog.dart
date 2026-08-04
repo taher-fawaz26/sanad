@@ -37,12 +37,13 @@ class PermissionSettingsDialog {
       child: PermissionDialogContent(
         explanation: resolved,
         theme: theme,
-        primaryLabel: theme.texts.openSettingsButtonLabel,
+        primaryLabel:
+            resolved.openSettingsLabel ?? theme.texts.openSettingsButtonLabel,
         primaryAction: () {
           Navigator.of(context).pop();
           onOpenSettings();
         },
-        secondaryLabel: theme.texts.cancelButtonLabel,
+        secondaryLabel: resolved.cancelLabel ?? theme.texts.cancelButtonLabel,
         secondaryAction: () => Navigator.of(context).pop(),
       ),
     );

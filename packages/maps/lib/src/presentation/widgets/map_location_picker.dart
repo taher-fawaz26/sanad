@@ -20,6 +20,7 @@ import 'package:maps/src/presentation/widgets/map_my_location_button.dart';
 import 'package:maps/src/presentation/widgets/map_zoom_controls.dart';
 import 'package:maps/src/presentation/widgets/place_search_sheet_body.dart';
 import 'package:maps/src/widgets/app_google_map.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 class MapLocationPicker extends StatefulWidget {
   const MapLocationPicker({
@@ -78,9 +79,9 @@ class MapLocationPickerState extends State<MapLocationPicker> {
   /// which animates the camera exactly once.
   Future<void> _openSearchSheet(BuildContext context) async {
     final bloc = context.read<LocationPickerBloc>();
-    final selected = await showAppModalSheet<PlacePrediction>(
-      context: context,
-      child: BlocProvider.value(
+    final selected = await SheetNavigator.push<PlacePrediction>(
+      context,
+      BlocProvider.value(
         value: bloc,
         child: BlocBuilder<LocationPickerBloc, LocationPickerState>(
           builder: (context, state) => PlaceSearchSheetBody(
@@ -101,6 +102,7 @@ class MapLocationPickerState extends State<MapLocationPicker> {
           ),
         ),
       ),
+      settings: const SheetRouteSettings(sheetSize: SheetSize.expanded),
     );
     bloc.add(const LocationPickerPredictionsCleared());
     if (selected != null) {
