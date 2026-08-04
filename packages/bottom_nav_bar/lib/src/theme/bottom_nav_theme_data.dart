@@ -74,6 +74,9 @@ class BottomNavThemeData {
   final double contentPadding;
 
   /// Width reserved for the center FAB notch gap.
+  ///
+  /// Set to `0` for a flat icon+label tab bar with no notch (Figma
+  /// `1526:12109`).
   final double centerGap;
 
   /// Icon size for destinations and actions.

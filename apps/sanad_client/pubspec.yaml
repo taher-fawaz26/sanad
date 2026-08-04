@@ -12,6 +12,8 @@ dependencies:
     path: ../../packages/app_assets
   app_logger:
     path: ../../packages/app_logger
+  account_settings:
+    path: ../../packages/features/account_settings
   auth:
     path: ../../packages/features/auth
   core:

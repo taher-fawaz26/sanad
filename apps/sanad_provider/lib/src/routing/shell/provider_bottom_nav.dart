@@ -9,10 +9,10 @@ import 'package:sanad_provider/src/routing/app_routes.dart';
 /// | Shell index | Destination | Route | Bar role |
 /// |-------------|-------------|-------|----------|
 /// | 0 | [home] | `/home` | Permanent tab |
-/// | 1 | [messages] | `/messages` | FAB action |
-/// | 2 | [requests] | `/requests` | FAB action |
-/// | 3 | [services] | `/services` | FAB action |
-/// | 4 | [settings] | `/settings` | Permanent tab |
+/// | 1 | [messages] | `/messages` | Permanent tab |
+/// | 2 | [requests] | `/requests` | Permanent tab |
+/// | 3 | [services] | `/services` | Hidden (deep-link only) |
+/// | 4 | [settings] | `/settings` | Opens settings menu sheet |
 enum ProviderBottomNavDestination {
   home,
   messages,
@@ -33,22 +33,19 @@ enum ProviderBottomNavDestination {
       };
 
   /// Whether this destination is a permanent bottom bar tab.
-  bool get isPermanentTab => this == home || this == settings;
+  bool get isPermanentTab => permanentTabs.contains(this);
 
-  /// Whether this destination is opened from the expandable FAB.
-  bool get isFabAction => !isPermanentTab;
+  /// Whether tapping this destination opens the settings menu sheet instead of
+  /// navigating immediately.
+  bool get opensSettingsMenu => this == settings;
 
-  /// Permanent tabs shown in the bottom navigation bar.
+  /// Permanent tabs in visual order — Figma `1526:12109`
+  /// (Home → Requests → Messages → Settings).
   static const List<ProviderBottomNavDestination> permanentTabs = [
     home,
-    settings,
-  ];
-
-  /// Expandable FAB actions in visual order (Services → Requests → Messages).
-  static const List<ProviderBottomNavDestination> fabActions = [
-    services,
     requests,
     messages,
+    settings,
   ];
 
   /// Resolves a shell branch index to its destination, or `null` when out of

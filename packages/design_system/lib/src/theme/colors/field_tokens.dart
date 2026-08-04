@@ -14,6 +14,7 @@ abstract final class FieldTokens {
   static const double captionGap = 12;
   static const double horizontalPadding = 16;
   static const double verticalPadding = 16;
+  static const double trailingPadding = 12;
   static const double borderRadius = 8;
   static const double borderWidthDefault = 1;
   static const double borderWidthEmphasis = 2;
@@ -122,8 +123,8 @@ abstract final class FieldTokens {
     Brightness brightness, {
     required bool enabled,
   }) {
-    return typography.regularNormal.copyWith(
-      height: 16 / 16,
+    return typography.smallNormal.copyWith(
+      height: 16 / 14,
       fontWeight: FontWeight.w400,
       letterSpacing: 0,
       color: hintColor(colors, brightness, enabled: enabled),
@@ -156,7 +157,15 @@ abstract final class FieldTokens {
     );
   }
 
-  static EdgeInsets contentPadding({bool hasPrefixIcon = false}) {
+  static EdgeInsets contentPadding({
+    bool hasPrefixIcon = false,
+    bool hasTrailing = false,
+  }) {
+    if (hasTrailing) {
+      final padding = responsiveDimension(trailingPadding);
+      return EdgeInsets.fromLTRB(padding, padding, 0, padding);
+    }
+
     return EdgeInsets.fromLTRB(
       hasPrefixIcon
           ? AppSpacing.sm + AppDimension.iconMenu + AppSpacing.sm
@@ -175,6 +184,11 @@ abstract final class FieldTokens {
   static BoxConstraints suffixIconConstraints() => BoxConstraints(
     minWidth: AppSpacing.sm + AppDimension.iconMenu + AppSpacing.sm,
     minHeight: responsiveDimension(fieldHeight),
+  );
+
+  static BoxConstraints trailingSuffixConstraints() => BoxConstraints(
+    minHeight: responsiveDimension(fieldHeight),
+    maxHeight: responsiveDimension(fieldHeight),
   );
 
   static BorderRadius borderRadiusAll() =>

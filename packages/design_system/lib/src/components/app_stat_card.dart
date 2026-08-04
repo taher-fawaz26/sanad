@@ -5,23 +5,27 @@ import 'package:design_system/src/theme/tokens/stat_card_tokens.dart';
 import 'package:design_system/src/theme/typography/app_typography.dart';
 import 'package:flutter/material.dart';
 
-/// Bordered KPI/stat card — Figma `kpi-card` (`1563:11021`).
+/// Bordered KPI/stat card — Figma `kpi-card` (`1563:11021` / `1563:11079`).
 ///
-/// Layout: `[icon circle] [count / label] …… [outline pill button]`.
+/// Layout: `[icon circle] [count? / label] …… [outline pill button]`.
+///
+/// When [count] is null (e.g. General Settings), only [label] is shown.
 class AppStatCard extends StatelessWidget {
   const AppStatCard({
     required this.icon,
     required this.iconBackgroundColor,
-    required this.count,
     required this.label,
     required this.actionLabel,
+    this.count,
     this.onActionTap,
     super.key,
   });
 
   final Widget icon;
   final Color iconBackgroundColor;
-  final String count;
+
+  /// Optional leading metric. Omit for label-only rows (General Settings).
+  final String? count;
   final String label;
   final String actionLabel;
   final VoidCallback? onActionTap;
@@ -32,6 +36,7 @@ class AppStatCard extends StatelessWidget {
       colors: context.appColors,
       typography: context.appTypography,
     );
+    final countText = count;
 
     return Container(
       padding: spec.padding,
@@ -58,8 +63,10 @@ class AppStatCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(count, style: spec.countStyle),
-                SizedBox(height: spec.textGap),
+                if (countText != null) ...[
+                  Text(countText, style: spec.countStyle),
+                  SizedBox(height: spec.textGap),
+                ],
                 Text(label, style: spec.labelStyle),
               ],
             ),

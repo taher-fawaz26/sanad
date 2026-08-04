@@ -31,25 +31,26 @@ void main() {
       expect(ProviderBottomNavDestination.settings.route, AppRoutes.settings);
     });
 
-    test('permanent tabs are home and settings only', () {
+    test('permanent tabs match Figma visual order', () {
       expect(ProviderBottomNavDestination.permanentTabs, [
         ProviderBottomNavDestination.home,
+        ProviderBottomNavDestination.requests,
+        ProviderBottomNavDestination.messages,
         ProviderBottomNavDestination.settings,
       ]);
       expect(ProviderBottomNavDestination.home.isPermanentTab, isTrue);
+      expect(ProviderBottomNavDestination.requests.isPermanentTab, isTrue);
+      expect(ProviderBottomNavDestination.messages.isPermanentTab, isTrue);
       expect(ProviderBottomNavDestination.settings.isPermanentTab, isTrue);
-      expect(ProviderBottomNavDestination.messages.isPermanentTab, isFalse);
+      expect(ProviderBottomNavDestination.services.isPermanentTab, isFalse);
     });
 
-    test('fab actions are services requests messages in order', () {
-      expect(ProviderBottomNavDestination.fabActions, [
-        ProviderBottomNavDestination.services,
-        ProviderBottomNavDestination.requests,
-        ProviderBottomNavDestination.messages,
-      ]);
-      for (final action in ProviderBottomNavDestination.fabActions) {
-        expect(action.isFabAction, isTrue);
-      }
+    test('settings opens menu sheet instead of navigating immediately', () {
+      expect(
+        ProviderBottomNavDestination.settings.opensSettingsMenu,
+        isTrue,
+      );
+      expect(ProviderBottomNavDestination.home.opensSettingsMenu, isFalse);
     });
   });
 }

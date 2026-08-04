@@ -5,13 +5,13 @@ import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:go_router/go_router.dart';
 import 'package:network/network.dart';
+import 'package:organization_settings/organization_settings.dart';
 import 'package:registration/registration.dart';
 import 'package:sanad_provider/src/di/app_di.dart';
 import 'package:sanad_provider/src/features/home/home_page.dart';
 import 'package:sanad_provider/src/features/messages/messages_page.dart';
 import 'package:sanad_provider/src/features/requests/requests_page.dart';
 import 'package:sanad_provider/src/features/services/services_page.dart';
-import 'package:sanad_provider/src/features/settings/settings_page.dart';
 import 'package:sanad_provider/src/routing/app_routes.dart';
 import 'package:sanad_provider/src/routing/provider_navigator.dart';
 import 'package:sanad_provider/src/routing/shell/main_shell.dart';
@@ -127,13 +127,8 @@ GoRouter buildProviderRouter() {
                 routes: [
                   GoRoute(
                     path: AppRoutes.settings,
-                    builder: (context, state) {
-                      final tabQuery = state.uri.queryParameters['tab'];
-                      final tab = int.tryParse(tabQuery ?? '') ?? 0;
-                      return ProviderSettingsPage(
-                        initialTab: tab.clamp(0, 1),
-                      );
-                    },
+                    builder: (context, state) =>
+                        const OrganizationSettingsPage(),
                   ),
                 ],
               ),

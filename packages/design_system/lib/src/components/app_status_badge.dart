@@ -20,7 +20,8 @@ class AppStatusBadge extends StatelessWidget {
   final AppStatusBadgeType type;
   final AppStatusBadgeSize size;
 
-  /// When true, draws a primary stroke — Figma worker badge (`1526:12324`).
+  /// When true, draws a semantic type-colored stroke matching [AppAlert]
+  /// (`3821:19107` – `3821:19192`).
   final bool outlined;
 
   @override
@@ -40,7 +41,7 @@ class AppStatusBadge extends StatelessWidget {
         border: spec.borderColor != null
             ? Border.all(
                 color: spec.borderColor!,
-                width: AppDimension.borderHairline,
+                width: spec.borderWidth ?? AppDimension.borderHairline,
               )
             : null,
       ),

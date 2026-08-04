@@ -1,0 +1,34 @@
+name: media
+description: >
+  Generic, reusable media toolkit — pick, validate, edit (crop/zoom/rotate),
+  and process (EXIF-normalize, resize, compress) images, returning a rich
+  EditedMedia. Knows nothing about uploading, endpoints, or business
+  entities: consuming features own that. Facebook-style identity headers,
+  avatars, covers, and future media all build on this.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+  flutter: ">=3.19.0"
+
+dependencies:
+  asset_picker:
+    path: ../asset_picker
+  design_system:
+    path: ../design_system
+  easy_localization: ^3.0.8
+  equatable: ^2.1.0
+  extended_image: ^9.1.0
+  flutter:
+    sdk: flutter
+  image: ^4.5.0
+  permissions:
+    path: ../permissions
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  mocktail: ^1.0.4
+  very_good_analysis: ^9.0.0

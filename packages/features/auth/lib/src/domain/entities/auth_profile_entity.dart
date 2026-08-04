@@ -57,12 +57,12 @@ class CompanyProviderProfileEntity extends AuthProfileEntity {
     required this.businessEmail,
     required this.representativeFullName,
     required this.representativeEmail,
-    required this.emiratesIdFrontId,
-    required this.emiratesIdBackId,
-    required this.tradeLicenseId,
     required this.isReviewed,
     this.tradeLicenseNumber,
     this.representativeEmiratesId,
+    this.emiratesIdFrontId,
+    this.emiratesIdBackId,
+    this.tradeLicenseId,
   });
 
   final String id;
@@ -76,9 +76,11 @@ class CompanyProviderProfileEntity extends AuthProfileEntity {
 
   /// Nullable per Swagger `CompanyProviderAuthProfileResponseDto`.
   final String? representativeEmiratesId;
-  final String emiratesIdFrontId;
-  final String emiratesIdBackId;
-  final String tradeLicenseId;
+
+  /// Document media IDs — omitted or null on some verify payloads.
+  final String? emiratesIdFrontId;
+  final String? emiratesIdBackId;
+  final String? tradeLicenseId;
   final bool isReviewed;
 
   @override

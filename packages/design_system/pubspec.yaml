@@ -31,6 +31,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - lib/src/shared_ui/enhance_with_ai.svg
   # Fonts are declared here so every consumer gets them via package dependency.
   fonts:
     - family: Inter

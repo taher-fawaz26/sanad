@@ -1,3 +1,5 @@
+import 'package:account_settings/account_settings.dart';
+
 /// Static route constants for the client app.
 ///
 /// Mirrors `sanad_provider`'s `AppRoutes` so both apps share the same
@@ -10,5 +12,8 @@ abstract final class ClientRoutes {
   static const offline = '/offline';
 
   /// Routes that require an authenticated session.
-  static const protected = <String>{home};
+  static const protected = <String>{
+    home,
+    ...AccountSettingsRoutes.protectedRoutes,
+  };
 }

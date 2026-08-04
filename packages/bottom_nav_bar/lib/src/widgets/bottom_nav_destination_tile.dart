@@ -30,16 +30,18 @@ class BottomNavDestinationTile<T> extends StatelessWidget {
       child: InkWell(
         onTap: enabled ? onTap : null,
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (destination.badgeBuilder != null) destination.badgeBuilder!(context),
+            if (destination.badgeBuilder != null)
+              destination.badgeBuilder!(context),
             _buildIcon(context),
-            SizedBox(height: theme.contentPadding / 3),
+            const SizedBox(height: 4),
             Text(
               destination.label,
               style: theme.resolveLabelStyle(context, selected: selected),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
             ),
           ],
         ),

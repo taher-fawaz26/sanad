@@ -1,0 +1,10 @@
+/// Shared account settings — hub page and logout.
+///
+/// Register [AccountSettingsModule] in the app [ModuleRegistry].
+/// Navigate via [AccountSettingsRoutes].
+library;
+
+export 'src/di/account_settings_di.dart';
+export 'src/module/account_settings_module.dart';
+export 'src/presentation/pages/account_settings_page.dart';
+export 'src/routes/account_settings_routes.dart';

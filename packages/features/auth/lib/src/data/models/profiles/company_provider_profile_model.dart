@@ -8,12 +8,12 @@ class CompanyProviderProfileModel extends CompanyProviderProfileEntity {
     required super.businessEmail,
     required super.representativeFullName,
     required super.representativeEmail,
-    required super.emiratesIdFrontId,
-    required super.emiratesIdBackId,
-    required super.tradeLicenseId,
     required super.isReviewed,
     super.tradeLicenseNumber,
     super.representativeEmiratesId,
+    super.emiratesIdFrontId,
+    super.emiratesIdBackId,
+    super.tradeLicenseId,
   });
 
   factory CompanyProviderProfileModel.fromJson(Map<String, dynamic> json) {
@@ -25,9 +25,9 @@ class CompanyProviderProfileModel extends CompanyProviderProfileEntity {
       representativeFullName: json['representativeFullName'] as String,
       representativeEmail: json['representativeEmail'] as String,
       representativeEmiratesId: json['representativeEmiratesId'] as String?,
-      emiratesIdFrontId: json['emiratesIdFrontId'] as String,
-      emiratesIdBackId: json['emiratesIdBackId'] as String,
-      tradeLicenseId: json['tradeLicenseId'] as String,
+      emiratesIdFrontId: json['emiratesIdFrontId'] as String?,
+      emiratesIdBackId: json['emiratesIdBackId'] as String?,
+      tradeLicenseId: json['tradeLicenseId'] as String?,
       isReviewed: json['isReviewed'] as bool,
     );
   }

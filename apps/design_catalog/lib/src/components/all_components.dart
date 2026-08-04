@@ -62,6 +62,33 @@ List<WidgetbookNode> buildCatalogDirectories() => [
                   isRequired: true,
                 ),
               ),
+              WidgetbookUseCase(
+                name: 'Trailing Add pill',
+                builder: (context) => AppTextField(
+                  label: 'Email Address',
+                  hint: 'Email Address',
+                  isRequired: true,
+                  readOnly: true,
+                  trailing: AppFieldOutlinePillTrailing(
+                    label: 'Add',
+                    onTap: () {},
+                  ),
+                ),
+              ),
+              WidgetbookUseCase(
+                name: 'Trailing Change link',
+                builder: (context) => AppTextField(
+                  label: 'Email Address',
+                  hint: 'Email Address',
+                  readOnly: true,
+                  showVerifiedBadge: true,
+                  controller: TextEditingController(text: 'ops@sanad.ae'),
+                  trailing: AppFieldTextLinkTrailing(
+                    label: 'Change',
+                    onTap: () {},
+                  ),
+                ),
+              ),
             ],
           ),
           WidgetbookComponent(
@@ -76,6 +103,34 @@ List<WidgetbookNode> buildCatalogDirectories() => [
                 builder: (context) => const AppPhoneField(
                   label: 'Phone',
                   isRequired: true,
+                ),
+              ),
+              WidgetbookUseCase(
+                name: 'Verified + Change',
+                builder: (context) => AppPhoneField(
+                  label: 'Phone Number',
+                  hint: 'Phone Number',
+                  isRequired: true,
+                  readOnly: true,
+                  showVerifiedBadge: true,
+                  controller: TextEditingController(text: '501234567'),
+                  trailing: AppFieldTextLinkTrailing(
+                    label: 'Change',
+                    onTap: () {},
+                  ),
+                ),
+              ),
+              WidgetbookUseCase(
+                name: 'Empty + Add',
+                builder: (context) => AppPhoneField(
+                  label: 'Phone Number',
+                  hint: 'Phone Number',
+                  isRequired: true,
+                  readOnly: true,
+                  trailing: AppFieldOutlinePillTrailing(
+                    label: 'Add',
+                    onTap: () {},
+                  ),
                 ),
               ),
             ],

@@ -15,6 +15,10 @@ abstract final class AppSvgs {
   /// Alert circle — featured icon error default.
   static const String alertCircle = '$_base/alert_circle.svg';
 
+  /// Browser window with refresh — inline alert review / rejected states
+  /// (`3821:19180`, `3821:19202`).
+  static const String reloadWindow = '$_base/reload_window.svg';
+
   /// Alert triangle — featured icon warning default.
   static const String alertTriangle = '$_base/alert_triangle.svg';
 
@@ -88,6 +92,9 @@ abstract final class AppSvgs {
   /// UAE flag — phone field country prefix.
   static const String flagAe = '$_base/flag_ae.svg';
 
+  /// Phone with incoming arrow — contact information sheet header (`3809:18013`).
+  static const String phoneOutcome = '$_base/phone_outcome.svg';
+
   /// Chevron down — select / dropdown fields.
   static const String chevronDown = '$_base/chevron_down.svg';
 
@@ -131,6 +138,11 @@ abstract final class AppSvgs {
   static const String invitationResend = '$_base/invitation_resend.svg';
 
   // ── Organization settings stat cards ───────────────────────────────────────
+
+  /// Crossed wrench + screwdriver — general settings (`1563:11093`).
+  /// Baked stroke `#ECA100` (`YellowPalette.shade500`); recolor via
+  /// `colorFilter` when a different tint is needed.
+  static const String tools = '$_base/tools.svg';
 
   /// Invitations — outbound mail icon.
   static const String mailOut = '$_base/mail_out.svg';
@@ -206,4 +218,18 @@ abstract final class AppSvgs {
 
   /// Gallery with add — asset picker "Upload from Gallery" row (`2947:14242`).
   static const String assetPickerGallery = '$_base/asset_picker_gallery.svg';
+
+  // ── Social profile brand icons (24×24) ─────────────────────────────────────
+
+  /// Facebook — organization social profiles.
+  static const String socialFacebook = '$_base/social_facebook.svg';
+
+  /// TikTok — organization social profiles.
+  static const String socialTiktok = '$_base/social_tiktok.svg';
+
+  /// Instagram — organization social profiles.
+  static const String socialInstagram = '$_base/social_instagram.svg';
+
+  /// X (Twitter) — organization social profiles.
+  static const String socialTwitter = '$_base/social_twitter.svg';
 }

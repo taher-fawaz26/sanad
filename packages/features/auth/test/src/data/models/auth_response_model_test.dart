@@ -12,6 +12,7 @@ void main() {
       () {
         // Shape from live POST /auth/email/verify for
         // seed-company-provider-1@sanad.test (tokens omitted).
+        // Document media IDs and trade/emirates numbers may be null/omitted.
         final response = AuthResponseModel.fromJson({
           'accessToken': 'access-token',
           'refreshToken': 'refresh-token',
@@ -33,10 +34,8 @@ void main() {
             'representativeFullName': 'Company Representative 1',
             'representativeEmail': 'seed-company-rep-1@sanad.test',
             'representativeEmiratesId': null,
-            'emiratesIdFrontId': '5d46c474-4a32-403b-8e32-f35502e6aa08',
-            'emiratesIdBackId': '46bd2bd6-d981-47cd-9746-f260f69fde9b',
-            'tradeLicenseId': '537a6f9b-7815-475d-8db6-f633b0a7b62e',
             'isReviewed': true,
+            'preferredLanguage': 'en',
           },
           'permissions': ['*'],
         });
@@ -50,6 +49,9 @@ void main() {
         final profile = session.profile! as CompanyProviderProfileModel;
         expect(profile.tradeLicenseNumber, isNull);
         expect(profile.representativeEmiratesId, isNull);
+        expect(profile.emiratesIdFrontId, isNull);
+        expect(profile.emiratesIdBackId, isNull);
+        expect(profile.tradeLicenseId, isNull);
         expect(profile.businessName, 'Company Provider 1 LLC');
         expect(session.permissions.single.name, '*');
       },

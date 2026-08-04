@@ -1,3 +1,4 @@
+import 'package:account_settings/account_settings.dart';
 import 'package:app_logger/app_logger.dart';
 import 'package:auth/auth.dart';
 import 'package:core/core.dart';
@@ -44,6 +45,7 @@ Future<void> configureDependencies() async {
   // ── Feature modules ────────────────────────────────────────────────────────
   moduleRegistry = ModuleRegistry([
     AuthModule(),
+    AccountSettingsModule(),
   ]);
   await moduleRegistry.initAll();
 }

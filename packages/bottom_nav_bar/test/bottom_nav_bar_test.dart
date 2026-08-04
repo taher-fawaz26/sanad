@@ -75,7 +75,9 @@ void main() {
       expect(find.text('Settings'), findsOneWidget);
     });
 
-    testWidgets('renders custom painted notch bar', (tester) async {
+    testWidgets('renders custom painted notch bar when centerGap > 0', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -111,6 +113,45 @@ void main() {
       );
     });
 
+    testWidgets('renders flat bar without notch when centerGap is 0', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            bottomNavigationBar: BottomNavBar<_Dest>(
+              destinations: const [
+                BottomNavDestination(
+                  item: _Dest.home,
+                  label: 'Home',
+                  iconBuilder: _icon,
+                ),
+                BottomNavDestination(
+                  item: _Dest.settings,
+                  label: 'Settings',
+                  iconBuilder: _icon,
+                ),
+              ],
+              selectedItem: _Dest.home,
+              theme: const BottomNavThemeData(centerGap: 0),
+              onDestinationSelected: (_) {},
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        find.descendant(
+          of: find.byType(BottomNavBar<_Dest>),
+          matching: find.byType(CustomPaint),
+        ),
+        findsNothing,
+      );
+      expect(find.byType(DecoratedBox), findsWidgets);
+      expect(find.text('Home'), findsOneWidget);
+      expect(find.text('Settings'), findsOneWidget);
+    });
+
     testWidgets('respects large text scale', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -141,5 +182,65 @@ void main() {
 
       expect(find.text('Home'), findsOneWidget);
     });
+
+    testWidgets('lifts bar above Android system navigation inset', (
+      tester,
+    ) async {
+      const systemBottom = 48.0;
+      const theme = BottomNavThemeData(bottomInset: 8);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(
+              // Edge-to-edge Android: padding.bottom is 0, viewPadding holds
+              // the system navigation bar height.
+              padding: EdgeInsets.zero,
+              viewPadding: EdgeInsets.only(bottom: systemBottom),
+            ),
+            child: const Scaffold(
+              bottomNavigationBar: BottomNavBar<_Dest>(
+                destinations: [
+                  BottomNavDestination(
+                    item: _Dest.home,
+                    label: 'Home',
+                    iconBuilder: _icon,
+                  ),
+                  BottomNavDestination(
+                    item: _Dest.settings,
+                    label: 'Settings',
+                    iconBuilder: _icon,
+                  ),
+                ],
+                selectedItem: _Dest.home,
+                theme: theme,
+                onDestinationSelected: _noop,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final padding = tester.widget<Padding>(
+        find
+            .descendant(
+              of: find.byType(BottomNavBar<_Dest>),
+              matching: find.byType(Padding),
+            )
+            .first,
+      );
+
+      expect(
+        padding.padding,
+        EdgeInsets.fromLTRB(
+          theme.horizontalInset,
+          0,
+          theme.horizontalInset,
+          theme.bottomInset + systemBottom,
+        ),
+      );
+    });
   });
 }
+
+void _noop(_Dest _) {}

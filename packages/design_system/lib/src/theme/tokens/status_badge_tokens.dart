@@ -1,6 +1,7 @@
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/spacing/responsive_spacing.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
+import 'package:design_system/src/theme/tokens/status_surface_tokens.dart';
 import 'package:design_system/src/theme/typography/app_typography.dart';
 import 'package:design_system/src/theme/typography/responsive_font_scale.dart';
 import 'package:flutter/material.dart';
@@ -44,6 +45,7 @@ class StatusBadgeStyleSpec {
     required this.height,
     required this.textStyle,
     this.borderColor,
+    this.borderWidth,
   });
 
   final Color backgroundColor;
@@ -54,8 +56,9 @@ class StatusBadgeStyleSpec {
   final double? height;
   final TextStyle textStyle;
 
-  /// Optional stroke — Figma worker badge (`1526:12324`) uses primary border.
+  /// Optional stroke — semantic type color when [outlined], else null.
   final Color? borderColor;
+  final double? borderWidth;
 }
 
 /// Figma `Views / Badges: Status: Rounded` (`40:10689`) token resolver.
@@ -68,6 +71,46 @@ abstract final class StatusBadgeTokens {
     required AppColors colors,
     AppStatusBadgeSize size = AppStatusBadgeSize.medium,
     bool outlined = false,
+  }) {
+    final (background, foreground, borderColor, borderWidth, fontWeight) =
+        outlined
+        ? _resolveOutlined(type: type, colors: colors)
+        : _resolveSoft(type: type, colors: colors);
+
+    final (height, fontSize, lineHeight) = switch (size) {
+      AppStatusBadgeSize.medium => (null, 16.0, 1.0),
+      AppStatusBadgeSize.compact => (AppDimension.iconMenu, 14.0, 16 / 14),
+      AppStatusBadgeSize.dense => (responsiveDimension(20), 12.0, 16 / 12),
+    };
+
+    return StatusBadgeStyleSpec(
+      backgroundColor: background,
+      foregroundColor: foreground,
+      borderRadius: BorderRadius.circular(AppDimension.radiusSm),
+      horizontalPadding: AppSpacing.lg,
+      verticalPadding: AppSpacing.sm,
+      height: height,
+      borderColor: borderColor,
+      borderWidth: borderWidth,
+      textStyle: typography.regularNormal.copyWith(
+        fontSize: fontSize.rfs,
+        height: lineHeight,
+        fontWeight: fontWeight,
+        letterSpacing: 0,
+        color: foreground,
+      ),
+    );
+  }
+
+  static (
+    Color background,
+    Color foreground,
+    Color? borderColor,
+    double? borderWidth,
+    FontWeight fontWeight,
+  ) _resolveSoft({
+    required AppStatusBadgeType type,
+    required AppColors colors,
   }) {
     final (background, foreground) = switch (type) {
       AppStatusBadgeType.success => (
@@ -88,27 +131,28 @@ abstract final class StatusBadgeTokens {
         ),
     };
 
-    final (height, fontSize, lineHeight) = switch (size) {
-      AppStatusBadgeSize.medium => (null, 16.0, 1.0),
-      AppStatusBadgeSize.compact => (AppDimension.iconMenu, 14.0, 16 / 14),
-      AppStatusBadgeSize.dense => (responsiveDimension(20), 12.0, 16 / 12),
-    };
+    return (background, foreground, null, null, FontWeight.w400);
+  }
 
-    return StatusBadgeStyleSpec(
-      backgroundColor: background,
-      foregroundColor: foreground,
-      borderRadius: BorderRadius.circular(AppDimension.radiusSm),
-      horizontalPadding: AppSpacing.lg,
-      verticalPadding: AppSpacing.sm,
-      height: height,
-      borderColor: outlined ? colors.primary : null,
-      textStyle: typography.regularNormal.copyWith(
-        fontSize: fontSize.rfs,
-        height: lineHeight,
-        fontWeight: FontWeight.w400,
-        letterSpacing: 0,
-        color: foreground,
-      ),
+  static (
+    Color background,
+    Color foreground,
+    Color? borderColor,
+    double? borderWidth,
+    FontWeight fontWeight,
+  ) _resolveOutlined({
+    required AppStatusBadgeType type,
+    required AppColors colors,
+  }) {
+    final (background, border, foreground) =
+        StatusSurfaceTokens.outlinedBadge(type: type, colors: colors);
+
+    return (
+      background,
+      foreground,
+      border,
+      AppDimension.borderHairline,
+      FontWeight.w500,
     );
   }
 }

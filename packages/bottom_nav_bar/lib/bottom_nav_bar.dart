@@ -1,4 +1,4 @@
-/// Reusable bottom navigation bar with expandable center actions.
+/// Reusable bottom navigation bar — flat tabs or notched + expandable center.
 library;
 
 export 'src/controller/bottom_nav_controller.dart';

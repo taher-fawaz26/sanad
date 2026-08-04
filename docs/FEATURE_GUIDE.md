@@ -198,6 +198,8 @@ See `.cursor/skills/create_feature.skill.md` for the complete workflow.
 | `otp` | `/otp` | `OtpBloc` | Active |
 | `forgot_password` | `/forgot-password`, `/forgot-password/reset` | `ForgotPasswordBloc` | Active |
 | `branches` | `/branches`, `/branches/add` | `BranchesBloc`, `AddBranchBloc` | Active |
+| `account_settings` | `/settings/account` | (uses `AuthBloc` for logout) | Active (hub + logout) |
+| `organization_settings` | `/settings`, `/settings/general` | — | Active (provider-only KPI hub) |
 
 ## App Features (Provider)
 
@@ -206,7 +208,6 @@ See `.cursor/skills/create_feature.skill.md` for the complete workflow.
 | home | Yes (`/home`) | `home_page.dart` |
 | requests | Yes (`/requests`) | `requests_page.dart` |
 | messages | Yes (`/messages`) | `messages_page.dart` |
-| settings | Yes (`/settings`) | `settings_page.dart` |
 | availability | No | `availability_page.dart` |
 | schedule | No | `schedule_page.dart` |
 | services | No | `services_page.dart` |

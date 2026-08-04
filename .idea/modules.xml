@@ -2,15 +2,16 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+<module fileurl="file://$PROJECT_DIR$/packages/features/account_settings/melos_account_settings.iml" filepath="$PROJECT_DIR$/packages/features/account_settings/melos_account_settings.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/analytics/melos_analytics.iml" filepath="$PROJECT_DIR$/packages/analytics/melos_analytics.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/app_assets/melos_app_assets.iml" filepath="$PROJECT_DIR$/packages/app_assets/melos_app_assets.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/app_logger/melos_app_logger.iml" filepath="$PROJECT_DIR$/packages/app_logger/melos_app_logger.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/asset_picker/melos_asset_picker.iml" filepath="$PROJECT_DIR$/packages/asset_picker/melos_asset_picker.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/features/auth/melos_auth.iml" filepath="$PROJECT_DIR$/packages/features/auth/melos_auth.iml"/>
+<module fileurl="file://$PROJECT_DIR$/packages/bottom_nav_bar/melos_bottom_nav_bar.iml" filepath="$PROJECT_DIR$/packages/bottom_nav_bar/melos_bottom_nav_bar.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/features/branches/melos_branches.iml" filepath="$PROJECT_DIR$/packages/features/branches/melos_branches.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/config/melos_config.iml" filepath="$PROJECT_DIR$/packages/config/melos_config.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/core/melos_core.iml" filepath="$PROJECT_DIR$/packages/core/melos_core.iml"/>
-<module fileurl="file://$PROJECT_DIR$/packages/curved_navigation_bar_pro/melos_curved_navigation_bar_pro.iml" filepath="$PROJECT_DIR$/packages/curved_navigation_bar_pro/melos_curved_navigation_bar_pro.iml"/>
 <module fileurl="file://$PROJECT_DIR$/apps/design_catalog/melos_design_catalog.iml" filepath="$PROJECT_DIR$/apps/design_catalog/melos_design_catalog.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/design_system/melos_design_system.iml" filepath="$PROJECT_DIR$/packages/design_system/melos_design_system.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/device/melos_device.iml" filepath="$PROJECT_DIR$/packages/device/melos_device.iml"/>
@@ -20,6 +21,7 @@
 <module fileurl="file://$PROJECT_DIR$/packages/maps/melos_maps.iml" filepath="$PROJECT_DIR$/packages/maps/melos_maps.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/network/melos_network.iml" filepath="$PROJECT_DIR$/packages/network/melos_network.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/notifications/melos_notifications.iml" filepath="$PROJECT_DIR$/packages/notifications/melos_notifications.iml"/>
+<module fileurl="file://$PROJECT_DIR$/packages/features/organization_settings/melos_organization_settings.iml" filepath="$PROJECT_DIR$/packages/features/organization_settings/melos_organization_settings.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/permissions/melos_permissions.iml" filepath="$PROJECT_DIR$/packages/permissions/melos_permissions.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/features/registration/melos_registration.iml" filepath="$PROJECT_DIR$/packages/features/registration/melos_registration.iml"/>
 <module fileurl="file://$PROJECT_DIR$/apps/sanad_client/melos_sanad_client.iml" filepath="$PROJECT_DIR$/apps/sanad_client/melos_sanad_client.iml"/>
@@ -30,6 +32,7 @@
 <module fileurl="file://$PROJECT_DIR$/packages/utilities/melos_utilities.iml" filepath="$PROJECT_DIR$/packages/utilities/melos_utilities.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/features/workers/melos_workers.iml" filepath="$PROJECT_DIR$/packages/features/workers/melos_workers.iml"/>
 <module fileurl="file://$PROJECT_DIR$/melos_sanad.iml" filepath="$PROJECT_DIR$/melos_sanad.iml"/>
+<module fileurl="file://$PROJECT_DIR$/packages/curved_navigation_bar_pro/melos_curved_navigation_bar_pro.iml" filepath="$PROJECT_DIR$/packages/curved_navigation_bar_pro/melos_curved_navigation_bar_pro.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/features/change_password/melos_change_password.iml" filepath="$PROJECT_DIR$/packages/features/change_password/melos_change_password.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/features/forgot_password/melos_forgot_password.iml" filepath="$PROJECT_DIR$/packages/features/forgot_password/melos_forgot_password.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/features/otp/melos_otp.iml" filepath="$PROJECT_DIR$/packages/features/otp/melos_otp.iml"/>

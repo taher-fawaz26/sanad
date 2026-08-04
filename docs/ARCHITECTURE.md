@@ -32,7 +32,7 @@ sanad/
 └── pubspec.yaml               # Workspace root — `workspace:` list + `melos:` config
 ```
 
-`packages/dependencies`, `packages/settings`, and `packages/shared_widgets` have been removed — see the Asset Ownership Policy, Component Ownership Policy, and Package Ownership Matrix below for where their responsibilities now live.
+`packages/dependencies`, `packages/settings`, and `packages/shared_widgets` have been removed — see the Asset Ownership Policy, Component Ownership Policy, and Package Ownership Matrix below for where their responsibilities now live. Settings UI now lives in `packages/features/account_settings` (shared) and `packages/features/organization_settings` (provider-only).
 
 ## Clean Architecture Layers
 

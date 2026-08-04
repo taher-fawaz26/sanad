@@ -31,6 +31,8 @@
 | Package | Description | Status |
 |---------|-------------|--------|
 | `auth` | Login, logout, register, session, auth BLoC | Active (reference) |
+| `account_settings` | Shared account settings hub + logout (provider + client) | Active |
+| `organization_settings` | Provider-only organization KPI hub + settings menu sheet | Active |
 | `otp` | OTP verification flow | Active |
 | `forgot_password` | Password reset flow | Active |
 | `change_password` | Authenticated password update | Stub |
@@ -41,7 +43,7 @@
 | Package | Description | Status |
 |---------|-------------|--------|
 | `design_system` | Theme, colors, typography, tokens, primitive components (`components/`), and higher-level composed UI (`shared_ui/`) | Active |
-| `bottom_nav_bar` | Reusable bottom navigation bar with expandable center actions (app-agnostic; theme via `BottomNavThemeData`) | Active |
+| `bottom_nav_bar` | Reusable bottom navigation bar — flat icon+label tabs or notched bar with expandable center actions (app-agnostic; theme via `BottomNavThemeData`, `centerGap: 0` for flat) | Active |
 | `localization` | EasyLocalization, TranslateBloc, validation keys | Active |
 | `shared_blocs` | Backwards-compat re-export facade | Active |
 
@@ -75,7 +77,7 @@ See `package_creation.skill.md` for detailed workflow.
 ## Removed Packages
 
 - `dependencies` (centralized third-party re-export hub) — **deleted**, zero consumers verified. Import third-party packages directly instead.
-- `settings` — **deleted**, dead stub (route constant only, zero imports anywhere). The real settings UI lives in `apps/sanad_provider/lib/src/features/settings/`.
+- `settings` — **deleted**, dead stub. Replaced by `packages/features/account_settings` (shared) and `packages/features/organization_settings` (provider-only).
 - `shared_widgets` — **deleted**, dissolved into `design_system/components/` (primitives), `packages/features/otp` (OTP field), and `packages/features/branches` (branch widgets).
 
 ## Naming Recommendation: `shared_models` (Not Executed)

@@ -1,6 +1,8 @@
 import 'package:app_assets/app_assets.dart';
 import 'package:core/core.dart';
 import 'package:design_system/src/components/app_field_label.dart';
+import 'package:design_system/src/components/app_field_trailing.dart';
+import 'package:design_system/src/components/app_verified_badge.dart';
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/spacing/responsive_spacing.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
@@ -28,6 +30,9 @@ class AppPhoneField extends StatefulWidget {
     this.countryCode = '+971',
     this.onCountryTap,
     this.errorText,
+    this.trailing,
+    this.showVerifiedBadge = false,
+    this.readOnly = false,
   });
 
   final String label;
@@ -48,6 +53,15 @@ class AppPhoneField extends StatefulWidget {
   /// When non-null, the field renders with an error border and this
   /// message below it (Figma field error state).
   final String? errorText;
+
+  /// Inline trailing action — e.g. text link Change (`3784:17463`).
+  final AppFieldTrailing? trailing;
+
+  /// Shows [AppVerifiedBadge] beside the label — Figma `3784:17466`.
+  final bool showVerifiedBadge;
+
+  /// Read-only display for verified phone with trailing Change action.
+  final bool readOnly;
 
   /// Gap between flag and country-code group — Figma `gap-[14px]`.
   static const double _prefixGap = 14;
@@ -116,7 +130,8 @@ class _AppPhoneFieldState extends State<AppPhoneField> {
       children: [
         AppFieldLabel(
           label: widget.label,
-          isRequired: widget.isRequired,
+          isRequired: widget.isRequired && !widget.showVerifiedBadge,
+          suffix: widget.showVerifiedBadge ? const AppVerifiedBadge() : null,
         ),
         SizedBox(height: labelGap),
         SizedBox(
@@ -124,6 +139,7 @@ class _AppPhoneFieldState extends State<AppPhoneField> {
           child: TextField(
             controller: _controller,
             enabled: widget.enabled,
+            readOnly: widget.readOnly,
             keyboardType: TextInputType.phone,
             textInputAction: TextInputAction.next,
             onChanged: widget.onChanged,
@@ -188,6 +204,22 @@ class _AppPhoneFieldState extends State<AppPhoneField> {
                     AppSpacing.sm,
                 minHeight: fieldHeight,
               ),
+              suffixIcon: widget.trailing != null
+                  ? Padding(
+                      padding: EdgeInsets.only(
+                        right: responsiveDimension(FieldTokens.trailingPadding),
+                      ),
+                      child: Center(
+                        child: AppFieldTrailingView(
+                          trailing: widget.trailing!,
+                          enabled: widget.enabled,
+                        ),
+                      ),
+                    )
+                  : null,
+              suffixIconConstraints: widget.trailing != null
+                  ? FieldTokens.trailingSuffixConstraints()
+                  : null,
               filled: true,
               fillColor: FieldTokens.background(
                 colors,
@@ -195,10 +227,19 @@ class _AppPhoneFieldState extends State<AppPhoneField> {
                 enabled: widget.enabled,
               ),
               isDense: true,
-              contentPadding: EdgeInsets.symmetric(
-                horizontal: responsiveDimension(FieldTokens.horizontalPadding),
-                vertical: responsiveDimension(FieldTokens.verticalPadding),
-              ),
+              contentPadding: widget.trailing != null
+                  ? EdgeInsets.fromLTRB(
+                      responsiveDimension(FieldTokens.trailingPadding),
+                      responsiveDimension(FieldTokens.trailingPadding),
+                      0,
+                      responsiveDimension(FieldTokens.trailingPadding),
+                    )
+                  : EdgeInsets.symmetric(
+                      horizontal: responsiveDimension(
+                        FieldTokens.horizontalPadding,
+                      ),
+                      vertical: responsiveDimension(FieldTokens.verticalPadding),
+                    ),
               border: _border(
                 colors,
                 brightness,

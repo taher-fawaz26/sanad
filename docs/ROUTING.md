@@ -31,7 +31,9 @@ GoRouter(
 | `AuthRoutes` | `auth` | `/`, `/login`, `/register` |
 | `OtpRoutes` | `otp` | `/otp` |
 | `ForgotPasswordRoutes` | `forgot_password` | `/forgot-password`, `/forgot-password/reset` |
-| `AppRoutes` | `sanad_provider` | `/home`, `/messages`, `/requests`, `/services`, `/settings`, `/branches`, `/branches/add` |
+| `AppRoutes` | `sanad_provider` | `/home`, `/messages`, `/requests`, `/services`, `/settings`, `/offline` |
+| `OrganizationSettingsRoutes` | `organization_settings` | `/settings`, `/settings/general` |
+| `AccountSettingsRoutes` | `account_settings` | `/settings/account` |
 
 ## Auth Guard
 
@@ -50,13 +52,25 @@ Bottom-nav tabs via `StatefulShellRoute.indexedStack`:
 | Messages | `/messages` | `ProviderMessagesPage` |
 | Requests | `/requests` | `RequestsPage` |
 | Services | `/services` | `ProviderServicesPage` |
-| Settings | `/settings` | `ProviderSettingsPage` |
+| Settings | `/settings` | `OrganizationSettingsPage` (shell hosts hub) |
+
+Outside the bottom-nav shell (pushed full-screen, module-owned):
+
+| Path | Page | Package |
+|------|------|---------|
+| `/settings/general` | `GeneralSettingsPage` (placeholder) | `organization_settings` |
+| `/settings/account` | `AccountSettingsPage` (hub + logout) | `account_settings` |
 
 Branch order matches [ProviderBottomNavDestination] in
 `apps/sanad_provider/lib/src/routing/shell/provider_bottom_nav.dart`.
 
-The bottom bar shows **Home** and **Settings** only. **Services**, **Requests**,
-and **Messages** are reachable from the center expandable FAB in `MainShell`.
+The bottom bar shows **Home**, **Requests**, **Messages**, and **Settings**
+(Figma `1526:12109`). Tapping **Settings** opens `showSettingsMenuSheet`
+(`3829:5902`) with Organization / Account options — it does not navigate
+immediately. **Services** remains a deep-link-only shell branch.
+
+Client registers `AccountSettingsModule` only; `/settings/account` is
+available via module routes (no client bottom-nav Settings tab yet).
 
 UI comes from the `bottom_nav_bar` package; the provider app maps
 `ProviderBottomNavDestination` to package models and injects Sanad theme tokens via

@@ -1,4 +1,6 @@
 import 'package:design_system/src/components/app_field_label.dart';
+import 'package:design_system/src/components/app_field_trailing.dart';
+import 'package:design_system/src/components/app_verified_badge.dart';
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
 import 'package:design_system/src/theme/colors/field_tokens.dart';
@@ -22,6 +24,8 @@ class AppTextField extends StatefulWidget {
     this.errorText,
     this.prefixIcon,
     this.suffixIcon,
+    this.trailing,
+    this.showVerifiedBadge = false,
     this.obscureText = false,
     this.enabled = true,
     this.readOnly = false,
@@ -46,6 +50,13 @@ class AppTextField extends StatefulWidget {
   final String? errorText;
   final Widget? prefixIcon;
   final Widget? suffixIcon;
+
+  /// Inline trailing action — outline pill (`3784:17518`) or text link
+  /// (`3784:17463`). Takes precedence over [suffixIcon] when set.
+  final AppFieldTrailing? trailing;
+
+  /// Shows [AppVerifiedBadge] beside the label — Figma `3784:17466`.
+  final bool showVerifiedBadge;
   final bool obscureText;
   final bool enabled;
   final bool readOnly;
@@ -108,7 +119,10 @@ class _AppTextFieldState extends State<AppTextField> {
             if (widget.label != null) ...[
               AppFieldLabel(
                 label: widget.label!,
-                isRequired: widget.isRequired,
+                isRequired: widget.isRequired && !widget.showVerifiedBadge,
+                suffix: widget.showVerifiedBadge
+                    ? const AppVerifiedBadge()
+                    : null,
               ),
               SizedBox(height: _labelGap),
             ],
@@ -190,9 +204,11 @@ class _AppTextFieldState extends State<AppTextField> {
         enabled: widget.enabled,
       ),
       prefixIcon: widget.prefixIcon,
-      suffixIcon: widget.suffixIcon,
+      suffixIcon: _buildSuffixIcon(enabled: widget.enabled),
       prefixIconConstraints: FieldTokens.prefixIconConstraints(),
-      suffixIconConstraints: FieldTokens.suffixIconConstraints(),
+      suffixIconConstraints: widget.trailing != null
+          ? FieldTokens.trailingSuffixConstraints()
+          : FieldTokens.suffixIconConstraints(),
       filled: true,
       fillColor: FieldTokens.background(
         colors,
@@ -202,6 +218,7 @@ class _AppTextFieldState extends State<AppTextField> {
       isDense: true,
       contentPadding: FieldTokens.contentPadding(
         hasPrefixIcon: widget.prefixIcon != null,
+        hasTrailing: widget.trailing != null || widget.suffixIcon != null,
       ),
       border: _buildBorder(
         colors,
@@ -263,5 +280,22 @@ class _AppTextFieldState extends State<AppTextField> {
         : responsiveDimension(FieldTokens.borderWidthDefault);
 
     return FieldTokens.outlineBorder(color, width);
+  }
+
+  Widget? _buildSuffixIcon({required bool enabled}) {
+    if (widget.trailing != null) {
+      return Padding(
+        padding: EdgeInsets.only(
+          right: responsiveDimension(FieldTokens.trailingPadding),
+        ),
+        child: Center(
+          child: AppFieldTrailingView(
+            trailing: widget.trailing!,
+            enabled: enabled,
+          ),
+        ),
+      );
+    }
+    return widget.suffixIcon;
   }
 }

@@ -7,6 +7,8 @@ environment:
 
 workspace:
   - packages/features/workers
+  - packages/features/account_settings
+  - packages/features/organization_settings
   - apps/sanad_client
   - apps/sanad_provider
   - apps/design_catalog
@@ -26,6 +28,7 @@ workspace:
   - packages/features/services
   - packages/flavors
   - packages/localization
+  - packages/media
   - packages/maps
   - packages/network
   - packages/notifications

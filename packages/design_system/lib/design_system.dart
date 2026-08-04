@@ -5,6 +5,7 @@ library;
 export 'src/blocs/theme/theme_bloc.dart';
 // Components
 export 'src/components/app_action_sheet.dart';
+export 'src/components/app_alert.dart';
 export 'src/components/app_avatar.dart';
 export 'src/components/app_avatar_stack.dart';
 export 'src/components/app_backdrop.dart';
@@ -28,6 +29,7 @@ export 'src/components/app_network_image.dart';
 export 'src/components/app_not_found_page.dart';
 export 'src/components/app_notification_icon.dart';
 export 'src/components/app_field_label.dart';
+export 'src/components/app_field_trailing.dart';
 export 'src/components/app_phone_field.dart';
 export 'src/components/app_fill_remaining_scrollable.dart';
 export 'src/components/app_loading_indicator.dart';
@@ -60,6 +62,7 @@ export 'src/components/app_tab_bar.dart';
 export 'src/components/app_table_cell.dart';
 export 'src/components/app_table_row.dart';
 export 'src/components/app_text_field.dart';
+export 'src/components/app_verified_badge.dart';
 // Shared UI (higher-level composed UI built from components/ + tokens)
 export 'src/shared_ui/shared_ui.dart';
 // Dimensions & spacing

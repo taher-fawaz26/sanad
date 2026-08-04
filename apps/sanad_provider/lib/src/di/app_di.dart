@@ -1,16 +1,17 @@
-import 'package:flutter/material.dart';
-
+import 'package:account_settings/account_settings.dart';
 import 'package:app_logger/app_logger.dart';
 import 'package:asset_picker/asset_picker.dart';
 import 'package:auth/auth.dart';
 import 'package:branches/branches.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:invitation/invitation.dart';
 import 'package:localization/localization.dart';
 import 'package:maps/maps.dart';
 import 'package:network/network.dart';
+import 'package:organization_settings/organization_settings.dart';
 import 'package:permissions/permissions.dart';
 import 'package:registration/registration.dart';
 import 'package:sanad_provider/src/config/app_config.dart';
@@ -71,6 +72,8 @@ Future<void> configureDependencies() async {
       ),
     ),
     AuthModule(),
+    AccountSettingsModule(),
+    OrganizationSettingsModule(),
     BranchesModule(),
     ServicesModule(),
     WorkersModule(),
