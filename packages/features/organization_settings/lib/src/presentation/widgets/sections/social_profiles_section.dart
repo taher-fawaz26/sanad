@@ -2,7 +2,6 @@ import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:organization_settings/src/presentation/widgets/components/settings_section_card.dart';
 import 'package:organization_settings/src/presentation/widgets/components/settings_social_field_view.dart';
 
 /// View-mode section displaying organization social profile links.
@@ -26,7 +25,7 @@ class SocialProfilesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SettingsSectionCard(
+    return AppSectionCard(
       title: 'settings.section_social'.tr(),
       
       onEdit: onEdit,

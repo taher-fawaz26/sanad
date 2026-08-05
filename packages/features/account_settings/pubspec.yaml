@@ -11,6 +11,8 @@ environment:
   flutter: ">=3.19.0"
 
 dependencies:
+  app_assets:
+    path: ../../app_assets
   auth:
     path: ../auth
   core:
@@ -22,6 +24,10 @@ dependencies:
     sdk: flutter
   flutter_bloc: ^9.1.1
   go_router: ^17.3.0
+  localization:
+    path: ../../localization
+  sheet_navigation:
+    path: ../../sheet_navigation
 
 dev_dependencies:
   flutter_test:

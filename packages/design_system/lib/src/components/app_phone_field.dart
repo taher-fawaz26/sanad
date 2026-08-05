@@ -206,11 +206,11 @@ class _AppPhoneFieldState extends State<AppPhoneField> {
               ),
               suffixIcon: widget.trailing != null
                   ? Padding(
-                      padding: EdgeInsetsGeometry.only(
-                        left: responsiveDimension(FieldTokens.trailingPadding),
+                      padding: EdgeInsetsDirectional.only(
+                        end: responsiveDimension(FieldTokens.trailingPadding),
                       ),
                       child: Align(
-                        alignment: Alignment.centerLeft,
+                        alignment: AlignmentDirectional.centerEnd,
                         child: AppFieldTrailingView(
                           trailing: widget.trailing!,
                           enabled: widget.enabled,

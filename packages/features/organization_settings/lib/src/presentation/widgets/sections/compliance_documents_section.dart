@@ -1,7 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:organization_settings/src/presentation/widgets/components/settings_section_card.dart';
 
 /// A single compliance document entry rendered as [AppComplianceDocumentCard].
 class ComplianceDocumentEntry {
@@ -40,7 +39,7 @@ class ComplianceDocumentsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SettingsSectionCard(
+    return AppSectionCard(
       title: 'settings.section_compliance'.tr(),
       child: Column(
         mainAxisSize: MainAxisSize.min,

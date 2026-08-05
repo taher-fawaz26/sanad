@@ -285,10 +285,11 @@ class _AppTextFieldState extends State<AppTextField> {
   Widget? _buildSuffixIcon({required bool enabled}) {
     if (widget.trailing != null) {
       return Padding(
-        padding: EdgeInsets.only(
-          right: responsiveDimension(FieldTokens.trailingPadding),
+        padding: EdgeInsetsDirectional.only(
+          end: responsiveDimension(FieldTokens.trailingPadding),
         ),
-        child: Center(
+        child: Align(
+          alignment: AlignmentDirectional.centerEnd,
           child: AppFieldTrailingView(
             trailing: widget.trailing!,
             enabled: enabled,

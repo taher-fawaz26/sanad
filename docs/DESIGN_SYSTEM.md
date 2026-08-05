@@ -83,11 +83,12 @@ Key components exported from `design_system.dart`:
 Provider shell navigation composes the `bottom_nav_bar` package in
 `apps/sanad_provider/lib/src/routing/shell/main_shell.dart` — not in `design_system`.
 
-- **Display:** `AppSection`, `AppStatusBadge`, `AppChip`, `AppAvatar`, `AppKeyValueCard`
+- **Display:** `AppSection`, `AppSectionCard`, `AppSectionHeader`, `AppStatusBadge`, `AppChip`, `AppAvatar`, `AppKeyValueCard`
 - **Feedback:** `AppSnackbar`, `AppProgressBar`, `AppPopover`
 - **Form:** `AppCheckbox`, `AppRadio`, `AppRadioTile`, `AppSwitch`, `AppSlider`
 - **Layout:** `AppDivider`, `AppWizardStepIndicator`, `AppStepper`
 - **Overlays:** `AppBottomSheet`, `AppActionSheet`, `AppBackdrop` — see [Overlays](#overlays) below
+- **Schedule:** `AppScheduleDayRow`, `AppAddScheduleDaySheet` (shell-agnostic day + from/to form; pair with `SheetNavigator`)
 - **Empty states:** `AppEmptyState`, `AppNetworkFailureState`, `AppGenericEmptyState` — see [Empty States](#empty-states) below
 
 ## Empty States

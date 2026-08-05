@@ -1,10 +1,12 @@
+import 'package:branches/branches.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:organization_settings/src/presentation/widgets/bottom_sheets/edit_category_bottom_sheet.dart';
-import 'package:organization_settings/src/presentation/widgets/bottom_sheets/edit_contact_information_bottom_sheet.dart';
 import 'package:organization_settings/src/presentation/widgets/bottom_sheets/edit_identity_bottom_sheet.dart';
+import 'package:organization_settings/src/presentation/widgets/bottom_sheets/edit_social_profiles_bottom_sheet.dart';
+import 'package:organization_settings/src/presentation/widgets/bottom_sheets/edit_working_hours_bottom_sheet.dart';
 import 'package:organization_settings/src/presentation/widgets/header/organization_header.dart';
 import 'package:organization_settings/src/presentation/widgets/sections/category_section.dart';
 import 'package:organization_settings/src/presentation/widgets/sections/compliance_documents_section.dart';
@@ -41,8 +43,19 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
     'brake_inspection',
   };
 
-  String _phone = '50 123 4567';
-  String _email = 'ops@sanad.ae';
+  SocialProfilesData _socialProfiles = const SocialProfilesData(
+    facebook: 'https://www.sanad.ae',
+    tiktok: 'sanad.ae',
+    instagram: 'sanad.ae',
+    twitter: 'sanad.ae',
+    websiteUrl: 'https://www.sanad.ae',
+  );
+
+  List<WorkingHoursEditEntry> _workingHoursEntries = const [
+    WorkingHoursEditEntry(dayId: 'SATURDAY', from: '09:00', to: '18:00'),
+    WorkingHoursEditEntry(dayId: 'SUNDAY', from: '09:00', to: '18:00'),
+    WorkingHoursEditEntry(dayId: 'MONDAY', from: '09:00', to: '18:00'),
+  ];
 
   List<String> get _selectedCategoryNames => _kPreviewCategories
       .where((category) => _selectedCategoryIds.contains(category.id))
@@ -59,18 +72,34 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
     setState(() => _selectedCategoryIds = result);
   }
 
-  Future<void> _editContactInformation() async {
-    final result = await showEditContactInformationBottomSheet(
+  Future<void> _editSocialProfiles() async {
+    final result = await showEditSocialProfilesBottomSheet(
       context: context,
-      initialPhone: _phone,
-      initialEmail: _email,
+      initial: _socialProfiles,
     );
     if (result == null || !mounted) return;
-    setState(() {
-      _phone = result.phone;
-      _email = result.email;
-    });
+    setState(() => _socialProfiles = result);
   }
+
+  Future<void> _editWorkingHours() async {
+    final result = await showEditWorkingHoursBottomSheet(
+      context: context,
+      initialEntries: _workingHoursEntries,
+    );
+    if (result == null || !mounted) return;
+    setState(() => _workingHoursEntries = result);
+  }
+
+  List<WorkingHoursEntry> get _workingHoursViewEntries => _workingHoursEntries
+      .map(
+        (entry) => WorkingHoursEntry(
+          dayLabel: BranchScheduleFormatter.localizedDay(entry.dayId),
+          hoursLabel: BranchScheduleFormatter.formatSlot(
+            BranchTimeSlotEntity(from: entry.from, to: entry.to),
+          ),
+        ),
+      )
+      .toList();
 
   @override
   Widget build(BuildContext context) {
@@ -106,19 +135,15 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
                   onEdit: _editCategories,
                 ),
                 SizedBox(height: sectionSpacing),
-                ContactInformationSection(
-                  phone: _phone,
-                  email: _email,
-                  onEdit: _editContactInformation,
-                ),
+                const ContactInformationSection(),
                 SizedBox(height: sectionSpacing),
                 SocialProfilesSection(
-                  onEdit: () {},
-                  facebook: 'https://www.sanad.ae',
-                  tiktok: 'sanad.ae',
-                  instagram: 'sanad.ae',
-                  twitter: 'sanad.ae',
-                  websiteUrl: 'https://www.sanad.ae',
+                  onEdit: _editSocialProfiles,
+                  facebook: _socialProfiles.facebook,
+                  tiktok: _socialProfiles.tiktok,
+                  instagram: _socialProfiles.instagram,
+                  twitter: _socialProfiles.twitter,
+                  websiteUrl: _socialProfiles.websiteUrl,
                 ),
                 SizedBox(height: sectionSpacing),
                 ComplianceDocumentsSection(
@@ -158,21 +183,8 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
                 ),
                 SizedBox(height: sectionSpacing),
                 WorkingHoursSection(
-                  entries: [
-                    WorkingHoursEntry(
-                      dayLabel: 'branches.add_branch.days.saturday'.tr(),
-                      hoursLabel: '9:00 AM – 6:00 PM',
-                    ),
-                    WorkingHoursEntry(
-                      dayLabel: 'branches.add_branch.days.sunday'.tr(),
-                      hoursLabel: '9:00 AM – 6:00 PM',
-                    ),
-                    WorkingHoursEntry(
-                      dayLabel: 'branches.add_branch.days.monday'.tr(),
-                      hoursLabel: '9:00 AM – 6:00 PM',
-                    ),
-                  ],
-                  onEdit: () {},
+                  entries: _workingHoursViewEntries,
+                  onEdit: _editWorkingHours,
                 ),
               ]),
             ),

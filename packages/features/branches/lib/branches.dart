@@ -35,4 +35,5 @@ export 'src/presentation/bloc/branches/branches_bloc.dart';
 export 'src/presentation/pages/add_branch_page.dart';
 export 'src/presentation/pages/branch_details_page.dart';
 export 'src/presentation/pages/branches_page.dart';
+export 'src/presentation/utils/branch_schedule_formatter.dart';
 export 'src/routes/branch_routes.dart';

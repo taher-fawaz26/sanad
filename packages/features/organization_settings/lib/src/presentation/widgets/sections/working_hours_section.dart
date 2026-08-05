@@ -1,7 +1,24 @@
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:organization_settings/src/presentation/widgets/components/settings_section_card.dart';
+
+/// One editable day entry for organization working hours.
+class WorkingHoursEditEntry {
+  const WorkingHoursEditEntry({
+    required this.dayId,
+    required this.from,
+    required this.to,
+  });
+
+  /// API weekday code (e.g. `SATURDAY`).
+  final String dayId;
+
+  /// Start time in `HH:mm` (24-hour).
+  final String from;
+
+  /// End time in `HH:mm` (24-hour).
+  final String to;
+}
 
 /// One day entry in [WorkingHoursSection].
 class WorkingHoursEntry {
@@ -27,7 +44,7 @@ class WorkingHoursSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SettingsSectionCard(
+    return AppSectionCard(
       title: 'settings.section_working_hours'.tr(),
       subtitle: 'settings.working_hours_subtitle'.tr(),
       onEdit: onEdit,

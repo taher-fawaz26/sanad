@@ -131,6 +131,7 @@ class SheetScaffold extends StatelessWidget {
                     )
                   : child,
             ),
+            SizedBox(height: AppSpacing.md),
           ],
         ),
       ),

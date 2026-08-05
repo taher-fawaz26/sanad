@@ -1,26 +1,35 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
-import 'package:organization_settings/src/presentation/widgets/components/settings_edit_button.dart';
 
-/// Card wrapper for a general settings view-mode section.
-class SettingsSectionCard extends StatelessWidget {
-  const SettingsSectionCard({
-    super.key,
+/// Card surface for a titled content section with an optional edit action.
+///
+/// Domain-agnostic wrapper used across settings and other feature screens.
+class AppSectionCard extends StatelessWidget {
+  /// Creates a section card.
+  const AppSectionCard({
     required this.child,
+    super.key,
     this.title,
     this.subtitle,
     this.onEdit,
   });
 
+  /// Section body content.
   final Widget child;
-  final VoidCallback? onEdit;
+
+  /// Optional header title.
   final String? title;
+
+  /// Optional header subtitle.
   final String? subtitle;
+
+  /// Optional edit callback shown in the header.
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final typography = context.appTypography;
+    final hasHeader = title != null || subtitle != null || onEdit != null;
 
     return Container(
       width: double.infinity,
@@ -36,13 +45,12 @@ class SettingsSectionCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: AppSpacing.lg,
         children: [
-          SettingsEditButton(
-            title: title,
-            subtitle: subtitle,
-            onEdit: onEdit,
-            colors: colors,
-            typography: typography,
-          ),
+          if (hasHeader)
+            AppSectionHeader(
+              title: title,
+              subtitle: subtitle,
+              onEdit: onEdit,
+            ),
           child,
         ],
       ),

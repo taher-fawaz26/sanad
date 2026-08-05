@@ -1,8 +1,6 @@
-import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:organization_settings/src/presentation/widgets/components/settings_section_card.dart';
 
 /// View-mode section for organization identity fields.
 ///
@@ -12,24 +10,21 @@ class IdentitySection extends StatelessWidget {
     super.key,
     this.businessDescription,
     this.onEdit,
-    this.onEnhanceWithAi,
   });
 
   final String? businessDescription;
   final VoidCallback? onEdit;
-  final VoidCallback? onEnhanceWithAi;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final typography = context.appTypography;
 
-    return SettingsSectionCard(
+    return AppSectionCard(
       title: 'settings.section_identity'.tr(),
       onEdit: onEdit,
       child: _BusinessDescriptionField(
         description: businessDescription,
-        onEnhanceWithAi: onEnhanceWithAi,
         colors: colors,
         typography: typography,
       ),
@@ -42,11 +37,9 @@ class _BusinessDescriptionField extends StatelessWidget {
     required this.colors,
     required this.typography,
     this.description,
-    this.onEnhanceWithAi,
   });
 
   final String? description;
-  final VoidCallback? onEnhanceWithAi;
   final AppColors colors;
   final AppTypography typography;
 
@@ -84,10 +77,6 @@ class _BusinessDescriptionField extends StatelessWidget {
                     color: colors.textPrimary,
                   ),
                 ),
-              AppEnhanceWithAiButton(
-                label: 'settings.enhance_with_ai'.tr(),
-                onTap: onEnhanceWithAi,
-              ),
             ],
           ),
         ),

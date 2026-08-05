@@ -1,11 +1,11 @@
 import 'package:core/core.dart';
+import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:media/media.dart';
 import 'package:organization_settings/src/domain/entities/organization_media_slot.dart';
 import 'package:organization_settings/src/presentation/bloc/identity_header/identity_header_bloc.dart';
-import 'package:organization_settings/src/presentation/widgets/components/settings_section_card.dart';
 
 /// Organization identity header for the general settings view mode.
 ///
@@ -81,7 +81,7 @@ class _OrganizationHeaderView extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<IdentityHeaderBloc, IdentityHeaderState>(
       builder: (context, state) {
-        return SettingsSectionCard(
+        return AppSectionCard(
           child: EditableImageHeader(
             title: name,
             subtitle: summary,

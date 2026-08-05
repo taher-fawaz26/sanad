@@ -4,13 +4,10 @@ Shared account settings feature for `sanad_provider` and `sanad_client`.
 
 ## Current scope
 
-- Account Settings hub page
-- Logout (via `AuthBloc`)
-
-## Future screens (placeholders only)
-
-Profile, Edit Profile, Change Password, Security, Notification Preferences,
-Language, Delete Account.
+- Account Settings page (Figma `3821:18875`)
+- Account credentials, language preferences, help & support sections
+- Language preferences sheet with single-select [AppRadio] (`3821:19032`)
+- Delete account confirmation popover (`3821:19091`) via [AuthBloc]
 
 ## Usage
 

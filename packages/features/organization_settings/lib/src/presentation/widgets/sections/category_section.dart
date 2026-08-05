@@ -1,7 +1,7 @@
+import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:organization_settings/src/presentation/widgets/components/settings_category_field_view.dart';
-import 'package:organization_settings/src/presentation/widgets/components/settings_section_card.dart';
 
 /// View-mode section for organization category and classification.
 ///
@@ -18,7 +18,7 @@ class CategorySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SettingsSectionCard(
+    return AppSectionCard(
       title: 'settings.section_category'.tr(),
       onEdit: onEdit,
       child: SettingsCategoryFieldView(

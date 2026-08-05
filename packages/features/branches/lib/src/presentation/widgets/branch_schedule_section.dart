@@ -1,11 +1,11 @@
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
 import 'package:branches/src/domain/entities/branch_time_slot_entity.dart';
 import 'package:branches/src/presentation/utils/branch_schedule_formatter.dart';
-import 'package:branches/src/presentation/widgets/add_custom_day_bottom_sheet.dart';
 import 'package:branches/src/presentation/widgets/branch_schedule_day_row.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 enum BranchScheduleMode { company, custom }
 
@@ -102,9 +102,26 @@ class BranchScheduleSection extends StatelessWidget {
       return;
     }
 
-    final result = await showAddCustomDayBottomSheet(
-      context: context,
-      availableDays: availableDays,
+    final result = await SheetNavigator.push<AppAddScheduleDayResult>(
+      context,
+      AppAddScheduleDaySheet(
+        days: availableDays
+            .map(
+              (day) => AppScheduleDayOption(
+                id: day,
+                label: BranchScheduleFormatter.localizedDay(day),
+              ),
+            )
+            .toList(),
+        dayLabel: 'branches.add_branch.day_label'.tr(),
+        fromLabel: 'branches.add_branch.from_label'.tr(),
+        toLabel: 'branches.add_branch.to_label'.tr(),
+        confirmLabel: 'branches.add_branch.add_day_button'.tr(),
+        cancelLabel: 'branches.add_branch.cancel'.tr(),
+      ),
+      settings: SheetRouteSettings(
+        title: 'branches.add_branch.add_custom_day_title'.tr(),
+      ),
     );
 
     if (result == null) return;

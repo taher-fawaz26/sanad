@@ -2,28 +2,32 @@ import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Edit action button for a general settings view-mode section.
-class SettingsEditButton extends StatelessWidget {
-  /// Creates the settings edit button placeholder.
-  ///
-
-  const SettingsEditButton({
+/// Title / subtitle row with an optional trailing edit action.
+///
+/// Domain-agnostic header used inside section cards and similar surfaces.
+class AppSectionHeader extends StatelessWidget {
+  /// Creates a section header.
+  const AppSectionHeader({
     super.key,
     this.title,
     this.subtitle,
-    required this.colors,
-    required this.typography,
     this.onEdit,
   });
 
-  final AppColors colors;
-  final AppTypography typography;
-  final VoidCallback? onEdit;
+  /// Primary heading text.
   final String? title;
+
+  /// Secondary supporting text under [title].
   final String? subtitle;
+
+  /// When non-null, shows a trailing edit icon that invokes this callback.
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final typography = context.appTypography;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -53,15 +57,19 @@ class SettingsEditButton extends StatelessWidget {
           ),
         ),
         if (onEdit != null)
-          GestureDetector(
+          InkWell(
             onTap: onEdit,
-            child: AppSvgPicture.asset(
-              AppSvgs.branchEdit,
-              width: 24,
-              height: 24,
-              colorFilter: ColorFilter.mode(
-                colors.textSecondary,
-                BlendMode.srcIn,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: AppSvgPicture.asset(
+                AppSvgs.branchEdit,
+                width: 24,
+                height: 24,
+                colorFilter: ColorFilter.mode(
+                  colors.textSecondary,
+                  BlendMode.srcIn,
+                ),
               ),
             ),
           ),
