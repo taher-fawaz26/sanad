@@ -28,7 +28,8 @@ enum DeviceClass {
   tablet(0.98),
 
   /// Width ≥ 840 dp
-  xlTablet(0.96);
+  xlTablet(0.96)
+  ;
 
   const DeviceClass(this.fontMultiplier);
 

@@ -51,8 +51,7 @@ class BranchesModule extends FeatureModule {
           ),
           BlocProvider(create: (_) => AddBranchDraftCubit()),
           BlocProvider(
-            create: (_) =>
-                AddBranchWizardCubit(isEdit: false, totalSteps: 4),
+            create: (_) => AddBranchWizardCubit(isEdit: false, totalSteps: 4),
           ),
         ],
         child: const AddBranchPage(),
@@ -113,8 +112,7 @@ class BranchesModule extends FeatureModule {
               ),
             ),
             BlocProvider(
-              create: (_) =>
-                  AddBranchWizardCubit(isEdit: true, totalSteps: 4),
+              create: (_) => AddBranchWizardCubit(isEdit: true, totalSteps: 4),
             ),
           ],
           child: AddBranchPage(

@@ -78,7 +78,8 @@ class AppRadioGroup<T> extends StatelessWidget {
             onChanged: onChanged,
             label: options[i].label,
           ),
-          if (i < options.length - 1) SizedBox(height: responsiveSpacing(spacing)),
+          if (i < options.length - 1)
+            SizedBox(height: responsiveSpacing(spacing)),
         ],
       ],
     );

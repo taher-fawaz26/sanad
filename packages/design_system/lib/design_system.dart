@@ -22,11 +22,9 @@ export 'src/components/app_feature_icon.dart';
 export 'src/components/app_field_action.dart';
 export 'src/components/app_grouped_key_value_list.dart';
 export 'src/components/app_key_value_card.dart';
-export 'src/components/app_list_card.dart';
 export 'src/components/app_map_link_card.dart';
 export 'src/components/app_modal_sheet.dart';
 export 'src/components/app_network_image.dart';
-export 'src/components/app_not_found_page.dart';
 export 'src/components/app_notification_icon.dart';
 export 'src/components/app_field_label.dart';
 export 'src/components/app_field_trailing.dart';
@@ -63,8 +61,6 @@ export 'src/components/app_table_cell.dart';
 export 'src/components/app_table_row.dart';
 export 'src/components/app_text_field.dart';
 export 'src/components/app_verified_badge.dart';
-// Shared UI (higher-level composed UI built from components/ + tokens)
-export 'src/shared_ui/shared_ui.dart';
 // Dimensions & spacing
 export 'src/dimensions/app_radius.dart';
 export 'src/dimensions/responsive_dimension.dart';

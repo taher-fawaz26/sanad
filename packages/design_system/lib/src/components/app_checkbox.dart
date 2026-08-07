@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 /// Figma `Controls / Checkboxes` (`40:7543`).
 class AppCheckbox extends StatelessWidget {
   const AppCheckbox({
-    required this.value, required this.onChanged, super.key,
+    required this.value,
+    required this.onChanged,
+    super.key,
     this.tristate = false,
   });
 
@@ -38,16 +40,16 @@ class AppCheckbox extends StatelessWidget {
             decoration: BoxDecoration(
               color: selected
                   ? (enabled
-                      ? spec.selectedFillColor
-                      : spec.selectedDisabledFillColor)
+                        ? spec.selectedFillColor
+                        : spec.selectedDisabledFillColor)
                   : Colors.transparent,
               borderRadius: spec.borderRadius,
               border: Border.all(
                 color: selected
                     ? Colors.transparent
                     : (enabled
-                        ? spec.unselectedBorderColor
-                        : spec.unselectedDisabledBorderColor),
+                          ? spec.unselectedBorderColor
+                          : spec.unselectedDisabledBorderColor),
                 width: spec.borderWidth,
               ),
             ),
@@ -55,9 +57,7 @@ class AppCheckbox extends StatelessWidget {
                 ? Icon(
                     Icons.check,
                     size: spec.size * 0.7,
-                    color: enabled
-                        ? spec.checkColor
-                        : spec.disabledCheckColor,
+                    color: enabled ? spec.checkColor : spec.disabledCheckColor,
                   )
                 : null,
           ),

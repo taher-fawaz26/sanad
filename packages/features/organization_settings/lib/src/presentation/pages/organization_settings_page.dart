@@ -1,5 +1,7 @@
 import 'package:app_assets/app_assets.dart';
+import 'package:auth/auth.dart';
 import 'package:branches/branches.dart';
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -17,6 +19,15 @@ class OrganizationSettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    // The business name comes from the auth session's provider profile
+    // (BusinessProviderProfileModel — shared shape for individual and
+    // company providers), seeded at login and refreshed by any Session
+    // update. Falls back to the generic label until the business has a
+    // name on file (e.g. fresh onboarding).
+    final profile = sl<SessionManager>().profile;
+    final businessName = profile is BusinessProviderProfileModel
+        ? profile.businessName
+        : null;
 
     return Scaffold(
       backgroundColor: colors.surface,
@@ -25,9 +36,9 @@ class OrganizationSettingsPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             AppTableRow(
-              title: 'branches.company_name'.tr(),
+              title: businessName ?? 'branches.company_name'.tr(),
               leading: AppTableLeading.avatar,
-              leadingAvatar: const AppAvatar(),
+              leadingAvatar: AppAvatar(initials: _initialsOf(businessName)),
               trailing: AppTableTrailing.icon,
               trailingIcon: AppNotificationIcon(
                 hasUnread: true,
@@ -115,5 +126,15 @@ class OrganizationSettingsPage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// First letter of up to the first two words of [name], uppercased —
+  /// [AppAvatar]'s placeholder content. `null` falls back to the avatar's
+  /// own default rendering.
+  String? _initialsOf(String? name) {
+    final trimmed = name?.trim();
+    if (trimmed == null || trimmed.isEmpty) return null;
+    final words = trimmed.split(RegExp(r'\s+')).take(2);
+    return words.map((w) => w[0].toUpperCase()).join();
   }
 }

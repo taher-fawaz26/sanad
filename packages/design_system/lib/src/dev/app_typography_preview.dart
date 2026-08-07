@@ -300,9 +300,12 @@ class _LineHeightGroup extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(metrics, style: typography.regularNormal.copyWith(
-                color: colors.textPrimary,
-              )),
+              Text(
+                metrics,
+                style: typography.regularNormal.copyWith(
+                  color: colors.textPrimary,
+                ),
+              ),
               Text(variant, style: mutedStyle),
             ],
           ),

@@ -290,6 +290,21 @@ Package: `packages/features/registration` (`UploadSingleMediaUseCase`).
 
 ---
 
+## Account settings (`GET/PATCH account-settings`)
+
+Signed-in provider account profile (name, email, phone, preferred language).
+
+| Item | Detail |
+|------|--------|
+| Path | `account-settings` (`AccountSettingsApiPaths.accountSettings`) |
+| Methods | `GET` — fetch settings; `PATCH` — partial update |
+| PATCH body | `{ "name"?: string, "preferredLanguage"?: "en" \| "ar" }` |
+| Response | `{ id, name, email, phone, preferredLanguage }` |
+
+Package: `packages/features/account_settings` (`GetAccountSettingsUseCase`, `UpdateAccountSettingsUseCase`).
+
+---
+
 ## Validation
 
 Import scanner (`melos validate:arch`) detects `DioException` imports outside `packages/network`.

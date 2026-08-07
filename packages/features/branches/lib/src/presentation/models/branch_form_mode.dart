@@ -4,7 +4,8 @@
 /// the rest of the wizard — UI, validation, draft, components — is shared.
 enum BranchFormMode {
   create,
-  edit;
+  edit
+  ;
 
   bool get isEdit => this == BranchFormMode.edit;
   bool get isCreate => this == BranchFormMode.create;

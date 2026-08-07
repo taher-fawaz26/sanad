@@ -7,7 +7,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 /// Routing decisions are delegated to the app's own router via callbacks.
 class SplashPage extends StatefulWidget {
   const SplashPage({
-    required this.onAuthenticated, required this.onUnauthenticated, super.key,
+    required this.onAuthenticated,
+    required this.onUnauthenticated,
+    super.key,
   });
 
   final VoidCallback onAuthenticated;

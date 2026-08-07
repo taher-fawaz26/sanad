@@ -22,14 +22,12 @@ class AppDivider extends StatelessWidget {
       brightness: brightness,
     );
 
-    final height =
-        thickness == AppDividerThickness.thin
-            ? spec.thinHeight
-            : spec.thickHeight;
-    final color =
-        thickness == AppDividerThickness.thin
-            ? spec.thinColor
-            : spec.thickColor;
+    final height = thickness == AppDividerThickness.thin
+        ? spec.thinHeight
+        : spec.thickHeight;
+    final color = thickness == AppDividerThickness.thin
+        ? spec.thinColor
+        : spec.thickColor;
 
     final divider = Container(
       height: height,

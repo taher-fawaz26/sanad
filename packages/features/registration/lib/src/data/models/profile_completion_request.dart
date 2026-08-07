@@ -23,14 +23,13 @@ class ProfileCompletionRequest {
   final String? representativeEmail;
 
   Map<String, dynamic> toJson() => {
-        'emiratesIdFrontId': emiratesIdFrontId,
-        'emiratesIdBackId': emiratesIdBackId,
-        if (tradeLicenseId != null) 'tradeLicenseId': tradeLicenseId,
-        if (fullName != null) 'fullName': fullName,
-        if (businessName != null) 'businessName': businessName,
-        if (representativeFullName != null)
-          'representativeFullName': representativeFullName,
-        if (representativeEmail != null)
-          'representativeEmail': representativeEmail,
-      };
+    'emiratesIdFrontId': emiratesIdFrontId,
+    'emiratesIdBackId': emiratesIdBackId,
+    if (tradeLicenseId != null) 'tradeLicenseId': tradeLicenseId,
+    if (fullName != null) 'fullName': fullName,
+    if (businessName != null) 'businessName': businessName,
+    if (representativeFullName != null)
+      'representativeFullName': representativeFullName,
+    if (representativeEmail != null) 'representativeEmail': representativeEmail,
+  };
 }

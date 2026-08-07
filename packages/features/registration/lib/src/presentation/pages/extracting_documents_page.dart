@@ -2,15 +2,15 @@ import 'dart:math' as math;
 
 import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
+import 'package:document_flow/document_flow.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
-import 'package:registration/src/presentation/cubit/registration_cubit.dart';
-import 'package:registration/src/presentation/cubit/registration_state.dart';
 import 'package:registration/src/presentation/widgets/registration_scan_chrome.dart';
 import 'package:registration/src/routes/registration_routes.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 const _kOrbSize = 180.0;
 
@@ -30,26 +30,27 @@ class ExtractingDocumentsPage extends HookWidget {
     )..repeat();
 
     useEffect(() {
-      context.read<RegistrationCubit>().extractDocuments();
+      context.read<DocumentFlowBloc>().add(const ExtractionRequested());
       return null;
     }, const []);
 
-    return BlocConsumer<RegistrationCubit, RegistrationState>(
+    return BlocConsumer<DocumentFlowBloc, DocumentFlowState>(
       listenWhen: (prev, curr) => prev.phase != curr.phase,
       listener: (context, state) {
-        if (state.phase is PhaseExtractionDone) {
+        if (state.phase is PhaseExtracted) {
           context.pushReplacement(RegistrationRoutes.reviewInformation);
         }
       },
       builder: (context, state) {
-        if (state.phase is PhaseExtractionFailed) {
+        if (state.phase is PhaseFailure &&
+            (state.phase as PhaseFailure).stage == FailedStage.extraction) {
           return Scaffold(
             body: AppNetworkFailureState(
               title: 'registration.extraction_failed_title'.tr(),
               description: 'registration.extraction_failed_retry'.tr(),
               retryLabel: 'empty_states.retry'.tr(),
               onRetry: () =>
-                  context.read<RegistrationCubit>().extractDocuments(),
+                  context.read<DocumentFlowBloc>().add(const RetryRequested()),
             ),
           );
         }

@@ -195,8 +195,7 @@ class AppTypography extends ThemeExtension<AppTypography> {
   @override
   AppTypography lerp(AppTypography? other, double t) {
     if (other is! AppTypography) return this;
-    TextStyle lerpStyle(TextStyle a, TextStyle b) =>
-        TextStyle.lerp(a, b, t)!;
+    TextStyle lerpStyle(TextStyle a, TextStyle b) => TextStyle.lerp(a, b, t)!;
 
     return AppTypography(
       title1: lerpStyle(title1, other.title1),

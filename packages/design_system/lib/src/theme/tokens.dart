@@ -49,8 +49,7 @@ export 'tokens/button_tokens.dart'
         ButtonSurfaceColors,
         ButtonTokens,
         ButtonVariant;
-export 'tokens/checkbox_tokens.dart'
-    show CheckboxStyleSpec, CheckboxTokens;
+export 'tokens/checkbox_tokens.dart' show CheckboxStyleSpec, CheckboxTokens;
 export 'tokens/chip_tokens.dart'
     show
         AppChipIconPosition,
@@ -82,7 +81,10 @@ export 'tokens/feature_icon_tokens.dart'
 export 'tokens/icon_button_tokens.dart'
     show AppIconButtonSize, IconButtonStyleSpec, IconButtonTokens;
 export 'tokens/grouped_key_value_list_tokens.dart'
-    show GroupedKeyValueItem, GroupedKeyValueListStyleSpec, GroupedKeyValueListTokens;
+    show
+        GroupedKeyValueItem,
+        GroupedKeyValueListStyleSpec,
+        GroupedKeyValueListTokens;
 export 'tokens/key_value_card_tokens.dart'
     show KeyValueCardStyleSpec, KeyValueCardTokens;
 export 'tokens/list_card_tokens.dart'

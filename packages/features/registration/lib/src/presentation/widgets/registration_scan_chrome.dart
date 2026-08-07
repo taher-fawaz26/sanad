@@ -1,5 +1,5 @@
-import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 /// Dark-green → black diagonal gradient shared by the full-screen scan / capture
 /// / extraction steps (matches [AuthScreenShell]'s header gradient and the Figma

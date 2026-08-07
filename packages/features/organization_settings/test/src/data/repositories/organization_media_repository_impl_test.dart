@@ -46,7 +46,10 @@ void main() {
 
   setUp(() {
     dataSource = _MockDataSource();
-    repository = OrganizationMediaRepositoryImpl(dataSource, _FakeNetworkGuard());
+    repository = OrganizationMediaRepositoryImpl(
+      dataSource,
+      _FakeNetworkGuard(),
+    );
   });
 
   test('uploadMedia maps the response DTO to a domain entity', () async {
@@ -74,20 +77,24 @@ void main() {
   });
 
   test('removeMedia delegates through the guard', () async {
-    when(() => dataSource.removeMedia(slot: any(named: 'slot')))
-        .thenAnswer((_) => TaskEither.right(unit));
+    when(
+      () => dataSource.removeMedia(slot: any(named: 'slot')),
+    ).thenAnswer((_) => TaskEither.right(unit));
 
-    final result =
-        await repository.removeMedia(slot: OrganizationMediaSlot.logo).run();
+    final result = await repository
+        .removeMedia(slot: OrganizationMediaSlot.logo)
+        .run();
 
     expect(result.isRight(), isTrue);
-    verify(() => dataSource.removeMedia(slot: OrganizationMediaSlot.logo))
-        .called(1);
+    verify(
+      () => dataSource.removeMedia(slot: OrganizationMediaSlot.logo),
+    ).called(1);
   });
 
   test('cancelUpload delegates to the datasource', () {
     repository.cancelUpload(OrganizationMediaSlot.cover);
-    verify(() => dataSource.cancelUpload(OrganizationMediaSlot.cover))
-        .called(1);
+    verify(
+      () => dataSource.cancelUpload(OrganizationMediaSlot.cover),
+    ).called(1);
   });
 }

@@ -2,6 +2,7 @@ import 'package:auth/src/di/auth_di.dart';
 import 'package:auth/src/presentation/pages/auth_page.dart';
 import 'package:auth/src/presentation/pages/splash_page.dart';
 import 'package:auth/src/routes/auth_routes.dart';
+import 'package:auth/src/session/session_manager.dart';
 import 'package:core/core.dart';
 import 'package:go_router/go_router.dart';
 
@@ -22,6 +23,14 @@ class AuthModule extends FeatureModule {
 
   @override
   void registerDependencies() => AuthDI.init();
+
+  /// Rehydrate the persisted session from Hive so the splash screen can
+  /// route the user without re-authenticating. Runs after DI registration
+  /// (see [ModuleRegistry.initAll]).
+  @override
+  Future<void> initialize() async {
+    await sl<SessionManager>().restore();
+  }
 
   @override
   List<RouteBase> routes(FeatureRouteContext ctx) {

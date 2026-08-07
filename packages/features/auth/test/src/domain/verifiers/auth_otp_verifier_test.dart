@@ -1,24 +1,25 @@
-import 'package:auth/src/auth/auth_status.dart';
-import 'package:auth/src/auth/auth_status_notifier.dart';
-import 'package:auth/src/domain/entities/auth_profile_entity.dart';
+import 'package:auth/src/data/models/profiles/auth_profile_model.dart';
 import 'package:auth/src/domain/entities/auth_response_entity.dart';
 import 'package:auth/src/domain/entities/user_entity.dart';
+import 'package:auth/src/domain/enums/auth_session_status.dart';
 import 'package:auth/src/domain/enums/user_type.dart';
 import 'package:auth/src/domain/usecases/request_email_otp_usecase.dart';
 import 'package:auth/src/domain/usecases/usecase_params.dart';
 import 'package:auth/src/domain/usecases/verify_email_otp_usecase.dart';
 import 'package:auth/src/domain/verifiers/auth_otp_verifier.dart';
+import 'package:auth/src/session/session_manager.dart';
 import 'package:core/core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:network/network.dart';
 
 class _MockRequestOtpUseCase extends Mock implements RequestEmailOtpUseCase {}
 
 class _MockVerifyOtpUseCase extends Mock implements VerifyEmailOtpUseCase {}
 
 class _MockSessionManager extends Mock implements SessionManager {}
+
+class _FakeAuthSession extends Fake implements AuthSessionEntity {}
 
 const _tEmail = 'user@example.com';
 
@@ -30,7 +31,7 @@ const _tUser = UserEntity(
   type: UserType.client,
 );
 
-const _tProfile = ClientProfileEntity(
+const _tProfile = ClientProfileModel(
   id: 'profile-1',
   fullName: 'Test User',
   email: _tEmail,
@@ -40,7 +41,7 @@ const _tProfile = ClientProfileEntity(
 const _tAuthenticated = AuthSessionEntity(
   accessToken: 'access-token',
   refreshToken: 'refresh-token',
-  status: 'authenticated',
+  status: AuthSessionStatus.authenticated,
   isEmailVerified: true,
   isProfileCreated: true,
   user: _tUser,
@@ -49,7 +50,7 @@ const _tAuthenticated = AuthSessionEntity(
 );
 
 const _tOnboarding = OnboardingAuthEntity(
-  status: 'onboarding',
+  status: AuthSessionStatus.onboarding,
   onboardingToken: 'onboarding-token',
   isEmailVerified: true,
   isProfileCreated: false,
@@ -60,32 +61,25 @@ void main() {
   late _MockRequestOtpUseCase requestOtpUseCase;
   late _MockVerifyOtpUseCase verifyOtpUseCase;
   late _MockSessionManager sessionManager;
-  late AuthStatusNotifier authStatusNotifier;
   late AuthOtpVerifier verifier;
 
   setUpAll(() {
     registerFallbackValue(const RequestEmailOtpParams(email: ''));
     registerFallbackValue(const VerifyEmailOtpParams(email: '', otp: ''));
+    registerFallbackValue(_FakeAuthSession());
   });
 
   setUp(() {
     requestOtpUseCase = _MockRequestOtpUseCase();
     verifyOtpUseCase = _MockVerifyOtpUseCase();
     sessionManager = _MockSessionManager();
-    authStatusNotifier = AuthStatusNotifier();
-    when(
-      () => sessionManager.startSession(
-        accessToken: any(named: 'accessToken'),
-        refreshToken: any(named: 'refreshToken'),
-      ),
-    ).thenAnswer((_) async {});
+    when(() => sessionManager.save(any())).thenAnswer((_) async {});
 
     verifier = AuthOtpVerifier(
       email: _tEmail,
       requestEmailOtp: requestOtpUseCase,
       verifyEmailOtp: verifyOtpUseCase,
       sessionManager: sessionManager,
-      authStatusNotifier: authStatusNotifier,
     );
   });
 
@@ -115,7 +109,7 @@ void main() {
   });
 
   group('verifyCode', () {
-    test('existing user starts a session and updates auth status', () async {
+    test('existing user hands the session to SessionManager.save', () async {
       when(
         () => verifyOtpUseCase(any()),
       ).thenReturn(TaskEither.right(_tAuthenticated));
@@ -123,13 +117,7 @@ void main() {
       final result = await verifier.verifyCode('123456').run();
 
       expect(result, const Right<Failure, AuthResponseEntity>(_tAuthenticated));
-      expect(authStatusNotifier.status, AuthStatus.authenticated);
-      verify(
-        () => sessionManager.startSession(
-          accessToken: 'access-token',
-          refreshToken: 'refresh-token',
-        ),
-      ).called(1);
+      verify(() => sessionManager.save(_tAuthenticated)).called(1);
     });
 
     test('new user does not start a session', () async {
@@ -140,13 +128,7 @@ void main() {
       final result = await verifier.verifyCode('123456').run();
 
       expect(result, const Right<Failure, AuthResponseEntity>(_tOnboarding));
-      expect(authStatusNotifier.status, AuthStatus.unknown);
-      verifyNever(
-        () => sessionManager.startSession(
-          accessToken: any(named: 'accessToken'),
-          refreshToken: any(named: 'refreshToken'),
-        ),
-      );
+      verifyNever(() => sessionManager.save(any()));
     });
 
     test(
@@ -159,12 +141,7 @@ void main() {
         final result = await verifier.verifyCode('000000').run();
 
         expect(result.isLeft(), isTrue);
-        verifyNever(
-          () => sessionManager.startSession(
-            accessToken: any(named: 'accessToken'),
-            refreshToken: any(named: 'refreshToken'),
-          ),
-        );
+        verifyNever(() => sessionManager.save(any()));
       },
     );
   });

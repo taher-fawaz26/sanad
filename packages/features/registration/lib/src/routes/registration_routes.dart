@@ -1,7 +1,8 @@
 /// Route path constants for the registration flow.
 ///
-/// All steps are nested under `/signup` and share a single `RegistrationCubit`
-/// provided by the flow's `ShellRoute` (see `RegistrationModule`).
+/// All steps are nested under `/signup` and share a single
+/// `RegistrationDetailsCubit` + `DocumentFlowBloc` pair provided by the
+/// flow's `ShellRoute` (see `RegistrationModule`).
 abstract final class RegistrationRoutes {
   RegistrationRoutes._();
 

@@ -117,7 +117,9 @@ class AddBranchBloc extends Bloc<AddBranchEvent, AddBranchState> {
     if (useCase == null) {
       throw StateError('GetBranchUseCase is required in edit mode.');
     }
-    emit(state.copyWith(loadStatus: RequestStatus.loading, clearLoadFailure: true));
+    emit(
+      state.copyWith(loadStatus: RequestStatus.loading, clearLoadFailure: true),
+    );
 
     final result = await useCase(GetBranchParams(id: event.branchId)).run();
 

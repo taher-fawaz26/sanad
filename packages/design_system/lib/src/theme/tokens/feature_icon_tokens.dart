@@ -74,30 +74,30 @@ abstract final class FeatureIconTokens {
   }) {
     final (containerSize, iconSize, outlineBorderWidth) = switch (size) {
       AppFeatureIconSize.xs => (
-          responsiveDimension(24),
-          responsiveDimension(12),
-          responsiveDimension(2),
-        ),
+        responsiveDimension(24),
+        responsiveDimension(12),
+        responsiveDimension(2),
+      ),
       AppFeatureIconSize.sm => (
-          responsiveDimension(32),
-          responsiveDimension(16),
-          responsiveDimension(4),
-        ),
+        responsiveDimension(32),
+        responsiveDimension(16),
+        responsiveDimension(4),
+      ),
       AppFeatureIconSize.md => (
-          responsiveDimension(40),
-          responsiveDimension(20),
-          responsiveDimension(6),
-        ),
+        responsiveDimension(40),
+        responsiveDimension(20),
+        responsiveDimension(6),
+      ),
       AppFeatureIconSize.lg => (
-          responsiveDimension(48),
-          responsiveDimension(24),
-          responsiveDimension(8),
-        ),
+        responsiveDimension(48),
+        responsiveDimension(24),
+        responsiveDimension(8),
+      ),
       AppFeatureIconSize.xl => (
-          responsiveDimension(56),
-          responsiveDimension(28),
-          responsiveDimension(10),
-        ),
+        responsiveDimension(56),
+        responsiveDimension(28),
+        responsiveDimension(10),
+      ),
     };
 
     final (iconColor, backgroundColor, outlineColor, defaultIconAsset) =
@@ -106,10 +106,9 @@ abstract final class FeatureIconTokens {
     return FeatureIconStyleSpec(
       containerSize: containerSize,
       iconSize: iconSize,
-      outlineBorderWidth:
-          theme == AppFeatureIconTheme.lightCircleOutline
-              ? outlineBorderWidth
-              : 0,
+      outlineBorderWidth: theme == AppFeatureIconTheme.lightCircleOutline
+          ? outlineBorderWidth
+          : 0,
       iconColor: iconColor,
       backgroundColor: backgroundColor,
       outlineColor: outlineColor,

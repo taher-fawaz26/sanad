@@ -94,8 +94,7 @@ class WorkersListBloc extends Bloc<WorkersListEvent, WorkersListState> {
     WorkerRemovedFromListEvent event,
     Emitter<WorkersListState> emit,
   ) {
-    final updated =
-        state.workers.where((w) => w.id != event.workerId).toList();
+    final updated = state.workers.where((w) => w.id != event.workerId).toList();
     emit(state.copyWith(workers: updated));
   }
 

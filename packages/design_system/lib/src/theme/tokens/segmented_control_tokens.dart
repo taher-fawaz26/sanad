@@ -1,4 +1,5 @@
-import 'package:design_system/design_system.dart' show AppSegmentedControl, AppTheme;
+import 'package:design_system/design_system.dart'
+    show AppSegmentedControl, AppTheme;
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/spacing/responsive_spacing.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
@@ -127,10 +128,10 @@ abstract final class SegmentedControlTokens {
         borderRadius: BorderRadius.circular(AppDimension.radiusSm),
         border: errorBorder,
       ),
-      selectedSegmentRadius:
-          BorderRadius.circular(AppDimension.radiusSegmentInner),
-      unselectedSegmentRadius:
-          BorderRadius.circular(AppDimension.radiusSm),
+      selectedSegmentRadius: BorderRadius.circular(
+        AppDimension.radiusSegmentInner,
+      ),
+      unselectedSegmentRadius: BorderRadius.circular(AppDimension.radiusSm),
       selectedBackground: isDark ? colors.surfaceVariant : colors.surface,
       unselectedBackground: colors.palettes.white.withValues(alpha: 0),
       selectedShadow: AppShadows.small,

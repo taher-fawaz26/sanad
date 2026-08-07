@@ -2,6 +2,7 @@ import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 /// Figma error-state dialog (`1546:8473`).
 ///
@@ -84,7 +85,6 @@ Future<bool?> showProfileCompletionErrorDialog({
 
   return showDialog<bool>(
     context: context,
-    barrierDismissible: true,
     barrierColor: barrierColor,
     builder: (_) => _ProfileCompletionErrorDialog(errorMessage: errorMessage),
   );

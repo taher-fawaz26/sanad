@@ -1,0 +1,30 @@
+name: shared_ui
+description: Shared UI — reusable application-level widgets composed from the design system (pages, slivers, headers, sections, states, effects).
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+
+dependencies:
+  app_assets:
+    path: ../app_assets
+  core:
+    path: ../core
+  design_system:
+    path: ../design_system
+  flutter:
+    sdk: flutter
+  localization:
+    path: ../localization
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: ^9.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - lib/src/widgets/enhance_with_ai.svg

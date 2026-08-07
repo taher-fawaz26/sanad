@@ -6,7 +6,8 @@ import 'package:flutter/material.dart';
 /// Figma `Views / Notification Badges` (`40:10681`).
 class AppNotificationBadge extends StatelessWidget {
   const AppNotificationBadge({
-    required this.count, super.key,
+    required this.count,
+    super.key,
     this.maxCount = 99,
   });
 

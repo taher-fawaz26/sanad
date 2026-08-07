@@ -11,7 +11,10 @@ class HiveEncryptionKeyManager {
   final FlutterSecureStorage _secureStorage;
   final Map<String, HiveCipher?> _cipherCache = {};
 
-  static const Set<String> _secureBoxes = {HiveBoxes.user};
+  static const Set<String> _secureBoxes = {
+    HiveBoxes.user,
+    HiveBoxes.session,
+  };
 
   Future<HiveCipher?> getEncryptionCipher(String boxName) async {
     if (!_secureBoxes.contains(boxName)) return null;

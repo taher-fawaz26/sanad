@@ -35,16 +35,16 @@ abstract final class AuthShell {
       BuildContext context,
       String email,
       String onboardingToken,
-    ) onOnboarding,
-  }) =>
-      GoRoute(
-        path: AuthRoutes.otp,
-        redirect: (context, state) =>
-            state.extra is String ? null : AuthRoutes.login,
-        builder: (context, state) => EmailOtpPage(
-          email: state.extra! as String,
-          onAuthenticated: () => onAuthenticated(context),
-          onOnboarding: (email, token) => onOnboarding(context, email, token),
-        ),
-      );
+    )
+    onOnboarding,
+  }) => GoRoute(
+    path: AuthRoutes.otp,
+    redirect: (context, state) =>
+        state.extra is String ? null : AuthRoutes.login,
+    builder: (context, state) => EmailOtpPage(
+      email: state.extra! as String,
+      onAuthenticated: () => onAuthenticated(context),
+      onOnboarding: (email, token) => onOnboarding(context, email, token),
+    ),
+  );
 }

@@ -1,12 +1,12 @@
 import 'package:auth/auth.dart';
 import 'package:core/core.dart';
-import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:go_router/go_router.dart';
 import 'package:network/network.dart';
 import 'package:sanad_client/src/di/app_di.dart';
 import 'package:sanad_client/src/features/home/home_page.dart';
 import 'package:sanad_client/src/routing/client_routes.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 /// sanad_client top-level router, independent from sanad_provider.
 GoRouter buildClientRouter() {

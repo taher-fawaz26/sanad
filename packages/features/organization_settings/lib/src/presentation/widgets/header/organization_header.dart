@@ -1,19 +1,21 @@
 import 'package:core/core.dart';
-import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:media/media.dart';
 import 'package:organization_settings/src/domain/entities/organization_media_slot.dart';
 import 'package:organization_settings/src/presentation/bloc/identity_header/identity_header_bloc.dart';
+import 'package:organization_settings/src/presentation/widgets/components/organization_status_badge.dart';
+import 'package:shared_ui/shared_ui.dart';
 
-/// Organization identity header for the general settings view mode.
+/// Organization identity header for the general settings view mode — Figma
+/// `Identity-Header-Section` (`4253:25622`).
 ///
 /// Facebook-style cover + circular logo with edit affordances. All media
 /// tooling (pick / crop / zoom / rotate / view) is delegated to the generic
 /// `media` package via [MediaCoordinator]; uploading is owned by
-/// [IdentityHeaderBloc]. This widget only provides the bloc and maps its state
-/// onto the pure [EditableImageHeader].
+/// [IdentityHeaderBloc]. This widget only provides the bloc and maps its
+/// state onto the pure [EditableImageHeader].
 class OrganizationHeader extends StatelessWidget {
   const OrganizationHeader({
     super.key,
@@ -21,12 +23,14 @@ class OrganizationHeader extends StatelessWidget {
     this.logoUrl,
     this.name,
     this.summary,
+    this.status = OrganizationProfileStatus.incomplete,
   });
 
   final String? coverUrl;
   final String? logoUrl;
   final String? name;
   final String? summary;
+  final OrganizationProfileStatus status;
 
   @override
   Widget build(BuildContext context) {
@@ -35,16 +39,25 @@ class OrganizationHeader extends StatelessWidget {
         ..add(
           IdentityHeaderInitialized(coverUrl: coverUrl, logoUrl: logoUrl),
         ),
-      child: _OrganizationHeaderView(name: name, summary: summary),
+      child: _OrganizationHeaderView(
+        name: name,
+        summary: summary,
+        status: status,
+      ),
     );
   }
 }
 
 class _OrganizationHeaderView extends StatelessWidget {
-  const _OrganizationHeaderView({this.name, this.summary});
+  const _OrganizationHeaderView({
+    this.name,
+    this.summary,
+    this.status = OrganizationProfileStatus.incomplete,
+  });
 
   final String? name;
   final String? summary;
+  final OrganizationProfileStatus status;
 
   Future<void> _edit(
     BuildContext context,
@@ -56,9 +69,7 @@ class _OrganizationHeaderView extends StatelessWidget {
 
     final result = await MediaCoordinator.start(
       context,
-      actionSheetTitle: (isCover
-              ? 'media.edit_cover'
-              : 'media.edit_photo')
+      actionSheetTitle: (isCover ? 'media.edit_cover' : 'media.edit_photo')
           .tr(),
       editorConfig: isCover
           ? const MediaEditorConfig.cover()
@@ -85,6 +96,7 @@ class _OrganizationHeaderView extends StatelessWidget {
           child: EditableImageHeader(
             title: name,
             subtitle: summary,
+            badge: OrganizationStatusBadge(status: status),
             coverUrl: state.cover.imageUrl,
             avatarUrl: state.logo.imageUrl,
             coverBusy: state.cover.isBusy,

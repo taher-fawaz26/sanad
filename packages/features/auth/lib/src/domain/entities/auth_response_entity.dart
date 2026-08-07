@@ -1,6 +1,8 @@
+import 'package:auth/src/domain/entities/auth_account_settings_entity.dart';
 import 'package:auth/src/domain/entities/auth_profile_entity.dart';
 import 'package:auth/src/domain/entities/permission_entity.dart';
 import 'package:auth/src/domain/entities/user_entity.dart';
+import 'package:auth/src/domain/enums/auth_session_status.dart';
 import 'package:equatable/equatable.dart';
 
 /// Base type for the Swagger `oneOf` auth response payload.
@@ -23,7 +25,7 @@ class OnboardingAuthEntity extends AuthResponseEntity {
     required this.user,
   });
 
-  final String status;
+  final AuthSessionStatus status;
   final String onboardingToken;
   final bool isEmailVerified;
   final bool isProfileCreated;
@@ -31,12 +33,12 @@ class OnboardingAuthEntity extends AuthResponseEntity {
 
   @override
   List<Object?> get props => [
-        status,
-        onboardingToken,
-        isEmailVerified,
-        isProfileCreated,
-        user,
-      ];
+    status,
+    onboardingToken,
+    isEmailVerified,
+    isProfileCreated,
+    user,
+  ];
 }
 
 /// Authenticated session (`status: authenticated`) — tokens + optional profile.
@@ -44,6 +46,10 @@ class OnboardingAuthEntity extends AuthResponseEntity {
 /// [profile] is itself a Swagger `oneOf`, resolved via [AuthProfileEntity].
 /// Some endpoints (e.g. `auth/email/verify`) omit `profile` even when
 /// [isProfileCreated] is true; callers must tolerate a null [profile].
+///
+/// [accountSettings] is provider-owner-only per the backend contract — it is
+/// always `null` for clients and workers, and may be `null` for providers on
+/// endpoints that omit it.
 class AuthSessionEntity extends AuthResponseEntity {
   const AuthSessionEntity({
     required this.accessToken,
@@ -54,26 +60,67 @@ class AuthSessionEntity extends AuthResponseEntity {
     required this.user,
     required this.permissions,
     this.profile,
+    this.accountSettings,
   });
 
   final String accessToken;
   final String refreshToken;
-  final String status;
+  final AuthSessionStatus status;
   final bool isEmailVerified;
   final bool isProfileCreated;
   final UserEntity user;
   final AuthProfileEntity? profile;
+  final AuthAccountSettingsEntity? accountSettings;
   final List<PermissionEntity> permissions;
+
+  /// Returns a copy with the given fields replaced.
+  ///
+  /// Nullable fields ([profile], [accountSettings]) use a sentinel default so
+  /// omitting an argument keeps the current value and explicitly passing
+  /// `null` clears it — the standard Dart copyWith idiom. Non-nullable
+  /// fields simply fall back to their current value when omitted.
+  AuthSessionEntity copyWith({
+    String? accessToken,
+    String? refreshToken,
+    AuthSessionStatus? status,
+    bool? isEmailVerified,
+    bool? isProfileCreated,
+    UserEntity? user,
+    List<PermissionEntity>? permissions,
+    Object? profile = _copyWithSentinel,
+    Object? accountSettings = _copyWithSentinel,
+  }) {
+    return AuthSessionEntity(
+      accessToken: accessToken ?? this.accessToken,
+      refreshToken: refreshToken ?? this.refreshToken,
+      status: status ?? this.status,
+      isEmailVerified: isEmailVerified ?? this.isEmailVerified,
+      isProfileCreated: isProfileCreated ?? this.isProfileCreated,
+      user: user ?? this.user,
+      permissions: permissions ?? this.permissions,
+      profile: identical(profile, _copyWithSentinel)
+          ? this.profile
+          : profile as AuthProfileEntity?,
+      accountSettings: identical(accountSettings, _copyWithSentinel)
+          ? this.accountSettings
+          : accountSettings as AuthAccountSettingsEntity?,
+    );
+  }
 
   @override
   List<Object?> get props => [
-        accessToken,
-        refreshToken,
-        status,
-        isEmailVerified,
-        isProfileCreated,
-        user,
-        profile,
-        permissions,
-      ];
+    accessToken,
+    refreshToken,
+    status,
+    isEmailVerified,
+    isProfileCreated,
+    user,
+    profile,
+    accountSettings,
+    permissions,
+  ];
 }
+
+/// Private sentinel that lets [AuthSessionEntity.copyWith] distinguish
+/// "argument omitted" from "argument explicitly set to null".
+const Object _copyWithSentinel = Object();

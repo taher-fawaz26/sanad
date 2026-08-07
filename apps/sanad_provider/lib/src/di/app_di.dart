@@ -3,6 +3,7 @@ import 'package:app_logger/app_logger.dart';
 import 'package:asset_picker/asset_picker.dart';
 import 'package:auth/auth.dart';
 import 'package:branches/branches.dart';
+import 'package:contact_verification/contact_verification.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
@@ -49,8 +50,13 @@ Future<void> configureDependencies() async {
     networkConfig: AppConfig.network,
     logger: appLogger,
     resolveLanguageCode: () => sl<TranslateBloc>().state.languageCode,
-    onUnauthorized: () =>
-        sl<AuthStatusNotifier>().update(AuthStatus.unauthenticated),
+    onUnauthorized: () {
+      // 401-refresh-failure hand-off: fire-and-forget a full session wipe
+      // (tokens are already cleared by the interceptor; this also drops the
+      // Hive session snapshot and in-memory cache) then flips the auth-status
+      // notifier so the router redirects to Login.
+      sl<SessionManager>().clear().ignore();
+    },
   );
 
   // ── Permissions (registers PermissionService, config, theme, provider) ───
@@ -72,6 +78,7 @@ Future<void> configureDependencies() async {
       ),
     ),
     AuthModule(),
+    ContactVerificationModule(),
     AccountSettingsModule(),
     OrganizationSettingsModule(),
     BranchesModule(),

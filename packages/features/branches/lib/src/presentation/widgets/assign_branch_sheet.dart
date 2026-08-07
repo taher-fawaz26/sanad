@@ -7,6 +7,7 @@ import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:localization/localization.dart';
+import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 import 'package:workers/workers.dart';
 
@@ -84,8 +85,7 @@ class _AssignBranchSheetBodyState extends State<_AssignBranchSheetBody> {
 
     setState(() => _saving = true);
 
-    final existingWorkerIds =
-        branch.workers.map((w) => w.id).toList();
+    final existingWorkerIds = branch.workers.map((w) => w.id).toList();
     final updatedWorkerIds = [...existingWorkerIds, widget.worker.id];
 
     final result = await sl<UpdateBranchUseCase>()

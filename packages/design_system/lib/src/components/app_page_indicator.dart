@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 /// Figma `Controls / Page Controls: Dot` (`40:7639`).
 class AppPageIndicator extends StatelessWidget {
   const AppPageIndicator({
-    required this.count, required this.currentIndex, super.key,
+    required this.count,
+    required this.currentIndex,
+    super.key,
   });
 
   final int count;

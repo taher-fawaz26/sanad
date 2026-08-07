@@ -15,12 +15,22 @@ dependencies:
     path: ../account_settings
   app_assets:
     path: ../../app_assets
+  asset_picker:
+    path: ../../asset_picker
+  auth:
+    path: ../auth
   branches:
     path: ../branches
+  contact_verification:
+    path: ../contact_verification
   core:
     path: ../../core
   design_system:
     path: ../../design_system
+  document_flow:
+    path: ../document_flow
+  shared_ui:
+    path: ../../shared_ui
   dio: ^5.8.0+1
   easy_localization: ^3.0.8
   equatable: ^2.1.0

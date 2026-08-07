@@ -64,10 +64,9 @@ class DialogStyleSpec {
   EdgeInsets paddingFor(AppDialogImageLayout layout) {
     return switch (layout) {
       AppDialogImageLayout.imageLarge ||
-      AppDialogImageLayout.iconSmall =>
-        contentPaddingWithImage,
-      AppDialogImageLayout.none || AppDialogImageLayout.heroHeader =>
-        contentPadding,
+      AppDialogImageLayout.iconSmall => contentPaddingWithImage,
+      AppDialogImageLayout.none ||
+      AppDialogImageLayout.heroHeader => contentPadding,
     };
   }
 
@@ -123,6 +122,7 @@ abstract final class DialogTokens {
   static const double bodyLineHeight = 24;
   static const double imageLargeSize = 120;
   static const double imageSmallSize = 64;
+
   /// Figma success popover ring (`194:5419`) — 100 dp outer circle.
   static const double featureIconOuterSize = 100;
   static const double imageBorderRadius = 16;

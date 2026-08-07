@@ -18,19 +18,20 @@ enum ProviderBottomNavDestination {
   messages,
   requests,
   services,
-  settings;
+  settings
+  ;
 
   /// Index in [StatefulNavigationShell.branches].
   int get shellBranchIndex => index;
 
   /// GoRouter path for this destination.
   String get route => switch (this) {
-        home => AppRoutes.home,
-        messages => AppRoutes.messages,
-        requests => AppRoutes.requests,
-        services => AppRoutes.services,
-        settings => AppRoutes.settings,
-      };
+    home => AppRoutes.home,
+    messages => AppRoutes.messages,
+    requests => AppRoutes.requests,
+    services => AppRoutes.services,
+    settings => AppRoutes.settings,
+  };
 
   /// Whether this destination is a permanent bottom bar tab.
   bool get isPermanentTab => permanentTabs.contains(this);
@@ -57,28 +58,28 @@ enum ProviderBottomNavDestination {
 
   /// SVG icon asset for this destination (unselected / outline).
   String get iconAsset => switch (this) {
-        home => AppNavigationIcons.home,
-        messages => AppNavigationIcons.messages,
-        requests => AppNavigationIcons.centerAction,
-        services => AppNavigationIcons.service,
-        settings => AppNavigationIcons.settings,
-      };
+    home => AppNavigationIcons.home,
+    messages => AppNavigationIcons.messages,
+    requests => AppNavigationIcons.centerAction,
+    services => AppNavigationIcons.service,
+    settings => AppNavigationIcons.settings,
+  };
 
   /// SVG icon asset when this destination is selected (filled variants).
   String? get selectedIconAsset => switch (this) {
-        home => AppNavigationIcons.homeSelected,
-        settings => AppNavigationIcons.settingsSelected,
-        services => AppNavigationIcons.serviceFilled,
-        requests => AppNavigationIcons.requestsFilled,
-        messages => AppNavigationIcons.messagesFilled,
-      };
+    home => AppNavigationIcons.homeSelected,
+    settings => AppNavigationIcons.settingsSelected,
+    services => AppNavigationIcons.serviceFilled,
+    requests => AppNavigationIcons.requestsFilled,
+    messages => AppNavigationIcons.messagesFilled,
+  };
 
   /// Localized label key for this destination.
   String get labelKey => switch (this) {
-        home => 'nav.home',
-        messages => 'nav.messages',
-        requests => 'nav.requests',
-        services => 'nav.service',
-        settings => 'nav.settings',
-      };
+    home => 'nav.home',
+    messages => 'nav.messages',
+    requests => 'nav.requests',
+    services => 'nav.service',
+    settings => 'nav.settings',
+  };
 }

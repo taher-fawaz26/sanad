@@ -17,9 +17,9 @@ class GoogleAuthDataSourceImpl implements GoogleAuthDataSource {
     required BaseApiClient apiClient,
     GoogleSignIn? googleSignIn,
     FirebaseAuth? firebaseAuth,
-  })  : _apiClient = apiClient,
-        _googleSignIn = googleSignIn ?? GoogleSignIn(),
-        _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance;
+  }) : _apiClient = apiClient,
+       _googleSignIn = googleSignIn ?? GoogleSignIn(),
+       _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance;
 
   final BaseApiClient _apiClient;
   final GoogleSignIn _googleSignIn;
@@ -40,8 +40,7 @@ class GoogleAuthDataSourceImpl implements GoogleAuthDataSource {
             accessToken: googleAuth.accessToken,
             idToken: idToken,
           );
-          final userCred =
-              await _firebaseAuth.signInWithCredential(credential);
+          final userCred = await _firebaseAuth.signInWithCredential(credential);
           final firebaseToken = await userCred.user?.getIdToken();
           if (firebaseToken == null) throw const _CancelledException();
 

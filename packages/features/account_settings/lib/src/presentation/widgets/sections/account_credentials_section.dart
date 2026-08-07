@@ -2,6 +2,7 @@ import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 /// Account credentials section — Figma `3821:18877`.
 class AccountCredentialsSection extends StatefulWidget {
@@ -109,7 +110,6 @@ class _AccountCredentialsSectionState extends State<AccountCredentialsSection> {
             label: emailLabel,
             hint: emailLabel,
             controller: _emailController,
-            readOnly: true,
             isRequired: true,
             showVerifiedBadge: _emailAdded && widget.emailVerified,
             trailing: _emailAdded

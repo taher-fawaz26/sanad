@@ -8,6 +8,9 @@ abstract final class OrganizationSettingsRoutes {
   /// Empty general settings placeholder — pushed from the KPI list.
   static const String general = '/settings/general';
 
+  /// Legal documents (Emirates ID + trade licence) update flow.
+  static const String legalDocuments = '/settings/legal-documents';
+
   /// Routes that require an authenticated session.
-  static const Set<String> protectedRoutes = {hub, general};
+  static const Set<String> protectedRoutes = {hub, general, legalDocuments};
 }

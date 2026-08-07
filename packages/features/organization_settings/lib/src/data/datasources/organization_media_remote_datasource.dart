@@ -1,17 +1,17 @@
 import 'package:core/core.dart';
-import 'package:dio/dio.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:media/media.dart';
 import 'package:network/network.dart';
+import 'package:organization_settings/src/data/datasources/media_upload_remote_datasource.dart';
 import 'package:organization_settings/src/data/models/organization_media_response.dart';
 import 'package:organization_settings/src/domain/entities/organization_media_slot.dart';
 
-/// Uploads/removes organization identity images via multipart HTTP.
+/// Sets the organization's cover/logo image via the documented two-step
+/// contract: `POST media/upload-single` (via [MediaUploadRemoteDataSource])
+/// returns a `mediaId`, then `PATCH {slot.endpoint} {mediaId}` applies it.
 ///
-/// Uses [SecureDioClient] (the `authDio` instance), whose `AuthInterceptor`
-/// attaches the session token automatically — so no `Authorization` header is
-/// set here. Cancel tokens are keyed per slot so a re-pick cancels the prior
-/// in-flight upload for that slot.
+/// Removing an image has no documented endpoint (see
+/// `OrganizationMediaRepository.removeMedia` for the resulting failure).
 abstract interface class OrganizationMediaRemoteDataSource {
   TaskEither<Failure, OrganizationMediaResponse> uploadMedia({
     required OrganizationMediaSlot slot,
@@ -26,63 +26,44 @@ abstract interface class OrganizationMediaRemoteDataSource {
 
 class OrganizationMediaRemoteDataSourceImpl
     implements OrganizationMediaRemoteDataSource {
-  OrganizationMediaRemoteDataSourceImpl(this._client);
+  OrganizationMediaRemoteDataSourceImpl(this._mediaUpload, this._apiClient);
 
-  final SecureDioClient _client;
-
-  final Map<OrganizationMediaSlot, CancelToken> _cancelTokens = {};
+  final MediaUploadRemoteDataSource _mediaUpload;
+  final BaseApiClient _apiClient;
 
   @override
   TaskEither<Failure, OrganizationMediaResponse> uploadMedia({
     required OrganizationMediaSlot slot,
     required EditedMedia media,
     void Function(double progress)? onProgress,
-  }) => TaskEither.tryCatch(
-    () async {
-      _cancelTokens[slot]?.cancel();
-      final cancelToken = CancelToken();
-      _cancelTokens[slot] = cancelToken;
-
-      final formData = FormData.fromMap({
-        'file': MultipartFile.fromBytes(
-          media.bytes,
-          filename: media.fileName,
-          contentType: DioMediaType.parse(media.mimeType),
-        ),
-      });
-
-      try {
-        final response = await _client.postMultipart<dynamic>(
-          slot.endpoint,
-          formData: formData,
-          cancelToken: cancelToken,
-          onSendProgress: (sent, total) {
-            if (total <= 0 || onProgress == null) return;
-            onProgress((sent / total).clamp(0.0, 1.0));
-          },
-        );
-
-        final raw = response.data;
-        final map = raw is Map<String, dynamic> ? raw : <String, dynamic>{};
-        return OrganizationMediaResponse.fromJson(map);
-      } finally {
-        _cancelTokens.remove(slot);
-      }
-    },
-    (error, _) => ErrorMapper.mapError(error),
-  );
+  }) => _mediaUpload
+      .uploadSingleBytes(
+        uploadKey: slot.name,
+        bytes: media.bytes,
+        fileName: media.fileName,
+        mimeType: media.mimeType,
+        onProgress: onProgress,
+      )
+      .flatMap(
+        (uploaded) => _apiClient
+            .request<OrganizationMediaResponse>(
+              path: slot.endpoint,
+              method: RequestMethod.patch,
+              body: {'mediaId': uploaded.id},
+              parser: (data) => OrganizationMediaResponse.fromJson(
+                data as Map<String, dynamic>,
+              ).withUrlFallback(uploaded.url),
+            ),
+      );
 
   @override
   TaskEither<Failure, Unit> removeMedia({
     required OrganizationMediaSlot slot,
-  }) => TaskEither.tryCatch(() async {
-    await _client.delete<dynamic>(slot.endpoint);
-    return unit;
-  }, (error, _) => ErrorMapper.mapError(error));
+  }) => TaskEither.left(
+    const BusinessRuleFailure(message: 'errors.remove_image_not_supported'),
+  );
 
   @override
-  void cancelUpload(OrganizationMediaSlot slot) {
-    final token = _cancelTokens.remove(slot);
-    if (token != null && !token.isCancelled) token.cancel();
-  }
+  void cancelUpload(OrganizationMediaSlot slot) =>
+      _mediaUpload.cancelUpload(slot.name);
 }

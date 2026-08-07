@@ -317,27 +317,28 @@ class _SectionTrailing extends StatelessWidget {
   Widget build(BuildContext context) {
     return switch (trailing) {
       AppSectionTrailing.icon => GestureDetector(
-          onTap: onTrailingTap,
-          behavior: HitTestBehavior.opaque,
-          child: SizedBox(
-            width: iconSize,
-            height: iconSize,
-            child: IconTheme(
-              data: IconThemeData(size: iconSize, color: iconColor),
-              child: trailingIcon ??
-                  Icon(
-                    Icons.person_outline,
-                    size: iconSize,
-                    color: iconColor,
-                  ),
-            ),
+        onTap: onTrailingTap,
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox(
+          width: iconSize,
+          height: iconSize,
+          child: IconTheme(
+            data: IconThemeData(size: iconSize, color: iconColor),
+            child:
+                trailingIcon ??
+                Icon(
+                  Icons.person_outline,
+                  size: iconSize,
+                  color: iconColor,
+                ),
           ),
         ),
+      ),
       AppSectionTrailing.button => AppButton(
-          label: trailingButtonLabel ?? 'Button',
-          onPressed: onTrailingTap,
-          size: AppButtonSize.small,
-        ),
+        label: trailingButtonLabel ?? 'Button',
+        onPressed: onTrailingTap,
+        size: AppButtonSize.small,
+      ),
       AppSectionTrailing.custom => trailingWidget ?? const SizedBox.shrink(),
       AppSectionTrailing.none => const SizedBox.shrink(),
     };

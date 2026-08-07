@@ -1,4 +1,4 @@
-﻿import 'package:design_system/src/theme/colors/app_colors.dart';
+import 'package:design_system/src/theme/colors/app_colors.dart';
 import 'package:design_system/src/theme/tokens/stepper_tokens.dart';
 import 'package:design_system/src/theme/typography/app_typography.dart';
 import 'package:flutter/material.dart';
@@ -54,9 +54,7 @@ class AppStepper extends StatelessWidget {
             icon: Icons.remove,
             iconSize: iconSize,
             inset: spec.iconInset(size),
-            color: _canDecrement
-                ? spec.decrementColor
-                : spec.disabledIconColor,
+            color: _canDecrement ? spec.decrementColor : spec.disabledIconColor,
             onTap: _canDecrement ? onDecrement : null,
           ),
           Expanded(
@@ -70,9 +68,7 @@ class AppStepper extends StatelessWidget {
             icon: Icons.add,
             iconSize: iconSize,
             inset: spec.iconInset(size),
-            color: _canIncrement
-                ? spec.incrementColor
-                : spec.disabledIconColor,
+            color: _canIncrement ? spec.incrementColor : spec.disabledIconColor,
             onTap: _canIncrement ? onIncrement : null,
           ),
         ],

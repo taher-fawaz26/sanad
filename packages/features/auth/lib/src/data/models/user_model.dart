@@ -11,7 +11,6 @@ class UserModel extends UserEntity implements EntityConverter<UserEntity> {
     required super.type,
   });
 
-
   factory UserModel.fromJson(Map<String, dynamic> json) {
     // Live API uses `userType`; older payloads may still send `type`.
     final typeRaw = json['userType'] ?? json['type'];

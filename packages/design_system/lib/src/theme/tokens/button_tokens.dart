@@ -81,21 +81,21 @@ abstract final class ButtonTokens {
   static const double sideIconGap = 8;
 
   static double minHeight(AppButtonSize size) => switch (size) {
-        AppButtonSize.block => responsiveDimension(blockHeight),
-        AppButtonSize.large => responsiveDimension(largeHeight),
-        AppButtonSize.small => responsiveDimension(smallHeight),
-      };
+    AppButtonSize.block => responsiveDimension(blockHeight),
+    AppButtonSize.large => responsiveDimension(largeHeight),
+    AppButtonSize.small => responsiveDimension(smallHeight),
+  };
 
   static EdgeInsets padding(AppButtonSize size) => switch (size) {
-        AppButtonSize.block || AppButtonSize.large => EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.sm,
-          ),
-        AppButtonSize.small => EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.sm,
-          ),
-      };
+    AppButtonSize.block || AppButtonSize.large => EdgeInsets.symmetric(
+      horizontal: AppSpacing.lg,
+      vertical: AppSpacing.sm,
+    ),
+    AppButtonSize.small => EdgeInsets.symmetric(
+      horizontal: AppSpacing.lg,
+      vertical: AppSpacing.sm,
+    ),
+  };
 
   static BorderRadius borderRadius() =>
       BorderRadius.circular(AppDimension.radiusPill);
@@ -236,12 +236,11 @@ abstract final class ButtonTokens {
     if (isDark) {
       return switch (type) {
         AppButtonType.outline ||
-        AppButtonType.transparent =>
-          ButtonSurfaceColors(
-            background: Colors.transparent,
-            foreground: dark.shade500,
-            border: dark.shade500,
-          ),
+        AppButtonType.transparent => ButtonSurfaceColors(
+          background: Colors.transparent,
+          foreground: dark.shade500,
+          border: dark.shade500,
+        ),
         AppButtonType.warning => ButtonSurfaceColors(
           background: yellow.shade800,
           foreground: dark.shade300,

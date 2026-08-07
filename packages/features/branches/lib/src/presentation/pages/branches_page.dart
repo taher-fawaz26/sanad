@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 /// Figma Branches screen (`73:2902`), collapsing header.
 ///
@@ -155,7 +156,9 @@ class _BranchesTab extends StatelessWidget {
                         SizedBox(height: AppSpacing.md),
                     itemBuilder: (context, index) => RepaintBoundary(
                       child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppSpacing.xl,
+                        ),
                         child: BranchListItem(branch: branches[index]),
                       ),
                     ),

@@ -85,8 +85,9 @@ class InvitationsListBloc
     InvitationRemovedFromListEvent event,
     Emitter<InvitationsListState> emit,
   ) {
-    final updated =
-        state.invitations.where((i) => i.id != event.invitationId).toList();
+    final updated = state.invitations
+        .where((i) => i.id != event.invitationId)
+        .toList();
     emit(state.copyWith(invitations: updated));
   }
 
@@ -122,8 +123,9 @@ class InvitationsListBloc
       (paged) => emit(
         state.copyWith(
           status: RequestStatus.success,
-          invitations:
-              append ? [...state.invitations, ...paged.items] : paged.items,
+          invitations: append
+              ? [...state.invitations, ...paged.items]
+              : paged.items,
           page: paged.currentPage,
           totalPages: paged.totalPages,
           loadingMore: false,

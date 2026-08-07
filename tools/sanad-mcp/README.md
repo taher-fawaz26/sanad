@@ -39,8 +39,9 @@ SANAD MCP (tools/sanad-mcp/src/index.mjs)
     │   (no auth required — Referer header is sufficient)
     │
     └── SanadAuthProvider
-            ├── reads SANAD_DEV_EMAIL / SANAD_DEV_PASSWORD from .env
-            ├── POST /auth/login → { accessToken, refreshToken }
+            ├── reads SANAD_DEV_EMAIL / SANAD_DEV_OTP from .env
+            ├── POST /auth/email/request-otp → { email }
+            ├── POST /auth/email/verify → { email, otp } → { accessToken, refreshToken }
             ├── caches tokens in process memory only
             ├── refreshes before expiry (JWT exp - 60s)
             └── attaches Authorization: Bearer <accessToken> to every API call
@@ -62,8 +63,8 @@ Or add `"SANAD_MCP_ALLOW_MUTATIONS": "true"` to the `env` block in `.mcp.json`.
 
 | Variable | Required | Description |
 |---|---|---|
-| `SANAD_DEV_EMAIL` | Yes | Dev account identifier (email or phone) |
-| `SANAD_DEV_PASSWORD` | Yes | Dev account password |
+| `SANAD_DEV_EMAIL` | Yes | Dev account email (OTP login) |
+| `SANAD_DEV_OTP` | No | Fixed dev/CI OTP, defaults to `055555` |
 | `SANAD_MCP_ALLOW_MUTATIONS` | No | Set to `true` to expose POST/PUT/PATCH/DELETE |
 
 ## API base URL
@@ -76,7 +77,7 @@ Live: `https://dev-api.trysanad.us/api/docs-json` (200 with Referer header)
 
 ## Token lifecycle
 
-1. First call: `POST /api/v1/auth/login` → cache accessToken + refreshToken in memory
+1. First call: `POST /api/v1/auth/email/request-otp` then `POST /api/v1/auth/email/verify` → cache accessToken + refreshToken in memory
 2. Subsequent calls: return cached token if not expired
 3. Near expiry (JWT exp - 60s): `POST /api/v1/auth/refresh` automatically
 4. On 401: attempt refresh → if fails, attempt re-login → retry original request

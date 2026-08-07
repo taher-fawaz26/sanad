@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
-import 'package:registration/src/presentation/cubit/registration_cubit.dart';
+import 'package:registration/src/presentation/cubit/registration_details_cubit.dart';
+import 'package:registration/src/presentation/registration_flow_context_x.dart';
 import 'package:registration/src/presentation/widgets/registration_header.dart';
 import 'package:registration/src/routes/registration_routes.dart';
 
@@ -20,17 +21,19 @@ class IndividualDetailsPage extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.read<RegistrationCubit>().state;
+    final state = context.read<RegistrationDetailsCubit>().state;
     final fullNameController = useTextEditingController(text: state.fullName);
     final formKey = useMemoized(GlobalKey<FormState>.new);
     final colors = context.appColors;
 
     void submit() {
       if (!(formKey.currentState?.validate() ?? false)) return;
-      context.read<RegistrationCubit>().setFullName(
-            fullNameController.text.trim(),
-          );
-      context.push(RegistrationRoutes.identityVerification);
+      context.read<RegistrationDetailsCubit>().setFullName(
+        fullNameController.text.trim(),
+      );
+      context
+        ..syncDocumentFlowContext()
+        ..push(RegistrationRoutes.identityVerification);
     }
 
     return Form(
@@ -39,36 +42,39 @@ class IndividualDetailsPage extends HookWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-          AppSvgPicture.asset(
-            AppSvgs.registrationProfile,
-            width: responsiveDimension(_kIconSize),
-            height: responsiveDimension(_kIconSize),
-            colorFilter: ColorFilter.mode(colors.textPrimary, BlendMode.srcIn),
-          ),
-          SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-          RegistrationHeader(
-            title: 'registration.individual_details_title'.tr(),
-            subtitle: Text('registration.individual_details_subtitle'.tr()),
-          ),
-          SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-          AppTextField(
-            controller: fullNameController,
-            label: 'registration.full_name'.tr(),
-            hint: 'registration.full_name_hint'.tr(),
-            textInputAction: TextInputAction.done,
-            textCapitalization: TextCapitalization.words,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
-            validator: (value) => (value == null || value.trim().isEmpty)
-                ? 'registration.field_required'.tr()
-                : null,
-            onSubmitted: (_) => submit(),
-          ),
-          SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-          AppButton(
-            label: 'registration.continue'.tr(),
-            onPressed: submit,
-          ),
-        ],
+            AppSvgPicture.asset(
+              AppSvgs.registrationProfile,
+              width: responsiveDimension(_kIconSize),
+              height: responsiveDimension(_kIconSize),
+              colorFilter: ColorFilter.mode(
+                colors.textPrimary,
+                BlendMode.srcIn,
+              ),
+            ),
+            SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
+            RegistrationHeader(
+              title: 'registration.individual_details_title'.tr(),
+              subtitle: Text('registration.individual_details_subtitle'.tr()),
+            ),
+            SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
+            AppTextField(
+              controller: fullNameController,
+              label: 'registration.full_name'.tr(),
+              hint: 'registration.full_name_hint'.tr(),
+              textInputAction: TextInputAction.done,
+              textCapitalization: TextCapitalization.words,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              validator: (value) => (value == null || value.trim().isEmpty)
+                  ? 'registration.field_required'.tr()
+                  : null,
+              onSubmitted: (_) => submit(),
+            ),
+            SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
+            AppButton(
+              label: 'registration.continue'.tr(),
+              onPressed: submit,
+            ),
+          ],
         ),
       ),
     );

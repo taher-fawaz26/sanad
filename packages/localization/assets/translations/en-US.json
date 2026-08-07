@@ -679,5 +679,13 @@
     "profile_complete_error_message": "We couldn't complete your registration. Please check your connection and try again.",
     "extraction_failed_title": "Extraction Failed",
     "extraction_failed_retry": "Failed to extract document information. Please check your connection and try again."
+  },  "document_flow": {
+    "title": "Document Flow",
+    "empty_title": "No document_flow yet",
+    "empty_description": "Your document_flow will appear here"
+  },  "contact_verification": {
+    "title": "Contact Verification",
+    "empty_title": "No contact_verification yet",
+    "empty_description": "Your contact_verification will appear here"
   }
 }

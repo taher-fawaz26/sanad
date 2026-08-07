@@ -3,6 +3,7 @@ import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_ui/shared_ui.dart';
 import 'package:workers/src/presentation/bloc/invitations_list/invitations_list_bloc.dart';
 import 'package:workers/src/presentation/widgets/invitation_list_item.dart';
 import 'package:workers/src/presentation/widgets/worker_empty_states.dart';
@@ -42,11 +43,12 @@ class InvitationsContent extends StatelessWidget {
             Expanded(
               child: AppRefreshIndicator(
                 onRefresh: () async {
-                  context
-                      .read<InvitationsListBloc>()
-                      .add(const InvitationsListRefreshEvent());
+                  context.read<InvitationsListBloc>().add(
+                    const InvitationsListRefreshEvent(),
+                  );
                 },
-                child: state.status == RequestStatus.failure &&
+                child:
+                    state.status == RequestStatus.failure &&
                         state.invitations.isEmpty
                     ? AppFillRemainingScrollable(
                         child: WorkerErrorState(
@@ -64,9 +66,9 @@ class InvitationsContent extends StatelessWidget {
                                   notification.metrics.maxScrollExtent - 200 &&
                               state.hasMore &&
                               !state.loadingMore) {
-                            context
-                                .read<InvitationsListBloc>()
-                                .add(const InvitationsListLoadMoreEvent());
+                            context.read<InvitationsListBloc>().add(
+                              const InvitationsListLoadMoreEvent(),
+                            );
                           }
                           return false;
                         },
@@ -77,7 +79,8 @@ class InvitationsContent extends StatelessWidget {
                             right: AppSpacing.lg,
                             bottom: AppSpacing.lg,
                           ),
-                          itemCount: state.filteredInvitations.length +
+                          itemCount:
+                              state.filteredInvitations.length +
                               (state.loadingMore ? 1 : 0),
                           separatorBuilder: (_, _) =>
                               SizedBox(height: AppSpacing.sm),

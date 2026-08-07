@@ -8,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:localization/localization.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 /// Figma `sign in` (`3026:19575`) and `Signup` (`2142:14088`).
 const _googleLogoSvg = '''
@@ -61,11 +62,11 @@ class AuthPage extends HookWidget {
     void submit() {
       if (!(formKey.currentState?.validate() ?? false)) return;
       context.read<AuthBloc>().add(
-            AuthValidateEmailEvent(
-              email: emailController.text.trim(),
-              isLogin: isLogin.value,
-            ),
-          );
+        AuthValidateEmailEvent(
+          email: emailController.text.trim(),
+          isLogin: isLogin.value,
+        ),
+      );
     }
 
     final shellTitle = isLogin.value
@@ -141,8 +142,8 @@ class AuthPage extends HookWidget {
       listener: (context, state) {
         if (state is AuthValidateEmailSuccessState) {
           context.read<AuthBloc>().add(
-                AuthRequestOtpEvent(emailController.text.trim()),
-              );
+            AuthRequestOtpEvent(emailController.text.trim()),
+          );
         } else if (state is AuthValidateEmailFailureState) {
           showAppErrorSnackbar(
             context: context,
@@ -234,7 +235,8 @@ class AuthPage extends HookWidget {
                 SizedBox(height: responsiveDimension(AppSpacing.xl)),
                 BlocBuilder<AuthBloc, AuthState>(
                   builder: (context, state) {
-                    final isLoading = state is AuthOtpRequestLoadingState ||
+                    final isLoading =
+                        state is AuthOtpRequestLoadingState ||
                         state is AuthValidateEmailLoadingState;
                     return AppButton(
                       onPressed: isLoading ? null : submit,
@@ -261,8 +263,8 @@ class AuthPage extends HookWidget {
                       onPressed: isLoading
                           ? null
                           : () => context.read<AuthBloc>().add(
-                                AuthGoogleSignInEvent(),
-                              ),
+                              AuthGoogleSignInEvent(),
+                            ),
                       icon: SvgPicture.string(
                         _googleLogoSvg,
                         width: 24,

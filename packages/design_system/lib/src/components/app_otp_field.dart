@@ -76,7 +76,8 @@ class AppOtpField extends StatelessWidget {
         height: cellSize,
         textStyle: textStyle ?? baseTextStyle,
         decoration: BoxDecoration(
-          color: fillColor ??
+          color:
+              fillColor ??
               FieldTokens.background(colors, brightness, enabled: enabled),
           borderRadius: radius,
           border: Border.all(color: borderColor, width: borderWidth),
@@ -123,8 +124,11 @@ class AppOtpField extends StatelessWidget {
             disabledPinTheme: themeFor(
               borderColor: FieldTokens.disabledBorder(colors, brightness),
               borderWidth: defaultWidth,
-              fillColor:
-                  FieldTokens.background(colors, brightness, enabled: false),
+              fillColor: FieldTokens.background(
+                colors,
+                brightness,
+                enabled: false,
+              ),
             ),
             separatorBuilder: (_) => SizedBox(width: AppSpacing.lg),
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],

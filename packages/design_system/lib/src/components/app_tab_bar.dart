@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 /// Figma `Bars / Tabs` (`40:6974`).
 class AppTabBar extends StatelessWidget implements PreferredSizeWidget {
   const AppTabBar({
-    required this.tabs, required this.controller, super.key,
+    required this.tabs,
+    required this.controller,
+    super.key,
     this.onTap,
   });
 

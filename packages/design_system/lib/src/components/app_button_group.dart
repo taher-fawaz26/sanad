@@ -6,7 +6,9 @@ import 'package:flutter/material.dart';
 /// Figma `Controls / Button Groups` (`251:6533`).
 class AppButtonGroup extends StatelessWidget {
   const AppButtonGroup({
-    required this.primaryLabel, required this.onPrimary, super.key,
+    required this.primaryLabel,
+    required this.onPrimary,
+    super.key,
     this.secondaryLabel,
     this.onSecondary,
     this.primaryType = AppButtonType.primary,

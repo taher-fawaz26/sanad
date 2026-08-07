@@ -12,6 +12,8 @@ dependencies:
     path: ../../packages/app_assets
   design_system:
     path: ../../packages/design_system
+  shared_ui:
+    path: ../../packages/shared_ui
   flutter:
     sdk: flutter
   flutter_screenutil: ^5.9.3

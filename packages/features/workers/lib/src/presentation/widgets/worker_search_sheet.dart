@@ -6,6 +6,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
 import 'package:workers/src/presentation/bloc/invitations_list/invitations_list_bloc.dart';
@@ -124,12 +125,13 @@ class _WorkerSearchSheetBodyState extends State<_WorkerSearchSheetBody> {
             showMicIcon: false,
             autofocus: true,
             onChanged: (value) => switch (widget.scope) {
-              WorkerSearchScope.team => context
-                  .read<WorkersListBloc>()
-                  .add(WorkersListSearchChangedEvent(value)),
-              WorkerSearchScope.invitations => context
-                  .read<InvitationsListBloc>()
-                  .add(InvitationsListSearchChangedEvent(value)),
+              WorkerSearchScope.team => context.read<WorkersListBloc>().add(
+                WorkersListSearchChangedEvent(value),
+              ),
+              WorkerSearchScope.invitations =>
+                context.read<InvitationsListBloc>().add(
+                  InvitationsListSearchChangedEvent(value),
+                ),
             },
           ),
         ),

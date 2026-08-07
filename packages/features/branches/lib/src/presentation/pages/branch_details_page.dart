@@ -12,6 +12,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
 import 'package:maps/maps.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 /// Figma Branch Details screen (`365:14892`).
 ///

@@ -45,8 +45,13 @@ class TokenManagerImpl implements TokenManager {
   }) async {
     _accessToken = accessToken;
     _refreshToken = refreshToken;
-    await _tokenStorage.saveToken(accessToken);
+    // Refresh token is written first. The backend uses rotating single-use
+    // refresh tokens: once consumed, the old token is dead and the new one
+    // must survive a crash. If the process dies between the two writes, a
+    // surviving new refresh token lets the next launch recover the session;
+    // a surviving stale refresh token does not — it causes a forced logout.
     await _tokenStorage.saveRefreshToken(refreshToken);
+    await _tokenStorage.saveToken(accessToken);
   }
 
   @override

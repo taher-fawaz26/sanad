@@ -12,8 +12,7 @@ class DeleteInvitationParams extends Equatable {
   List<Object?> get props => [id];
 }
 
-class DeleteInvitationUseCase
-    implements UseCase<Unit, DeleteInvitationParams> {
+class DeleteInvitationUseCase implements UseCase<Unit, DeleteInvitationParams> {
   const DeleteInvitationUseCase(this._repository);
 
   final WorkerRepository _repository;

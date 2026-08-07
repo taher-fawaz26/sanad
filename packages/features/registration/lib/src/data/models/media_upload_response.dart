@@ -1,4 +1,4 @@
-import 'package:registration/src/domain/entities/media_file_entity.dart';
+import 'package:document_flow/document_flow.dart';
 
 /// DTO for `POST media/onboarding`.
 class MediaUploadResponse {
@@ -8,7 +8,7 @@ class MediaUploadResponse {
     required this.fileName,
     required this.mimeType,
     required this.size,
-    required this.type,
+    required this.backendType,
     required this.url,
     required this.createdAt,
   });
@@ -20,7 +20,7 @@ class MediaUploadResponse {
         fileName: json['fileName'] as String? ?? '',
         mimeType: json['mimeType'] as String? ?? '',
         size: (json['size'] as num?)?.toInt() ?? 0,
-        type: json['type'] as String? ?? '',
+        backendType: json['type'] as String? ?? '',
         url: json['url'] as String? ?? '',
         createdAt: DateTime.parse(
           json['createdAt'] as String? ?? DateTime.now().toIso8601String(),
@@ -32,18 +32,21 @@ class MediaUploadResponse {
   final String fileName;
   final String mimeType;
   final int size;
-  final String type;
+
+  /// The document category as classified by the backend — unrelated to the
+  /// [DocumentType] slot the caller uploaded to.
+  final String backendType;
   final String url;
   final DateTime createdAt;
 
-  MediaFileEntity toEntity() => MediaFileEntity(
-        id: id,
-        originalName: originalName,
-        fileName: fileName,
-        mimeType: mimeType,
-        size: size,
-        type: type,
-        url: url,
-        createdAt: createdAt,
-      );
+  /// Maps to the generic [DocumentMedia], tagged with the [type] slot the
+  /// caller uploaded to (the backend's own category isn't carried forward).
+  DocumentMedia toEntity({required DocumentType type}) => DocumentMedia(
+    id: id,
+    fileName: fileName,
+    mimeType: mimeType,
+    size: size,
+    url: url,
+    type: type,
+  );
 }

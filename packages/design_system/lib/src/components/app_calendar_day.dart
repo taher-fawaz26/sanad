@@ -6,7 +6,8 @@ import 'package:flutter/material.dart';
 /// Figma `_Partials / Date` (`194:4474`) — calendar day cell.
 class AppCalendarDay extends StatelessWidget {
   const AppCalendarDay({
-    required this.day, super.key,
+    required this.day,
+    super.key,
     this.isSelected = false,
     this.onTap,
     this.enabled = true,
@@ -29,10 +30,10 @@ class AppCalendarDay extends StatelessWidget {
     );
 
     final active = isSelected && enabled;
-    final background =
-        active ? spec.activeBackgroundColor : spec.defaultBackgroundColor;
-    final foreground =
-        active ? spec.activeTextColor : spec.defaultTextColor;
+    final background = active
+        ? spec.activeBackgroundColor
+        : spec.defaultBackgroundColor;
+    final foreground = active ? spec.activeTextColor : spec.defaultTextColor;
 
     return Semantics(
       button: onTap != null,

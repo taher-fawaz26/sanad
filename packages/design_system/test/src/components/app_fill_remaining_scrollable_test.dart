@@ -93,33 +93,21 @@ void main() {
       expect(find.text('lb-content'), findsOneWidget);
     });
 
-    testWidgets('works with AppEmptyState', (tester) async {
+    testWidgets('works with widgets containing nested LayoutBuilder chains', (
+      tester,
+    ) async {
+      // Regression coverage for consumers such as shared_ui's AppEmptyState /
+      // AppErrorState, which also build on LayoutBuilder internally — kept
+      // here as a plain LayoutBuilder child to avoid a shared_ui dependency
+      // (design_system must not depend on shared_ui).
       await _pump(
         tester,
-        AppFillRemainingScrollable(
-          child: AppGenericEmptyState(
-            title: 'Nothing here',
-            description: 'Come back later.',
-          ),
+        const AppFillRemainingScrollable(
+          child: _LayoutBuilderChild(label: 'Nothing here'),
         ),
       );
 
       expect(find.text('Nothing here'), findsOneWidget);
-    });
-
-    testWidgets('works with AppNetworkFailureState', (tester) async {
-      await _pump(
-        tester,
-        AppFillRemainingScrollable(
-          child: AppNetworkFailureState(
-            title: 'No connection',
-            description: 'Check your network.',
-            retryLabel: 'Retry',
-          ),
-        ),
-      );
-
-      expect(find.text('No connection'), findsOneWidget);
     });
 
     testWidgets('is stateless and produces no extra rebuilds', (tester) async {

@@ -83,3 +83,5 @@ See `package_creation.skill.md` for detailed workflow.
 ## Naming Recommendation: `shared_models` (Not Executed)
 
 `packages/shared_models` currently has zero implementation (no `lib/` directory) and zero consumers, and its stated purpose duplicates `packages/domain`, which is active and already owns shared entities. Recommendation: either consolidate into `domain` and delete the stub, or — if a distinct serializable/transport DTO layer is genuinely wanted — rename it once it has real content (e.g. `api_models`) to signal that distinction. No rename or deletion has been performed; this is a documented finding awaiting a separate decision.
+
+| `shared_ui` | SharedUi package | Scaffolded |

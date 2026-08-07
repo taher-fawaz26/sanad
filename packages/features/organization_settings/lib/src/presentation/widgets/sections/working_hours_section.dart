@@ -1,6 +1,7 @@
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 /// One editable day entry for organization working hours.
 class WorkingHoursEditEntry {
@@ -32,6 +33,9 @@ class WorkingHoursEntry {
 }
 
 /// View-mode working hours section — Figma `3821:18620`.
+///
+/// Card-style section with a titled header, optional edit action, and
+/// schedule day rows below.
 class WorkingHoursSection extends StatelessWidget {
   const WorkingHoursSection({
     super.key,
@@ -52,11 +56,11 @@ class WorkingHoursSection extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (var i = 0; i < entries.length; i++) ...[
-            if (i > 0) SizedBox(height: AppSpacing.md),
+          for (var index = 0; index < entries.length; index++) ...[
+            if (index > 0) SizedBox(height: AppSpacing.md),
             AppScheduleDayRow(
-              title: entries[i].dayLabel,
-              value: entries[i].hoursLabel,
+              title: entries[index].dayLabel,
+              value: entries[index].hoursLabel,
             ),
           ],
         ],

@@ -3,6 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_ui/shared_ui.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
 import 'package:workers/src/domain/entities/worker_status.dart';
 import 'package:workers/src/presentation/bloc/workers_list/workers_list_bloc.dart';
@@ -27,8 +28,7 @@ class WorkerListItem extends StatelessWidget {
       title: worker.fullName,
       caption: worker.role,
       leading: AppAvatar(
-        image: worker.profilePicUrl != null &&
-                worker.profilePicUrl!.isNotEmpty
+        image: worker.profilePicUrl != null && worker.profilePicUrl!.isNotEmpty
             ? NetworkImage(worker.profilePicUrl!)
             : null,
         initials: worker.initials,

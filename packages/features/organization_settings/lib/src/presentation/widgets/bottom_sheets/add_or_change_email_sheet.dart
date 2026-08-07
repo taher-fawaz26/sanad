@@ -1,21 +1,20 @@
 import 'dart:async';
 
 import 'package:app_assets/app_assets.dart';
+import 'package:contact_verification/contact_verification.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:organization_settings/src/domain/usecases/request_email_otp_usecase.dart';
-import 'package:organization_settings/src/domain/usecases/verify_email_otp_usecase.dart';
-import 'package:organization_settings/src/domain/verifiers/organization_email_otp_verifier.dart';
 import 'package:otp/otp.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Shows the "Enter Email" bottom sheet — Figma `3809:18007`.
 ///
 /// Used for both Add (no [initialEmail]) and Change (prefilled). On
-/// Continue, requests + verifies an OTP via the shared `otp` package; returns
-/// the new email address once verified, or `null` if dismissed.
+/// Continue, requests + verifies an OTP via the shared `contact_verification`
+/// + `otp` packages (purpose `changeBusinessEmail`); returns the new email
+/// address once verified, or `null` if dismissed.
 Future<String?> showAddOrChangeEmailSheet({
   required BuildContext context,
   String? initialEmail,
@@ -65,15 +64,17 @@ class _AddOrChangeEmailSheetBodyState
     final email = _controller.text.trim();
 
     setState(() => _submitting = true);
-    final result = await OtpFlow.start<void>(
+    final result = await OtpFlow.start<VerificationResult>(
       context,
-      OtpFlowConfig<void>.email(
+      OtpFlowConfig<VerificationResult>.email(
         destination: email,
         purpose: OtpPurpose.changeEmail,
-        verifier: OrganizationEmailOtpVerifier(
-          email: email,
-          requestOtp: sl<RequestEmailOtpUseCase>(),
-          verifyOtp: sl<VerifyEmailOtpUseCase>(),
+        verifier: ContactVerificationVerifier(
+          purpose: VerificationPurpose.changeBusinessEmail,
+          target: email,
+          requestVerification: sl<RequestVerificationUseCase>(),
+          resendVerification: sl<ResendVerificationUseCase>(),
+          verifyContact: sl<VerifyContactUseCase>(),
         ),
       ),
     );

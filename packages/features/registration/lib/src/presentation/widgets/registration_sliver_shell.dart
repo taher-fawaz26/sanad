@@ -63,7 +63,7 @@ class RegistrationSliverShell extends StatefulWidget {
   /// Builds the collapsing hero. Receives normalized collapse progress `t`
   /// (`1.0` expanded → `0.0` collapsed) synchronized with the white sheet.
   final Widget Function(BuildContext context, double collapseProgress)
-      headerBuilder;
+  headerBuilder;
 
   /// Business content rendered inside the white sheet (not scrollable itself).
   final Widget child;
@@ -121,8 +121,10 @@ class _RegistrationSliverShellState extends State<RegistrationSliverShell> {
     final collapsedHeight = kToolbarHeight + topPadding;
     final collapseRange = expandedHeight - collapsedHeight;
     final hasFooter = widget.footer != null;
-    final minSheetHeight =
-        (viewportHeight - collapsedHeight).clamp(0.0, double.infinity);
+    final minSheetHeight = (viewportHeight - collapsedHeight).clamp(
+      0.0,
+      double.infinity,
+    );
 
     return Scaffold(
       body: DecoratedBox(

@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 ///
 /// Keeps on-device memory in check and prevents accidental huge-file uploads
 /// to the OCR API, which typically rejects files above this threshold anyway.
-const _kMaxDocumentFileSize = 10 * 1024 * 1024; // 10 MB
+const int _kMaxDocumentFileSize = 10 * 1024 * 1024; // 10 MB
 
 /// Options for Emirates ID capture: scanner (front + back), gallery, files.
 /// Camera is intentionally excluded — only 3 sources per Figma.

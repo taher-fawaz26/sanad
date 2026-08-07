@@ -118,8 +118,7 @@ class AppTableTheme extends ThemeExtension<AppTableTheme> {
 }
 
 extension AppTableThemeX on BuildContext {
-  AppTableTheme get appTableTheme =>
-      Theme.of(this).extension<AppTableTheme>()!;
+  AppTableTheme get appTableTheme => Theme.of(this).extension<AppTableTheme>()!;
 }
 
 /// Figma `_Partials / Tables` (`40:8360`) and `Views / Tables` (`40:9256`).

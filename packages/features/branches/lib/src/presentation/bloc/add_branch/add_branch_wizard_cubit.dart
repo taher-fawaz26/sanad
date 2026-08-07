@@ -92,8 +92,7 @@ class AddBranchWizardCubit extends Cubit<AddBranchWizardState> {
 
   /// Marks the wizard as awaiting a branch fetch before it can seed the
   /// draft. Called from the page's initState in edit-with-id mode.
-  void markSeedingRequired() =>
-      emit(state.copyWith(isSeeded: false));
+  void markSeedingRequired() => emit(state.copyWith(isSeeded: false));
 
   void markSeeded() => emit(state.copyWith(isSeeded: true));
 
@@ -111,8 +110,7 @@ class AddBranchWizardCubit extends Cubit<AddBranchWizardState> {
     emit(state.copyWith(currentStep: step));
   }
 
-  void showStepOneErrors() =>
-      emit(state.copyWith(showStepOneErrors: true));
+  void showStepOneErrors() => emit(state.copyWith(showStepOneErrors: true));
 
   void setCoverageAccessDenied({required bool denied}) {
     if (state.coverageAccessDenied == denied) return;

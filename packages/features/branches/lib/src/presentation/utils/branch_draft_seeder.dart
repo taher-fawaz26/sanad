@@ -76,18 +76,18 @@ abstract final class BranchDraftSeeder {
     ];
   }
 
-  static List<workers.WorkerEntity> _workers(BranchEntity branch) =>
-      branch.workers
-          .map(
-            (w) => workers.WorkerEntity(
-              id: w.id,
-              fullName: w.fullName,
-              role: w.type.toApiString(),
-              initials: w.initials,
-              status: w.status == WorkerStatus.active
-                  ? workers.WorkerStatus.active
-                  : workers.WorkerStatus.inactive,
-            ),
-          )
-          .toList();
+  static List<workers.WorkerEntity> _workers(BranchEntity branch) => branch
+      .workers
+      .map(
+        (w) => workers.WorkerEntity(
+          id: w.id,
+          fullName: w.fullName,
+          role: w.type.toApiString(),
+          initials: w.initials,
+          status: w.status == WorkerStatus.active
+              ? workers.WorkerStatus.active
+              : workers.WorkerStatus.inactive,
+        ),
+      )
+      .toList();
 }

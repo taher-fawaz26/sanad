@@ -1,15 +1,12 @@
 import 'package:app_assets/app_assets.dart';
 import 'package:asset_picker/asset_picker.dart';
 import 'package:design_system/design_system.dart';
+import 'package:document_flow/document_flow.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:registration/src/domain/failures/registration_failure.dart';
-import 'package:registration/src/presentation/cubit/registration_cubit.dart';
-import 'package:registration/src/presentation/cubit/registration_state.dart';
-import 'package:registration/src/presentation/models/registration_document_slot.dart';
-import 'package:registration/src/presentation/widgets/document_upload_card.dart';
+import 'package:registration/src/presentation/cubit/registration_details_cubit.dart';
 import 'package:registration/src/presentation/widgets/registration_logo.dart';
 import 'package:registration/src/presentation/widgets/registration_sliver_shell.dart';
 import 'package:registration/src/presentation/widgets/select_capture_method_sheet.dart';
@@ -28,48 +25,33 @@ class IdentityVerificationPage extends StatefulWidget {
 }
 
 class _IdentityVerificationPageState extends State<IdentityVerificationPage> {
-  bool _isPickingFront = false;
-  bool _isPickingBack = false;
+  bool _isPicking = false;
 
-  Future<void> _upload(RegistrationDocumentSlot slot) async {
-    if (_isPickingFront || _isPickingBack) return;
+  DocumentUploadCardLabels get _labels => DocumentUploadCardLabels(
+    chooseUpload: 'registration.choose_upload'.tr(),
+    chooseUploadHint: 'registration.choose_upload_hint'.tr(),
+    uploading: 'registration.uploading'.tr(),
+    uploadFailed: 'registration.upload_failed'.tr(),
+    replaceDocument: 'registration.replace_document'.tr(),
+    removeDocument: 'registration.remove_document'.tr(),
+    upload: 'registration.upload'.tr(),
+    retryUpload: 'registration.retry_upload'.tr(),
+  );
 
-    final source = await showAssetSourceSheet(
-      context: context,
-      options: kRegistrationEmiratesIdOptions,
-      theme: registrationPickerTheme(context),
-    );
-    if (source == null || !mounted) return;
-
-    setState(() {
-      if (slot == RegistrationDocumentSlot.emiratesIdFront) {
-        _isPickingFront = true;
-      } else {
-        _isPickingBack = true;
-      }
-    });
+  Future<void> _upload(DocumentType slot) async {
+    if (_isPicking) return;
+    setState(() => _isPicking = true);
 
     try {
-      final result = await pickRegistrationAsset(
-        source,
-        kRegistrationEmiratesIdOptions,
+      final controller = DocumentFlowController(
+        context.read<DocumentFlowBloc>(),
       );
-      if (!mounted) return;
-      if (result == null || result.isEmpty) return;
-
-      final cubit = context.read<RegistrationCubit>();
-      final assets = result.assets;
-
-      if (assets.length > 1) {
-        cubit.setEmiratesIdLocal(front: assets[0], back: assets[1]);
-        await cubit.uploadEmiratesIdSequence();
-      } else if (slot == RegistrationDocumentSlot.emiratesIdFront) {
-        cubit.setEmiratesIdLocal(front: assets.first);
-        await cubit.uploadDocument(slot: slot, asset: assets.first);
-      } else {
-        cubit.setEmiratesIdLocal(back: assets.first);
-        await cubit.uploadDocument(slot: slot, asset: assets.first);
-      }
+      await controller.pick(
+        context,
+        type: slot,
+        options: kRegistrationEmiratesIdOptions,
+        theme: registrationPickerTheme(context),
+      );
     } on AssetPickerException {
       if (mounted) {
         showAppErrorSnackbar(
@@ -78,22 +60,20 @@ class _IdentityVerificationPageState extends State<IdentityVerificationPage> {
         );
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isPickingFront = false;
-          _isPickingBack = false;
-        });
-      }
+      if (mounted) setState(() => _isPicking = false);
     }
   }
 
-  void _clearSlot(RegistrationDocumentSlot slot) =>
-      context.read<RegistrationCubit>().clearDocument(slot);
+  void _clearSlot(DocumentType slot) =>
+      context.read<DocumentFlowBloc>().add(DocumentRemoved(slot));
 
   void _continue() {
-    final state = context.read<RegistrationCubit>().state;
+    final isOrganization = context
+        .read<RegistrationDetailsCubit>()
+        .state
+        .isOrganization;
     context.go(
-      state.isOrganization
+      isOrganization
           ? RegistrationRoutes.tradeLicence
           : RegistrationRoutes.extracting,
     );
@@ -101,23 +81,28 @@ class _IdentityVerificationPageState extends State<IdentityVerificationPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<RegistrationCubit, RegistrationState>(
+    return BlocConsumer<DocumentFlowBloc, DocumentFlowState>(
       listenWhen: (prev, curr) =>
           prev.failure != curr.failure && curr.failure is UploadFailure,
       listener: (context, state) {
         final failure = state.failure;
         if (failure is! UploadFailure) return;
         showAppErrorSnackbar(context: context, title: failure.messageKey.tr());
-        context.read<RegistrationCubit>().clearFailure();
       },
       builder: (context, state) {
-        final canContinue = state.hasBothIdSides;
+        final front = state.documentAt(DocumentType.emiratesIdFront);
+        final back = state.documentAt(DocumentType.emiratesIdBack);
+        final canContinue =
+            (front?.isUploaded ?? false) && (back?.isUploaded ?? false);
         final title = 'registration.identity_title'.tr();
 
         return RegistrationSliverShell(
           onBack: () => RegistrationNavigation.popStep(
             context,
-            registrationState: context.read<RegistrationCubit>().state,
+            isOrganization: context
+                .read<RegistrationDetailsCubit>()
+                .state
+                .isOrganization,
           ),
           headerBuilder: (context, t) => RegistrationLogo(
             collapseProgress: t,
@@ -162,36 +147,26 @@ class _IdentityVerificationPageState extends State<IdentityVerificationPage> {
               SizedBox(height: responsiveDimension(AppSpacing.xxl)),
               DocumentUploadCard(
                 title: 'registration.id_front'.tr(),
-                uploadable: state.emiratesIdFront,
-                onUpload: _isPickingFront
-                    ? () {}
-                    : () => _upload(RegistrationDocumentSlot.emiratesIdFront),
-                onCancel: () => context
-                    .read<RegistrationCubit>()
-                    .cancelDocumentUpload(
-                      RegistrationDocumentSlot.emiratesIdFront,
-                    ),
-                onReplace: () =>
-                    _upload(RegistrationDocumentSlot.emiratesIdFront),
-                onRemove: () =>
-                    _clearSlot(RegistrationDocumentSlot.emiratesIdFront),
+                labels: _labels,
+                uploadable: front,
+                onUpload: () => _upload(DocumentType.emiratesIdFront),
+                onCancel: () => context.read<DocumentFlowBloc>().add(
+                  const DocumentUploadCancelled(DocumentType.emiratesIdFront),
+                ),
+                onReplace: () => _upload(DocumentType.emiratesIdFront),
+                onRemove: () => _clearSlot(DocumentType.emiratesIdFront),
               ),
               SizedBox(height: responsiveDimension(AppSpacing.xl)),
               DocumentUploadCard(
                 title: 'registration.id_back'.tr(),
-                uploadable: state.emiratesIdBack,
-                onUpload: _isPickingBack
-                    ? () {}
-                    : () => _upload(RegistrationDocumentSlot.emiratesIdBack),
-                onCancel: () => context
-                    .read<RegistrationCubit>()
-                    .cancelDocumentUpload(
-                      RegistrationDocumentSlot.emiratesIdBack,
-                    ),
-                onReplace: () =>
-                    _upload(RegistrationDocumentSlot.emiratesIdBack),
-                onRemove: () =>
-                    _clearSlot(RegistrationDocumentSlot.emiratesIdBack),
+                labels: _labels,
+                uploadable: back,
+                onUpload: () => _upload(DocumentType.emiratesIdBack),
+                onCancel: () => context.read<DocumentFlowBloc>().add(
+                  const DocumentUploadCancelled(DocumentType.emiratesIdBack),
+                ),
+                onReplace: () => _upload(DocumentType.emiratesIdBack),
+                onRemove: () => _clearSlot(DocumentType.emiratesIdBack),
               ),
             ],
           ),

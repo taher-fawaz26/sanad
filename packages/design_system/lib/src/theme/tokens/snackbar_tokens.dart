@@ -58,8 +58,9 @@ class SnackbarStyleSpec {
   final double boxMaxWidth;
 
   EdgeInsets padding({required bool hasCaption}) {
-    final vertical =
-        hasCaption ? verticalPaddingExpanded : verticalPaddingCompact;
+    final vertical = hasCaption
+        ? verticalPaddingExpanded
+        : verticalPaddingCompact;
     return EdgeInsets.symmetric(
       horizontal: horizontalPadding,
       vertical: vertical,
@@ -81,10 +82,10 @@ class AppSnackbarTheme extends ThemeExtension<AppSnackbarTheme> {
   final SnackbarStyleSpec error;
 
   SnackbarStyleSpec specFor(AppSnackbarColor color) => switch (color) {
-        AppSnackbarColor.dark => dark,
-        AppSnackbarColor.primary => primary,
-        AppSnackbarColor.error => error,
-      };
+    AppSnackbarColor.dark => dark,
+    AppSnackbarColor.primary => primary,
+    AppSnackbarColor.error => error,
+  };
 
   @override
   AppSnackbarTheme copyWith({

@@ -42,8 +42,7 @@ class OtpUiCubit extends Cubit<OtpUiState> {
 
   void startTimer([Duration? cooldown]) {
     _timer?.cancel();
-    final totalSeconds =
-        (cooldown ?? AppDurations.otpResendCooldown).inSeconds;
+    final totalSeconds = (cooldown ?? AppDurations.otpResendCooldown).inSeconds;
     emit(state.copyWith(secondsRemaining: totalSeconds, clearError: true));
     _timer = Timer.periodic(AppDurations.otpTimerTick, (timer) {
       final next = state.secondsRemaining - 1;

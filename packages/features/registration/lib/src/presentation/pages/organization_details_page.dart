@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
-import 'package:registration/src/presentation/cubit/registration_cubit.dart';
+import 'package:registration/src/presentation/cubit/registration_details_cubit.dart';
+import 'package:registration/src/presentation/registration_flow_context_x.dart';
 import 'package:registration/src/presentation/widgets/registration_header.dart';
 import 'package:registration/src/routes/registration_routes.dart';
 
@@ -19,7 +20,7 @@ class OrganizationDetailsPage extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.read<RegistrationCubit>().state;
+    final state = context.read<RegistrationDetailsCubit>().state;
     final businessNameController = useTextEditingController(
       text: state.businessName,
     );
@@ -35,11 +36,13 @@ class OrganizationDetailsPage extends HookWidget {
 
     void submit() {
       if (!(formKey.currentState?.validate() ?? false)) return;
-      context.read<RegistrationCubit>().setOrganizationDetails(
+      context.read<RegistrationDetailsCubit>().setOrganizationDetails(
         businessName: businessNameController.text.trim(),
         representativeName: representativeNameController.text.trim(),
       );
-      context.push(RegistrationRoutes.identityVerification);
+      context
+        ..syncDocumentFlowContext()
+        ..push(RegistrationRoutes.identityVerification);
     }
 
     return Form(

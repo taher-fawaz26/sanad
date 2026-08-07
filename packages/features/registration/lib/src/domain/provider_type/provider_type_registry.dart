@@ -6,7 +6,7 @@ import 'package:registration/src/domain/provider_type/provider_type_spec.dart';
 /// No other file — no pages, routes, repository methods, or use-case branches —
 /// needs to change.
 ///
-/// Endpoint strings mirror [MediaApiPaths] constants; they're inlined here
+/// Endpoint strings mirror `MediaApiPaths` constants; they're inlined here
 /// so the domain layer carries no dependency on the data layer.
 abstract final class ProviderTypeRegistry {
   ProviderTypeRegistry._();

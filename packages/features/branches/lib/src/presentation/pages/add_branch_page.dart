@@ -26,6 +26,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maps/maps.dart';
 import 'package:services/services.dart';
+import 'package:shared_ui/shared_ui.dart';
 import 'package:workers/workers.dart';
 
 /// Coverage fields selected from the draft to render the step 2 preview.
@@ -83,7 +84,8 @@ class _AddBranchPageState extends State<AddBranchPage> {
     switch (wizard.state.currentStep) {
       case 1:
         final formValid = _stepOneFormKey.currentState?.validate() ?? false;
-        final phoneValid = draft.phone.trim().isNotEmpty &&
+        final phoneValid =
+            draft.phone.trim().isNotEmpty &&
             UaePhoneValidator.isValid(draft.phone);
         if (!formValid || !draft.isStepOneComplete || !phoneValid) {
           // Surface the Figma inline field errors (`1513:7801` error frame).
@@ -138,9 +140,10 @@ class _AddBranchPageState extends State<AddBranchPage> {
         specifiedLocation: 'branches.location_picker.specified_location'.tr(),
         addressHint: 'branches.location_picker.address_hint'.tr(),
         permissionDenied: 'branches.location_picker.permission_denied'.tr(),
-        permissionPermanentlyDenied: 'branches.location_picker'
-                '.permission_permanently_denied'
-            .tr(),
+        permissionPermanentlyDenied:
+            'branches.location_picker'
+                    '.permission_permanently_denied'
+                .tr(),
         serviceDisabled: 'branches.location_picker.service_disabled'.tr(),
         genericError: 'branches.location_picker.generic_error'.tr(),
         openSettings: 'branches.location_picker.open_settings'.tr(),
@@ -164,7 +167,8 @@ class _AddBranchPageState extends State<AddBranchPage> {
     final status = await sl<LocationService>().checkPermission();
     if (!mounted) return;
     final wizard = context.read<AddBranchWizardCubit>();
-    final denied = status == LocationPermissionStatus.permanentlyDenied ||
+    final denied =
+        status == LocationPermissionStatus.permanentlyDenied ||
         status == LocationPermissionStatus.serviceDisabled;
     wizard.setCoverageAccessDenied(denied: denied);
     if (denied) return;
@@ -253,7 +257,10 @@ class _AddBranchPageState extends State<AddBranchPage> {
     } else if (state.hasError && state.failure != null) {
       showAddBranchErrorSnackbar(context: context, failure: state.failure!);
     } else if (state.hasSetupError && state.setupFailure != null) {
-      showAddBranchErrorSnackbar(context: context, failure: state.setupFailure!);
+      showAddBranchErrorSnackbar(
+        context: context,
+        failure: state.setupFailure!,
+      );
     }
   }
 
@@ -270,9 +277,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
     ).whenComplete(
       () {
         if (mounted) {
-          context
-              .read<AddBranchWizardCubit>()
-              .markSubmittingDialogDismissed();
+          context.read<AddBranchWizardCubit>().markSubmittingDialogDismissed();
         }
       },
     );
@@ -522,8 +527,9 @@ class _AddBranchPageState extends State<AddBranchPage> {
                 return AddBranchServicesStep(
                   selectedServices: services,
                   onAddServices: _openSelectServices,
-                  onRemoveService:
-                      context.read<AddBranchDraftCubit>().removeService,
+                  onRemoveService: context
+                      .read<AddBranchDraftCubit>()
+                      .removeService,
                 );
               },
             ),

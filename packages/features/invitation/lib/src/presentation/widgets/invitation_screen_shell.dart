@@ -1,5 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 /// Thin wrapper kept for backwards-compatibility with the invitation flow.
 /// All scaffold logic lives in [AuthScreenShell] (design_system).

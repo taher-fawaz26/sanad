@@ -26,7 +26,6 @@ export 'src/models/api_error_response.dart';
 export 'src/models/cursor_response.dart';
 export 'src/models/paginated_response.dart';
 export 'src/network_config.dart';
-export 'src/session/session_manager.dart';
 export 'src/ssl/certificate_pinner.dart';
 export 'src/ssl/pinned_http_client_adapter.dart';
 export 'src/ssl/secure_transport_exceptions.dart';

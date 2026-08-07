@@ -36,8 +36,7 @@ void main() {
   tearDown(() => cubit.close());
 
   test('delete: emits Started then Succeeded on success', () async {
-    when(() => repo.deleteWorker('w1'))
-        .thenAnswer((_) => TaskEither.of(unit));
+    when(() => repo.deleteWorker('w1')).thenAnswer((_) => TaskEither.of(unit));
     final effects = <WorkerActionEffect>[];
     final sub = cubit.effects.listen(effects.add);
 
@@ -56,8 +55,7 @@ void main() {
   });
 
   test('delete: emits Started then Failed on failure', () async {
-    when(() => repo.deleteWorker('w1'))
-        .thenAnswer(
+    when(() => repo.deleteWorker('w1')).thenAnswer(
       (_) => TaskEither.left(const NetworkFailure(message: 'boom')),
     );
     final effects = <WorkerActionEffect>[];
@@ -72,35 +70,38 @@ void main() {
     expect(effects[1], isA<WorkerActionFailed>());
   });
 
-  test('changeStatus: emits Succeeded with updated worker on success',
-      () async {
-    when(
-      () => repo.updateWorkerStatus('w1', WorkerStatus.inactive),
-    ).thenAnswer((_) => TaskEither.of(_worker));
+  test(
+    'changeStatus: emits Succeeded with updated worker on success',
+    () async {
+      when(
+        () => repo.updateWorkerStatus('w1', WorkerStatus.inactive),
+      ).thenAnswer((_) => TaskEither.of(_worker));
 
-    final effects = <WorkerActionEffect>[];
-    final sub = cubit.effects.listen(effects.add);
+      final effects = <WorkerActionEffect>[];
+      final sub = cubit.effects.listen(effects.add);
 
-    await cubit.changeStatus(
-      workerId: 'w1',
-      status: WorkerStatus.inactive,
-    );
-    await Future<void>.delayed(Duration.zero);
-    await sub.cancel();
+      await cubit.changeStatus(
+        workerId: 'w1',
+        status: WorkerStatus.inactive,
+      );
+      await Future<void>.delayed(Duration.zero);
+      await sub.cancel();
 
-    expect(effects.length, 2);
-    expect(effects[0], const WorkerActionStarted(WorkerActionType.suspend));
-    expect(effects[1], isA<WorkerActionSucceeded>());
-    final succeeded = effects[1] as WorkerActionSucceeded;
-    expect(succeeded.type, WorkerActionType.suspend);
-    expect(succeeded.workerId, 'w1');
-    expect(succeeded.updatedWorker, isNotNull);
-  });
+      expect(effects.length, 2);
+      expect(effects[0], const WorkerActionStarted(WorkerActionType.suspend));
+      expect(effects[1], isA<WorkerActionSucceeded>());
+      final succeeded = effects[1] as WorkerActionSucceeded;
+      expect(succeeded.type, WorkerActionType.suspend);
+      expect(succeeded.workerId, 'w1');
+      expect(succeeded.updatedWorker, isNotNull);
+    },
+  );
 
   test('ignores a second call while an action is in flight', () async {
     final gate = Completer<Either<Failure, Unit>>();
-    when(() => repo.deleteWorker('w1'))
-        .thenAnswer((_) => TaskEither(() => gate.future));
+    when(
+      () => repo.deleteWorker('w1'),
+    ).thenAnswer((_) => TaskEither(() => gate.future));
 
     final effects = <WorkerActionEffect>[];
     final sub = cubit.effects.listen(effects.add);

@@ -77,12 +77,14 @@ class IdentityHeaderBloc
     _emitSlot(
       emit,
       slot,
-      state.slot(slot).copyWith(
-        status: RequestStatus.loading,
-        progress: 0,
-        lastMedia: media,
-        clearFailure: true,
-      ),
+      state
+          .slot(slot)
+          .copyWith(
+            status: RequestStatus.loading,
+            progress: 0,
+            lastMedia: media,
+            clearFailure: true,
+          ),
     );
 
     final result = await _uploadUseCase(
@@ -110,20 +112,24 @@ class IdentityHeaderBloc
       (failure) => _emitSlot(
         emit,
         slot,
-        state.slot(slot).copyWith(
-          status: RequestStatus.failure,
-          failure: failure,
-        ),
+        state
+            .slot(slot)
+            .copyWith(
+              status: RequestStatus.failure,
+              failure: failure,
+            ),
       ),
       (entity) => _emitSlot(
         emit,
         slot,
-        state.slot(slot).copyWith(
-          status: RequestStatus.success,
-          imageUrl: entity.url ?? state.slot(slot).imageUrl,
-          progress: 1,
-          lastMedia: null,
-        ),
+        state
+            .slot(slot)
+            .copyWith(
+              status: RequestStatus.success,
+              imageUrl: entity.url ?? state.slot(slot).imageUrl,
+              progress: 1,
+              lastMedia: null,
+            ),
       ),
     );
   }
@@ -144,10 +150,12 @@ class IdentityHeaderBloc
     _emitSlot(
       emit,
       event.slot,
-      state.slot(event.slot).copyWith(
-        status: RequestStatus.loading,
-        clearFailure: true,
-      ),
+      state
+          .slot(event.slot)
+          .copyWith(
+            status: RequestStatus.loading,
+            clearFailure: true,
+          ),
     );
 
     final result = await _removeUseCase(
@@ -158,20 +166,24 @@ class IdentityHeaderBloc
       (failure) => _emitSlot(
         emit,
         event.slot,
-        state.slot(event.slot).copyWith(
-          status: RequestStatus.failure,
-          failure: failure,
-        ),
+        state
+            .slot(event.slot)
+            .copyWith(
+              status: RequestStatus.failure,
+              failure: failure,
+            ),
       ),
       (_) => _emitSlot(
         emit,
         event.slot,
-        state.slot(event.slot).copyWith(
-          status: RequestStatus.success,
-          imageUrl: null,
-          progress: 0,
-          lastMedia: null,
-        ),
+        state
+            .slot(event.slot)
+            .copyWith(
+              status: RequestStatus.success,
+              imageUrl: null,
+              progress: 0,
+              lastMedia: null,
+            ),
       ),
     );
   }

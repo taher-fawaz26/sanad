@@ -1,3 +1,5 @@
+import 'package:registration/src/domain/provider_type/provider_type_registry.dart' show ProviderTypeRegistry;
+
 /// Describes the backend-facing configuration for a single provider type.
 ///
 /// This is the entry point for extensibility: every provider type is declared

@@ -43,13 +43,10 @@ abstract final class RadioTokens {
 
     return RadioStyleSpec(
       size: responsiveDimension(size),
-      unselectedBorderColor:
-          isDark ? dark.shade600 : dark.shade300,
-      unselectedDisabledBorderColor:
-          isDark ? dark.shade800 : dark.shade200,
+      unselectedBorderColor: isDark ? dark.shade600 : dark.shade300,
+      unselectedDisabledBorderColor: isDark ? dark.shade800 : dark.shade200,
       selectedFillColor: colors.primary,
-      selectedDisabledFillColor:
-          isDark ? dark.shade900 : dark.shade200,
+      selectedDisabledFillColor: isDark ? dark.shade900 : dark.shade200,
       innerDotColor: colors.white,
       disabledInnerDotColor: isDark ? dark.shade800 : dark.shade200,
     );

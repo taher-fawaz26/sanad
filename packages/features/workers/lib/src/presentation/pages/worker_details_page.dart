@@ -411,8 +411,8 @@ class _AssignedBranchesCard extends StatelessWidget {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () => sl<WorkerBranchAssigner>()
-                            .showAssignBranchSheet(
+                        onTap: () =>
+                            sl<WorkerBranchAssigner>().showAssignBranchSheet(
                               context: context,
                               worker: worker,
                               onWorkerUpdated: onWorkerUpdated,

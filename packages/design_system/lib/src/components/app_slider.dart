@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 /// Figma `Controls / Sliders` (`40:7585`).
 class AppSlider extends StatelessWidget {
   const AppSlider({
-    required this.value, required this.onChanged, super.key,
+    required this.value,
+    required this.onChanged,
+    super.key,
     this.min = 0,
     this.max = 1,
     this.type = AppSliderType.single,

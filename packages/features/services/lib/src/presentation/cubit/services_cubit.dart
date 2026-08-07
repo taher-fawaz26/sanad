@@ -27,12 +27,11 @@ class ServicesState extends Equatable {
     List<ServiceEntity>? services,
     Failure? failure,
     bool clearFailure = false,
-  }) =>
-      ServicesState(
-        status: status ?? this.status,
-        services: services ?? this.services,
-        failure: clearFailure ? null : (failure ?? this.failure),
-      );
+  }) => ServicesState(
+    status: status ?? this.status,
+    services: services ?? this.services,
+    failure: clearFailure ? null : (failure ?? this.failure),
+  );
 
   @override
   List<Object?> get props => [status, services, failure];

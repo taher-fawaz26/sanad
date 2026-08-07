@@ -1,6 +1,8 @@
 import 'package:design_system/design_system.dart' show AppButtonGroup;
-import 'package:design_system/src/components/app_button_group.dart' show AppButtonGroup;
-import 'package:design_system/src/components/components.dart' show AppButtonGroup;
+import 'package:design_system/src/components/app_button_group.dart'
+    show AppButtonGroup;
+import 'package:design_system/src/components/components.dart'
+    show AppButtonGroup;
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:flutter/material.dart';
 

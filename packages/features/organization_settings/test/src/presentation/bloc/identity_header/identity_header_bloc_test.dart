@@ -97,7 +97,11 @@ void main() {
       ),
       isA<IdentityHeaderState>()
           .having((s) => s.cover.status, 'cover.status', RequestStatus.success)
-          .having((s) => s.cover.imageUrl, 'cover.imageUrl', 'https://cdn/c.jpg'),
+          .having(
+            (s) => s.cover.imageUrl,
+            'cover.imageUrl',
+            'https://cdn/c.jpg',
+          ),
     ],
   );
 
@@ -153,7 +157,9 @@ void main() {
       cover: IdentityMediaSlotState(imageUrl: 'c.png'),
     ),
     setUp: () {
-      when(() => removeUseCase(any())).thenAnswer((_) => TaskEither.right(unit));
+      when(
+        () => removeUseCase(any()),
+      ).thenAnswer((_) => TaskEither.right(unit));
     },
     act: (bloc) =>
         bloc.add(IdentityHeaderMediaRemoved(slot: OrganizationMediaSlot.cover)),

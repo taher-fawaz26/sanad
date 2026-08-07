@@ -50,7 +50,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '53289695434',
     projectId: 'sanad-da77a',
     storageBucket: 'sanad-da77a.firebasestorage.app',
-    iosClientId: '53289695434-r5ne08frculv1k1e6uncpiovuakf0tff.apps.googleusercontent.com',
+    iosClientId:
+        '53289695434-r5ne08frculv1k1e6uncpiovuakf0tff.apps.googleusercontent.com',
     iosBundleId: 'com.sanad.provider',
   );
 }

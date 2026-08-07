@@ -1,4 +1,4 @@
-﻿import 'package:design_system/src/theme/colors/app_colors.dart';
+import 'package:design_system/src/theme/colors/app_colors.dart';
 import 'package:design_system/src/theme/tokens/radio_tokens.dart';
 import 'package:flutter/material.dart';
 
@@ -39,8 +39,8 @@ class AppRadio<T> extends StatelessWidget {
               shape: BoxShape.circle,
               color: selected
                   ? (enabled
-                      ? spec.selectedFillColor
-                      : spec.selectedDisabledFillColor)
+                        ? spec.selectedFillColor
+                        : spec.selectedDisabledFillColor)
                   : Colors.transparent,
               border: selected
                   ? null

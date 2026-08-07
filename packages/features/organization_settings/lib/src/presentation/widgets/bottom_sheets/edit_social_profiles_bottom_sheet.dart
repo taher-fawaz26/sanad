@@ -11,14 +11,14 @@ class SocialProfilesData {
     this.facebook,
     this.tiktok,
     this.instagram,
-    this.twitter,
+    this.x,
     this.websiteUrl,
   });
 
   final String? facebook;
   final String? tiktok;
   final String? instagram;
-  final String? twitter;
+  final String? x;
   final String? websiteUrl;
 }
 
@@ -51,7 +51,7 @@ class _EditSocialProfilesSheetBodyState
   late final TextEditingController _facebookController;
   late final TextEditingController _tiktokController;
   late final TextEditingController _instagramController;
-  late final TextEditingController _twitterController;
+  late final TextEditingController _xController;
   late final TextEditingController _websiteController;
 
   @override
@@ -59,11 +59,11 @@ class _EditSocialProfilesSheetBodyState
     super.initState();
     _facebookController = TextEditingController(text: widget.initial.facebook);
     _tiktokController = TextEditingController(text: widget.initial.tiktok);
-    _instagramController =
-        TextEditingController(text: widget.initial.instagram);
-    _twitterController = TextEditingController(text: widget.initial.twitter);
-    _websiteController =
-        TextEditingController(text: widget.initial.websiteUrl);
+    _instagramController = TextEditingController(
+      text: widget.initial.instagram,
+    );
+    _xController = TextEditingController(text: widget.initial.x);
+    _websiteController = TextEditingController(text: widget.initial.websiteUrl);
   }
 
   @override
@@ -71,7 +71,7 @@ class _EditSocialProfilesSheetBodyState
     _facebookController.dispose();
     _tiktokController.dispose();
     _instagramController.dispose();
-    _twitterController.dispose();
+    _xController.dispose();
     _websiteController.dispose();
     super.dispose();
   }
@@ -82,7 +82,7 @@ class _EditSocialProfilesSheetBodyState
         facebook: _trimOrNull(_facebookController.text),
         tiktok: _trimOrNull(_tiktokController.text),
         instagram: _trimOrNull(_instagramController.text),
-        twitter: _trimOrNull(_twitterController.text),
+        x: _trimOrNull(_xController.text),
         websiteUrl: _trimOrNull(_websiteController.text),
       ),
     );
@@ -135,7 +135,7 @@ class _EditSocialProfilesSheetBodyState
           AppTextField(
             label: 'settings.social_twitter'.tr(),
             hint: 'settings.social_twitter'.tr(),
-            controller: _twitterController,
+            controller: _xController,
             keyboardType: TextInputType.url,
             textInputAction: TextInputAction.next,
             prefixIcon: _SocialPrefixIcon(asset: AppSvgs.socialTwitter),

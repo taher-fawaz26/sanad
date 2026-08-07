@@ -1,5 +1,6 @@
-﻿import 'package:design_system/design_system.dart' show AppTypography;
-import 'package:design_system/src/theme/typography/app_typography.dart' show AppTypography;
+import 'package:design_system/design_system.dart' show AppTypography;
+import 'package:design_system/src/theme/typography/app_typography.dart'
+    show AppTypography;
 import 'package:design_system/src/theme/typography/arabic_type_scale.dart';
 import 'package:design_system/src/theme/typography/responsive_font_scale.dart';
 import 'package:design_system/src/theme/typography/type_scale.dart';
@@ -115,86 +116,86 @@ abstract final class AppFontArabic {
 extension AppFontScaleX on TextStyle {
   // ── Titles ────────────────────────────────────────────────────────────────
   TextStyle get title1 => copyWith(
-        fontSize: TypeScale.title1,
-        height: TypeScale.lineHeightTitle1,
-        letterSpacing: TypeScale.trackingTitle1,
-      );
+    fontSize: TypeScale.title1,
+    height: TypeScale.lineHeightTitle1,
+    letterSpacing: TypeScale.trackingTitle1,
+  );
 
   TextStyle get title2 => copyWith(
-        fontSize: TypeScale.title2,
-        height: TypeScale.lineHeightTitle2,
-        letterSpacing: TypeScale.trackingTitle2,
-      );
+    fontSize: TypeScale.title2,
+    height: TypeScale.lineHeightTitle2,
+    letterSpacing: TypeScale.trackingTitle2,
+  );
 
   TextStyle get title3 => copyWith(
-        fontSize: TypeScale.title3,
-        height: TypeScale.lineHeightTitle3,
-        letterSpacing: TypeScale.trackingTitle3,
-      );
+    fontSize: TypeScale.title3,
+    height: TypeScale.lineHeightTitle3,
+    letterSpacing: TypeScale.trackingTitle3,
+  );
 
   // ── Large (18) ────────────────────────────────────────────────────────────
   TextStyle get largeNone => copyWith(
-        fontSize: TypeScale.large,
-        height: TypeScale.lineHeightLargeNone,
-      );
+    fontSize: TypeScale.large,
+    height: TypeScale.lineHeightLargeNone,
+  );
 
   TextStyle get largeTight => copyWith(
-        fontSize: TypeScale.large,
-        height: TypeScale.lineHeightLargeTight,
-      );
+    fontSize: TypeScale.large,
+    height: TypeScale.lineHeightLargeTight,
+  );
 
   TextStyle get largeNormal => copyWith(
-        fontSize: TypeScale.large,
-        height: TypeScale.lineHeightLargeNormal,
-      );
+    fontSize: TypeScale.large,
+    height: TypeScale.lineHeightLargeNormal,
+  );
 
   // ── Regular (16) ──────────────────────────────────────────────────────────
   TextStyle get regularNone => copyWith(
-        fontSize: TypeScale.regular,
-        height: TypeScale.lineHeightRegularNone,
-      );
+    fontSize: TypeScale.regular,
+    height: TypeScale.lineHeightRegularNone,
+  );
 
   TextStyle get regularTight => copyWith(
-        fontSize: TypeScale.regular,
-        height: TypeScale.lineHeightRegularTight,
-      );
+    fontSize: TypeScale.regular,
+    height: TypeScale.lineHeightRegularTight,
+  );
 
   TextStyle get regularNormal => copyWith(
-        fontSize: TypeScale.regular,
-        height: TypeScale.lineHeightRegularNormal,
-      );
+    fontSize: TypeScale.regular,
+    height: TypeScale.lineHeightRegularNormal,
+  );
 
   // ── Small (14) ────────────────────────────────────────────────────────────
   TextStyle get smallNone => copyWith(
-        fontSize: TypeScale.small,
-        height: TypeScale.lineHeightSmallNone,
-      );
+    fontSize: TypeScale.small,
+    height: TypeScale.lineHeightSmallNone,
+  );
 
   TextStyle get smallTight => copyWith(
-        fontSize: TypeScale.small,
-        height: TypeScale.lineHeightSmallTight,
-      );
+    fontSize: TypeScale.small,
+    height: TypeScale.lineHeightSmallTight,
+  );
 
   TextStyle get smallNormal => copyWith(
-        fontSize: TypeScale.small,
-        height: TypeScale.lineHeightSmallNormal,
-      );
+    fontSize: TypeScale.small,
+    height: TypeScale.lineHeightSmallNormal,
+  );
 
   // ── Tiny (12) ─────────────────────────────────────────────────────────────
   TextStyle get tinyNone => copyWith(
-        fontSize: TypeScale.tiny,
-        height: TypeScale.lineHeightTinyNone,
-      );
+    fontSize: TypeScale.tiny,
+    height: TypeScale.lineHeightTinyNone,
+  );
 
   TextStyle get tinyTight => copyWith(
-        fontSize: TypeScale.tiny,
-        height: TypeScale.lineHeightTinyTight,
-      );
+    fontSize: TypeScale.tiny,
+    height: TypeScale.lineHeightTinyTight,
+  );
 
   TextStyle get tinyNormal => copyWith(
-        fontSize: TypeScale.tiny,
-        height: TypeScale.lineHeightTinyNormal,
-      );
+    fontSize: TypeScale.tiny,
+    height: TypeScale.lineHeightTinyNormal,
+  );
 }
 
 /// **Pre-composed Figma `177:2763` text styles — Regular weight defaults.**
@@ -237,86 +238,86 @@ abstract final class AppFontStyle {
 extension AppFontArabicScaleX on TextStyle {
   // ── Titles ────────────────────────────────────────────────────────────────
   TextStyle get arTitle1 => copyWith(
-        fontSize: TypeScale.title1,
-        height: ArabicTypeScale.lineHeightTitle1,
-        letterSpacing: TypeScale.trackingTitle1,
-      );
+    fontSize: TypeScale.title1,
+    height: ArabicTypeScale.lineHeightTitle1,
+    letterSpacing: TypeScale.trackingTitle1,
+  );
 
   TextStyle get arTitle2 => copyWith(
-        fontSize: TypeScale.title2,
-        height: ArabicTypeScale.lineHeightTitle2,
-        letterSpacing: TypeScale.trackingTitle2,
-      );
+    fontSize: TypeScale.title2,
+    height: ArabicTypeScale.lineHeightTitle2,
+    letterSpacing: TypeScale.trackingTitle2,
+  );
 
   TextStyle get arTitle3 => copyWith(
-        fontSize: TypeScale.title3,
-        height: ArabicTypeScale.lineHeightTitle3,
-        letterSpacing: TypeScale.trackingTitle3,
-      );
+    fontSize: TypeScale.title3,
+    height: ArabicTypeScale.lineHeightTitle3,
+    letterSpacing: TypeScale.trackingTitle3,
+  );
 
   // ── Large (18) ────────────────────────────────────────────────────────────
   TextStyle get arLargeNone => copyWith(
-        fontSize: TypeScale.large,
-        height: ArabicTypeScale.lineHeightLargeNone,
-      );
+    fontSize: TypeScale.large,
+    height: ArabicTypeScale.lineHeightLargeNone,
+  );
 
   TextStyle get arLargeTight => copyWith(
-        fontSize: TypeScale.large,
-        height: ArabicTypeScale.lineHeightLargeTight,
-      );
+    fontSize: TypeScale.large,
+    height: ArabicTypeScale.lineHeightLargeTight,
+  );
 
   TextStyle get arLargeNormal => copyWith(
-        fontSize: TypeScale.large,
-        height: ArabicTypeScale.lineHeightLargeNormal,
-      );
+    fontSize: TypeScale.large,
+    height: ArabicTypeScale.lineHeightLargeNormal,
+  );
 
   // ── Regular (16) ──────────────────────────────────────────────────────────
   TextStyle get arRegularNone => copyWith(
-        fontSize: TypeScale.regular,
-        height: ArabicTypeScale.lineHeightRegularNone,
-      );
+    fontSize: TypeScale.regular,
+    height: ArabicTypeScale.lineHeightRegularNone,
+  );
 
   TextStyle get arRegularTight => copyWith(
-        fontSize: TypeScale.regular,
-        height: ArabicTypeScale.lineHeightRegularTight,
-      );
+    fontSize: TypeScale.regular,
+    height: ArabicTypeScale.lineHeightRegularTight,
+  );
 
   TextStyle get arRegularNormal => copyWith(
-        fontSize: TypeScale.regular,
-        height: ArabicTypeScale.lineHeightRegularNormal,
-      );
+    fontSize: TypeScale.regular,
+    height: ArabicTypeScale.lineHeightRegularNormal,
+  );
 
   // ── Small (14) ────────────────────────────────────────────────────────────
   TextStyle get arSmallNone => copyWith(
-        fontSize: TypeScale.small,
-        height: ArabicTypeScale.lineHeightSmallNone,
-      );
+    fontSize: TypeScale.small,
+    height: ArabicTypeScale.lineHeightSmallNone,
+  );
 
   TextStyle get arSmallTight => copyWith(
-        fontSize: TypeScale.small,
-        height: ArabicTypeScale.lineHeightSmallTight,
-      );
+    fontSize: TypeScale.small,
+    height: ArabicTypeScale.lineHeightSmallTight,
+  );
 
   TextStyle get arSmallNormal => copyWith(
-        fontSize: TypeScale.small,
-        height: ArabicTypeScale.lineHeightSmallNormal,
-      );
+    fontSize: TypeScale.small,
+    height: ArabicTypeScale.lineHeightSmallNormal,
+  );
 
   // ── Tiny (12) ─────────────────────────────────────────────────────────────
   TextStyle get arTinyNone => copyWith(
-        fontSize: TypeScale.tiny,
-        height: ArabicTypeScale.lineHeightTinyNone,
-      );
+    fontSize: TypeScale.tiny,
+    height: ArabicTypeScale.lineHeightTinyNone,
+  );
 
   TextStyle get arTinyTight => copyWith(
-        fontSize: TypeScale.tiny,
-        height: ArabicTypeScale.lineHeightTinyTight,
-      );
+    fontSize: TypeScale.tiny,
+    height: ArabicTypeScale.lineHeightTinyTight,
+  );
 
   TextStyle get arTinyNormal => copyWith(
-        fontSize: TypeScale.tiny,
-        height: ArabicTypeScale.lineHeightTinyNormal,
-      );
+    fontSize: TypeScale.tiny,
+    height: ArabicTypeScale.lineHeightTinyNormal,
+  );
 }
 
 /// **Pre-composed Arabic text styles — Regular weight defaults.**

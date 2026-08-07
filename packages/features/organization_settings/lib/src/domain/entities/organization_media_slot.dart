@@ -1,13 +1,15 @@
-import 'package:organization_settings/src/data/endpoints/organization_media_api_paths.dart';
-
 /// Which organization identity image a media operation targets.
 enum OrganizationMediaSlot {
   cover,
-  logo;
+  logo
+  ;
 
-  /// The upload/remove endpoint for this slot.
+  /// The `PATCH` endpoint that applies an uploaded `mediaId` to this slot.
+  ///
+  /// Matches the documented two-step contract: `POST media/upload-single`
+  /// returns a `mediaId`, then this endpoint is PATCHed with `{mediaId}`.
   String get endpoint => switch (this) {
-    OrganizationMediaSlot.cover => OrganizationMediaApiPaths.cover,
-    OrganizationMediaSlot.logo => OrganizationMediaApiPaths.logo,
+    OrganizationMediaSlot.cover => 'service-provider/cover-image',
+    OrganizationMediaSlot.logo => 'service-provider/profile-image',
   };
 }

@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 /// Figma `Views / Progress Bars` (`40:9160`).
 class AppProgressBar extends StatelessWidget {
   const AppProgressBar({
-    required this.value, super.key,
+    required this.value,
+    super.key,
     this.min = 0,
     this.max = 1,
   });

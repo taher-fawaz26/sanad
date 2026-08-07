@@ -1,6 +1,8 @@
 import 'package:design_system/design_system.dart' show AppPageIndicator;
-import 'package:design_system/src/components/app_page_indicator.dart' show AppPageIndicator;
-import 'package:design_system/src/components/components.dart' show AppPageIndicator;
+import 'package:design_system/src/components/app_page_indicator.dart'
+    show AppPageIndicator;
+import 'package:design_system/src/components/components.dart'
+    show AppPageIndicator;
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
 import 'package:flutter/material.dart';

@@ -32,7 +32,8 @@ class MainShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeDestination = ProviderBottomNavDestination.fromShellBranch(
+    final activeDestination =
+        ProviderBottomNavDestination.fromShellBranch(
           navigationShell.currentIndex,
         ) ??
         ProviderBottomNavDestination.home;
@@ -49,8 +50,7 @@ class MainShell extends StatelessWidget {
         destinations: ProviderBottomNavItems.destinations(context),
         selectedItem: selectedItem,
         theme: providerBottomNavTheme(context),
-        onDestinationSelected: (destination) =>
-            _goBranch(context, destination),
+        onDestinationSelected: (destination) => _goBranch(context, destination),
       ),
     );
   }

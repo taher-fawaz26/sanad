@@ -5,6 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:services/src/domain/entities/service_entity.dart';
 import 'package:services/src/domain/usecases/get_services_usecase.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 /// Result returned when the user confirms service selection.
 class SelectServiceResult {

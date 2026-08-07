@@ -72,8 +72,13 @@ abstract final class StatusBadgeTokens {
     AppStatusBadgeSize size = AppStatusBadgeSize.medium,
     bool outlined = false,
   }) {
-    final (background, foreground, borderColor, borderWidth, fontWeight) =
-        outlined
+    final (
+      background,
+      foreground,
+      borderColor,
+      borderWidth,
+      fontWeight,
+    ) = outlined
         ? _resolveOutlined(type: type, colors: colors)
         : _resolveSoft(type: type, colors: colors);
 
@@ -108,27 +113,28 @@ abstract final class StatusBadgeTokens {
     Color? borderColor,
     double? borderWidth,
     FontWeight fontWeight,
-  ) _resolveSoft({
+  )
+  _resolveSoft({
     required AppStatusBadgeType type,
     required AppColors colors,
   }) {
     final (background, foreground) = switch (type) {
       AppStatusBadgeType.success => (
-          colors.successContainer,
-          colors.onSuccessContainer,
-        ),
+        colors.successContainer,
+        colors.onSuccessContainer,
+      ),
       AppStatusBadgeType.alert => (
-          colors.errorContainer,
-          colors.onErrorContainer,
-        ),
+        colors.errorContainer,
+        colors.onErrorContainer,
+      ),
       AppStatusBadgeType.warning => (
-          colors.warningContainer,
-          colors.onWarningContainer,
-        ),
+        colors.warningContainer,
+        colors.onWarningContainer,
+      ),
       AppStatusBadgeType.info => (
-          colors.infoContainer,
-          colors.onInfoContainer,
-        ),
+        colors.infoContainer,
+        colors.onInfoContainer,
+      ),
     };
 
     return (background, foreground, null, null, FontWeight.w400);
@@ -140,12 +146,15 @@ abstract final class StatusBadgeTokens {
     Color? borderColor,
     double? borderWidth,
     FontWeight fontWeight,
-  ) _resolveOutlined({
+  )
+  _resolveOutlined({
     required AppStatusBadgeType type,
     required AppColors colors,
   }) {
-    final (background, border, foreground) =
-        StatusSurfaceTokens.outlinedBadge(type: type, colors: colors);
+    final (background, border, foreground) = StatusSurfaceTokens.outlinedBadge(
+      type: type,
+      colors: colors,
+    );
 
     return (
       background,

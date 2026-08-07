@@ -17,6 +17,7 @@ class EditableImageHeader extends StatelessWidget {
     this.avatarUrl,
     this.title,
     this.subtitle,
+    this.badge,
     this.coverBusy = false,
     this.avatarBusy = false,
     this.coverProgress = 0.0,
@@ -32,6 +33,10 @@ class EditableImageHeader extends StatelessWidget {
   final String? avatarUrl;
   final String? title;
   final String? subtitle;
+
+  /// Optional status pill shown to the right of [title] (e.g. a review/
+  /// completion status badge).
+  final Widget? badge;
   final bool coverBusy;
   final bool avatarBusy;
   final double coverProgress;
@@ -78,15 +83,23 @@ class EditableImageHeader extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: AppSpacing.xs,
                 children: [
-                  if (title != null)
-                    Text(
-                      title!,
-                      style: typography.title3.copyWith(
-                        color: colors.textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  if (title != null || badge != null)
+                    Row(
+                      children: [
+                        if (title != null)
+                          Expanded(
+                            child: Text(
+                              title!,
+                              style: typography.title3.copyWith(
+                                color: colors.textPrimary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        if (badge != null) badge!,
+                      ],
                     ),
                   if (subtitle != null)
                     Text(

@@ -11,10 +11,10 @@ import 'package:auth/src/domain/usecases/request_email_otp_usecase.dart';
 import 'package:auth/src/domain/usecases/sign_in_with_google_usecase.dart';
 import 'package:auth/src/domain/usecases/usecase_params.dart';
 import 'package:auth/src/domain/usecases/validate_email_usecase.dart';
+import 'package:auth/src/session/session_manager.dart';
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:network/network.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';
@@ -54,6 +54,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthStatusNotifier _authStatusNotifier;
   final SignInWithGoogleUseCase _signInWithGoogleUseCase;
   final ValidateEmailUseCase _validateEmailUseCase;
+
   Future<void> _requestOtp(
     AuthRequestOtpEvent event,
     Emitter<AuthState> emit,
@@ -117,8 +118,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final result = await _logoutUseCase.call(const NoParams()).run();
     // Local session is cleared regardless of server outcome — the user
     // asked to log out and must be logged out on this device.
-    await _sessionManager.logout();
-    _authStatusNotifier.update(AuthStatus.unauthenticated);
+    // SessionManager.clear also flips AuthStatusNotifier to unauthenticated.
+    await _sessionManager.clear();
     await result.match(
       (failure) async => emit(AuthLogoutFailureState(failure)),
       (_) async => emit(const AuthLogoutSuccessState('auth.logout_success')),
@@ -153,9 +154,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         );
       },
       (_) async {
-        await _sessionManager.logout();
+        await _sessionManager.clear();
         emit(const AuthLogoutSuccessState('auth.account_deleted_success'));
-        _authStatusNotifier.update(AuthStatus.unauthenticated);
       },
     );
   }
@@ -188,12 +188,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           return;
         }
         emit(AuthCheckSignInStatusSuccessState(user));
-        // Locally persisted users are only saved after an authenticated
-        // session — treat restored sessions as profile-complete.
-        _authStatusNotifier.update(
-          AuthStatus.authenticated,
-          isProfileCompleted: true,
-        );
+        // The session was restored from Hive by SessionManager.restore() in
+        // AuthModule.initialize(), which already flipped AuthStatusNotifier
+        // to authenticated with the correct isProfileCompleted flag. Re-emit
+        // here would be redundant, so the bloc only owns the state stream.
       },
     );
   }
@@ -210,21 +208,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       (failure) async => emit(AuthGoogleSignInFailureState(failure)),
       (response) async {
         switch (response) {
-          case AuthSessionEntity(
-            :final accessToken,
-            :final refreshToken,
-            :final user,
-            :final isProfileCreated,
-          ):
-            await _sessionManager.startSession(
-              accessToken: accessToken,
-              refreshToken: refreshToken,
-            );
-            _authStatusNotifier.update(
-              AuthStatus.authenticated,
-              isProfileCompleted: isProfileCreated,
-            );
-            emit(AuthAuthenticatedState(user));
+          case final AuthSessionEntity session:
+            // Single call persists tokens + Hive session + flips the
+            // AuthStatusNotifier to authenticated.
+            await _sessionManager.save(session);
+            emit(AuthAuthenticatedState(session.user));
           case OnboardingAuthEntity(:final onboardingToken, :final user):
             emit(
               AuthOnboardingRequiredState(

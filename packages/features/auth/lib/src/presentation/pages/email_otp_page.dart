@@ -1,11 +1,11 @@
 import 'dart:async';
 
-import 'package:auth/src/auth/auth_status_notifier.dart';
 import 'package:auth/src/domain/entities/auth_response_entity.dart';
 import 'package:auth/src/domain/usecases/request_email_otp_usecase.dart';
 import 'package:auth/src/domain/usecases/verify_email_otp_usecase.dart';
 import 'package:auth/src/domain/verifiers/auth_otp_verifier.dart';
 import 'package:auth/src/presentation/bloc/auth/auth_bloc.dart';
+import 'package:auth/src/session/session_manager.dart';
 import 'package:core/core.dart' show sl;
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -15,7 +15,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
-import 'package:network/network.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 const _kResendCooldown = 60;
 
@@ -62,7 +62,6 @@ class EmailOtpPage extends HookWidget {
         requestEmailOtp: sl<RequestEmailOtpUseCase>(),
         verifyEmailOtp: sl<VerifyEmailOtpUseCase>(),
         sessionManager: sl<SessionManager>(),
-        authStatusNotifier: sl<AuthStatusNotifier>(),
       ),
       [email],
     );

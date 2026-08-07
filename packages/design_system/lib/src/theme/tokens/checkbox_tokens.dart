@@ -1,5 +1,6 @@
 import 'package:design_system/design_system.dart' show AppCheckbox;
-import 'package:design_system/src/components/app_checkbox.dart' show AppCheckbox;
+import 'package:design_system/src/components/app_checkbox.dart'
+    show AppCheckbox;
 import 'package:design_system/src/components/components.dart' show AppCheckbox;
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
@@ -50,13 +51,10 @@ abstract final class CheckboxTokens {
       size: responsiveDimension(size),
       borderRadius: BorderRadius.circular(responsiveDimension(borderRadius)),
       borderWidth: borderWidth,
-      unselectedBorderColor:
-          isDark ? dark.shade600 : dark.shade300,
-      unselectedDisabledBorderColor:
-          isDark ? dark.shade800 : dark.shade200,
+      unselectedBorderColor: isDark ? dark.shade600 : dark.shade300,
+      unselectedDisabledBorderColor: isDark ? dark.shade800 : dark.shade200,
       selectedFillColor: colors.primary,
-      selectedDisabledFillColor:
-          isDark ? dark.shade900 : dark.shade200,
+      selectedDisabledFillColor: isDark ? dark.shade900 : dark.shade200,
       checkColor: colors.white,
       disabledCheckColor: isDark ? dark.shade800 : dark.shade200,
     );

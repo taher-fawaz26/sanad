@@ -14,7 +14,6 @@ import 'package:network/src/interceptors/logging_interceptor.dart';
 import 'package:network/src/interceptors/retry_on_timeout_interceptor.dart';
 import 'package:network/src/interceptors/timeout_error_interceptor.dart';
 import 'package:network/src/network_config.dart';
-import 'package:network/src/session/session_manager.dart';
 import 'package:network/src/ssl/certificate_pinner.dart';
 import 'package:network/src/ssl/pinned_http_client_adapter.dart';
 import 'package:network/src/token/token_manager.dart';
@@ -45,10 +44,13 @@ import 'package:network/src/token/token_manager_impl.dart';
 /// * `CertificatePinner`
 /// * `Dio` named `'rawDio'` (no auth interceptor)
 /// * `TokenManager` (initialized before the future completes)
-/// * `SessionManager`
 /// * `ConnectivityService` / `ConnectivityController` / `NetworkGuard`
 /// * `Dio` named `'authDio'` (with auth + retry + logging)
 /// * `SecureDioClient`, `BaseApiClient`
+///
+/// The higher-level `SessionManager` (holding the full [AuthSessionEntity])
+/// lives in the `auth` package and is registered by `AuthDI.init` — network
+/// deliberately does not know about auth-domain types.
 abstract final class NetworkDI {
   NetworkDI._();
 
@@ -87,7 +89,6 @@ abstract final class NetworkDI {
     await sl<TokenManager>().init();
 
     sl
-      ..registerLazySingleton(() => SessionManager(sl<TokenManager>()))
       ..registerLazySingleton<ConnectivityService>(ConnectivityServiceImpl.new)
       ..registerLazySingleton(
         () => ConnectivityController(sl<ConnectivityService>()),

@@ -10,17 +10,15 @@ class PermissionModel extends PermissionEntity {
 
   factory PermissionModel.fromJson(Map<String, dynamic> json) {
     return PermissionModel(
-      name: (json['name'] as String?) ??
-          (json['permission'] as String?) ??
-          '',
+      name: (json['name'] as String?) ?? (json['permission'] as String?) ?? '',
       resource: json['resource'] as String?,
       action: json['action'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'name': name,
-        if (resource != null) 'resource': resource,
-        if (action != null) 'action': action,
-      };
+    'name': name,
+    if (resource != null) 'resource': resource,
+    if (action != null) 'action': action,
+  };
 }

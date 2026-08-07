@@ -14,6 +14,12 @@ forbidden_edges:
   - from: design_system
     to: "packages/features/**"
     reason: design_system must not depend on feature packages
+  - from: design_system
+    to: shared_ui
+    reason: design_system is a pure UI foundation and must never depend on the application-UI layer built on top of it
+  - from: shared_ui
+    to: "packages/features/**"
+    reason: shared_ui must remain feature-independent
   - from: "*"
     to: "apps/**"
     reason: packages must never depend on apps
@@ -35,7 +41,7 @@ layer_order:
   - tier: 0
     packages: [core, app_assets, config, utilities]
   - tier: 1
-    packages: [design_system, app_logger, localization]
+    packages: [design_system, app_logger, localization, shared_ui]
   - tier: 2
     packages:
       - network
@@ -50,12 +56,16 @@ layer_order:
   - tier: 3
     packages: [maps, asset_picker, sheet_navigation, otp]
   - tier: 4
-    packages: [auth, services, workers, change_password]
+    packages:
+      [auth, services, workers, change_password, document_flow, contact_verification]
   - tier: 5
-    packages: [forgot_password, invitation, registration]
+    packages: [forgot_password, invitation, registration, account_settings]
   - tier: 6
     packages: [branches]
   - tier: 7
+    # organization_settings depends on branches (working-hours/branch widgets).
+    packages: [organization_settings]
+  - tier: 8
     packages: [sanad_client, sanad_provider, design_catalog]
 
 # Within-package layer import rules (enforced by scan_imports.dart)

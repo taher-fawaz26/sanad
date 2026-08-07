@@ -2,6 +2,7 @@
 
 import 'package:auth/src/auth/auth_status.dart';
 import 'package:auth/src/auth/auth_status_notifier.dart';
+import 'package:auth/src/domain/entities/auth_response_entity.dart';
 import 'package:auth/src/domain/entities/user_entity.dart';
 import 'package:auth/src/domain/enums/user_type.dart';
 import 'package:auth/src/domain/usecases/check_signin_status_usecase.dart';
@@ -12,12 +13,12 @@ import 'package:auth/src/domain/usecases/sign_in_with_google_usecase.dart';
 import 'package:auth/src/domain/usecases/usecase_params.dart';
 import 'package:auth/src/domain/usecases/validate_email_usecase.dart';
 import 'package:auth/src/presentation/bloc/auth/auth_bloc.dart';
+import 'package:auth/src/session/session_manager.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:core/core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:network/network.dart';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
@@ -36,6 +37,8 @@ class _MockCheckSignInStatusUseCase extends Mock
 
 class _MockSignInWithGoogleUseCase extends Mock
     implements SignInWithGoogleUseCase {}
+
+class _FakeAuthSession extends Fake implements AuthSessionEntity {}
 
 // ── Fixture data ───────────────────────────────────────────────────────────
 
@@ -78,6 +81,7 @@ void main() {
     registerFallbackValue(const ValidateEmailParams(email: ''));
     registerFallbackValue(const DeleteAccountParams(userSub: ''));
     registerFallbackValue(const NoParams());
+    registerFallbackValue(_FakeAuthSession());
   });
 
   setUp(() {
@@ -90,13 +94,8 @@ void main() {
     validateEmailUseCase = _MockValidateEmailUseCase();
     authStatusNotifier = AuthStatusNotifier();
 
-    when(
-      () => sessionManager.startSession(
-        accessToken: any(named: 'accessToken'),
-        refreshToken: any(named: 'refreshToken'),
-      ),
-    ).thenAnswer((_) async {});
-    when(() => sessionManager.logout()).thenAnswer((_) async {});
+    when(() => sessionManager.save(any())).thenAnswer((_) async {});
+    when(() => sessionManager.clear()).thenAnswer((_) async {});
   });
 
   group('AuthBloc', () {
@@ -239,8 +238,10 @@ void main() {
           isA<AuthLogoutSuccessState>(),
         ],
         verify: (_) {
-          verify(() => sessionManager.logout()).called(1);
-          expect(authStatusNotifier.status, AuthStatus.unauthenticated);
+          // The bloc delegates to SessionManager.clear, which is the single
+          // writer of AuthStatusNotifier.unauthenticated. The notifier itself
+          // is covered in session_manager_test.dart.
+          verify(() => sessionManager.clear()).called(1);
         },
       );
 
@@ -258,8 +259,7 @@ void main() {
           isA<AuthLogoutFailureState>(),
         ],
         verify: (_) {
-          verify(() => sessionManager.logout()).called(1);
-          expect(authStatusNotifier.status, AuthStatus.unauthenticated);
+          verify(() => sessionManager.clear()).called(1);
         },
       );
     });
@@ -284,9 +284,9 @@ void main() {
             _tUser,
           ),
         ],
-        verify: (_) {
-          expect(authStatusNotifier.status, AuthStatus.authenticated);
-        },
+        // The bloc no longer flips AuthStatusNotifier on success — that is
+        // owned by SessionManager.restore() during bootstrap. The bloc only
+        // owns its own AuthState stream here.
       );
 
       blocTest<AuthBloc, AuthState>(
@@ -361,7 +361,7 @@ void main() {
           isA<AuthLogoutSuccessState>(),
         ],
         verify: (_) {
-          verify(() => sessionManager.logout()).called(1);
+          verify(() => sessionManager.clear()).called(1);
         },
       );
 

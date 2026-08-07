@@ -21,6 +21,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   design_system:
     path: ../../packages/design_system
+  shared_ui:
+    path: ../../packages/shared_ui
   dio: ^5.10.0
   easy_localization: ^3.0.8
   equatable: ^2.1.0

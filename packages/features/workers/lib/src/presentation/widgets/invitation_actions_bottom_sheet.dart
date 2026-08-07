@@ -97,8 +97,10 @@ class _InvitationActionsSheetBody extends StatelessWidget {
               AppSvgs.invitationResend,
               width: 24,
               height: 24,
-              colorFilter:
-                  ColorFilter.mode(colors.textPrimary, BlendMode.srcIn),
+              colorFilter: ColorFilter.mode(
+                colors.textPrimary,
+                BlendMode.srcIn,
+              ),
             ),
             onTap: () async {
               Navigator.of(context).pop();

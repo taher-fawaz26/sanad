@@ -4,6 +4,7 @@ import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:organization_settings/src/presentation/widgets/sections/working_hours_section.dart';
+import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Shows the working hours edit bottom sheet — Figma `3821:18452`.
@@ -30,7 +31,8 @@ class _EditWorkingHoursSheetBody extends StatefulWidget {
       _EditWorkingHoursSheetBodyState();
 }
 
-class _EditWorkingHoursSheetBodyState extends State<_EditWorkingHoursSheetBody> {
+class _EditWorkingHoursSheetBodyState
+    extends State<_EditWorkingHoursSheetBody> {
   late List<WorkingHoursEditEntry> _entries;
 
   @override
@@ -45,7 +47,8 @@ class _EditWorkingHoursSheetBodyState extends State<_EditWorkingHoursSheetBody> 
     });
   }
 
-  void _save() => Navigator.of(context).pop(List<WorkingHoursEditEntry>.from(_entries));
+  void _save() =>
+      Navigator.of(context).pop(List<WorkingHoursEditEntry>.from(_entries));
 
   Future<void> _openAddDaySheet() async {
     final existingDays = _entries.map((entry) => entry.dayId).toSet();

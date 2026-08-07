@@ -3,6 +3,7 @@ import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:organization_settings/src/presentation/widgets/components/settings_social_field_view.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 /// View-mode section displaying organization social profile links.
 class SocialProfilesSection extends StatelessWidget {
@@ -11,7 +12,7 @@ class SocialProfilesSection extends StatelessWidget {
     this.facebook,
     this.tiktok,
     this.instagram,
-    this.twitter,
+    this.x,
     this.websiteUrl,
     this.onEdit,
   });
@@ -19,7 +20,7 @@ class SocialProfilesSection extends StatelessWidget {
   final String? facebook;
   final String? tiktok;
   final String? instagram;
-  final String? twitter;
+  final String? x;
   final String? websiteUrl;
   final VoidCallback? onEdit;
 
@@ -27,7 +28,7 @@ class SocialProfilesSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppSectionCard(
       title: 'settings.section_social'.tr(),
-      
+
       onEdit: onEdit,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -54,7 +55,7 @@ class SocialProfilesSection extends StatelessWidget {
           SettingsSocialFieldView(
             label: 'settings.social_twitter'.tr(),
             iconAsset: AppSvgs.socialTwitter,
-            value: twitter,
+            value: x,
           ),
           SizedBox(height: AppSpacing.md),
           SettingsSocialFieldView(

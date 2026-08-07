@@ -56,8 +56,10 @@ class RegistrationLogo extends StatelessWidget {
   static double collapsedTitleOpacity(double collapseProgress) {
     final t = collapseProgress.clamp(0.0, 1.0);
     if (t > _titleRevealThreshold) return 0;
-    return ((_titleRevealThreshold - t) / _titleRevealThreshold)
-        .clamp(0.0, 1.0);
+    return ((_titleRevealThreshold - t) / _titleRevealThreshold).clamp(
+      0.0,
+      1.0,
+    );
   }
 
   @override
@@ -69,8 +71,7 @@ class RegistrationLogo extends StatelessWidget {
         ? collapsedTitleOpacity(t)
         : 0.0;
     final isRtl = Directionality.of(context) == TextDirection.rtl;
-    final leadingWidth =
-        reserveLeadingSpace ? kToolbarHeight : 0.0;
+    final leadingWidth = reserveLeadingSpace ? kToolbarHeight : 0.0;
     final spacing = responsiveDimension(AppSpacing.md);
     final edgeInset = responsiveDimension(AppSpacing.sm);
 
@@ -81,19 +82,25 @@ class RegistrationLogo extends StatelessWidget {
         final largeLogoWidth = responsiveDimension(_largeWidth);
         final largeLogoHeight = responsiveDimension(_largeHeight);
 
-        final logoWidth =
-            ui.lerpDouble(smallLogoWidth, largeLogoWidth, 1 - toolbarBlend)!;
-        final logoHeight =
-            ui.lerpDouble(smallLogoHeight, largeLogoHeight, 1 - toolbarBlend)!;
+        final logoWidth = ui.lerpDouble(
+          smallLogoWidth,
+          largeLogoWidth,
+          1 - toolbarBlend,
+        )!;
+        final logoHeight = ui.lerpDouble(
+          smallLogoHeight,
+          largeLogoHeight,
+          1 - toolbarBlend,
+        )!;
 
         final expandedCenterX = constraints.maxWidth / 2;
         final expandedCenterY = constraints.maxHeight / 2;
 
         final collapsedLogoCenterX = isRtl
             ? constraints.maxWidth -
-                leadingWidth -
-                edgeInset -
-                smallLogoWidth / 2
+                  leadingWidth -
+                  edgeInset -
+                  smallLogoWidth / 2
             : leadingWidth + edgeInset + smallLogoWidth / 2;
 
         final collapsedCenterY = topPadding + kToolbarHeight / 2;
@@ -140,8 +147,9 @@ class RegistrationLogo extends StatelessWidget {
                 child: Opacity(
                   opacity: titleOpacity,
                   child: Align(
-                    alignment:
-                        isRtl ? Alignment.centerRight : Alignment.centerLeft,
+                    alignment: isRtl
+                        ? Alignment.centerRight
+                        : Alignment.centerLeft,
                     child: Text(
                       collapsedTitle!,
                       maxLines: 1,

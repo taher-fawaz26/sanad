@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 /// Figma `Controls / Switches` (`40:7496`).
 class AppSwitch extends StatelessWidget {
   const AppSwitch({
-    required this.value, required this.onChanged, super.key,
+    required this.value,
+    required this.onChanged,
+    super.key,
   });
 
   final bool value;

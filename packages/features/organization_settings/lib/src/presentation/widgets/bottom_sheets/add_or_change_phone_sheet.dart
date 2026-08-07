@@ -1,21 +1,20 @@
 import 'dart:async';
 
 import 'package:app_assets/app_assets.dart';
+import 'package:contact_verification/contact_verification.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:organization_settings/src/domain/usecases/request_phone_otp_usecase.dart';
-import 'package:organization_settings/src/domain/usecases/verify_phone_otp_usecase.dart';
-import 'package:organization_settings/src/domain/verifiers/organization_phone_otp_verifier.dart';
 import 'package:otp/otp.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Shows the "Enter Phone Number" bottom sheet — Figma `3809:18016`.
 ///
 /// Used for both Add (no [initialPhone]) and Change (prefilled). On
-/// Continue, requests + verifies an OTP via the shared `otp` package; returns
-/// the new national phone number once verified, or `null` if dismissed.
+/// Continue, requests + verifies an OTP via the shared `contact_verification`
+/// + `otp` packages (purpose `changeBusinessPhone`); returns the new
+/// national phone number once verified, or `null` if dismissed.
 Future<String?> showAddOrChangePhoneSheet({
   required BuildContext context,
   String? initialPhone,
@@ -67,15 +66,17 @@ class _AddOrChangePhoneSheetBodyState
     final phone = UaePhoneValidator.normalize(_controller.text);
 
     setState(() => _submitting = true);
-    final result = await OtpFlow.start<void>(
+    final result = await OtpFlow.start<VerificationResult>(
       context,
-      OtpFlowConfig<void>.phone(
+      OtpFlowConfig<VerificationResult>.phone(
         destination: phone,
         purpose: OtpPurpose.changePhone,
-        verifier: OrganizationPhoneOtpVerifier(
-          phone: phone,
-          requestOtp: sl<RequestPhoneOtpUseCase>(),
-          verifyOtp: sl<VerifyPhoneOtpUseCase>(),
+        verifier: ContactVerificationVerifier(
+          purpose: VerificationPurpose.changeBusinessPhone,
+          target: phone,
+          requestVerification: sl<RequestVerificationUseCase>(),
+          resendVerification: sl<ResendVerificationUseCase>(),
+          verifyContact: sl<VerifyContactUseCase>(),
         ),
       ),
     );

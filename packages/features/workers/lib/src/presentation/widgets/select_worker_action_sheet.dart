@@ -3,6 +3,7 @@ import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_ui/shared_ui.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
 import 'package:workers/src/domain/usecases/get_workers_usecase.dart';
 
@@ -32,8 +33,9 @@ Future<SelectWorkerResult?> showSelectWorkerActionSheet({
         w.role.toLowerCase().contains(q),
     initialSelectedIds: initialSelectedIds,
     loadItems: () async {
-      final result =
-          await sl<GetWorkersUseCase>()(const GetWorkersParams(limit: 100)).run();
+      final result = await sl<GetWorkersUseCase>()(
+        const GetWorkersParams(limit: 100),
+      ).run();
       return result.fold((f) => throw f, (paged) => paged.items);
     },
     errorTextBuilder: (e) => e is Failure ? e.message : e.toString(),
@@ -75,7 +77,11 @@ class _WorkerEmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AppSvgPicture.asset(AppSvgs.users2, width: iconSize, height: iconSize),
+            AppSvgPicture.asset(
+              AppSvgs.users2,
+              width: iconSize,
+              height: iconSize,
+            ),
             SizedBox(height: AppSpacing.lg),
             Text(
               'workers.select_worker.empty'.tr(),

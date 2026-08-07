@@ -1,10 +1,11 @@
-import 'package:registration/src/data/models/extraction_result.dart';
+import 'package:document_flow/document_flow.dart';
 
 /// DTO for `POST auth/extract`.
 ///
-/// Parses the backend response into an [ExtractionResult]. All string fields
-/// fall back to empty string so the UI can detect missing data without null
-/// checks.
+/// Parses the backend response into [ExtractedDocuments]. Raw string values
+/// are kept under `raw` (keyed by the field name the review page uses to
+/// build localized [ExtractedField]s) so this data-layer mapper never needs
+/// to know about l10n.
 ///
 /// The backend envelope is flat — no `data` wrapper — and uses verbose key
 /// names (`personalLegalData`, `tradeLicenseLegalData`) with camelCase field
@@ -13,7 +14,7 @@ import 'package:registration/src/data/models/extraction_result.dart';
 abstract final class ExtractionResponse {
   ExtractionResponse._();
 
-  static ExtractionResult fromJson(
+  static ExtractedDocuments fromJson(
     Map<String, dynamic> json, {
     required bool includeTradeLicence,
   }) {
@@ -35,67 +36,96 @@ abstract final class ExtractionResponse {
           data['trade_licence'],
     );
 
-    final emiratesId = _parseEmiratesId(idMap);
-    final tradeLicence =
-        includeTradeLicence ? _parseTradeLicence(tlMap) : null;
+    final sections = [
+      _parseEmiratesId(idMap),
+      if (includeTradeLicence) _parseTradeLicence(tlMap),
+    ];
 
-    return ExtractionResult(
-      emiratesId: emiratesId,
-      tradeLicence: tradeLicence,
+    return ExtractedDocuments(sections: sections);
+  }
+
+  static ExtractedDocument _parseEmiratesId(Map<String, dynamic> m) {
+    if (m.isEmpty) {
+      return const ExtractedDocument(
+        type: DocumentType.emiratesIdFront,
+        fields: [],
+        issue: DocumentIssue.imageUnclear,
+      );
+    }
+    return ExtractedDocument(
+      type: DocumentType.emiratesIdFront,
+      fields: const [],
+      raw: {
+        // Backend: fullNameEnglish  |  legacy: fullNameEn / full_name_en / name
+        'fullNameEn': _str(
+          m,
+          ['fullNameEnglish', 'fullNameEn', 'full_name_en', 'name'],
+        ),
+        // Backend: fullNameArabic  |  legacy: fullNameAr / full_name_ar
+        'fullNameAr': _str(m, ['fullNameArabic', 'fullNameAr', 'full_name_ar']),
+        'idNumber': _str(
+          m,
+          ['idNumber', 'id_number', 'emiratesId', 'emirates_id'],
+        ),
+        'nationality': _str(m, ['nationality']),
+        'dateOfBirth': _str(m, ['dateOfBirth', 'date_of_birth', 'dob']),
+        'expiryDate': _str(m, ['expiryDate', 'expiry_date', 'expiry']),
+        'gender': _str(m, ['gender']),
+      },
     );
   }
 
-  static EmiratesIdResult _parseEmiratesId(Map<String, dynamic> m) {
-    if (m.isEmpty) return const EmiratesIdResult.unclear();
-    return EmiratesIdResult(
-      // Backend: fullNameEnglish  |  legacy: fullNameEn / full_name_en / name
-      fullNameEn: _str(
-        m,
-        ['fullNameEnglish', 'fullNameEn', 'full_name_en', 'name'],
-      ),
-      // Backend: fullNameArabic  |  legacy: fullNameAr / full_name_ar
-      fullNameAr: _str(m, ['fullNameArabic', 'fullNameAr', 'full_name_ar']),
-      idNumber: _str(
-        m,
-        ['idNumber', 'id_number', 'emiratesId', 'emirates_id'],
-      ),
-      nationality: _str(m, ['nationality']),
-      dateOfBirth: _str(m, ['dateOfBirth', 'date_of_birth', 'dob']),
-      expiryDate: _str(m, ['expiryDate', 'expiry_date', 'expiry']),
-      gender: _str(m, ['gender']),
-    );
-  }
-
-  static TradeLicenceResult _parseTradeLicence(Map<String, dynamic> m) {
-    if (m.isEmpty) return const TradeLicenceResult.expired();
-    return TradeLicenceResult(
-      // Backend: tradeNameEnglish  |  legacy: tradeNameEn / tradeName
-      tradeNameEn: _str(
-        m,
-        ['tradeNameEnglish', 'tradeNameEn', 'trade_name_en', 'tradeName'],
-      ),
-      // Backend: tradeNameArabic  |  legacy: tradeNameAr
-      tradeNameAr: _str(m, ['tradeNameArabic', 'tradeNameAr', 'trade_name_ar']),
-      // Backend: licenseNumber  |  legacy: licenceNo / licenseNo
-      licenceNo: _str(
-        m,
-        ['licenseNumber', 'licenceNumber', 'licenceNo', 'licence_no',
-         'licenseNo'],
-      ),
-      licenceType: _str(m, ['licenceType', 'licence_type', 'licenseType']),
-      establishmentDate: _str(m, ['establishmentDate', 'establishment_date']),
-      issuanceDate: _str(m, ['issuanceDate', 'issuance_date']),
-      legalForm: _str(m, ['legalForm', 'legal_form']),
-      // Backend: unifiedRegistrationNumber  |  legacy: unifiedRegNo
-      unifiedRegNo: _str(
-        m,
-        ['unifiedRegistrationNumber', 'unifiedRegNo', 'unified_reg_no'],
-      ),
-      // Backend: unifiedLicenseNumber  |  legacy: unifiedLicenceNo
-      unifiedLicenceNo: _str(
-        m,
-        ['unifiedLicenseNumber', 'unifiedLicenceNo', 'unified_licence_no'],
-      ),
+  static ExtractedDocument _parseTradeLicence(Map<String, dynamic> m) {
+    if (m.isEmpty) {
+      return const ExtractedDocument(
+        type: DocumentType.tradeLicense,
+        fields: [],
+        issue: DocumentIssue.expired,
+      );
+    }
+    return ExtractedDocument(
+      type: DocumentType.tradeLicense,
+      fields: const [],
+      raw: {
+        // Backend: tradeNameEnglish  |  legacy: tradeNameEn / tradeName
+        'tradeNameEn': _str(
+          m,
+          ['tradeNameEnglish', 'tradeNameEn', 'trade_name_en', 'tradeName'],
+        ),
+        // Backend: tradeNameArabic  |  legacy: tradeNameAr
+        'tradeNameAr': _str(
+          m,
+          ['tradeNameArabic', 'tradeNameAr', 'trade_name_ar'],
+        ),
+        // Backend: licenseNumber  |  legacy: licenceNo / licenseNo
+        'licenceNo': _str(
+          m,
+          [
+            'licenseNumber',
+            'licenceNumber',
+            'licenceNo',
+            'licence_no',
+            'licenseNo',
+          ],
+        ),
+        'licenceType': _str(m, ['licenceType', 'licence_type', 'licenseType']),
+        'establishmentDate': _str(
+          m,
+          ['establishmentDate', 'establishment_date'],
+        ),
+        'issuanceDate': _str(m, ['issuanceDate', 'issuance_date']),
+        'legalForm': _str(m, ['legalForm', 'legal_form']),
+        // Backend: unifiedRegistrationNumber  |  legacy: unifiedRegNo
+        'unifiedRegNo': _str(
+          m,
+          ['unifiedRegistrationNumber', 'unifiedRegNo', 'unified_reg_no'],
+        ),
+        // Backend: unifiedLicenseNumber  |  legacy: unifiedLicenceNo
+        'unifiedLicenceNo': _str(
+          m,
+          ['unifiedLicenseNumber', 'unifiedLicenceNo', 'unified_licence_no'],
+        ),
+      },
     );
   }
 

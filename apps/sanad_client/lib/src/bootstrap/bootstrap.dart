@@ -1,5 +1,4 @@
 ﻿import 'package:app_logger/app_logger.dart';
-import 'package:auth/auth.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_ce/hive.dart';
@@ -24,10 +23,6 @@ Future<void> _bootstrap() async {
     storageDirectory: HydratedStorageDirectory(appDir.path),
   );
   Hive.init(appDir.path);
-
-  if (!Hive.isAdapterRegistered(0)) {
-    Hive.registerAdapter(UserAdapter());
-  }
 
   await configureDependencies();
 

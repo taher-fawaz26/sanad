@@ -7,8 +7,9 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:registration/src/domain/provider_type/provider_type_registry.dart';
 import 'package:registration/src/domain/provider_type/provider_type_spec.dart';
-import 'package:registration/src/presentation/cubit/registration_cubit.dart';
+import 'package:registration/src/presentation/cubit/registration_details_cubit.dart';
 import 'package:registration/src/presentation/models/onboarding_args.dart';
+import 'package:registration/src/presentation/registration_flow_context_x.dart';
 import 'package:registration/src/presentation/widgets/registration_header.dart';
 import 'package:registration/src/routes/registration_routes.dart';
 
@@ -24,10 +25,11 @@ class SelectAccountTypePage extends HookWidget {
     final extra = GoRouterState.of(context).extra;
     useEffect(() {
       if (extra is OnboardingArgs) {
-        context.read<RegistrationCubit>().setOnboarding(
+        context.read<RegistrationDetailsCubit>().setOnboarding(
           email: extra.email,
           onboardingToken: extra.onboardingToken,
         );
+        context.syncDocumentFlowContext();
       }
       return null;
     }, [extra]);
@@ -60,8 +62,7 @@ class SelectAccountTypePage extends HookWidget {
                   iconPath: AppSvgs.registrationIndividual,
                   spec: ProviderTypeRegistry.individual,
                   selected: selected.value,
-                  onTap: () =>
-                      selected.value = ProviderTypeRegistry.individual,
+                  onTap: () => selected.value = ProviderTypeRegistry.individual,
                 ),
                 SizedBox(height: responsiveDimension(AppSpacing.lg)),
                 AppButton(
@@ -71,13 +72,15 @@ class SelectAccountTypePage extends HookWidget {
                       : () {
                           final spec = selected.value!;
                           context
-                              .read<RegistrationCubit>()
+                              .read<RegistrationDetailsCubit>()
                               .setProviderType(spec);
-                          context.push(
-                            spec.requiresTradeLicence
-                                ? RegistrationRoutes.organizationDetails
-                                : RegistrationRoutes.individualDetails,
-                          );
+                          context
+                            ..syncDocumentFlowContext()
+                            ..push(
+                              spec.requiresTradeLicence
+                                  ? RegistrationRoutes.organizationDetails
+                                  : RegistrationRoutes.individualDetails,
+                            );
                         },
                 ),
               ],

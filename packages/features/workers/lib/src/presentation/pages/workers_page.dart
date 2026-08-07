@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
+import 'package:shared_ui/shared_ui.dart';
 import 'package:workers/src/presentation/bloc/invitation_action/invitation_action_cubit.dart';
 import 'package:workers/src/presentation/bloc/invitations_list/invitations_list_bloc.dart';
 import 'package:workers/src/presentation/bloc/worker_action/worker_action_cubit.dart';
@@ -41,8 +42,9 @@ class _WorkersPageState extends State<WorkersPage> {
   void initState() {
     super.initState();
     context.read<WorkersListBloc>().add(const WorkersListFetchEvent());
-    _workerEffectsSub =
-        context.read<WorkerActionCubit>().effects.listen(_onWorkerEffect);
+    _workerEffectsSub = context.read<WorkerActionCubit>().effects.listen(
+      _onWorkerEffect,
+    );
     _invitationEffectsSub = context
         .read<InvitationActionCubit>()
         .effects
@@ -64,19 +66,19 @@ class _WorkersPageState extends State<WorkersPage> {
       case WorkerActionStarted(:final type):
         _showWorkerProgress(type);
       case WorkerActionSucceeded(
-          :final type,
-          :final workerId,
-          :final updatedWorker,
-        ):
+        :final type,
+        :final workerId,
+        :final updatedWorker,
+      ):
         _dismissWorkerProgress();
         if (type == WorkerActionType.delete) {
-          context
-              .read<WorkersListBloc>()
-              .add(WorkerRemovedFromListEvent(workerId));
+          context.read<WorkersListBloc>().add(
+            WorkerRemovedFromListEvent(workerId),
+          );
         } else if (updatedWorker != null) {
-          context
-              .read<WorkersListBloc>()
-              .add(WorkerReplacedInListEvent(updatedWorker));
+          context.read<WorkersListBloc>().add(
+            WorkerReplacedInListEvent(updatedWorker),
+          );
         }
         showAppSnackbar(context: context, title: _workerSuccessMessage(type));
       case WorkerActionFailed(:final type, :final failure):
@@ -157,8 +159,7 @@ class _WorkersPageState extends State<WorkersPage> {
 
   String _workerProgressTitle(WorkerActionType type) => switch (type) {
     WorkerActionType.suspend => 'workers.worker_suspend_in_progress'.tr(),
-    WorkerActionType.unsuspend =>
-      'workers.worker_unsuspend_in_progress'.tr(),
+    WorkerActionType.unsuspend => 'workers.worker_unsuspend_in_progress'.tr(),
     WorkerActionType.delete => 'workers.worker_delete_in_progress'.tr(),
   };
 
@@ -178,12 +179,9 @@ class _WorkersPageState extends State<WorkersPage> {
   }
 
   String _invitationProgressTitle(InvitationActionType type) => switch (type) {
-    InvitationActionType.resend =>
-      'workers.invitation_resend_in_progress'.tr(),
-    InvitationActionType.cancel =>
-      'workers.invitation_cancel_in_progress'.tr(),
-    InvitationActionType.delete =>
-      'workers.invitation_delete_in_progress'.tr(),
+    InvitationActionType.resend => 'workers.invitation_resend_in_progress'.tr(),
+    InvitationActionType.cancel => 'workers.invitation_cancel_in_progress'.tr(),
+    InvitationActionType.delete => 'workers.invitation_delete_in_progress'.tr(),
   };
 
   String _invitationSuccessMessage(InvitationActionType type) => switch (type) {
@@ -206,12 +204,9 @@ class _WorkersPageState extends State<WorkersPage> {
 
     if (raw.isNotEmpty) return failure.localizedMessage();
     return switch (type) {
-      InvitationActionType.resend =>
-        'workers.invitation_resend_failed'.tr(),
-      InvitationActionType.cancel =>
-        'workers.invitation_cancel_failed'.tr(),
-      InvitationActionType.delete =>
-        'workers.invitation_delete_failed'.tr(),
+      InvitationActionType.resend => 'workers.invitation_resend_failed'.tr(),
+      InvitationActionType.cancel => 'workers.invitation_cancel_failed'.tr(),
+      InvitationActionType.delete => 'workers.invitation_delete_failed'.tr(),
     };
   }
 
@@ -263,9 +258,9 @@ class _WorkersPageState extends State<WorkersPage> {
     if (index == 1 &&
         context.read<InvitationsListBloc>().state.status ==
             RequestStatus.initial) {
-      context
-          .read<InvitationsListBloc>()
-          .add(const InvitationsListFetchEvent());
+      context.read<InvitationsListBloc>().add(
+        const InvitationsListFetchEvent(),
+      );
     }
   }
 }
@@ -300,17 +295,17 @@ class _WorkersContent extends StatelessWidget {
             Expanded(
               child: AppRefreshIndicator(
                 onRefresh: () async {
-                  context
-                      .read<WorkersListBloc>()
-                      .add(const WorkersListRefreshEvent());
+                  context.read<WorkersListBloc>().add(
+                    const WorkersListRefreshEvent(),
+                  );
                 },
                 child: state.hasError && state.workers.isEmpty
                     ? AppFillRemainingScrollable(
                         child: WorkerErrorState(
                           failure: state.failure,
-                          onRetry: () => context
-                              .read<WorkersListBloc>()
-                              .add(const WorkersListRefreshEvent()),
+                          onRetry: () => context.read<WorkersListBloc>().add(
+                            const WorkersListRefreshEvent(),
+                          ),
                         ),
                       )
                     : state.filteredWorkers.isEmpty
@@ -321,9 +316,9 @@ class _WorkersContent extends StatelessWidget {
                                   notification.metrics.maxScrollExtent - 200 &&
                               state.hasMore &&
                               !state.loadingMore) {
-                            context
-                                .read<WorkersListBloc>()
-                                .add(const WorkersListLoadMoreEvent());
+                            context.read<WorkersListBloc>().add(
+                              const WorkersListLoadMoreEvent(),
+                            );
                           }
                           return false;
                         },
@@ -334,7 +329,8 @@ class _WorkersContent extends StatelessWidget {
                             end: AppSpacing.lg,
                             bottom: AppSpacing.lg,
                           ),
-                          itemCount: state.filteredWorkers.length +
+                          itemCount:
+                              state.filteredWorkers.length +
                               (state.loadingMore ? 1 : 0),
                           separatorBuilder: (_, _) =>
                               SizedBox(height: AppSpacing.sm),
@@ -367,9 +363,7 @@ class _WorkersContent extends StatelessWidget {
 Future<void> _openAddWorker(BuildContext context) async {
   final added = await context.push<bool>(WorkerRoutes.add);
   if ((added ?? false) && context.mounted) {
-    context
-        .read<WorkersListBloc>()
-        .add(const WorkersListRefreshEvent());
+    context.read<WorkersListBloc>().add(const WorkersListRefreshEvent());
   }
 }
 

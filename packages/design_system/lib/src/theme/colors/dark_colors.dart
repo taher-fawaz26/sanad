@@ -1,6 +1,7 @@
 import 'package:design_system/src/theme/colors/app_colors.dart';
 import 'package:design_system/src/theme/colors/app_palettes.dart';
-import 'package:design_system/src/theme/colors/light_colors.dart' show LightColors;
+import 'package:design_system/src/theme/colors/light_colors.dart'
+    show LightColors;
 import 'package:design_system/src/theme/colors/palettes/accent_palette.dart';
 import 'package:design_system/src/theme/colors/palettes/dark_palette.dart';
 import 'package:design_system/src/theme/colors/palettes/main_palette.dart';

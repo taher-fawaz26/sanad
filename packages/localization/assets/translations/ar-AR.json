@@ -679,5 +679,13 @@
     "profile_complete_error_message": "تعذّر إكمال تسجيلك. تحقق من اتصالك بالإنترنت وحاول مرة أخرى.",
     "extraction_failed_title": "فشل الاستخراج",
     "extraction_failed_retry": "فشل استخراج بيانات المستند. تحقق من اتصالك بالإنترنت وحاول مرة أخرى."
+  },  "document_flow": {
+    "title": "",
+    "empty_title": "",
+    "empty_description": ""
+  },  "contact_verification": {
+    "title": "",
+    "empty_title": "",
+    "empty_description": ""
   }
 }

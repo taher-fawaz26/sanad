@@ -1,6 +1,8 @@
 import 'package:design_system/design_system.dart' show AppProgressBar;
-import 'package:design_system/src/components/app_progress_bar.dart' show AppProgressBar;
-import 'package:design_system/src/components/components.dart' show AppProgressBar;
+import 'package:design_system/src/components/app_progress_bar.dart'
+    show AppProgressBar;
+import 'package:design_system/src/components/components.dart'
+    show AppProgressBar;
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
 import 'package:flutter/material.dart';

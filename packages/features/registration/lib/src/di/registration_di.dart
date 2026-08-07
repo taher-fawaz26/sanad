@@ -1,11 +1,16 @@
+import 'package:auth/auth.dart';
 import 'package:core/core.dart';
+import 'package:document_flow/document_flow.dart';
 import 'package:network/network.dart';
 import 'package:registration/src/data/datasources/media_remote_datasource.dart';
-import 'package:registration/src/data/repositories/media_repository_impl.dart';
-import 'package:registration/src/domain/repositories/media_repository.dart';
-import 'package:registration/src/domain/usecases/complete_profile_usecase.dart';
-import 'package:registration/src/domain/usecases/extract_documents_usecase.dart';
-import 'package:registration/src/domain/usecases/upload_single_media_usecase.dart';
+import 'package:registration/src/data/repositories/registration_document_repository.dart';
+
+/// GetIt instance name registration uses for every `document_flow` type it
+/// registers. Required: `DocumentFlowRepository` and its use cases are
+/// generic types — every feature implementing the shared flow registers its
+/// own instance, and an unqualified registration would collide with another
+/// feature's (e.g. `organization_settings`) registration of the same type.
+const registrationDocumentFlowInstance = 'registration';
 
 /// GetIt registrations for the registration feature.
 abstract final class RegistrationDI {
@@ -16,20 +21,45 @@ abstract final class RegistrationDI {
       ..registerLazySingleton<MediaRemoteDataSource>(
         () => MediaRemoteDataSourceImpl(sl<SecureDioClient>()),
       )
-      ..registerLazySingleton<MediaRepository>(
-        () => MediaRepositoryImpl(
+      ..registerLazySingleton<DocumentFlowRepository>(
+        () => RegistrationDocumentRepository(
           sl<MediaRemoteDataSource>(),
           sl<NetworkGuard>(),
+          sl<SessionManager>(),
         ),
+        instanceName: registrationDocumentFlowInstance,
       )
       ..registerLazySingleton(
-        () => UploadSingleMediaUseCase(sl<MediaRepository>()),
+        () => UploadMediaUseCase(
+          sl<DocumentFlowRepository>(
+            instanceName: registrationDocumentFlowInstance,
+          ),
+        ),
+        instanceName: registrationDocumentFlowInstance,
       )
       ..registerLazySingleton(
-        () => ExtractDocumentsUseCase(sl<MediaRepository>()),
+        () => ExtractDocumentsUseCase(
+          sl<DocumentFlowRepository>(
+            instanceName: registrationDocumentFlowInstance,
+          ),
+        ),
+        instanceName: registrationDocumentFlowInstance,
       )
       ..registerLazySingleton(
-        () => CompleteProfileUseCase(sl<MediaRepository>()),
+        () => SubmitDocumentsUseCase(
+          sl<DocumentFlowRepository>(
+            instanceName: registrationDocumentFlowInstance,
+          ),
+        ),
+        instanceName: registrationDocumentFlowInstance,
+      )
+      ..registerLazySingleton(
+        () => FetchDocumentsUseCase(
+          sl<DocumentFlowRepository>(
+            instanceName: registrationDocumentFlowInstance,
+          ),
+        ),
+        instanceName: registrationDocumentFlowInstance,
       );
   }
 }

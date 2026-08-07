@@ -17,7 +17,11 @@ class AppVerifiedBadge extends StatelessWidget {
       child: SizedBox(
         width: _size,
         height: _size,
-        child: Icon(Icons.check, size: _iconSize, color: context.appColors.onPrimary),
+        child: Icon(
+          Icons.check,
+          size: _iconSize,
+          color: context.appColors.onPrimary,
+        ),
       ),
     );
   }

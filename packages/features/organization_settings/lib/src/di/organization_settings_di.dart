@@ -1,20 +1,26 @@
 import 'package:core/core.dart';
+import 'package:document_flow/document_flow.dart';
 import 'package:network/network.dart';
-import 'package:organization_settings/src/data/datasources/organization_contact_remote_datasource.dart';
+import 'package:organization_settings/src/data/datasources/legal_data_remote_datasource.dart';
+import 'package:organization_settings/src/data/datasources/media_upload_remote_datasource.dart';
 import 'package:organization_settings/src/data/datasources/organization_media_remote_datasource.dart';
-import 'package:organization_settings/src/data/repositories/organization_contact_repository_impl.dart';
+import 'package:organization_settings/src/data/datasources/organization_settings_remote_datasource.dart';
+import 'package:organization_settings/src/data/repositories/organization_document_repository.dart';
 import 'package:organization_settings/src/data/repositories/organization_media_repository_impl.dart';
-import 'package:organization_settings/src/domain/repositories/organization_contact_repository.dart';
+import 'package:organization_settings/src/data/repositories/organization_settings_repository_impl.dart';
 import 'package:organization_settings/src/domain/repositories/organization_media_repository.dart';
-import 'package:organization_settings/src/domain/usecases/get_organization_contact_usecase.dart';
+import 'package:organization_settings/src/domain/repositories/organization_settings_repository.dart';
+import 'package:organization_settings/src/domain/usecases/get_organization_settings_usecase.dart';
 import 'package:organization_settings/src/domain/usecases/remove_organization_media_usecase.dart';
-import 'package:organization_settings/src/domain/usecases/request_email_otp_usecase.dart';
-import 'package:organization_settings/src/domain/usecases/request_phone_otp_usecase.dart';
 import 'package:organization_settings/src/domain/usecases/upload_organization_media_usecase.dart';
-import 'package:organization_settings/src/domain/usecases/verify_email_otp_usecase.dart';
-import 'package:organization_settings/src/domain/usecases/verify_phone_otp_usecase.dart';
-import 'package:organization_settings/src/presentation/bloc/contact_information/contact_information_bloc.dart';
 import 'package:organization_settings/src/presentation/bloc/identity_header/identity_header_bloc.dart';
+import 'package:organization_settings/src/presentation/bloc/organization_settings/organization_settings_bloc.dart';
+
+/// GetIt instance name organization_settings uses for every `document_flow`
+/// type it registers — `DocumentFlowRepository` and its use cases are
+/// generic types shared with `registration`; an unqualified registration
+/// would collide with registration's own instance of the same type.
+const organizationDocumentFlowInstance = 'organization_settings';
 
 /// Dependency registration for organization_settings.
 ///
@@ -25,8 +31,14 @@ abstract final class OrganizationSettingsDI {
 
   static void init() {
     sl
+      ..registerLazySingleton<MediaUploadRemoteDataSource>(
+        () => MediaUploadRemoteDataSourceImpl(sl<SecureDioClient>()),
+      )
       ..registerLazySingleton<OrganizationMediaRemoteDataSource>(
-        () => OrganizationMediaRemoteDataSourceImpl(sl<SecureDioClient>()),
+        () => OrganizationMediaRemoteDataSourceImpl(
+          sl<MediaUploadRemoteDataSource>(),
+          sl<BaseApiClient>(),
+        ),
       )
       ..registerLazySingleton<OrganizationMediaRepository>(
         () => OrganizationMediaRepositoryImpl(
@@ -47,35 +59,69 @@ abstract final class OrganizationSettingsDI {
           repository: sl<OrganizationMediaRepository>(),
         ),
       )
-      ..registerLazySingleton<OrganizationContactRemoteDataSource>(
-        () => OrganizationContactRemoteDataSourceImpl(sl<BaseApiClient>()),
+      ..registerLazySingleton<OrganizationSettingsRemoteDataSource>(
+        () => OrganizationSettingsRemoteDataSourceImpl(sl<BaseApiClient>()),
       )
-      ..registerLazySingleton<OrganizationContactRepository>(
-        () => OrganizationContactRepositoryImpl(
-          sl<OrganizationContactRemoteDataSource>(),
+      ..registerLazySingleton<OrganizationSettingsRepository>(
+        () => OrganizationSettingsRepositoryImpl(
+          sl<OrganizationSettingsRemoteDataSource>(),
           sl<NetworkGuard>(),
         ),
       )
       ..registerLazySingleton(
-        () =>
-            GetOrganizationContactUseCase(sl<OrganizationContactRepository>()),
-      )
-      ..registerLazySingleton(
-        () => RequestPhoneOtpUseCase(sl<OrganizationContactRepository>()),
-      )
-      ..registerLazySingleton(
-        () => VerifyPhoneOtpUseCase(sl<OrganizationContactRepository>()),
-      )
-      ..registerLazySingleton(
-        () => RequestEmailOtpUseCase(sl<OrganizationContactRepository>()),
-      )
-      ..registerLazySingleton(
-        () => VerifyEmailOtpUseCase(sl<OrganizationContactRepository>()),
+        () => GetOrganizationSettingsUseCase(
+          sl<OrganizationSettingsRepository>(),
+        ),
       )
       ..registerFactory(
-        () => ContactInformationBloc(
-          getContact: sl<GetOrganizationContactUseCase>(),
+        () => OrganizationSettingsBloc(
+          getOrganizationSettings: sl<GetOrganizationSettingsUseCase>(),
         ),
+      )
+      ..registerLazySingleton<LegalDataRemoteDataSource>(
+        () => LegalDataRemoteDataSourceImpl(
+          sl<BaseApiClient>(),
+          sl<MediaUploadRemoteDataSource>(),
+        ),
+      )
+      ..registerLazySingleton<DocumentFlowRepository>(
+        () => OrganizationDocumentRepository(
+          sl<LegalDataRemoteDataSource>(),
+          sl<NetworkGuard>(),
+        ),
+        instanceName: organizationDocumentFlowInstance,
+      )
+      ..registerLazySingleton(
+        () => UploadMediaUseCase(
+          sl<DocumentFlowRepository>(
+            instanceName: organizationDocumentFlowInstance,
+          ),
+        ),
+        instanceName: organizationDocumentFlowInstance,
+      )
+      ..registerLazySingleton(
+        () => ExtractDocumentsUseCase(
+          sl<DocumentFlowRepository>(
+            instanceName: organizationDocumentFlowInstance,
+          ),
+        ),
+        instanceName: organizationDocumentFlowInstance,
+      )
+      ..registerLazySingleton(
+        () => SubmitDocumentsUseCase(
+          sl<DocumentFlowRepository>(
+            instanceName: organizationDocumentFlowInstance,
+          ),
+        ),
+        instanceName: organizationDocumentFlowInstance,
+      )
+      ..registerLazySingleton(
+        () => FetchDocumentsUseCase(
+          sl<DocumentFlowRepository>(
+            instanceName: organizationDocumentFlowInstance,
+          ),
+        ),
+        instanceName: organizationDocumentFlowInstance,
       );
   }
 }

@@ -1,92 +1,101 @@
+import 'package:auth/auth.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:organization_settings/src/presentation/bloc/contact_information/contact_information_bloc.dart';
 import 'package:organization_settings/src/presentation/widgets/bottom_sheets/add_or_change_email_sheet.dart';
 import 'package:organization_settings/src/presentation/widgets/bottom_sheets/add_or_change_phone_sheet.dart';
 import 'package:organization_settings/src/presentation/widgets/components/verified_email_field.dart';
 import 'package:organization_settings/src/presentation/widgets/components/verified_phone_field.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 /// Section displaying the organization's contact info (phone + email).
 ///
-/// Owns its own [ContactInformationBloc] — loads the current values on
-/// mount, opens the per-field Add/Change sheets (which run the shared OTP
-/// flow), and refreshes from the server once a field is verified.
+/// Pure and prop-driven — [phone]/[email] come from the root
+/// `OrganizationSettingsEntity` (single source of truth, `businessPhone` /
+/// `businessEmail` are only ever non-null once verified). Opens the
+/// per-field Add/Change sheets (which run the shared OTP flow) and calls
+/// [onRefresh] once a field is verified so the caller can re-pull the root
+/// profile.
 class ContactInformationSection extends StatelessWidget {
-  const ContactInformationSection({super.key});
+  const ContactInformationSection({
+    super.key,
+    this.phone,
+    this.email,
+    this.onRefresh,
+  });
 
-  @override
-  Widget build(BuildContext context) {
-    return BlocProvider<ContactInformationBloc>(
-      create: (_) =>
-          sl<ContactInformationBloc>()..add(const ContactInformationLoaded()),
-      child: const _ContactInformationView(),
-    );
-  }
-}
+  final String? phone;
+  final String? email;
+  final VoidCallback? onRefresh;
 
-class _ContactInformationView extends StatelessWidget {
-  const _ContactInformationView();
-
-  Future<void> _addOrChangePhone(BuildContext context, String? phone) async {
+  Future<void> _addOrChangePhone(BuildContext context) async {
     final result = await showAddOrChangePhoneSheet(
       context: context,
       initialPhone: phone,
     );
     if (result == null || !context.mounted) return;
-    context.read<ContactInformationBloc>().add(
-      const ContactInformationRefreshed(),
-    );
+    await _syncBusinessProfileToSession(businessPhone: result);
+    onRefresh?.call();
   }
 
-  Future<void> _addOrChangeEmail(BuildContext context, String? email) async {
+  Future<void> _addOrChangeEmail(BuildContext context) async {
     final result = await showAddOrChangeEmailSheet(
       context: context,
       initialEmail: email,
     );
     if (result == null || !context.mounted) return;
-    context.read<ContactInformationBloc>().add(
-      const ContactInformationRefreshed(),
+    await _syncBusinessProfileToSession(businessEmail: result);
+    onRefresh?.call();
+  }
+
+  /// Keeps the session's lightweight `BusinessProviderProfileModel` (read by
+  /// the KPI hub / shells) coherent with a business contact change —
+  /// `OrganizationSettingsRefreshed` only updates the richer `/me` profile
+  /// this section itself reads from, not the session's copy.
+  Future<void> _syncBusinessProfileToSession({
+    String? businessEmail,
+    String? businessPhone,
+  }) async {
+    final sessionManager = sl<SessionManager>();
+    final current = sessionManager.profile;
+    if (current is! BusinessProviderProfileModel) return;
+
+    await sessionManager.setProfile(
+      BusinessProviderProfileModel(
+        id: current.id,
+        isReviewed: current.isReviewed,
+        businessName: current.businessName,
+        businessEmail: businessEmail ?? current.businessEmail,
+        businessPhone: businessPhone ?? current.businessPhone,
+        tradeLicenseNumber: current.tradeLicenseNumber,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<ContactInformationBloc, ContactInformationState>(
-      listener: (context, state) {
-        if (state.status == RequestStatus.failure && state.failure != null) {
-          showAppErrorSnackbar(
-            context: context,
-            title: state.failure!.message,
-          );
-        }
-      },
-      builder: (context, state) {
-        return AppSectionCard(
-          title: 'settings.section_contact'.tr(),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              VerifiedPhoneField(
-                phone: state.phone,
-                verified: state.phoneVerified,
-                onAdd: () => _addOrChangePhone(context, state.phone),
-                onChange: () => _addOrChangePhone(context, state.phone),
-              ),
-              SizedBox(height: AppSpacing.md),
-              VerifiedEmailField(
-                email: state.email,
-                verified: state.emailVerified,
-                onAdd: () => _addOrChangeEmail(context, state.email),
-                onChange: () => _addOrChangeEmail(context, state.email),
-              ),
-            ],
+    return AppSectionCard(
+      title: 'settings.section_contact'.tr(),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          VerifiedPhoneField(
+            phone: phone,
+            verified: phone != null,
+            onAdd: () => _addOrChangePhone(context),
+            onChange: () => _addOrChangePhone(context),
           ),
-        );
-      },
+          SizedBox(height: AppSpacing.md),
+          VerifiedEmailField(
+            email: email,
+            verified: email != null,
+            onAdd: () => _addOrChangeEmail(context),
+            onChange: () => _addOrChangeEmail(context),
+          ),
+        ],
+      ),
     );
   }
 }

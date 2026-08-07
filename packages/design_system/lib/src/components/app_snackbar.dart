@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 /// Figma `Views / Snackbars` (`97:3434`).
 class AppSnackbar extends StatelessWidget {
   const AppSnackbar({
-    required this.title, super.key,
+    required this.title,
+    super.key,
     this.caption,
     this.color = AppSnackbarColor.dark,
     this.layout = AppSnackbarLayout.box,
@@ -121,8 +122,9 @@ void showAppSnackbar({
       elevation: 0,
       padding: EdgeInsets.zero,
       duration: duration,
-      behavior:
-          isFullWidth ? SnackBarBehavior.fixed : SnackBarBehavior.floating,
+      behavior: isFullWidth
+          ? SnackBarBehavior.fixed
+          : SnackBarBehavior.floating,
       margin: isFullWidth ? null : EdgeInsets.all(AppSpacing.lg),
       content: AppSnackbar(
         title: title,
