@@ -10,10 +10,10 @@ import 'package:sanad_provider/src/di/app_di.dart';
 import 'package:sanad_provider/src/features/home/home_page.dart';
 import 'package:sanad_provider/src/features/messages/messages_page.dart';
 import 'package:sanad_provider/src/features/requests/requests_page.dart';
-import 'package:sanad_provider/src/features/services/services_page.dart';
 import 'package:sanad_provider/src/routing/app_routes.dart';
 import 'package:sanad_provider/src/routing/provider_navigator.dart';
 import 'package:sanad_provider/src/routing/shell/main_shell.dart';
+import 'package:services/services.dart';
 import 'package:shared_ui/shared_ui.dart';
 
 /// sanad_provider top-level router, independent from sanad_client.
@@ -119,6 +119,17 @@ GoRouter buildProviderRouter() {
                   GoRoute(
                     path: AppRoutes.services,
                     builder: (context, state) => const ProviderServicesPage(),
+                    routes: [
+                      GoRoute(
+                        path: 'add',
+                        builder: (context, state) => const AddServicePage(),
+                      ),
+                      GoRoute(
+                        path: 'request-new',
+                        builder: (context, state) =>
+                            const RequestNewServicePage(),
+                      ),
+                    ],
                   ),
                 ],
               ),

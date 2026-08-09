@@ -326,6 +326,28 @@
     }
   },
   "services": {
+    "title": "Services",
+    "dashboard": "Dashboard",
+    "add_new_service": "Add New Service",
+    "add_first_service": "Add First Service",
+    "tab_my_services": "My Services",
+    "tab_service_request": "Service request",
+    "metric_orders": "Orders",
+    "metric_revenue": "Revenue",
+    "metric_completion_rate": "Completion Rate",
+    "metric_cancelled": "{percent}% Cancelled",
+    "search_hint": "Search service requests...",
+    "filter_status": "Status",
+    "filter_type": "Type",
+    "status_active": "Active",
+    "card_requests": "Requests",
+    "card_revenue": "Revenue",
+    "currency_aed": "AED",
+    "more_actions": "More actions",
+    "empty_title": "No services added yet",
+    "empty_description": "Add your first service so you can assign it to branches and make it available to customers.",
+    "requests_empty_title": "No service requests yet",
+    "requests_empty_description": "Service requests from customers will appear here.",
     "select_service": {
       "title": "Select Service",
       "search_hint": "Search",
@@ -333,6 +355,34 @@
       "retry": "Retry",
       "empty": "No Services Found",
       "empty_description": "Try searching with a different keyword"
+    },
+    "add_service": {
+      "request_new_service": "Request a New Service",
+      "category_label": "Category",
+      "category_hint": "Select a category",
+      "service_name_label": "Name of Service",
+      "service_name_hint": "Select a service",
+      "search_hint": "Search",
+      "not_found_title": "Service not found",
+      "not_found_description": "The service you're looking for is not available in Sanad's catalog.",
+      "inline_not_found_prefix": "Didn't find your service? ",
+      "inline_request_link": "Request New service",
+      "description_label": "Service Description",
+      "description_hint": "Describe the service and explain what customers will request.",
+      "images_label": "Images",
+      "images_upload_label": "Upload a photos",
+      "images_max_size_caption": "Maximum 5 MB file size",
+      "images_add_label": "Add Image",
+      "create_button": "Create"
+    },
+    "request_new_service": {
+      "title": "Request New Service",
+      "warning_banner": "Submitting a request does not publish the service immediately. Sanad will review it before it becomes available.",
+      "service_name_label": "Requested Service Name",
+      "service_name_hint": "Enter the service name",
+      "description_label": "Service Description",
+      "description_hint": "Describe the service and explain what customers will request.",
+      "submit_button": "Request"
     }
   },
   "workers": {

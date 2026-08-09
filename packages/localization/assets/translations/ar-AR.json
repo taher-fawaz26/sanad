@@ -326,6 +326,28 @@
     }
   },
   "services": {
+    "title": "الخدمات",
+    "dashboard": "لوحة التحكم",
+    "add_new_service": "إضافة خدمة جديدة",
+    "add_first_service": "أضف أول خدمة",
+    "tab_my_services": "خدماتي",
+    "tab_service_request": "طلبات الخدمة",
+    "metric_orders": "الطلبات",
+    "metric_revenue": "الإيرادات",
+    "metric_completion_rate": "معدل الإنجاز",
+    "metric_cancelled": "{percent}% ملغاة",
+    "search_hint": "ابحث في طلبات الخدمة...",
+    "filter_status": "الحالة",
+    "filter_type": "النوع",
+    "status_active": "نشط",
+    "card_requests": "الطلبات",
+    "card_revenue": "الإيرادات",
+    "currency_aed": "درهم",
+    "more_actions": "المزيد",
+    "empty_title": "لم تتم إضافة خدمات بعد",
+    "empty_description": "أضف أول خدمة لك حتى تتمكن من تعيينها للفروع وإتاحتها للعملاء.",
+    "requests_empty_title": "لا توجد طلبات خدمة بعد",
+    "requests_empty_description": "ستظهر هنا طلبات الخدمة من العملاء.",
     "select_service": {
       "title": "اختر الخدمة",
       "search_hint": "بحث",
@@ -333,6 +355,34 @@
       "retry": "إعادة المحاولة",
       "empty": "لا توجد خدمات",
       "empty_description": "جرّب البحث بكلمة مختلفة"
+    },
+    "add_service": {
+      "request_new_service": "طلب خدمة جديدة",
+      "category_label": "الفئة",
+      "category_hint": "اختر فئة",
+      "service_name_label": "اسم الخدمة",
+      "service_name_hint": "اختر خدمة",
+      "search_hint": "بحث",
+      "not_found_title": "الخدمة غير موجودة",
+      "not_found_description": "الخدمة التي تبحث عنها غير متوفرة في كتالوج سند.",
+      "inline_not_found_prefix": "لم تجد خدمتك؟ ",
+      "inline_request_link": "طلب خدمة جديدة",
+      "description_label": "وصف الخدمة",
+      "description_hint": "صف الخدمة واشرح ما سيطلبه العملاء.",
+      "images_label": "الصور",
+      "images_upload_label": "تحميل صور",
+      "images_max_size_caption": "الحد الأقصى لحجم الملف 5 ميجابايت",
+      "images_add_label": "إضافة صورة",
+      "create_button": "إنشاء"
+    },
+    "request_new_service": {
+      "title": "طلب خدمة جديدة",
+      "warning_banner": "إرسال الطلب لا ينشر الخدمة فورًا. سيقوم سند بمراجعتها قبل أن تصبح متاحة.",
+      "service_name_label": "اسم الخدمة المطلوبة",
+      "service_name_hint": "أدخل اسم الخدمة",
+      "description_label": "وصف الخدمة",
+      "description_hint": "صف الخدمة واشرح ما سيطلبه العملاء.",
+      "submit_button": "طلب"
     }
   },
   "workers": {

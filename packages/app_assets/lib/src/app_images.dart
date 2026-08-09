@@ -26,6 +26,20 @@ abstract final class AppImages {
 
   static const String addServices = '$_base/illustrations/add_services.svg';
 
+  /// UAE Dirham mark — services dashboard revenue metric (`4715:26102`).
+  static const String dirham = '$_base/services/dirham.png';
+
+  /// Sample service cover — AC Repair (`4715:26252`).
+  static const String serviceCoverAc = '$_base/services/service_cover_ac.jpg';
+
+  /// Sample service cover — Plumbing (`4715:26141`).
+  static const String serviceCoverPlumbing =
+      '$_base/services/service_cover_plumbing.jpg';
+
+  /// Sample service cover — Electrical (`4715:26171`).
+  static const String serviceCoverElectrical =
+      '$_base/services/service_cover_electrical.jpg';
+
   /// Emirates ID front capture preview — Scan flow (`2897:13628`).
   static const String emiratesIdFrontPreview =
       '$_base/registration/emirates_id_front_preview.png';

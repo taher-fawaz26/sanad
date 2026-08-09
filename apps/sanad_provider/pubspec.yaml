@@ -22,6 +22,8 @@ dependencies:
     path: ../../packages/bottom_nav_bar
   branches:
     path: ../../packages/features/branches
+  media_upload:
+    path: ../../packages/features/media_upload
   organization_settings:
     path: ../../packages/features/organization_settings
   services:

@@ -11,6 +11,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:invitation/invitation.dart';
 import 'package:localization/localization.dart';
 import 'package:maps/maps.dart';
+import 'package:media_upload/media_upload.dart';
 import 'package:network/network.dart';
 import 'package:organization_settings/organization_settings.dart';
 import 'package:permissions/permissions.dart';
@@ -61,6 +62,9 @@ Future<void> configureDependencies() async {
 
   // ── Permissions (registers PermissionService, config, theme, provider) ───
   PermissionsDI.init();
+
+  // ── Media upload (shared multipart-upload pipeline; no FeatureModule) ────
+  MediaUploadDI.init();
 
   sl
     ..registerLazySingleton<LocationService>(

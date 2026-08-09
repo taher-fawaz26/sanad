@@ -42,6 +42,7 @@ class AppSelectSheet<T> extends StatefulWidget {
     this.errorTextBuilder,
     this.searchVariant = AppSearchFieldVariant.flat,
     this.maxHeightFraction = 0.55,
+    this.singleSelect = false,
   }) : assert(
          items != null || loadItems != null,
          'Provide either items or loadItems.',
@@ -80,6 +81,12 @@ class AppSelectSheet<T> extends StatefulWidget {
 
   final AppSearchFieldVariant searchVariant;
   final double maxHeightFraction;
+
+  /// When `true`, tapping a row immediately pops the sheet with that single
+  /// item selected — no checkbox state, no footer confirm button. Use for a
+  /// single-select field (e.g. a searchable dropdown) instead of the default
+  /// multi-select-with-confirm behaviour.
+  final bool singleSelect;
 
   @override
   State<AppSelectSheet<T>> createState() => _AppSelectSheetState<T>();
@@ -138,13 +145,20 @@ class _AppSelectSheetState<T> extends State<AppSelectSheet<T>> {
     return _allItems.where((item) => widget.searchFilter(item, query)).toList();
   }
 
-  void _toggle(String id) => setState(() {
-    if (_selectedIds.contains(id)) {
-      _selectedIds.remove(id);
-    } else {
-      _selectedIds.add(id);
+  void _toggle(String id) {
+    if (widget.singleSelect) {
+      final item = _allItems.firstWhere((item) => widget.getId(item) == id);
+      Navigator.of(context).pop([item]);
+      return;
     }
-  });
+    setState(() {
+      if (_selectedIds.contains(id)) {
+        _selectedIds.remove(id);
+      } else {
+        _selectedIds.add(id);
+      }
+    });
+  }
 
   void _confirm() {
     final selected = _allItems
@@ -186,10 +200,12 @@ class _AppSelectSheetState<T> extends State<AppSelectSheet<T>> {
           ),
         ],
       ),
-      footer: AppButton(
-        label: widget.confirmLabel,
-        onPressed: _selectedIds.isEmpty ? null : _confirm,
-      ),
+      footer: widget.singleSelect
+          ? null
+          : AppButton(
+              label: widget.confirmLabel,
+              onPressed: _selectedIds.isEmpty ? null : _confirm,
+            ),
     );
   }
 
@@ -261,11 +277,11 @@ class _AppSelectSheetState<T> extends State<AppSelectSheet<T>> {
 Future<List<T>?> showAppSelectSheet<T>({
   required BuildContext context,
   required String title,
-  required String confirmLabel,
   required String searchHint,
   required String Function(T) getId,
   required SelectSheetItemBuilder<T> itemBuilder,
   required SelectSheetFilter<T> searchFilter,
+  String confirmLabel = '',
   Set<String> initialSelectedIds = const {},
   List<T>? items,
   Future<List<T>> Function()? loadItems,
@@ -274,6 +290,7 @@ Future<List<T>?> showAppSelectSheet<T>({
   String Function(Object error)? errorTextBuilder,
   AppSearchFieldVariant searchVariant = AppSearchFieldVariant.flat,
   double maxHeightFraction = 0.55,
+  bool singleSelect = false,
 }) {
   final colors = context.appColors;
   final typography = context.appTypography;
@@ -304,6 +321,7 @@ Future<List<T>?> showAppSelectSheet<T>({
       errorTextBuilder: errorTextBuilder,
       searchVariant: searchVariant,
       maxHeightFraction: maxHeightFraction,
+      singleSelect: singleSelect,
     ),
   );
 }

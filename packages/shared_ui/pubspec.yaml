@@ -14,12 +14,14 @@ dependencies:
     path: ../core
   design_system:
     path: ../design_system
+  equatable: ^2.1.0
   flutter:
     sdk: flutter
   localization:
     path: ../localization
 
 dev_dependencies:
+  flutter_screenutil: ^5.9.3
   flutter_test:
     sdk: flutter
   very_good_analysis: ^9.0.0

@@ -1,8 +1,13 @@
 /// Route path constants for the services feature.
-///
-/// Services are presented via [showSelectServiceActionSheet] rather than
-/// full-page navigation, so this class currently contains no routes.
-/// Reserved for future dedicated service-management pages.
 abstract final class ServiceRoutes {
   ServiceRoutes._();
+
+  /// Provider services dashboard (shell deep-link: `/services`).
+  static const String list = '/services';
+
+  /// Add Service form, nested under [list].
+  static const String add = '/services/add';
+
+  /// Request New Service form, nested under [list].
+  static const String requestNew = '/services/request-new';
 }

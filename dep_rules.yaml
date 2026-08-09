@@ -57,7 +57,7 @@ layer_order:
     packages: [maps, asset_picker, sheet_navigation, otp]
   - tier: 4
     packages:
-      [auth, services, workers, change_password, document_flow, contact_verification]
+      [auth, services, workers, change_password, document_flow, contact_verification, media_upload]
   - tier: 5
     packages: [forgot_password, invitation, registration, account_settings]
   - tier: 6

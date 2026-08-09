@@ -150,6 +150,15 @@ abstract final class AppSvgs {
   /// Services — bag icon.
   static const String bag = '$_base/bag.svg';
 
+  /// Filter lines — services dashboard filter button (`4715:26126`).
+  static const String filterLines = '$_base/filter_lines.svg';
+
+  /// Wallet — service card revenue metric (`4715:26272`).
+  static const String wallet = '$_base/wallet.svg';
+
+  /// File / document — service card requests metric (`4715:26265`).
+  static const String fileText = '$_base/file_text.svg';
+
   // ── Invitation flow (mocked UI, no backend) ────────────────────────────────
 
   /// Sanad wordmark — invitation-flow header logo (`2560:24653`). The
