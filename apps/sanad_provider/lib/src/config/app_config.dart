@@ -1,3 +1,4 @@
+import 'package:deep_linking/deep_linking.dart';
 import 'package:network/network.dart';
 
 /// App-level API and environment configuration for sanad_provider.
@@ -37,6 +38,29 @@ abstract final class AppConfig {
     _ => const NetworkConfig(
       baseUrl: 'https://dev-api.trysanad.us/api/v1/',
       refreshTokenPath: 'auth/refresh',
+    ),
+  };
+
+  /// Trusted incoming-link sources for this app: the App Links / Universal
+  /// Links host for the active environment, plus the `sanadprovider://`
+  /// custom scheme (registered on every environment for QA/testing before a
+  /// domain is verified).
+  static DeepLinkConfig get deepLinkConfig => switch (_env) {
+    'prod' => const DeepLinkConfig(
+      schemes: {'sanadprovider'},
+      hosts: {'links.trysanad.us'},
+    ),
+    'stage' => const DeepLinkConfig(
+      schemes: {'sanadprovider'},
+      hosts: {'stage-links.trysanad.us'},
+    ),
+    'qa' => const DeepLinkConfig(
+      schemes: {'sanadprovider'},
+      hosts: {'qa-links.trysanad.us'},
+    ),
+    _ => const DeepLinkConfig(
+      schemes: {'sanadprovider'},
+      hosts: {'dev-links.trysanad.us'},
     ),
   };
 }

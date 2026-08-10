@@ -5,11 +5,16 @@ import 'package:auth/src/data/repositories/auth_repository_impl.dart';
 import 'package:auth/src/domain/repositories/auth_repository.dart';
 import 'package:auth/src/domain/usecases/check_signin_status_usecase.dart';
 import 'package:auth/src/domain/usecases/delete_account_usecase.dart';
+import 'package:auth/src/domain/usecases/get_current_user_usecase.dart';
+import 'package:auth/src/domain/usecases/get_resend_info_usecase.dart';
 import 'package:auth/src/domain/usecases/logout_usecase.dart';
-import 'package:auth/src/domain/usecases/request_email_otp_usecase.dart';
-import 'package:auth/src/domain/usecases/sign_in_with_google_usecase.dart';
-import 'package:auth/src/domain/usecases/validate_email_usecase.dart';
-import 'package:auth/src/domain/usecases/verify_email_otp_usecase.dart';
+import 'package:auth/src/domain/usecases/request_login_otp_usecase.dart';
+import 'package:auth/src/domain/usecases/request_signup_otp_usecase.dart';
+import 'package:auth/src/domain/usecases/resend_otp_usecase.dart';
+import 'package:auth/src/domain/usecases/social_login_usecase.dart';
+import 'package:auth/src/domain/usecases/social_signup_usecase.dart';
+import 'package:auth/src/domain/usecases/verify_login_otp_usecase.dart';
+import 'package:auth/src/domain/usecases/verify_signup_otp_usecase.dart';
 import 'package:auth/src/presentation/bloc/auth/auth_bloc.dart';
 import 'package:auth/src/session/session_cache.dart';
 import 'package:auth/src/session/session_manager.dart';
@@ -60,33 +65,47 @@ class AuthDI {
           sl<GoogleAuthDataSource>(),
         ),
       )
+      // ── Use cases ────────────────────────────────────────────────────────
       ..registerLazySingleton(
-        () => RequestEmailOtpUseCase(sl<AuthRepository>()),
+        () => RequestSignupOtpUseCase(sl<AuthRepository>()),
       )
       ..registerLazySingleton(
-        () => VerifyEmailOtpUseCase(sl<AuthRepository>()),
+        () => VerifySignupOtpUseCase(sl<AuthRepository>()),
+      )
+      ..registerLazySingleton(
+        () => RequestLoginOtpUseCase(sl<AuthRepository>()),
+      )
+      ..registerLazySingleton(
+        () => VerifyLoginOtpUseCase(sl<AuthRepository>()),
+      )
+      ..registerLazySingleton(() => ResendOtpUseCase(sl<AuthRepository>()))
+      ..registerLazySingleton(
+        () => GetResendInfoUseCase(sl<AuthRepository>()),
+      )
+      ..registerLazySingleton(() => SocialSignupUseCase(sl<AuthRepository>()))
+      ..registerLazySingleton(() => SocialLoginUseCase(sl<AuthRepository>()))
+      ..registerLazySingleton(
+        () => GetCurrentUserUseCase(sl<AuthRepository>()),
       )
       ..registerLazySingleton(() => AuthLogoutUseCase(sl<AuthRepository>()))
       ..registerLazySingleton(() => DeleteAccountUseCase(sl<AuthRepository>()))
       ..registerLazySingleton(
         () => AuthCheckSignInStatusUseCase(sl<SessionManager>()),
       )
-      ..registerLazySingleton(
-        () => SignInWithGoogleUseCase(sl<AuthRepository>()),
-      )
-      ..registerLazySingleton(
-        () => ValidateEmailUseCase(sl<AuthRepository>()),
-      )
       ..registerFactory(
         () => AuthBloc(
-          requestOtpUseCase: sl<RequestEmailOtpUseCase>(),
+          requestSignupOtpUseCase: sl<RequestSignupOtpUseCase>(),
+          requestLoginOtpUseCase: sl<RequestLoginOtpUseCase>(),
+          resendOtpUseCase: sl<ResendOtpUseCase>(),
+          getResendInfoUseCase: sl<GetResendInfoUseCase>(),
           logoutUseCase: sl<AuthLogoutUseCase>(),
           deleteAccountUseCase: sl<DeleteAccountUseCase>(),
           sessionManager: sl<SessionManager>(),
           checkSignInStatusUseCase: sl<AuthCheckSignInStatusUseCase>(),
           authStatusNotifier: sl<AuthStatusNotifier>(),
-          signInWithGoogleUseCase: sl<SignInWithGoogleUseCase>(),
-          validateEmailUseCase: sl<ValidateEmailUseCase>(),
+          socialSignupUseCase: sl<SocialSignupUseCase>(),
+          socialLoginUseCase: sl<SocialLoginUseCase>(),
+          getCurrentUserUseCase: sl<GetCurrentUserUseCase>(),
         ),
       );
   }

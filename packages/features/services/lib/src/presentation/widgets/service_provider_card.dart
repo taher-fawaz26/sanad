@@ -48,11 +48,11 @@ class ServiceProviderCard extends StatelessWidget {
                   fit: StackFit.expand,
                   children: [
                     ColoredBox(color: colors.palettes.sky.shade100),
-                    if (data.coverAssetPath != null)
-                      Image.asset(
-                        data.coverAssetPath!,
-                        package: AppAssets.package,
+                    if (data.coverImageUrl != null)
+                      Image.network(
+                        data.coverImageUrl!,
                         fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => const SizedBox.shrink(),
                       ),
                     if (data.showMoreAction)
                       PositionedDirectional(
@@ -83,7 +83,9 @@ class ServiceProviderCard extends StatelessWidget {
                         SizedBox(width: AppSpacing.sm),
                         AppStatusBadge(
                           label: data.statusLabel,
-                          type: AppStatusBadgeType.success,
+                          type: data.isActive
+                              ? AppStatusBadgeType.success
+                              : AppStatusBadgeType.warning,
                           size: AppStatusBadgeSize.dense,
                         ),
                       ],

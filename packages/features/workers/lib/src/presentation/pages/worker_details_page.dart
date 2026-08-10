@@ -9,6 +9,7 @@ import 'package:workers/src/domain/entities/worker_status.dart';
 import 'package:workers/src/domain/entities/worker_type.dart';
 import 'package:workers/src/domain/usecases/get_worker_usecase.dart';
 import 'package:workers/src/presentation/services/worker_branch_assigner.dart';
+import 'package:workers/src/presentation/services/worker_role_assigner.dart';
 import 'package:workers/src/presentation/widgets/worker_error_state.dart';
 import 'package:workers/src/routes/worker_routes.dart';
 
@@ -155,6 +156,10 @@ class _DetailsBody extends StatelessWidget {
                   worker: worker,
                   onWorkerUpdated: onWorkerUpdated,
                 ),
+                if (sl.isRegistered<WorkerRoleAssigner>()) ...[
+                  SizedBox(height: AppSpacing.lg),
+                  sl<WorkerRoleAssigner>().buildRolesCard(worker.id),
+                ],
               ],
             ),
           ),

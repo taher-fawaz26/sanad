@@ -12,7 +12,7 @@ import 'package:shared_ui/shared_ui.dart';
 /// Section displaying the organization's contact info (phone + email).
 ///
 /// Pure and prop-driven — [phone]/[email] come from the root
-/// `OrganizationSettingsEntity` (single source of truth, `businessPhone` /
+/// `OrganizationProfileEntity` (single source of truth, `businessPhone` /
 /// `businessEmail` are only ever non-null once verified). Opens the
 /// per-field Add/Change sheets (which run the shared OTP flow) and calls
 /// [onRefresh] once a field is verified so the caller can re-pull the root
@@ -51,8 +51,8 @@ class ContactInformationSection extends StatelessWidget {
 
   /// Keeps the session's lightweight `BusinessProviderProfileModel` (read by
   /// the KPI hub / shells) coherent with a business contact change —
-  /// `OrganizationSettingsRefreshed` only updates the richer `/me` profile
-  /// this section itself reads from, not the session's copy.
+  /// `OrganizationSettingsRefreshed` only updates the richer `/settings`
+  /// profile this section itself reads from, not the session's copy.
   Future<void> _syncBusinessProfileToSession({
     String? businessEmail,
     String? businessPhone,

@@ -19,6 +19,8 @@ dependencies:
   core:
     path: ../../packages/core
   cupertino_icons: ^1.0.8
+  deep_linking:
+    path: ../../packages/deep_linking
   design_system:
     path: ../../packages/design_system
   shared_ui:

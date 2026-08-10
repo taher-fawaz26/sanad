@@ -2,16 +2,26 @@
 
 import 'package:auth/src/auth/auth_status.dart';
 import 'package:auth/src/auth/auth_status_notifier.dart';
+import 'package:auth/src/domain/entities/auth_identity_entity.dart';
 import 'package:auth/src/domain/entities/auth_response_entity.dart';
+import 'package:auth/src/domain/entities/login_result_entity.dart';
+import 'package:auth/src/domain/entities/resend_info_entity.dart';
 import 'package:auth/src/domain/entities/user_entity.dart';
+import 'package:auth/src/domain/enums/auth_account_status.dart';
+import 'package:auth/src/domain/enums/auth_flow_intent.dart';
+import 'package:auth/src/domain/enums/auth_session_status.dart';
 import 'package:auth/src/domain/enums/user_type.dart';
 import 'package:auth/src/domain/usecases/check_signin_status_usecase.dart';
 import 'package:auth/src/domain/usecases/delete_account_usecase.dart';
+import 'package:auth/src/domain/usecases/get_current_user_usecase.dart';
+import 'package:auth/src/domain/usecases/get_resend_info_usecase.dart';
 import 'package:auth/src/domain/usecases/logout_usecase.dart';
-import 'package:auth/src/domain/usecases/request_email_otp_usecase.dart';
-import 'package:auth/src/domain/usecases/sign_in_with_google_usecase.dart';
+import 'package:auth/src/domain/usecases/request_login_otp_usecase.dart';
+import 'package:auth/src/domain/usecases/request_signup_otp_usecase.dart';
+import 'package:auth/src/domain/usecases/resend_otp_usecase.dart';
+import 'package:auth/src/domain/usecases/social_login_usecase.dart';
+import 'package:auth/src/domain/usecases/social_signup_usecase.dart';
 import 'package:auth/src/domain/usecases/usecase_params.dart';
-import 'package:auth/src/domain/usecases/validate_email_usecase.dart';
 import 'package:auth/src/presentation/bloc/auth/auth_bloc.dart';
 import 'package:auth/src/session/session_manager.dart';
 import 'package:bloc_test/bloc_test.dart';
@@ -22,9 +32,15 @@ import 'package:mocktail/mocktail.dart';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
-class _MockRequestOtpUseCase extends Mock implements RequestEmailOtpUseCase {}
+class _MockRequestSignupOtpUseCase extends Mock
+    implements RequestSignupOtpUseCase {}
 
-class _MockValidateEmailUseCase extends Mock implements ValidateEmailUseCase {}
+class _MockRequestLoginOtpUseCase extends Mock
+    implements RequestLoginOtpUseCase {}
+
+class _MockResendOtpUseCase extends Mock implements ResendOtpUseCase {}
+
+class _MockGetResendInfoUseCase extends Mock implements GetResendInfoUseCase {}
 
 class _MockLogoutUseCase extends Mock implements AuthLogoutUseCase {}
 
@@ -35,8 +51,12 @@ class _MockSessionManager extends Mock implements SessionManager {}
 class _MockCheckSignInStatusUseCase extends Mock
     implements AuthCheckSignInStatusUseCase {}
 
-class _MockSignInWithGoogleUseCase extends Mock
-    implements SignInWithGoogleUseCase {}
+class _MockSocialSignupUseCase extends Mock implements SocialSignupUseCase {}
+
+class _MockSocialLoginUseCase extends Mock implements SocialLoginUseCase {}
+
+class _MockGetCurrentUserUseCase extends Mock
+    implements GetCurrentUserUseCase {}
 
 class _FakeAuthSession extends Fake implements AuthSessionEntity {}
 
@@ -52,50 +72,86 @@ const _tUser = UserEntity(
   type: UserType.client,
 );
 
+const _tIdentity = AuthIdentity(
+  id: 'sub-123',
+  email: _tEmail,
+  userType: UserType.client,
+  permissions: ['*'],
+);
+
 const _tFailure = ServerFailure(message: 'server_error');
 
 // ── Tests ──────────────────────────────────────────────────────────────────
 
 void main() {
-  late _MockRequestOtpUseCase requestOtpUseCase;
+  late _MockRequestSignupOtpUseCase requestSignupOtpUseCase;
+  late _MockRequestLoginOtpUseCase requestLoginOtpUseCase;
+  late _MockResendOtpUseCase resendOtpUseCase;
+  late _MockGetResendInfoUseCase getResendInfoUseCase;
   late _MockLogoutUseCase logoutUseCase;
   late _MockDeleteAccountUseCase deleteAccountUseCase;
   late _MockSessionManager sessionManager;
   late _MockCheckSignInStatusUseCase checkSignInStatusUseCase;
-  late _MockSignInWithGoogleUseCase signInWithGoogleUseCase;
+  late _MockSocialSignupUseCase socialSignupUseCase;
+  late _MockSocialLoginUseCase socialLoginUseCase;
+  late _MockGetCurrentUserUseCase getCurrentUserUseCase;
   late AuthStatusNotifier authStatusNotifier;
-  late _MockValidateEmailUseCase validateEmailUseCase;
+
   AuthBloc buildBloc() => AuthBloc(
-    requestOtpUseCase: requestOtpUseCase,
+    requestSignupOtpUseCase: requestSignupOtpUseCase,
+    requestLoginOtpUseCase: requestLoginOtpUseCase,
+    resendOtpUseCase: resendOtpUseCase,
+    getResendInfoUseCase: getResendInfoUseCase,
     logoutUseCase: logoutUseCase,
     deleteAccountUseCase: deleteAccountUseCase,
     sessionManager: sessionManager,
     checkSignInStatusUseCase: checkSignInStatusUseCase,
     authStatusNotifier: authStatusNotifier,
-    signInWithGoogleUseCase: signInWithGoogleUseCase,
-    validateEmailUseCase: validateEmailUseCase,
+    socialSignupUseCase: socialSignupUseCase,
+    socialLoginUseCase: socialLoginUseCase,
+    getCurrentUserUseCase: getCurrentUserUseCase,
   );
 
   setUpAll(() {
     registerFallbackValue(const RequestEmailOtpParams(email: ''));
-    registerFallbackValue(const ValidateEmailParams(email: ''));
     registerFallbackValue(const DeleteAccountParams(userSub: ''));
     registerFallbackValue(const NoParams());
     registerFallbackValue(_FakeAuthSession());
+    registerFallbackValue(_tIdentity);
   });
 
   setUp(() {
-    requestOtpUseCase = _MockRequestOtpUseCase();
+    requestSignupOtpUseCase = _MockRequestSignupOtpUseCase();
+    requestLoginOtpUseCase = _MockRequestLoginOtpUseCase();
+    resendOtpUseCase = _MockResendOtpUseCase();
+    getResendInfoUseCase = _MockGetResendInfoUseCase();
     logoutUseCase = _MockLogoutUseCase();
     deleteAccountUseCase = _MockDeleteAccountUseCase();
     sessionManager = _MockSessionManager();
     checkSignInStatusUseCase = _MockCheckSignInStatusUseCase();
-    signInWithGoogleUseCase = _MockSignInWithGoogleUseCase();
-    validateEmailUseCase = _MockValidateEmailUseCase();
+    socialSignupUseCase = _MockSocialSignupUseCase();
+    socialLoginUseCase = _MockSocialLoginUseCase();
+    getCurrentUserUseCase = _MockGetCurrentUserUseCase();
     authStatusNotifier = AuthStatusNotifier();
 
     when(() => sessionManager.save(any())).thenAnswer((_) async {});
     when(() => sessionManager.clear()).thenAnswer((_) async {});
+    when(
+      () => sessionManager.hydrateIdentity(any()),
+    ).thenAnswer((_) async => null);
+    when(
+      () => sessionManager.primeTokens(
+        accessToken: any(named: 'accessToken'),
+        refreshToken: any(named: 'refreshToken'),
+      ),
+    ).thenAnswer((_) async {});
+    when(
+      () => sessionManager.saveFromIdentity(
+        accessToken: any(named: 'accessToken'),
+        refreshToken: any(named: 'refreshToken'),
+        identity: any(named: 'identity'),
+      ),
+    ).thenAnswer((_) async {});
   });
 
   group('AuthBloc', () {
@@ -107,29 +163,72 @@ void main() {
 
     group('AuthRequestOtpEvent', () {
       blocTest<AuthBloc, AuthState>(
-        'emits [loading, sent] when the OTP request succeeds',
+        'signIn intent calls RequestLoginOtpUseCase and emits [loading, sent]',
         build: () {
           when(
-            () => requestOtpUseCase(any()),
+            () => requestLoginOtpUseCase(any()),
           ).thenReturn(TaskEither<Failure, void>.right(null));
           return buildBloc();
         },
-        act: (bloc) => bloc.add(const AuthRequestOtpEvent(_tEmail)),
+        act: (bloc) => bloc.add(
+          const AuthRequestOtpEvent(
+            email: _tEmail,
+            intent: AuthFlowIntent.signIn,
+          ),
+        ),
         expect: () => [
           isA<AuthOtpRequestLoadingState>(),
-          isA<AuthOtpSentState>().having((s) => s.email, 'email', _tEmail),
+          isA<AuthOtpSentState>()
+              .having((s) => s.email, 'email', _tEmail)
+              .having((s) => s.intent, 'intent', AuthFlowIntent.signIn),
         ],
+        verify: (_) {
+          verify(() => requestLoginOtpUseCase(any())).called(1);
+          verifyNever(() => requestSignupOtpUseCase(any()));
+        },
       );
 
       blocTest<AuthBloc, AuthState>(
-        'emits [loading, failure] when the OTP request fails',
+        'createAccount intent calls RequestSignupOtpUseCase',
         build: () {
           when(
-            () => requestOtpUseCase(any()),
+            () => requestSignupOtpUseCase(any()),
+          ).thenReturn(TaskEither<Failure, void>.right(null));
+          return buildBloc();
+        },
+        act: (bloc) => bloc.add(
+          const AuthRequestOtpEvent(
+            email: _tEmail,
+            intent: AuthFlowIntent.createAccount,
+          ),
+        ),
+        expect: () => [
+          isA<AuthOtpRequestLoadingState>(),
+          isA<AuthOtpSentState>().having(
+            (s) => s.intent,
+            'intent',
+            AuthFlowIntent.createAccount,
+          ),
+        ],
+        verify: (_) {
+          verify(() => requestSignupOtpUseCase(any())).called(1);
+        },
+      );
+
+      blocTest<AuthBloc, AuthState>(
+        'emits [loading, failure] when the OTP request fails (e.g. 404/409)',
+        build: () {
+          when(
+            () => requestLoginOtpUseCase(any()),
           ).thenReturn(TaskEither.left(_tFailure));
           return buildBloc();
         },
-        act: (bloc) => bloc.add(const AuthRequestOtpEvent(_tEmail)),
+        act: (bloc) => bloc.add(
+          const AuthRequestOtpEvent(
+            email: _tEmail,
+            intent: AuthFlowIntent.signIn,
+          ),
+        ),
         expect: () => [
           isA<AuthOtpRequestLoadingState>(),
           isA<AuthOtpRequestFailureState>(),
@@ -137,89 +236,49 @@ void main() {
       );
     });
 
-    // ── Validate email ─────────────────────────────────────────────────────
+    // ── Resend ─────────────────────────────────────────────────────────────
 
-    group('AuthValidateEmailEvent', () {
+    group('AuthResendOtpEvent / AuthResendInfoRequestedEvent', () {
       blocTest<AuthBloc, AuthState>(
-        'sign-in + email in use → success',
+        'resend success emits AuthOtpSentState',
         build: () {
           when(
-            () => validateEmailUseCase(any()),
-          ).thenReturn(TaskEither.right(false));
+            () => resendOtpUseCase(any()),
+          ).thenReturn(TaskEither<Failure, void>.right(null));
           return buildBloc();
         },
-        act: (bloc) => bloc.add(
-          const AuthValidateEmailEvent(email: _tEmail, isLogin: true),
-        ),
-        expect: () => [
-          isA<AuthValidateEmailLoadingState>(),
-          isA<AuthValidateEmailSuccessState>(),
-        ],
+        act: (bloc) => bloc.add(const AuthResendOtpEvent(_tEmail)),
+        expect: () => [isA<AuthOtpSentState>()],
       );
 
       blocTest<AuthBloc, AuthState>(
-        'sign-in + email not found → failure',
+        'resend-info success emits AuthResendInfoState',
         build: () {
-          when(
-            () => validateEmailUseCase(any()),
-          ).thenReturn(TaskEither.right(true));
+          when(() => getResendInfoUseCase(any())).thenReturn(
+            TaskEither.right(
+              const ResendInfo(
+                canResend: false,
+                remainingSeconds: 42,
+                attemptsLeft: 2,
+              ),
+            ),
+          );
           return buildBloc();
         },
-        act: (bloc) => bloc.add(
-          const AuthValidateEmailEvent(email: _tEmail, isLogin: true),
-        ),
+        act: (bloc) => bloc.add(const AuthResendInfoRequestedEvent(_tEmail)),
         expect: () => [
-          isA<AuthValidateEmailLoadingState>(),
-          isA<AuthValidateEmailFailureState>().having(
-            (s) => s.failure.message,
-            'message',
-            'errors.email_not_found',
-          ),
-        ],
-      );
-
-      blocTest<AuthBloc, AuthState>(
-        'sign-up + email available → success',
-        build: () {
-          when(
-            () => validateEmailUseCase(any()),
-          ).thenReturn(TaskEither.right(true));
-          return buildBloc();
-        },
-        act: (bloc) => bloc.add(
-          const AuthValidateEmailEvent(email: _tEmail, isLogin: false),
-        ),
-        expect: () => [
-          isA<AuthValidateEmailLoadingState>(),
-          isA<AuthValidateEmailSuccessState>(),
-        ],
-      );
-
-      blocTest<AuthBloc, AuthState>(
-        'sign-up + email in use → failure',
-        build: () {
-          when(
-            () => validateEmailUseCase(any()),
-          ).thenReturn(TaskEither.right(false));
-          return buildBloc();
-        },
-        act: (bloc) => bloc.add(
-          const AuthValidateEmailEvent(email: _tEmail, isLogin: false),
-        ),
-        expect: () => [
-          isA<AuthValidateEmailLoadingState>(),
-          isA<AuthValidateEmailFailureState>().having(
-            (s) => s.failure.message,
-            'message',
-            'errors.email_not_valid',
+          isA<AuthResendInfoState>().having(
+            (s) => s.resendInfo.remainingSeconds,
+            'remainingSeconds',
+            42,
           ),
         ],
       );
     });
 
     // Email OTP verification (session start, onboarding hand-off) is now
-    // owned by `AuthOtpVerifier` — see auth_otp_verifier_test.dart. `AuthBloc`
-    // no longer has a verify-OTP event/state pair.
+    // called directly from `EmailOtpPage` — the two verify endpoints have
+    // different response shapes and no longer fit a shared Bloc event.
 
     // ── Logout ───────────────────────────────────────────────────────────
 
@@ -238,9 +297,6 @@ void main() {
           isA<AuthLogoutSuccessState>(),
         ],
         verify: (_) {
-          // The bloc delegates to SessionManager.clear, which is the single
-          // writer of AuthStatusNotifier.unauthenticated. The notifier itself
-          // is covered in session_manager_test.dart.
           verify(() => sessionManager.clear()).called(1);
         },
       );
@@ -268,11 +324,14 @@ void main() {
 
     group('AuthCheckSignInStatusEvent', () {
       blocTest<AuthBloc, AuthState>(
-        'emits [loading, success] when a valid session exists',
+        'emits [loading, success] and hydrates identity when a session exists',
         build: () {
           when(
             () => checkSignInStatusUseCase(any()),
           ).thenReturn(TaskEither.right(_tUser));
+          when(
+            () => getCurrentUserUseCase(any()),
+          ).thenReturn(TaskEither.right(_tIdentity));
           return buildBloc();
         },
         act: (bloc) => bloc.add(AuthCheckSignInStatusEvent()),
@@ -284,9 +343,30 @@ void main() {
             _tUser,
           ),
         ],
-        // The bloc no longer flips AuthStatusNotifier on success — that is
-        // owned by SessionManager.restore() during bootstrap. The bloc only
-        // owns its own AuthState stream here.
+        verify: (_) {
+          verify(() => sessionManager.hydrateIdentity(_tIdentity)).called(1);
+        },
+      );
+
+      blocTest<AuthBloc, AuthState>(
+        'a failed GET /me does not block an otherwise-valid local session',
+        build: () {
+          when(
+            () => checkSignInStatusUseCase(any()),
+          ).thenReturn(TaskEither.right(_tUser));
+          when(
+            () => getCurrentUserUseCase(any()),
+          ).thenReturn(TaskEither.left(_tFailure));
+          return buildBloc();
+        },
+        act: (bloc) => bloc.add(AuthCheckSignInStatusEvent()),
+        expect: () => [
+          isA<AuthCheckSignInStatusLoadingState>(),
+          isA<AuthCheckSignInStatusSuccessState>(),
+        ],
+        verify: (_) {
+          verifyNever(() => sessionManager.hydrateIdentity(any()));
+        },
       );
 
       blocTest<AuthBloc, AuthState>(
@@ -388,6 +468,113 @@ void main() {
                 'failure.message',
                 'server_error',
               ),
+        ],
+      );
+    });
+
+    // ── Google Sign-In ─────────────────────────────────────────────────────
+
+    group('AuthGoogleSignInEvent', () {
+      blocTest<AuthBloc, AuthState>(
+        'createAccount + onboarding response emits AuthOnboardingRequiredState',
+        build: () {
+          when(() => socialSignupUseCase(any())).thenReturn(
+            TaskEither.right(
+              const OnboardingAuthEntity(
+                status: AuthSessionStatus.onboarding,
+                onboardingToken: 'onboarding-token',
+                isEmailVerified: false,
+                isProfileCreated: false,
+                user: _tUser,
+              ),
+            ),
+          );
+          return buildBloc();
+        },
+        act: (bloc) => bloc.add(
+          const AuthGoogleSignInEvent(AuthFlowIntent.createAccount),
+        ),
+        expect: () => [
+          isA<AuthGoogleSignInLoadingState>(),
+          isA<AuthOnboardingRequiredState>().having(
+            (s) => s.onboardingToken,
+            'onboardingToken',
+            'onboarding-token',
+          ),
+        ],
+      );
+
+      blocTest<AuthBloc, AuthState>(
+        'signIn + ACTIVE composes a session via GET /me and emits authenticated',
+        build: () {
+          when(() => socialLoginUseCase(any())).thenReturn(
+            TaskEither.right(
+              const LoginResult(
+                status: AuthAccountStatus.active,
+                accessToken: 'access-token',
+                refreshToken: 'refresh-token',
+              ),
+            ),
+          );
+          when(
+            () => getCurrentUserUseCase(any()),
+          ).thenReturn(TaskEither.right(_tIdentity));
+          return buildBloc();
+        },
+        act: (bloc) =>
+            bloc.add(const AuthGoogleSignInEvent(AuthFlowIntent.signIn)),
+        expect: () => [
+          isA<AuthGoogleSignInLoadingState>(),
+          isA<AuthAuthenticatedState>(),
+        ],
+        verify: (_) {
+          verify(
+            () => sessionManager.primeTokens(
+              accessToken: 'access-token',
+              refreshToken: 'refresh-token',
+            ),
+          ).called(1);
+          verify(
+            () => sessionManager.saveFromIdentity(
+              accessToken: 'access-token',
+              refreshToken: 'refresh-token',
+              identity: _tIdentity,
+            ),
+          ).called(1);
+        },
+      );
+
+      blocTest<AuthBloc, AuthState>(
+        'signIn + SUSPENDED emits AuthSuspendedState',
+        build: () {
+          when(() => socialLoginUseCase(any())).thenReturn(
+            TaskEither.right(
+              const LoginResult(status: AuthAccountStatus.suspended),
+            ),
+          );
+          return buildBloc();
+        },
+        act: (bloc) =>
+            bloc.add(const AuthGoogleSignInEvent(AuthFlowIntent.signIn)),
+        expect: () => [
+          isA<AuthGoogleSignInLoadingState>(),
+          isA<AuthSuspendedState>(),
+        ],
+      );
+
+      blocTest<AuthBloc, AuthState>(
+        'signIn + failure emits AuthGoogleSignInFailureState',
+        build: () {
+          when(
+            () => socialLoginUseCase(any()),
+          ).thenReturn(TaskEither.left(_tFailure));
+          return buildBloc();
+        },
+        act: (bloc) =>
+            bloc.add(const AuthGoogleSignInEvent(AuthFlowIntent.signIn)),
+        expect: () => [
+          isA<AuthGoogleSignInLoadingState>(),
+          isA<AuthGoogleSignInFailureState>(),
         ],
       );
     });

@@ -8,9 +8,9 @@ import 'package:auth/src/domain/enums/worker_type.dart';
 /// The backend's `profile` oneOf has exactly three wire shapes:
 /// `ClientAuthProfileResponseDto`, `WorkerAuthProfileResponseDto`, and
 /// `BusinessProviderAuthProfileResponseDto` — the latter shared by BOTH
-/// [UserType.individualProvider] and [UserType.companyProvider] accounts.
-/// There is no separate "individual provider" wire shape; the backend does
-/// not distinguish them at this layer.
+/// [UserType.individualProvider] and [UserType.organizationProvider]
+/// accounts. There is no separate "individual provider" wire shape; the
+/// backend does not distinguish them at this layer.
 ///
 /// [fromJson] is the sole dispatcher, replacing the old `AuthProfileFactory`.
 /// Kept `sealed` (not just abstract) so any switch over a parsed profile is
@@ -26,9 +26,14 @@ sealed class AuthProfileModel extends AuthProfileEntity {
       case UserType.client:
         return ClientProfileModel.fromJson(json);
       case UserType.individualProvider:
-      case UserType.companyProvider:
+      case UserType.organizationProvider:
         return BusinessProviderProfileModel.fromJson(json);
+      // `manager` is a distinct top-level userType from the backend's
+      // enum (§8), but shares the WorkerAuthProfileResponseDto shape —
+      // that DTO's own `type` field (worker|manager) is what actually
+      // discriminates manager-vs-worker within the profile payload.
       case UserType.worker:
+      case UserType.manager:
         return WorkerProfileModel.fromJson(json);
       case UserType.admin:
         throw StateError(

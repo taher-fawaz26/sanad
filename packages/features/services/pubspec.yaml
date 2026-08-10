@@ -33,6 +33,8 @@ dependencies:
     path: ../../network
   shared_ui:
     path: ../../shared_ui
+  sheet_navigation:
+    path: ../../sheet_navigation
 
 dev_dependencies:
   bloc_test: ^10.0.0

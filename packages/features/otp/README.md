@@ -95,11 +95,17 @@ extension OtpResultX<T> on OtpResult<T> { bool get isVerified; }
 ## Basic usage
 
 ```dart
-final result = await OtpFlow.start<AuthResponseEntity>(
+final result = await OtpFlow.start<VerificationResult>(
   context,
   OtpFlowConfig.email(
     destination: email,
-    verifier: AuthOtpVerifier(email: email, requestEmailOtp: ..., verifyEmailOtp: ...),
+    verifier: ContactVerificationVerifier(
+      purpose: purpose,
+      target: email,
+      requestVerification: requestVerification,
+      resendVerification: resendVerification,
+      verifyContact: verifyContact,
+    ),
   ),
 );
 
@@ -139,10 +145,13 @@ exactly two responsibilities:
 Any side effect that must happen the moment verification succeeds (starting a
 session, updating an in-memory status notifier, persisting the new value)
 belongs **inside** `verifyCode`, not in the caller of `OtpFlow.start` — see
-`AuthOtpVerifier` in `packages/features/auth/lib/src/domain/verifiers/` for the
-reference implementation: it wraps `RequestEmailOtpUseCase`/
-`VerifyEmailOtpUseCase` and, on a successful verify, starts the session and
-updates `AuthStatusNotifier` before resolving.
+`ContactVerificationVerifier` in
+`packages/features/contact_verification/lib/src/domain/verifiers/` for a
+reference implementation: it wraps `RequestVerificationUseCase`/
+`ResendVerificationUseCase`/`VerifyContactUseCase` and resolves to a
+`VerificationResult` on a successful verify. For the simplest possible
+integration (a callback pair, no dedicated verifier class), see
+`CallbackOtpVerifier` used by `invitation`.
 
 ## OTP lifecycle (`OtpBloc`)
 

@@ -1,3 +1,4 @@
+import 'package:auth/src/domain/enums/auth_flow_intent.dart';
 import 'package:auth/src/presentation/bloc/auth/auth_bloc.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
@@ -41,7 +42,9 @@ class AuthPage extends HookWidget {
   final bool initialIsLogin;
 
   /// Called once the OTP has been dispatched — navigate to the OTP screen.
-  final ValueChanged<String> onOtpSent;
+  /// Carries [AuthFlowIntent] so the OTP screen verifies against the right
+  /// endpoint (`login/verify` vs `signup/verify`).
+  final void Function(String email, AuthFlowIntent intent) onOtpSent;
 
   /// Called when Google Sign-In completes for an existing user.
   final VoidCallback? onAuthenticated;
@@ -59,12 +62,19 @@ class AuthPage extends HookWidget {
 
     void toggleMode() => isLogin.value = !isLogin.value;
 
+    AuthFlowIntent currentIntent() =>
+        isLogin.value ? AuthFlowIntent.signIn : AuthFlowIntent.createAccount;
+
     void submit() {
       if (!(formKey.currentState?.validate() ?? false)) return;
+      // Explicit Sign in / Create account choice (product decision): the
+      // matching endpoint is called directly — no `validate-info` probe, no
+      // silent auto-branch. 404 (login, unknown email) / 409 (signup, email
+      // already registered) surface as real errors.
       context.read<AuthBloc>().add(
-        AuthValidateEmailEvent(
+        AuthRequestOtpEvent(
           email: emailController.text.trim(),
-          isLogin: isLogin.value,
+          intent: currentIntent(),
         ),
       );
     }
@@ -132,25 +142,14 @@ class AuthPage extends HookWidget {
 
     return BlocListener<AuthBloc, AuthState>(
       listenWhen: (_, curr) =>
-          curr is AuthValidateEmailSuccessState ||
-          curr is AuthValidateEmailFailureState ||
           curr is AuthOtpSentState ||
           curr is AuthOtpRequestFailureState ||
           curr is AuthAuthenticatedState ||
           curr is AuthOnboardingRequiredState ||
           curr is AuthGoogleSignInFailureState,
       listener: (context, state) {
-        if (state is AuthValidateEmailSuccessState) {
-          context.read<AuthBloc>().add(
-            AuthRequestOtpEvent(emailController.text.trim()),
-          );
-        } else if (state is AuthValidateEmailFailureState) {
-          showAppErrorSnackbar(
-            context: context,
-            title: state.failure.localizedMessage(),
-          );
-        } else if (state is AuthOtpSentState) {
-          onOtpSent(state.email);
+        if (state is AuthOtpSentState) {
+          onOtpSent(state.email, state.intent);
         } else if (state is AuthOtpRequestFailureState) {
           showAppErrorSnackbar(
             context: context,
@@ -235,9 +234,7 @@ class AuthPage extends HookWidget {
                 SizedBox(height: responsiveDimension(AppSpacing.xl)),
                 BlocBuilder<AuthBloc, AuthState>(
                   builder: (context, state) {
-                    final isLoading =
-                        state is AuthOtpRequestLoadingState ||
-                        state is AuthValidateEmailLoadingState;
+                    final isLoading = state is AuthOtpRequestLoadingState;
                     return AppButton(
                       onPressed: isLoading ? null : submit,
                       label: 'auth.continue_button'.tr(),
@@ -263,7 +260,7 @@ class AuthPage extends HookWidget {
                       onPressed: isLoading
                           ? null
                           : () => context.read<AuthBloc>().add(
-                              AuthGoogleSignInEvent(),
+                              AuthGoogleSignInEvent(currentIntent()),
                             ),
                       icon: SvgPicture.string(
                         _googleLogoSvg,

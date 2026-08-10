@@ -60,7 +60,7 @@ const _tUser = UserModel(
   email: 'seed@sanad.test',
   isVerified: true,
   isActive: true,
-  type: UserType.companyProvider,
+  type: UserType.organizationProvider,
 );
 
 const _tProfile = BusinessProviderProfileModel(
@@ -335,8 +335,8 @@ void main() {
     });
 
     test('userType / isUserType', () {
-      expect(manager.userType, UserType.companyProvider);
-      expect(manager.isUserType(UserType.companyProvider), isTrue);
+      expect(manager.userType, UserType.organizationProvider);
+      expect(manager.isUserType(UserType.organizationProvider), isTrue);
       expect(manager.isUserType(UserType.client), isFalse);
     });
 

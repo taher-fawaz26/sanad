@@ -124,7 +124,8 @@ void main() {
       ),
     ).thenAnswer((invocation) {
       final parser =
-          invocation.namedArguments[#parser] as OrganizationMediaResponse Function(dynamic);
+          invocation.namedArguments[#parser]
+              as OrganizationMediaResponse Function(dynamic);
       return TaskEither.right(parser(<String, dynamic>{'mediaId': 'm1'}));
     });
 

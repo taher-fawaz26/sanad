@@ -1,7 +1,6 @@
 import 'package:account_settings/src/domain/entities/account_settings_entity.dart';
 import 'package:account_settings/src/domain/enums/preferred_language.dart';
 import 'package:account_settings/src/domain/usecases/account_settings_params.dart';
-import 'package:account_settings/src/domain/usecases/get_account_settings_usecase.dart';
 import 'package:account_settings/src/domain/usecases/update_account_settings_usecase.dart';
 import 'package:account_settings/src/presentation/bloc/account_settings/account_settings_bloc.dart';
 import 'package:auth/auth.dart'
@@ -11,9 +10,6 @@ import 'package:core/core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:mocktail/mocktail.dart';
-
-class _MockGetAccountSettingsUseCase extends Mock
-    implements GetAccountSettingsUseCase {}
 
 class _MockUpdateAccountSettingsUseCase extends Mock
     implements UpdateAccountSettingsUseCase {}
@@ -38,6 +34,13 @@ const _seededSettings = AccountSettingsEntity(
   preferredLanguage: PreferredLanguage.ar,
 );
 
+const _refreshedAuthSettings = AuthAccountSettingsEntity(
+  id: 'e3521ee5-3f43-4af1-819b-8c0f1f164a5f',
+  name: 'Layla Al Mansoori',
+  email: 'seed-company-provider-1@sanad.test',
+  preferredLanguage: 'en',
+);
+
 const _refreshedSettings = AccountSettingsEntity(
   id: 'e3521ee5-3f43-4af1-819b-8c0f1f164a5f',
   name: 'Layla Al Mansoori',
@@ -46,12 +49,10 @@ const _refreshedSettings = AccountSettingsEntity(
 );
 
 void main() {
-  late _MockGetAccountSettingsUseCase getAccountSettings;
   late _MockUpdateAccountSettingsUseCase updateAccountSettings;
   late _MockSessionManager sessionManager;
 
   setUpAll(() {
-    registerFallbackValue(const NoParams());
     registerFallbackValue(
       const UpdateAccountSettingsParams(
         preferredLanguage: PreferredLanguage.ar,
@@ -61,14 +62,12 @@ void main() {
   });
 
   setUp(() {
-    getAccountSettings = _MockGetAccountSettingsUseCase();
     updateAccountSettings = _MockUpdateAccountSettingsUseCase();
     sessionManager = _MockSessionManager();
     when(() => sessionManager.update(any())).thenAnswer((_) async => null);
   });
 
   AccountSettingsBloc build() => AccountSettingsBloc(
-    getAccountSettings: getAccountSettings,
     updateAccountSettings: updateAccountSettings,
     sessionManager: sessionManager,
   );
@@ -87,9 +86,6 @@ void main() {
           .having((s) => s.loadStatus, 'loadStatus', RequestStatus.success)
           .having((s) => s.settings, 'settings', _seededSettings),
     ],
-    verify: (_) {
-      verifyNever(() => getAccountSettings(any()));
-    },
   );
 
   blocTest<AccountSettingsBloc, AccountSettingsState>(
@@ -107,43 +103,38 @@ void main() {
   );
 
   blocTest<AccountSettingsBloc, AccountSettingsState>(
-    'AccountSettingsRefreshed hits network and syncs the session',
-    build: build,
-    setUp: () {
-      when(() => getAccountSettings(any())).thenAnswer(
-        (_) => TaskEither.right(_refreshedSettings),
-      );
+    'AccountSettingsRefreshed reseeds from the session snapshot, '
+    'no network call',
+    build: () {
+      when(
+        () => sessionManager.accountSettings,
+      ).thenReturn(_refreshedAuthSettings);
+      return build();
     },
     act: (bloc) => bloc.add(const AccountSettingsRefreshed()),
     expect: () => [
-      isA<AccountSettingsState>().having(
-        (s) => s.loadStatus,
-        'loadStatus',
-        RequestStatus.loading,
-      ),
       isA<AccountSettingsState>()
           .having((s) => s.loadStatus, 'loadStatus', RequestStatus.success)
           .having((s) => s.settings, 'settings', _refreshedSettings),
     ],
     verify: (_) {
-      verify(() => sessionManager.update(any())).called(1);
+      verifyNever(() => sessionManager.update(any()));
     },
   );
 
   blocTest<AccountSettingsBloc, AccountSettingsState>(
-    'refresh failure surfaces the failure',
-    build: build,
-    setUp: () {
-      when(() => getAccountSettings(any())).thenAnswer(
-        (_) => TaskEither.left(const ServerFailure(message: 'boom')),
-      );
+    'AccountSettingsRefreshed with no session emits success but '
+    'null settings',
+    build: () {
+      when(() => sessionManager.accountSettings).thenReturn(null);
+      return build();
     },
     act: (bloc) => bloc.add(const AccountSettingsRefreshed()),
-    verify: (bloc) {
-      expect(bloc.state.loadStatus, RequestStatus.failure);
-      expect(bloc.state.failure, isA<ServerFailure>());
-      verifyNever(() => sessionManager.update(any()));
-    },
+    expect: () => [
+      isA<AccountSettingsState>()
+          .having((s) => s.loadStatus, 'loadStatus', RequestStatus.success)
+          .having((s) => s.settings, 'settings', isNull),
+    ],
   );
 
   blocTest<AccountSettingsBloc, AccountSettingsState>(
@@ -173,6 +164,28 @@ void main() {
     ],
     verify: (_) {
       verify(() => sessionManager.update(any())).called(1);
+    },
+  );
+
+  blocTest<AccountSettingsBloc, AccountSettingsState>(
+    'update failure surfaces the failure',
+    build: build,
+    setUp: () {
+      when(() => updateAccountSettings(any())).thenAnswer(
+        (_) => TaskEither.left(const ServerFailure(message: 'boom')),
+      );
+    },
+    act: (bloc) => bloc.add(
+      const AccountSettingsUpdated(
+        UpdateAccountSettingsParams(
+          preferredLanguage: PreferredLanguage.en,
+        ),
+      ),
+    ),
+    verify: (bloc) {
+      expect(bloc.state.saveStatus, RequestStatus.failure);
+      expect(bloc.state.saveFailure, isA<ServerFailure>());
+      verifyNever(() => sessionManager.update(any()));
     },
   );
 }

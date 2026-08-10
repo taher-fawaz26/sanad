@@ -29,7 +29,6 @@ export 'src/utils/uuid_v4.dart';
 export 'src/validators/date_validators.dart';
 export 'src/validators/email_validator.dart';
 export 'src/validators/emirates_id_validator.dart';
-export 'src/validators/password_validator.dart';
 export 'src/validators/person_name_validator.dart';
 export 'src/validators/phone_validator.dart';
 export 'src/validators/uae_phone_validator.dart';

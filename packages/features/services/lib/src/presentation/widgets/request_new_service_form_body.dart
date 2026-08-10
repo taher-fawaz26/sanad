@@ -3,16 +3,15 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:media_upload/media_upload.dart';
-import 'package:services/src/presentation/models/mock_add_service_data.dart';
 import 'package:services/src/presentation/widgets/add_service_images_field.dart';
-import 'package:shared_ui/shared_ui.dart';
 
-/// The Request New Service form's fields — UI-only, no submit/category API.
+/// The Request New Service form's fields.
 ///
-/// Category and Images reuse the exact same fields/wiring as
-/// `AddServiceFormBody`; Requested Service Name is a plain required text
-/// field rather than the searchable catalog picker, since this screen exists
-/// precisely for services the catalog doesn't have.
+/// Per `CreateServiceRequestDto`, there is no existing-category-id field —
+/// the backend only accepts a free-text `requestedServiceName` and/or
+/// `requestedCategoryName` (at least one of the two, "or both"), a
+/// description, and 1-5 images. There is deliberately no "Category" picker
+/// bound to the real category list here.
 class RequestNewServiceFormBody extends StatefulWidget {
   /// Creates the Request New Service form body.
   const RequestNewServiceFormBody({
@@ -32,14 +31,24 @@ class RequestNewServiceFormBody extends StatefulWidget {
 /// `GlobalKey<RequestNewServiceFormBodyState>`.
 class RequestNewServiceFormBodyState extends State<RequestNewServiceFormBody> {
   final _serviceNameController = TextEditingController();
+  final _categoryNameController = TextEditingController();
   final _descriptionController = TextEditingController();
 
-  String? _category;
   bool _wasComplete = false;
+
+  String? get requestedServiceName => _serviceNameController.text.trim().isEmpty
+      ? null
+      : _serviceNameController.text.trim();
+  String? get requestedCategoryName =>
+      _categoryNameController.text.trim().isEmpty
+      ? null
+      : _categoryNameController.text.trim();
+  String get description => _descriptionController.text.trim();
 
   @override
   void dispose() {
     _serviceNameController.dispose();
+    _categoryNameController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
@@ -51,20 +60,25 @@ class RequestNewServiceFormBodyState extends State<RequestNewServiceFormBody> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AppSelectField(
-            label: 'services.add_service.category_label'.tr(),
-            isRequired: true,
-            hint: 'services.add_service.category_hint'.tr(),
-            value: _category,
-            onTap: _pickCategory,
-          ),
-          SizedBox(height: AppSpacing.lg),
           AppTextField(
             label: 'services.request_new_service.service_name_label'.tr(),
-            isRequired: true,
             hint: 'services.request_new_service.service_name_hint'.tr(),
             controller: _serviceNameController,
             onChanged: (_) => _reportCompleteness(),
+          ),
+          SizedBox(height: AppSpacing.lg),
+          AppTextField(
+            label: 'services.request_new_service.category_name_label'.tr(),
+            hint: 'services.request_new_service.category_name_hint'.tr(),
+            controller: _categoryNameController,
+            onChanged: (_) => _reportCompleteness(),
+          ),
+          SizedBox(height: AppSpacing.sm),
+          Text(
+            'services.request_new_service.name_or_category_hint'.tr(),
+            style: context.appTypography.smallNormal.copyWith(
+              color: context.appColors.textMuted,
+            ),
           ),
           SizedBox(height: AppSpacing.lg),
           AppTextField(
@@ -87,29 +101,10 @@ class RequestNewServiceFormBodyState extends State<RequestNewServiceFormBody> {
     );
   }
 
-  Future<void> _pickCategory() async {
-    final selected = await showAppSelectSheet<String>(
-      context: context,
-      title: 'services.add_service.category_label'.tr(),
-      searchHint: 'services.add_service.search_hint'.tr(),
-      singleSelect: true,
-      getId: (category) => category,
-      searchFilter: (category, query) => category.toLowerCase().contains(query),
-      items: MockAddServiceData.categories,
-      itemBuilder: (context, category, isSelected, onTap) =>
-          AppTableRow(title: category, onTap: onTap),
-    );
-    if (selected == null || selected.isEmpty) return;
-
-    setState(() => _category = selected.first);
-    _reportCompleteness();
-  }
-
   void _reportCompleteness() {
     final isComplete =
-        _category != null &&
-        _serviceNameController.text.trim().isNotEmpty &&
-        _descriptionController.text.trim().isNotEmpty &&
+        (requestedServiceName != null || requestedCategoryName != null) &&
+        description.isNotEmpty &&
         context.read<MediaUploadBloc>().state.uploadedCount > 0;
 
     if (isComplete == _wasComplete) return;

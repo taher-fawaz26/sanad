@@ -1,7 +1,8 @@
 name: invitation
 description: >
-  Temporary UI-only invitation flow (details, OTP, success) — no backend
-  integration; see InvitationModule doc comment.
+  Worker-invitation acceptance flow (details, OTP, success) — backed by the
+  `workers/verify-token` / `workers/invitations/*` endpoints; see
+  InvitationModule doc comment.
 version: 0.1.0
 publish_to: none
 resolution: workspace
@@ -13,12 +14,20 @@ environment:
 dependencies:
   app_assets:
     path: ../../app_assets
+  auth:
+    path: ../auth
   core:
     path: ../../core
   design_system:
     path: ../../design_system
+  localization:
+    path: ../../localization
+  network:
+    path: ../../network
   shared_ui:
     path: ../../shared_ui
+  workers:
+    path: ../workers
   easy_localization: ^3.0.8
   equatable: ^2.1.0
   flutter:
@@ -30,8 +39,10 @@ dependencies:
     path: ../otp
 
 dev_dependencies:
+  bloc_test: ^10.0.0
   flutter_test:
     sdk: flutter
+  mocktail: ^1.0.4
   testing:
     path: ../../testing
   very_good_analysis: ^9.0.0

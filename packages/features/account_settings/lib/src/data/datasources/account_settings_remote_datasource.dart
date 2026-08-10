@@ -6,9 +6,10 @@ import 'package:fpdart/fpdart.dart';
 import 'package:network/network.dart';
 
 /// Remote data source for signed-in account settings.
+///
+/// There is no `GET /account-settings` on the live backend — only
+/// `PATCH /account-settings` — so this only exposes the update call.
 abstract interface class AccountSettingsRemoteDataSource {
-  TaskEither<Failure, AccountSettingsResponse> getAccountSettings();
-
   TaskEither<Failure, AccountSettingsResponse> updateAccountSettings(
     UpdateAccountSettingsRequest request,
   );
@@ -19,16 +20,6 @@ class AccountSettingsRemoteDataSourceImpl
   const AccountSettingsRemoteDataSourceImpl(this._apiClient);
 
   final BaseApiClient _apiClient;
-
-  @override
-  TaskEither<Failure, AccountSettingsResponse> getAccountSettings() =>
-      _apiClient.request<AccountSettingsResponse>(
-        path: AccountSettingsApiPaths.accountSettings,
-        method: RequestMethod.get,
-        parser: (data) => AccountSettingsResponse.fromJson(
-          data as Map<String, dynamic>,
-        ),
-      );
 
   @override
   TaskEither<Failure, AccountSettingsResponse> updateAccountSettings(

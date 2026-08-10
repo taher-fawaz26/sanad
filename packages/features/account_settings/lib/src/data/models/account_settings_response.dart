@@ -1,7 +1,7 @@
 import 'package:account_settings/src/domain/entities/account_settings_entity.dart';
 import 'package:account_settings/src/domain/enums/preferred_language.dart';
 
-/// DTO for `GET/PATCH account-settings`.
+/// DTO for `PATCH account-settings`.
 ///
 /// Backend spec: `name` and `phone` are nullable; `id`, `email`, and
 /// `preferredLanguage` are required.

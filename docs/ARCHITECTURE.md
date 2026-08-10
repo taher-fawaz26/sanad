@@ -26,7 +26,6 @@ sanad/
 │   └── features/             # Business feature packages
 │       ├── auth/             # Authentication (reference impl)
 │       ├── otp/              # OTP verification
-│       ├── forgot_password/  # Password reset
 │       ├── branches/         # Provider branches
 │       └── ...               # See PACKAGE_GUIDE.md
 └── pubspec.yaml               # Workspace root — `workspace:` list + `melos:` config

@@ -2,7 +2,6 @@ import 'package:account_settings/src/data/mappers/auth_account_settings_mapper.d
 import 'package:account_settings/src/domain/entities/account_settings_entity.dart';
 import 'package:account_settings/src/domain/enums/preferred_language.dart';
 import 'package:account_settings/src/domain/usecases/account_settings_params.dart';
-import 'package:account_settings/src/domain/usecases/get_account_settings_usecase.dart';
 import 'package:account_settings/src/domain/usecases/update_account_settings_usecase.dart';
 import 'package:auth/auth.dart' show SessionManager;
 import 'package:core/core.dart';
@@ -16,21 +15,24 @@ part 'account_settings_state.dart';
 ///
 /// Reads seed data from the auth session ([SessionManager]) — the same
 /// snapshot that came back in the login/verify response — instead of firing
-/// its own `GET /account-settings` on every open. Explicit
-/// [AccountSettingsRefreshed] events (e.g. pull-to-refresh) still hit the
-/// server; the initial [AccountSettingsLoaded] does not.
+/// a network call on every open. There is no `GET /account-settings` on the
+/// live backend (only `PATCH /account-settings` exists), so both the initial
+/// [AccountSettingsLoaded] and the explicit [AccountSettingsRefreshed] (e.g.
+/// pull-to-refresh, or after a phone/email change) reseed from the session
+/// snapshot rather than hitting the server.
 ///
 /// After a successful PATCH the updated entity is written back into the
 /// session via [SessionManager.update] so every other consumer of the
-/// session sees the fresh value immediately.
+/// session sees the fresh value immediately. Likewise, phone/email changes
+/// write straight into the session (via `SessionManager.setPhone`/`setEmail`)
+/// before [AccountSettingsRefreshed] is dispatched, so the reseed here always
+/// observes the latest value.
 class AccountSettingsBloc
     extends Bloc<AccountSettingsEvent, AccountSettingsState> {
   AccountSettingsBloc({
-    required GetAccountSettingsUseCase getAccountSettings,
     required UpdateAccountSettingsUseCase updateAccountSettings,
     required SessionManager sessionManager,
-  }) : _getAccountSettings = getAccountSettings,
-       _updateAccountSettings = updateAccountSettings,
+  }) : _updateAccountSettings = updateAccountSettings,
        _sessionManager = sessionManager,
        super(const AccountSettingsState()) {
     on<AccountSettingsLoaded>(_onLoaded);
@@ -38,7 +40,6 @@ class AccountSettingsBloc
     on<AccountSettingsUpdated>(_onUpdated);
   }
 
-  final GetAccountSettingsUseCase _getAccountSettings;
   final UpdateAccountSettingsUseCase _updateAccountSettings;
   final SessionManager _sessionManager;
 
@@ -62,29 +63,21 @@ class AccountSettingsBloc
     );
   }
 
-  /// Explicit refresh (pull-to-refresh, etc.) — hits `GET account-settings`
-  /// and updates both the local state and the session cache.
-  Future<void> _onRefreshed(
+  /// Explicit refresh (pull-to-refresh, and after a phone/email change) —
+  /// there is no `GET /account-settings` on the live backend, so this
+  /// reseeds from the (already up to date) session snapshot, same as
+  /// [_onLoaded].
+  void _onRefreshed(
     AccountSettingsRefreshed event,
     Emitter<AccountSettingsState> emit,
-  ) async {
-    emit(state.copyWith(loadStatus: RequestStatus.loading, clearFailure: true));
-
-    final result = await _getAccountSettings(const NoParams()).run();
-
-    await result.fold(
-      (failure) async => emit(
-        state.copyWith(loadStatus: RequestStatus.failure, failure: failure),
+  ) {
+    final seeded = _sessionManager.accountSettings?.toAccountSettingsEntity();
+    emit(
+      state.copyWith(
+        loadStatus: RequestStatus.success,
+        settings: seeded,
+        clearFailure: true,
       ),
-      (settings) async {
-        emit(
-          state.copyWith(
-            loadStatus: RequestStatus.success,
-            settings: settings,
-          ),
-        );
-        await _syncSession(settings);
-      },
     );
   }
 

@@ -3,6 +3,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:network/network.dart';
 import 'package:organization_settings/src/data/datasources/media_upload_remote_datasource.dart';
 import 'package:organization_settings/src/data/endpoints/legal_data_api_paths.dart';
+import 'package:organization_settings/src/data/models/legal_data_extraction_response.dart';
 import 'package:organization_settings/src/data/models/legal_data_media_response.dart';
 import 'package:organization_settings/src/data/models/legal_data_response.dart';
 
@@ -26,7 +27,7 @@ abstract interface class LegalDataRemoteDataSource {
 
   void cancelUpload(String uploadKey);
 
-  TaskEither<Failure, LegalDataResponse> extract({
+  TaskEither<Failure, LegalDataExtractionResponse> extract({
     required String emiratesIdFrontId,
     required String emiratesIdBackId,
     String? tradeLicenseId,
@@ -82,11 +83,11 @@ class LegalDataRemoteDataSourceImpl implements LegalDataRemoteDataSource {
   void cancelUpload(String uploadKey) => _mediaUpload.cancelUpload(uploadKey);
 
   @override
-  TaskEither<Failure, LegalDataResponse> extract({
+  TaskEither<Failure, LegalDataExtractionResponse> extract({
     required String emiratesIdFrontId,
     required String emiratesIdBackId,
     String? tradeLicenseId,
-  }) => _apiClient.request<LegalDataResponse>(
+  }) => _apiClient.request<LegalDataExtractionResponse>(
     path: LegalDataApiPaths.extract,
     method: RequestMethod.post,
     body: {
@@ -95,7 +96,7 @@ class LegalDataRemoteDataSourceImpl implements LegalDataRemoteDataSource {
       if (tradeLicenseId != null) 'tradeLicenseId': tradeLicenseId,
     },
     parser: (data) =>
-        LegalDataResponse.fromJson(data as Map<String, dynamic>),
+        LegalDataExtractionResponse.fromJson(data as Map<String, dynamic>),
   );
 
   @override

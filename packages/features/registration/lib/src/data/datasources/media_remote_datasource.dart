@@ -32,10 +32,10 @@ abstract interface class MediaRemoteDataSource {
     String? tradeLicenseId,
   });
 
-  /// Completes provider profile by posting to [endpoint].
+  /// Completes provider profile by posting to `MediaApiPaths.profile`
+  /// (`POST auth/profile`).
   TaskEither<Failure, AuthSessionEntity> completeProfile({
     required String authorizationToken,
-    required String endpoint,
     required ProfileCompletionRequest request,
   });
 }
@@ -138,12 +138,11 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
   @override
   TaskEither<Failure, AuthSessionEntity> completeProfile({
     required String authorizationToken,
-    required String endpoint,
     required ProfileCompletionRequest request,
   }) => TaskEither.tryCatch(
     () async {
       final response = await _client.post<dynamic>(
-        endpoint,
+        MediaApiPaths.profile,
         data: request.toJson(),
         options: Options(
           headers: {'Authorization': 'Bearer $authorizationToken'},

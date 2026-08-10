@@ -11,7 +11,8 @@ class WorkingHoursEditEntry {
     required this.to,
   });
 
-  /// API weekday code (e.g. `SATURDAY`).
+  /// Exact backend weekday value (e.g. `Saturday`) — see
+  /// `WorkingHoursDayIds` in the domain layer.
   final String dayId;
 
   /// Start time in `HH:mm` (24-hour).

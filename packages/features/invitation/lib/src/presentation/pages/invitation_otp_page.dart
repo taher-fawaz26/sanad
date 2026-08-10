@@ -1,24 +1,32 @@
+import 'package:auth/auth.dart';
 import 'package:core/core.dart';
+import 'package:design_system/design_system.dart' show showAppErrorSnackbar;
 import 'package:flutter/material.dart';
-import 'package:fpdart/fpdart.dart' hide State;
 import 'package:go_router/go_router.dart';
-import 'package:invitation/src/domain/entities/invitation_mock.dart';
+import 'package:invitation/src/domain/usecases/accept_invitation_usecase.dart';
+import 'package:invitation/src/domain/usecases/get_invitation_resend_info_usecase.dart';
+import 'package:invitation/src/domain/usecases/request_invitation_otp_usecase.dart';
+import 'package:invitation/src/domain/usecases/resend_invitation_otp_usecase.dart';
+import 'package:invitation/src/domain/usecases/usecase_params.dart';
 import 'package:invitation/src/routes/invitation_routes.dart';
+import 'package:invitation/src/routing/invitation_route_args.dart';
+import 'package:localization/localization.dart';
 import 'package:otp/otp.dart';
 
 /// Screen 2 — OTP entry (Figma `2560:24688`).
 ///
-/// UI-only: verification doesn't call any API — [CallbackOtpVerifier] mocks
-/// a short delay then always succeeds. All OTP UI/state lives in the `otp`
-/// package; this page only bridges the mocked verifier to it and routes on
-/// the result.
+/// Sequencing: `request-otp` fires once here (details already verified the
+/// token, but never sent a code), then `GET resend-info` seeds the
+/// server-driven cooldown before the shared `otp` package's sheet opens
+/// with `autoSendOnStart: false` — the code is already in flight by then.
+/// Every subsequent resend tap calls `resend-otp` (a different endpoint from
+/// the initial send, per the live contract). Verifying calls
+/// `POST /workers/invitations/accept`, and a success persists the returned
+/// session via [SessionManager.save] before routing to the success screen.
 class InvitationOtpPage extends StatefulWidget {
-  const InvitationOtpPage({
-    this.invitation = InvitationMock.sample,
-    super.key,
-  });
+  const InvitationOtpPage({required this.args, super.key});
 
-  final InvitationMock invitation;
+  final InvitationOtpRouteArgs args;
 
   @override
   State<InvitationOtpPage> createState() => _InvitationOtpPageState();
@@ -36,28 +44,53 @@ class _InvitationOtpPageState extends State<InvitationOtpPage> {
   }
 
   Future<void> _startFlow() async {
-    final result = await OtpFlow.start<void>(
+    final token = widget.args.token;
+    final params = InvitationTokenParams(token: token);
+
+    final bootstrap = await sl<RequestInvitationOtpUseCase>()(
+      params,
+    ).flatMap((_) => sl<GetInvitationResendInfoUseCase>()(params)).run();
+
+    if (!mounted) return;
+
+    final resendInfo = bootstrap.fold((failure) {
+      showAppErrorSnackbar(context: context, title: failure.localizedMessage());
+      context.pop();
+      return null;
+    }, (info) => info);
+
+    if (resendInfo == null) return;
+
+    final result = await OtpFlow.start<AuthSessionEntity>(
       context,
-      OtpFlowConfig<void>(
+      OtpFlowConfig<AuthSessionEntity>(
         channel: OtpChannel.email,
-        destination: widget.invitation.email,
+        destination: widget.args.preview.email ?? '',
         presentAsSheet: false,
-        verifier: CallbackOtpVerifier<void>(
-          onRequestCode: () => TaskEither.right(const OtpDelivery()),
-          onVerifyCode: (_) => TaskEither<Failure, void>(() async {
-            await Future<void>.delayed(const Duration(milliseconds: 600));
-            return right(null);
-          }),
+        autoSendOnStart: false,
+        resendCooldown: Duration(seconds: resendInfo.remainingSeconds),
+        verifier: CallbackOtpVerifier<AuthSessionEntity>(
+          onRequestCode: () => sl<ResendInvitationOtpUseCase>()(
+            params,
+          ).map((_) => const OtpDelivery()),
+          onVerifyCode: (code) => sl<AcceptInvitationUseCase>()(
+            AcceptInvitationParams(token: token, otp: code),
+          ),
         ),
       ),
     );
 
     if (!mounted) return;
 
-    if (result.isVerified) {
+    if (result case OtpVerified<AuthSessionEntity>(:final data)) {
+      await sl<SessionManager>().save(data);
+      if (!mounted) return;
       context.pushReplacement(
         InvitationRoutes.success,
-        extra: widget.invitation,
+        extra: InvitationSuccessRouteArgs(
+          preview: widget.args.preview,
+          session: data,
+        ),
       );
     } else {
       context.pop();

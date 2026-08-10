@@ -12,4 +12,8 @@ abstract final class AuthRoutes {
 
   /// Sign-up email entry — first step before the shared OTP screen.
   static const signUp = '/signup';
+
+  /// Shown when `login/verify` (or `social/login`) reports
+  /// `status: SUSPENDED` — the account exists but has no usable session.
+  static const suspended = '/suspended';
 }

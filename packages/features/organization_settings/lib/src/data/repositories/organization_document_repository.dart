@@ -3,9 +3,13 @@ import 'package:document_flow/document_flow.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:network/network.dart';
 import 'package:organization_settings/src/data/datasources/legal_data_remote_datasource.dart';
+import 'package:organization_settings/src/data/models/legal_data_extraction_response.dart';
 import 'package:organization_settings/src/data/models/legal_data_response.dart';
+import 'package:organization_settings/src/domain/entities/legal_data_status.dart';
 import 'package:organization_settings/src/domain/entities/personal_legal_data_entity.dart';
+import 'package:organization_settings/src/domain/entities/personal_legal_data_extraction_entity.dart';
 import 'package:organization_settings/src/domain/entities/trade_license_legal_data_entity.dart';
+import 'package:organization_settings/src/domain/entities/trade_license_legal_data_extraction_entity.dart';
 
 /// Organization Settings' [DocumentFlowRepository] implementation.
 ///
@@ -62,7 +66,7 @@ class OrganizationDocumentRepository implements DocumentFlowRepository {
             tradeLicenseId: params.uploadedIds[DocumentType.tradeLicense],
           ),
         )
-        .map(_toExtractedDocuments);
+        .map(_toExtractedDocumentsFromExtraction);
   }
 
   @override
@@ -112,7 +116,9 @@ class OrganizationDocumentRepository implements DocumentFlowRepository {
     return ExtractedDocument(
       type: DocumentType.emiratesIdFront,
       fields: const [],
-      issue: personal.isExpired ? DocumentIssue.expired : DocumentIssue.none,
+      issue: personal.status == LegalDataStatus.expired
+          ? DocumentIssue.expired
+          : DocumentIssue.none,
       raw: {
         'fullNameEn': personal.fullNameEnglish ?? '',
         'fullNameAr': personal.fullNameArabic ?? '',
@@ -148,7 +154,9 @@ class OrganizationDocumentRepository implements DocumentFlowRepository {
   ) => ExtractedDocument(
     type: DocumentType.tradeLicense,
     fields: const [],
-    issue: tradeLicense.isExpired ? DocumentIssue.expired : DocumentIssue.none,
+    issue: tradeLicense.status == LegalDataStatus.expired
+        ? DocumentIssue.expired
+        : DocumentIssue.none,
     raw: {
       'tradeNameEn': tradeLicense.tradeNameEnglish ?? '',
       'tradeNameAr': tradeLicense.tradeNameArabic ?? '',
@@ -170,5 +178,62 @@ class OrganizationDocumentRepository implements DocumentFlowRepository {
           mimeType: document.mimeType,
         ),
     ],
+  );
+
+  /// Extraction results carry no media (the extractor reads the already-
+  /// uploaded documents but doesn't echo them back) and no `id`/timestamps —
+  /// see [LegalDataExtractionResponse].
+  ExtractedDocuments _toExtractedDocumentsFromExtraction(
+    LegalDataExtractionResponse response,
+  ) {
+    final personal = response.personalLegalData.toEntity();
+    final tradeLicense = response.tradeLicenseLegalData?.toEntity();
+
+    return ExtractedDocuments(
+      sections: [
+        _emiratesIdExtractionSection(personal),
+        if (tradeLicense != null) _tradeLicenseExtractionSection(tradeLicense),
+      ],
+    );
+  }
+
+  ExtractedDocument _emiratesIdExtractionSection(
+    PersonalLegalDataExtractionEntity personal,
+  ) => ExtractedDocument(
+    type: DocumentType.emiratesIdFront,
+    fields: const [],
+    issue: personal.status == LegalDataStatus.expired
+        ? DocumentIssue.expired
+        : DocumentIssue.none,
+    raw: {
+      'fullNameEn': personal.fullNameEnglish ?? '',
+      'fullNameAr': personal.fullNameArabic ?? '',
+      'idNumber': personal.idNumber ?? '',
+      'nationality': personal.nationality ?? '',
+      'dateOfBirth': personal.dateOfBirth ?? '',
+      'expiryDate': personal.expiryDate ?? '',
+      'gender': personal.gender ?? '',
+    },
+  );
+
+  ExtractedDocument _tradeLicenseExtractionSection(
+    TradeLicenseLegalDataExtractionEntity tradeLicense,
+  ) => ExtractedDocument(
+    type: DocumentType.tradeLicense,
+    fields: const [],
+    issue: tradeLicense.status == LegalDataStatus.expired
+        ? DocumentIssue.expired
+        : DocumentIssue.none,
+    raw: {
+      'tradeNameEn': tradeLicense.tradeNameEnglish ?? '',
+      'tradeNameAr': tradeLicense.tradeNameArabic ?? '',
+      'licenceNo': tradeLicense.licenseNumber ?? '',
+      'licenceType': tradeLicense.licenseType ?? '',
+      'establishmentDate': tradeLicense.establishmentDate ?? '',
+      'issuanceDate': tradeLicense.issuanceDate ?? '',
+      'legalForm': tradeLicense.legalForm ?? '',
+      'unifiedRegNo': tradeLicense.unifiedRegistrationNumber ?? '',
+      'unifiedLicenceNo': tradeLicense.unifiedLicenseNumber ?? '',
+    },
   );
 }

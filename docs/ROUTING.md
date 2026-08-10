@@ -30,7 +30,6 @@ GoRouter(
 |-------|---------|-------|
 | `AuthRoutes` | `auth` | `/`, `/login`, `/register` |
 | `OtpRoutes` | `otp` | `/otp` |
-| `ForgotPasswordRoutes` | `forgot_password` | `/forgot-password`, `/forgot-password/reset` |
 | `AppRoutes` | `sanad_provider` | `/home`, `/messages`, `/requests`, `/services`, `/settings`, `/offline` |
 | `OrganizationSettingsRoutes` | `organization_settings` | `/settings`, `/settings/general` |
 | `AccountSettingsRoutes` | `account_settings` | `/settings/account` |
@@ -105,7 +104,7 @@ GoRoute(path: AppRoutes.addBranch, builder: (_, __) => const AddBranchPage()),
 ## Deep Linking
 
 - Route paths must be stable and URL-safe
-- Use hyphens, not spaces: `/forgot-password` not `/forgot password`
+- Use hyphens, not spaces: `/add-branch` not `/add branch`
 - No dynamic segments without typed validation
 
 ## Navigation API

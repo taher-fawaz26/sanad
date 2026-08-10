@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Universal Links — one entry per environment, since this entitlements
+		 file is shared across all dart define ENV builds. Each host needs
+		 a matching apple-app-site-association file served over HTTPS at
+		 /.well-known/ (see docs/DEEP_LINKING.md), and this capability must
+		 also be enabled for the app's App ID in the Apple Developer portal
+		 / provisioning profile before it takes effect. -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:links.trysanad.us</string>
+		<string>applinks:stage-links.trysanad.us</string>
+		<string>applinks:qa-links.trysanad.us</string>
+		<string>applinks:dev-links.trysanad.us</string>
+	</array>
+</dict>
+</plist>

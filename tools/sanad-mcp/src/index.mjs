@@ -4,7 +4,7 @@
  * Provides Claude Code with authenticated access to the SANAD backend:
  *   - Live OpenAPI specification discovery
  *   - Authenticated API request execution
- *   - Automatic token lifecycle (login → cache → refresh → re-login)
+ *   - Automatic token lifecycle (email+OTP login → cache → refresh → re-login)
  *
  * NOT part of the Flutter application. Never import this from Dart packages.
  *
@@ -12,10 +12,10 @@
  *   node tools/sanad-mcp/src/index.mjs
  *
  * Required environment variables:
- *   SANAD_DEV_EMAIL     — dev account email/phone identifier
- *   SANAD_DEV_PASSWORD  — dev account password
+ *   SANAD_DEV_EMAIL     — dev account email identifier
  *
  * Optional:
+ *   SANAD_DEV_OTP                    — override the OTP code used during dev login (CI)
  *   SANAD_MCP_ALLOW_MUTATIONS=true   — also expose POST/PUT/PATCH/DELETE tools
  *                                       (default: GET only for safety)
  */

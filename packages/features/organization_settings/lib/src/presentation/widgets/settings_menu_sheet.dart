@@ -4,6 +4,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:organization_settings/src/routes/organization_settings_routes.dart';
+import 'package:provider_rbac/provider_rbac.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Settings menu opened from the bottom-nav Settings tab — Figma `3829:5902`.
@@ -65,6 +66,20 @@ class _SettingsMenuSheetBody extends StatelessWidget {
             onTap: () {
               SheetNavigator.pop(context);
               shellContext.push(AccountSettingsRoutes.hub);
+            },
+          ),
+          SizedBox(height: AppSpacing.sm),
+          AppTableRow(
+            title: 'settings.roles_and_permissions'.tr(),
+            trailing: AppTableTrailing.icon,
+            trailingIcon: Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: colors.gray400,
+            ),
+            onTap: () {
+              SheetNavigator.pop(context);
+              shellContext.push(ProviderRbacRoutes.list);
             },
           ),
         ],

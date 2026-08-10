@@ -147,7 +147,6 @@ Shared feature packages implement `FeatureModule` from `core`:
 final modules = [
   AuthModule(),
   OtpModule(),
-  ForgotPasswordModule(),
 ];
 await ModuleRegistry(modules).initAll();
 ```
@@ -196,7 +195,6 @@ See `.cursor/skills/create_feature.skill.md` for the complete workflow.
 |---------|--------|------|--------|
 | `auth` | `/`, `/login`, `/register` | `AuthBloc` | Active |
 | `otp` | `/otp` | `OtpBloc` | Active |
-| `forgot_password` | `/forgot-password`, `/forgot-password/reset` | `ForgotPasswordBloc` | Active |
 | `branches` | `/branches`, `/branches/add` | `BranchesBloc`, `AddBranchBloc` | Active |
 | `account_settings` | `/settings/account` | (uses `AuthBloc` for logout) | Active (hub + logout) |
 | `organization_settings` | `/settings`, `/settings/general` | — | Active (provider-only KPI hub) |

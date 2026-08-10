@@ -1,11 +1,20 @@
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fpdart/fpdart.dart';
 import 'package:go_router/go_router.dart';
 import 'package:media_upload/media_upload.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:services/src/domain/entities/category_record_entity.dart';
+import 'package:services/src/domain/entities/pagination_meta_entity.dart';
+import 'package:services/src/domain/usecases/create_service_request_usecase.dart';
+import 'package:services/src/domain/usecases/create_service_usecase.dart';
+import 'package:services/src/domain/usecases/get_categories_usecase.dart';
+import 'package:services/src/presentation/bloc/add_service/add_service_bloc.dart';
+import 'package:services/src/presentation/bloc/request_new_service/request_new_service_bloc.dart';
 import 'package:services/src/presentation/pages/add_service_page.dart';
 import 'package:services/src/presentation/pages/request_new_service_page.dart';
 import 'package:shared_ui/shared_ui.dart';
@@ -13,9 +22,44 @@ import 'package:shared_ui/shared_ui.dart';
 class _MockMediaUploadRepository extends Mock
     implements MediaUploadRepository {}
 
+class _FakeGetCategoriesUseCase implements GetCategoriesUseCase {
+  const _FakeGetCategoriesUseCase();
+
+  @override
+  TaskEither<Failure, ServicesPagedResult<CategoryRecordEntity>> call(
+    GetCategoriesParams params,
+  ) => TaskEither.right(
+    ServicesPagedResult(
+      items: [
+        CategoryRecordEntity(
+          id: 'cat-car',
+          slug: 'car',
+          name: 'Car',
+          description: 'Car services',
+          icon: null,
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+        ),
+      ],
+      meta: const PaginationMetaEntity(
+        totalItems: 1,
+        itemCount: 1,
+        itemsPerPage: 100,
+        totalPages: 1,
+        currentPage: 1,
+      ),
+    ),
+  );
+}
+
+class _MockCreateServiceUseCase extends Mock implements CreateServiceUseCase {}
+
+class _MockCreateServiceRequestUseCase extends Mock
+    implements CreateServiceRequestUseCase {}
+
 Future<void> _pumpRouter(WidgetTester tester) async {
-  // The Category/Service Name modal sheets can exceed the default (small)
-  // test surface — use a realistic device-sized surface instead.
+  // The Category modal sheet can exceed the default (small) test surface —
+  // use a realistic device-sized surface instead.
   await tester.binding.setSurfaceSize(const Size(1080, 2400));
   tester.view.physicalSize = const Size(1080, 2400);
   tester.view.devicePixelRatio = 3.0;
@@ -34,11 +78,17 @@ Future<void> _pumpRouter(WidgetTester tester) async {
     routes: [
       GoRoute(
         path: '/services/add',
-        builder: (context, state) => const AddServicePage(),
+        builder: (context, state) => BlocProvider(
+          create: (_) => sl<AddServiceBloc>(),
+          child: const AddServicePage(),
+        ),
       ),
       GoRoute(
         path: '/services/request-new',
-        builder: (context, state) => const RequestNewServicePage(),
+        builder: (context, state) => BlocProvider(
+          create: (_) => sl<RequestNewServiceBloc>(),
+          child: const RequestNewServicePage(),
+        ),
       ),
     ],
   );
@@ -58,12 +108,32 @@ Future<void> _pumpRouter(WidgetTester tester) async {
 void main() {
   setUpAll(() {
     final repository = _MockMediaUploadRepository();
-    sl.registerFactoryParam<MediaUploadBloc, MediaUploadConfig, void>(
-      (config, _) => MediaUploadBloc(repository: repository, config: config),
-    );
+    sl
+      ..registerFactoryParam<MediaUploadBloc, MediaUploadConfig, void>(
+        (config, _) => MediaUploadBloc(repository: repository, config: config),
+      )
+      ..registerLazySingleton<GetCategoriesUseCase>(
+        () => const _FakeGetCategoriesUseCase(),
+      )
+      ..registerFactory<AddServiceBloc>(
+        () => AddServiceBloc(
+          createServiceUseCase: _MockCreateServiceUseCase(),
+        ),
+      )
+      ..registerFactory<RequestNewServiceBloc>(
+        () => RequestNewServiceBloc(
+          createServiceRequestUseCase: _MockCreateServiceRequestUseCase(),
+        ),
+      );
   });
 
-  tearDownAll(() => sl.unregister<MediaUploadBloc>());
+  tearDownAll(() {
+    sl
+      ..unregister<MediaUploadBloc>()
+      ..unregister<GetCategoriesUseCase>()
+      ..unregister<AddServiceBloc>()
+      ..unregister<RequestNewServiceBloc>();
+  });
 
   testWidgets(
     'tapping the header "Request a New Service" button navigates to '
@@ -85,16 +155,6 @@ void main() {
     (tester) async {
       await _pumpRouter(tester);
 
-      // Select a category so the inline link becomes visible.
-      await tester.tap(find.byType(AppSelectField).first);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Car'));
-      await tester.pumpAndSettle();
-
-      // AppInlineLinkText renders leading text + link as a single
-      // Text.rich; its own widget tests already confirm only the link span
-      // is tappable, so invoke the callback directly rather than trying to
-      // hit-test a specific glyph run.
       final linkWidget = tester.widget<AppInlineLinkText>(
         find.byType(AppInlineLinkText),
       );

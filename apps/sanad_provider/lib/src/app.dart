@@ -1,4 +1,5 @@
 import 'package:core/core.dart';
+import 'package:deep_linking/deep_linking.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -22,16 +23,23 @@ class SanadProviderApp extends StatefulWidget {
 class _SanadProviderAppState extends State<SanadProviderApp> {
   late final GoRouter _router;
   late final ConnectivityController _connectivity;
+  late final DeepLinkDispatcher _deepLinkDispatcher;
 
   @override
   void initState() {
     super.initState();
     _router = buildProviderRouter();
     _connectivity = sl<ConnectivityController>();
+    _deepLinkDispatcher = DeepLinkDispatcher(
+      service: sl<DeepLinkingService>(),
+      onNavigate: _router.go,
+    );
+    _deepLinkDispatcher.start().ignore();
   }
 
   @override
   void dispose() {
+    _deepLinkDispatcher.stop().ignore();
     _router.dispose();
     super.dispose();
   }

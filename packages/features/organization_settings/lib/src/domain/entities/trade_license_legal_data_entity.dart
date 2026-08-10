@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:organization_settings/src/domain/entities/legal_data_status.dart';
 import 'package:organization_settings/src/domain/entities/media_entity.dart';
 
 /// The company's trade license data, extracted by the backend from the
@@ -8,8 +9,7 @@ import 'package:organization_settings/src/domain/entities/media_entity.dart';
 class TradeLicenseLegalDataEntity extends Equatable {
   const TradeLicenseLegalDataEntity({
     required this.id,
-    required this.isExpired,
-    required this.isExpiringSoon,
+    required this.status,
     required this.createdAt,
     required this.updatedAt,
     this.licenseType,
@@ -44,8 +44,7 @@ class TradeLicenseLegalDataEntity extends Equatable {
   final String? legalForm;
   final String? tradeNameEnglish;
   final String? tradeNameArabic;
-  final bool isExpired;
-  final bool isExpiringSoon;
+  final LegalDataStatus status;
   final MediaEntity? document;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -64,8 +63,7 @@ class TradeLicenseLegalDataEntity extends Equatable {
     legalForm,
     tradeNameEnglish,
     tradeNameArabic,
-    isExpired,
-    isExpiringSoon,
+    status,
     document,
     createdAt,
     updatedAt,

@@ -1,0 +1,25 @@
+name: deep_linking
+description: >
+  Generic OS-level deep-link infrastructure — turns incoming Android App
+  Links / iOS Universal Links / custom-scheme URIs into GoRouter-navigable
+  locations, with no knowledge of individual features.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+
+dependencies:
+  app_links: ^6.4.1
+  core:
+    path: ../core
+  flutter:
+    sdk: flutter
+  meta: ^1.16.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  mocktail: ^1.0.4
+  very_good_analysis: ^9.0.0

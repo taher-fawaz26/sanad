@@ -15,6 +15,7 @@ import 'package:sanad_provider/src/routing/provider_navigator.dart';
 import 'package:sanad_provider/src/routing/shell/main_shell.dart';
 import 'package:services/services.dart';
 import 'package:shared_ui/shared_ui.dart';
+import 'package:workers/workers.dart';
 
 /// sanad_provider top-level router, independent from sanad_client.
 GoRouter buildProviderRouter() {
@@ -25,6 +26,7 @@ GoRouter buildProviderRouter() {
     protectedRoutes: {
       ...AppRoutes.protected,
       ...BranchRoutes.protectedRoutes,
+      ...WorkerRoutes.protectedRoutes,
     },
   );
 
@@ -36,7 +38,10 @@ GoRouter buildProviderRouter() {
         GoRoute(
           path: AuthRoutes.login,
           builder: (context, state) => AuthPage(
-            onOtpSent: (email) => context.push(AuthRoutes.otp, extra: email),
+            onOtpSent: (email, intent) => context.push(
+              AuthRoutes.otp,
+              extra: AuthOtpRouteArgs(email: email, intent: intent),
+            ),
             onAuthenticated: () => context.go(AppRoutes.home),
             onOnboarding: (email, token) => context.go(
               RegistrationRoutes.selectAccountType,
@@ -66,7 +71,8 @@ GoRouter buildProviderRouter() {
 
       final isProtected =
           AppRoutes.protected.contains(state.matchedLocation) ||
-          BranchRoutes.isProtectedRoute(state.matchedLocation);
+          BranchRoutes.isProtectedRoute(state.matchedLocation) ||
+          WorkerRoutes.isProtectedRoute(state.matchedLocation);
       if (isProtected && authStatus.status != AuthStatus.authenticated) {
         return AuthRoutes.login;
       }

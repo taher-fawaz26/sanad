@@ -8,7 +8,7 @@ import 'package:sheet_navigation/sheet_navigation.dart';
 /// package.
 ///
 /// ```dart
-/// final result = await OtpFlow.start<AuthResponseEntity>(
+/// final result = await OtpFlow.start<VerificationResult>(
 ///   context,
 ///   OtpFlowConfig.email(destination: email, verifier: myVerifier),
 /// );

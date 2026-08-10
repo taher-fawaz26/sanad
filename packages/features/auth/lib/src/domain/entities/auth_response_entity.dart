@@ -44,7 +44,7 @@ class OnboardingAuthEntity extends AuthResponseEntity {
 /// Authenticated session (`status: authenticated`) — tokens + optional profile.
 ///
 /// [profile] is itself a Swagger `oneOf`, resolved via [AuthProfileEntity].
-/// Some endpoints (e.g. `auth/email/verify`) omit `profile` even when
+/// Some endpoints (e.g. `auth/profile`) omit `profile` even when
 /// [isProfileCreated] is true; callers must tolerate a null [profile].
 ///
 /// [accountSettings] is provider-owner-only per the backend contract — it is

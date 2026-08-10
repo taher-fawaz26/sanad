@@ -75,7 +75,9 @@ class AuthSessionResponseModel extends AuthSessionEntity {
       accessToken: json['accessToken'] as String,
       refreshToken: json['refreshToken'] as String,
       status: AuthSessionStatus.fromString(rawStatus),
-      isEmailVerified: json['isEmailVerified'] as bool,
+      // The live `AuthSessionResponseDto` (`auth/profile` = 201) has no
+      // top-level `isEmailVerified` field — default rather than throw.
+      isEmailVerified: json['isEmailVerified'] as bool? ?? false,
       isProfileCreated: json['isProfileCreated'] as bool,
       user: user,
       profile: profile,

@@ -4,15 +4,14 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:localization/localization.dart';
 import 'package:media_upload/media_upload.dart';
+import 'package:services/src/domain/usecases/create_service_usecase.dart';
+import 'package:services/src/presentation/bloc/add_service/add_service_bloc.dart';
 import 'package:services/src/presentation/widgets/add_service_form_body.dart';
 import 'package:services/src/routes/service_routes.dart';
 
-/// Add Service screen — UI-only.
-///
-/// No service-create, category, or catalog API calls happen here; only the
-/// Images field is backed by a real integration (`media_upload`). Backend
-/// wiring for category/catalog/create is a documented follow-up.
+/// Add Service screen — submits `POST /services` via [AddServiceBloc].
 class AddServicePage extends StatefulWidget {
   /// Creates the Add Service screen.
   const AddServicePage({super.key});
@@ -34,59 +33,67 @@ class _AddServicePageState extends State<AddServicePage> {
           allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
         ),
       ),
-      child: Scaffold(
-        backgroundColor: context.appColors.surface,
-        body: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              AppNavBar(
-                title: 'services.title'.tr(),
-                showBackButton: true,
-                onLeadingTap: () {
-                  if (context.canPop()) context.pop();
-                },
-                trailing: AppNotificationIcon(
-                  hasUnread: true,
-                  onTap: () {},
+      child: BlocListener<AddServiceBloc, AddServiceState>(
+        listener: _handleAddServiceState,
+        child: Scaffold(
+          backgroundColor: context.appColors.surface,
+          body: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AppNavBar(
+                  title: 'services.title'.tr(),
+                  showBackButton: true,
+                  onLeadingTap: () {
+                    if (context.canPop()) context.pop();
+                  },
+                  trailing: AppNotificationIcon(
+                    hasUnread: true,
+                    onTap: () {},
+                  ),
                 ),
-              ),
-              Expanded(
-                child: SingleChildScrollView(
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                      vertical: AppSpacing.md,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _Header(
+                          onRequestNewService: _navigateToRequestNewService,
+                        ),
+                        SizedBox(height: AppSpacing.lg),
+                        AddServiceFormBody(
+                          key: _formBodyKey,
+                          onCompletenessChanged: (complete) {
+                            if (_isFormComplete == complete) return;
+                            setState(() => _isFormComplete = complete);
+                          },
+                          onRequestNewService: _navigateToRequestNewService,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
                   padding: EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg,
+                    horizontal: AppSpacing.xl,
                     vertical: AppSpacing.md,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _Header(
-                        onRequestNewService: _navigateToRequestNewService,
-                      ),
-                      SizedBox(height: AppSpacing.lg),
-                      AddServiceFormBody(
-                        key: _formBodyKey,
-                        onCompletenessChanged: (complete) {
-                          if (_isFormComplete == complete) return;
-                          setState(() => _isFormComplete = complete);
-                        },
-                        onRequestNewService: _navigateToRequestNewService,
-                      ),
-                    ],
+                  child: BlocBuilder<AddServiceBloc, AddServiceState>(
+                    builder: (context, state) => AppButtonPresets.primary(
+                      label: 'services.add_service.create_button'.tr(),
+                      onPressed: _isFormComplete && !state.isSubmitting
+                          ? _onCreate
+                          : null,
+                      isLoading: state.isSubmitting,
+                    ),
                   ),
                 ),
-              ),
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xl,
-                  vertical: AppSpacing.md,
-                ),
-                child: AppButtonPresets.primary(
-                  label: 'services.add_service.create_button'.tr(),
-                  onPressed: _isFormComplete ? _onCreate : null,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -98,7 +105,49 @@ class _AddServicePageState extends State<AddServicePage> {
   }
 
   void _onCreate() {
-    // UI-only for now — service-create API is a documented follow-up.
+    final formState = _formBodyKey.currentState;
+    if (formState == null) return;
+    final categoryId = formState.categoryId;
+    final price = formState.price;
+    if (categoryId == null || price == null) return;
+
+    final mediaIds = context
+        .read<MediaUploadBloc>()
+        .state
+        .items
+        .where((item) => item.isSuccess)
+        .map((item) => item.mediaId)
+        .whereType<String>()
+        .toList();
+
+    context.read<AddServiceBloc>().add(
+      AddServiceSubmittedEvent(
+        CreateServiceParams(
+          name: formState.name,
+          description: formState.description,
+          categoryId: categoryId,
+          price: price,
+          mediaIds: mediaIds.isEmpty ? null : mediaIds,
+        ),
+      ),
+    );
+  }
+
+  void _handleAddServiceState(BuildContext context, AddServiceState state) {
+    if (state.status == RequestStatus.success) {
+      if (context.canPop()) context.pop(true);
+      return;
+    }
+    if (state.status == RequestStatus.failure && state.failure != null) {
+      final display = failureErrorDisplay(state.failure);
+      showAppSnackbar(
+        context: context,
+        title: display.title,
+        caption: display.description,
+        color: AppSnackbarColor.error,
+        layout: AppSnackbarLayout.fullWidth,
+      );
+    }
   }
 }
 

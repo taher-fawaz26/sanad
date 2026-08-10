@@ -26,6 +26,8 @@ dependencies:
     path: ../../packages/features/media_upload
   organization_settings:
     path: ../../packages/features/organization_settings
+  provider_rbac:
+    path: ../../packages/features/provider_rbac
   services:
     path: ../../packages/features/services
   workers:
@@ -33,6 +35,8 @@ dependencies:
   core:
     path: ../../packages/core
   cupertino_icons: ^1.0.8
+  deep_linking:
+    path: ../../packages/deep_linking
   firebase_core: ^3.13.1
   design_system:
     path: ../../packages/design_system

@@ -58,7 +58,7 @@ void main(List<String> args) {
   results.add(_Check(
     name: 'Registered modules',
     passed: moduleCount > 0,
-    message: '$moduleCount modules (auth, otp, forgot_password)',
+    message: '$moduleCount modules (auth, otp)',
   ));
 
   print('Sanad Doctor — platform health check\n');

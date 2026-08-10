@@ -5,10 +5,13 @@
  *   getAuthHeaders() → login if no token, refresh if expired → return Bearer header
  *   handleAuthError(401) → refresh, if fails → re-login → return true (retry)
  *
- * Login mechanism (backend contract as of the OTP-based auth refactor):
+ * Login mechanism (backend contract as of the login/verify auth refactor):
  *   #doLogin() → #doRequestOtp() → #doVerifyOtp() → #doStoreSession()
  *   1. POST REQUEST_OTP_PATH  { email }         — triggers OTP issuance server-side
- *   2. POST VERIFY_OTP_PATH   { email, otp }    — returns { accessToken, refreshToken }
+ *   2. POST VERIFY_OTP_PATH   { email, otp }    — returns
+ *      { accessToken, refreshToken, status } where `status` is one of
+ *      "ACTIVE" | "SUSPENDED" | "INCOMPLETE". Tokens are only populated when
+ *      `status === "ACTIVE"`; any other status is treated as a login failure.
  *
  * Security:
  *   - Reads credentials from environment variables only
@@ -17,8 +20,8 @@
  */
 
 const BASE_URL = 'https://dev-api.trysanad.us/api/v1';
-const REQUEST_OTP_PATH = `${BASE_URL}/auth/email/request-otp`;
-const VERIFY_OTP_PATH = `${BASE_URL}/auth/email/verify`;
+const REQUEST_OTP_PATH = `${BASE_URL}/auth/login`;
+const VERIFY_OTP_PATH = `${BASE_URL}/auth/login/verify`;
 const REFRESH_PATH = `${BASE_URL}/auth/refresh`;
 
 // Dev-only OTP fallback — overridable so CI can inject its own value.
@@ -131,8 +134,10 @@ export class SanadAuthProvider {
   }
 
   /**
-   * Step 2 — POST VERIFY_OTP_PATH { email, otp }. Returns the token pair.
-   * `SANAD_DEV_OTP` lets CI override the fixed dev OTP.
+   * Step 2 — POST VERIFY_OTP_PATH { email, otp }. Returns
+   * { accessToken, refreshToken, status }. `SANAD_DEV_OTP` lets CI override
+   * the fixed dev OTP. Tokens are only meaningful when `status === "ACTIVE"`;
+   * "SUSPENDED"/"INCOMPLETE" accounts have no usable session.
    */
   async #doVerifyOtp(email) {
     process.stderr.write('[SanadAuth] Verifying OTP...\n');
@@ -148,6 +153,12 @@ export class SanadAuthProvider {
     if (!res.ok) {
       throw new Error(
         `[SanadAuth] OTP verification failed ${res.status}: ${JSON.stringify(body)}`,
+      );
+    }
+
+    if (body.status !== 'ACTIVE') {
+      throw new Error(
+        `[SanadAuth] Login did not complete: account status is "${body.status}" (expected "ACTIVE").`,
       );
     }
 

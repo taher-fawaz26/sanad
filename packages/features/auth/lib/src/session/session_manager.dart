@@ -3,11 +3,14 @@ import 'package:auth/src/auth/auth_status_notifier.dart';
 import 'package:auth/src/data/models/permission_model.dart';
 import 'package:auth/src/data/models/profiles/auth_profile_model.dart';
 import 'package:auth/src/data/models/responses/auth_account_settings_response_dto.dart';
+import 'package:auth/src/data/models/user_model.dart';
 import 'package:auth/src/domain/entities/auth_account_settings_entity.dart';
+import 'package:auth/src/domain/entities/auth_identity_entity.dart';
 import 'package:auth/src/domain/entities/auth_profile_entity.dart';
 import 'package:auth/src/domain/entities/auth_response_entity.dart';
 import 'package:auth/src/domain/entities/permission_entity.dart';
 import 'package:auth/src/domain/entities/user_entity.dart';
+import 'package:auth/src/domain/enums/auth_session_status.dart';
 import 'package:auth/src/domain/enums/user_type.dart';
 import 'package:auth/src/session/session_cache.dart';
 import 'package:auth/src/session/session_repository.dart';
@@ -121,6 +124,79 @@ class SessionManager {
     _authStatusNotifier.update(AuthStatus.unauthenticated);
   }
 
+  // ── Login-verify / GET-me composition ────────────────────────────────────
+  //
+  // `LoginResponseDto` (`auth/login/verify`, `auth/social/login`) carries
+  // only tokens + status — no user/profile payload — so an ACTIVE result
+  // cannot be turned into a full [AuthSessionEntity] on its own. The caller
+  // (AuthBloc / EmailOtpPage) primes the tokens first so a follow-up
+  // `GET /me` call is authenticated, then hands the fetched [AuthIdentity]
+  // to [saveFromIdentity] to persist the composed session in one step.
+
+  /// Writes [accessToken]/[refreshToken] straight to the token layer without
+  /// touching the session snapshot. Narrow, single-purpose: authenticates
+  /// the `GET /me` call that must follow an ACTIVE login/verify before a full
+  /// session exists. If that call fails, the Hive/cache tiers are untouched
+  /// here, so [current] still reports signed-out.
+  Future<void> primeTokens({
+    required String accessToken,
+    required String refreshToken,
+  }) => _tokenManager.saveTokens(
+    accessToken: accessToken,
+    refreshToken: refreshToken,
+  );
+
+  /// Builds and persists a full session from bare tokens plus a freshly
+  /// fetched [identity] (see the login-verify/GET-me composition note above).
+  Future<void> saveFromIdentity({
+    required String accessToken,
+    required String refreshToken,
+    required AuthIdentity identity,
+  }) => save(
+    AuthSessionEntity(
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+      status: AuthSessionStatus.authenticated,
+      isEmailVerified: true,
+      isProfileCreated: true,
+      user: UserModel(
+        id: identity.id,
+        email: identity.email,
+        isVerified: true,
+        isActive: true,
+        type: identity.userType,
+      ),
+      permissions: identity.permissions
+          .map((name) => PermissionModel(name: name))
+          .toList(),
+    ),
+  );
+
+  /// Overwrites the current session's identity fields (`user.type`,
+  /// `permissions`) from a freshly fetched [identity] — used on resume
+  /// (after [restore]) per the "GET /me re-hydration" decision, so a stale
+  /// persisted snapshot (e.g. a role/permission change since last launch, or
+  /// the retired `companyProvider` value) self-heals. No-op when signed out.
+  Future<AuthSessionEntity?> hydrateIdentity(AuthIdentity identity) {
+    final existing = current();
+    if (existing == null) return Future.value();
+    final updatedUser = UserModel(
+      id: existing.user.id,
+      email: identity.email,
+      isVerified: existing.user.isVerified,
+      isActive: existing.user.isActive,
+      type: identity.userType,
+    );
+    return update(
+      (s) => s.copyWith(
+        user: updatedUser,
+        permissions: identity.permissions
+            .map((name) => PermissionModel(name: name))
+            .toList(),
+      ),
+    );
+  }
+
   // ── Guard helpers ────────────────────────────────────────────────────────
 
   /// `true` when a session is present and its tokens are live.
@@ -139,14 +215,14 @@ class SessionManager {
   bool isUserType(UserType type) => userType == type;
 
   /// `true` for both [UserType.individualProvider] and
-  /// [UserType.companyProvider] — the two variants sharing the
+  /// [UserType.organizationProvider] — the two variants sharing the
   /// `BusinessProviderAuthProfileResponseDto` profile shape.
   bool get isProvider =>
       userType == UserType.individualProvider ||
-      userType == UserType.companyProvider;
+      userType == UserType.organizationProvider;
 
-  /// `true` for [UserType.companyProvider] specifically.
-  bool get isCompany => userType == UserType.companyProvider;
+  /// `true` for [UserType.organizationProvider] specifically.
+  bool get isCompany => userType == UserType.organizationProvider;
 
   /// `true` for [UserType.client].
   bool get isClient => userType == UserType.client;

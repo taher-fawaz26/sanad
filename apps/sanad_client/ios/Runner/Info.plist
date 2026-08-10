@@ -73,5 +73,21 @@
 	<string>Sanad uses your location to show you nearby services and help you select a location on the map.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Sanad uses your location to show you nearby services and help you select a location on the map.</string>
+	<!-- Custom-scheme deep-link fallback — works without domain
+		 verification, useful for QA before Associated Domains /
+		 apple-app-site-association is published. Universal Links
+		 (the production path) are configured via Runner.entitlements,
+		 not here. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.sanad.client.deeplink</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>sanadclient</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

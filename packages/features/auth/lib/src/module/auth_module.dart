@@ -1,16 +1,19 @@
 import 'package:auth/src/di/auth_di.dart';
+import 'package:auth/src/domain/enums/auth_flow_intent.dart';
 import 'package:auth/src/presentation/pages/auth_page.dart';
 import 'package:auth/src/presentation/pages/splash_page.dart';
+import 'package:auth/src/presentation/pages/suspended_page.dart';
 import 'package:auth/src/routes/auth_routes.dart';
+import 'package:auth/src/routing/auth_otp_route_args.dart';
 import 'package:auth/src/session/session_manager.dart';
 import 'package:core/core.dart';
 import 'package:go_router/go_router.dart';
 
 /// Auth feature module — DI and routes.
 ///
-/// Contributes the splash and email auth routes. The shared OTP route is
-/// composed by each app via `AuthShell.otpRoute` so the app can wire its own
-/// post-verification navigation (dashboard vs onboarding).
+/// Contributes the splash, email auth, and suspended routes. The shared OTP
+/// route is composed by each app via `AuthShell.otpRoute` so the app can
+/// wire its own post-verification navigation (dashboard vs onboarding).
 class AuthModule extends FeatureModule {
   @override
   String get name => 'auth';
@@ -47,20 +50,42 @@ class AuthModule extends FeatureModule {
       GoRoute(
         path: AuthRoutes.login,
         builder: (context, state) => AuthPage(
-          onOtpSent: (email) => context.push(AuthRoutes.otp, extra: email),
+          onOtpSent: (email, intent) => context.push(
+            AuthRoutes.otp,
+            extra: AuthOtpRouteArgs(email: email, intent: intent),
+          ),
           onAuthenticated: () => context.go(home),
-          onOnboarding: (email, token) =>
-              context.push(AuthRoutes.otp, extra: email),
+          onOnboarding: (email, token) => context.push(
+            AuthRoutes.otp,
+            extra: AuthOtpRouteArgs(
+              email: email,
+              intent: AuthFlowIntent.createAccount,
+            ),
+          ),
         ),
       ),
       GoRoute(
         path: AuthRoutes.signUp,
         builder: (context, state) => AuthPage(
           initialIsLogin: false,
-          onOtpSent: (email) => context.push(AuthRoutes.otp, extra: email),
+          onOtpSent: (email, intent) => context.push(
+            AuthRoutes.otp,
+            extra: AuthOtpRouteArgs(email: email, intent: intent),
+          ),
           onAuthenticated: () => context.go(home),
-          onOnboarding: (email, token) =>
-              context.push(AuthRoutes.otp, extra: email),
+          onOnboarding: (email, token) => context.push(
+            AuthRoutes.otp,
+            extra: AuthOtpRouteArgs(
+              email: email,
+              intent: AuthFlowIntent.createAccount,
+            ),
+          ),
+        ),
+      ),
+      GoRoute(
+        path: AuthRoutes.suspended,
+        builder: (context, state) => SuspendedPage(
+          onLoggedOut: () => context.go(AuthRoutes.login),
         ),
       ),
     ];

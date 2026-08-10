@@ -6,7 +6,6 @@ enum OtpPurpose {
   verifyPhone,
   changePhone,
   login,
-  passwordReset,
   deleteAccount,
   mfa,
   custom,

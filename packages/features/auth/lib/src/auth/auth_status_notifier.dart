@@ -41,6 +41,17 @@ class AuthStatusNotifier extends ChangeNotifier {
       notifyListeners();
       return;
     }
+    if (newStatus == AuthStatus.suspended) {
+      // A suspended account (`LoginResponseDto.status: SUSPENDED`) has no
+      // tokens and no session — same reset as unauthenticated, distinct
+      // status so the router can send it to a dedicated screen instead of
+      // silently back to Login.
+      _status = AuthStatus.suspended;
+      _registrationStatus = RegistrationStatus.notStarted;
+      _submittedReferenceNumber = null;
+      notifyListeners();
+      return;
+    }
     _status = newStatus;
     if (clearSubmittedReference) {
       _submittedReferenceNumber = null;

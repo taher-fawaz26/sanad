@@ -1,12 +1,12 @@
 import 'package:organization_settings/src/data/models/legal_data_media_response.dart';
+import 'package:organization_settings/src/domain/entities/legal_data_status.dart';
 import 'package:organization_settings/src/domain/entities/trade_license_legal_data_entity.dart';
 
 /// Mirrors `TradeLicenseResponseDto` exactly.
 class TradeLicenseResponse {
   const TradeLicenseResponse({
     required this.id,
-    required this.isExpired,
-    required this.isExpiringSoon,
+    required this.status,
     required this.createdAt,
     required this.updatedAt,
     this.licenseType,
@@ -39,8 +39,7 @@ class TradeLicenseResponse {
       legalForm: json['legalForm'] as String?,
       tradeNameEnglish: json['tradeNameEnglish'] as String?,
       tradeNameArabic: json['tradeNameArabic'] as String?,
-      isExpired: json['isExpired'] as bool,
-      isExpiringSoon: json['isExpiringSoon'] as bool,
+      status: LegalDataStatus.fromJson(json['status'] as String),
       document: document == null
           ? null
           : LegalDataMediaResponse.fromJson(document),
@@ -61,8 +60,7 @@ class TradeLicenseResponse {
   final String? legalForm;
   final String? tradeNameEnglish;
   final String? tradeNameArabic;
-  final bool isExpired;
-  final bool isExpiringSoon;
+  final LegalDataStatus status;
   final LegalDataMediaResponse? document;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -80,8 +78,7 @@ class TradeLicenseResponse {
     legalForm: legalForm,
     tradeNameEnglish: tradeNameEnglish,
     tradeNameArabic: tradeNameArabic,
-    isExpired: isExpired,
-    isExpiringSoon: isExpiringSoon,
+    status: status,
     document: document?.toEntity(),
     createdAt: createdAt,
     updatedAt: updatedAt,

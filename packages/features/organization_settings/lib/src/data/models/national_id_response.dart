@@ -1,12 +1,12 @@
 import 'package:organization_settings/src/data/models/legal_data_media_response.dart';
+import 'package:organization_settings/src/domain/entities/legal_data_status.dart';
 import 'package:organization_settings/src/domain/entities/personal_legal_data_entity.dart';
 
 /// Mirrors `NationalIdResponseDto` exactly.
 class NationalIdResponse {
   const NationalIdResponse({
     required this.id,
-    required this.isExpired,
-    required this.isExpiringSoon,
+    required this.status,
     required this.createdAt,
     required this.updatedAt,
     this.fullNameEnglish,
@@ -33,8 +33,7 @@ class NationalIdResponse {
       dateOfBirth: json['dateOfBirth'] as String?,
       expiryDate: json['expiryDate'] as String?,
       gender: json['gender'] as String?,
-      isExpired: json['isExpired'] as bool,
-      isExpiringSoon: json['isExpiringSoon'] as bool,
+      status: LegalDataStatus.fromJson(json['status'] as String),
       frontMedia: front == null ? null : LegalDataMediaResponse.fromJson(front),
       backMedia: back == null ? null : LegalDataMediaResponse.fromJson(back),
       createdAt: DateTime.parse(json['createdAt'] as String),
@@ -50,8 +49,7 @@ class NationalIdResponse {
   final String? dateOfBirth;
   final String? expiryDate;
   final String? gender;
-  final bool isExpired;
-  final bool isExpiringSoon;
+  final LegalDataStatus status;
   final LegalDataMediaResponse? frontMedia;
   final LegalDataMediaResponse? backMedia;
   final DateTime createdAt;
@@ -66,8 +64,7 @@ class NationalIdResponse {
     dateOfBirth: dateOfBirth,
     expiryDate: expiryDate,
     gender: gender,
-    isExpired: isExpired,
-    isExpiringSoon: isExpiringSoon,
+    status: status,
     frontMedia: frontMedia?.toEntity(),
     backMedia: backMedia?.toEntity(),
     createdAt: createdAt,

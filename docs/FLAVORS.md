@@ -21,6 +21,7 @@ Sanad uses four build environments (flavors) selected via `--dart-define=ENV=<fl
 - Used for daily development and debugging
 
 ```bash
+cd apps/sanad_provider   # or apps/sanad_client
 flutter run                                    # defaults to dev
 flutter run --dart-define=ENV=dev              # explicit
 ```
@@ -32,6 +33,7 @@ flutter run --dart-define=ENV=dev              # explicit
 - Used for feature validation before staging
 
 ```bash
+cd apps/sanad_provider   # or apps/sanad_client
 flutter run --dart-define=ENV=qa
 ```
 
@@ -42,6 +44,7 @@ flutter run --dart-define=ENV=qa
 - Final validation before release
 
 ```bash
+cd apps/sanad_provider   # or apps/sanad_client
 flutter run --dart-define=ENV=stage
 ```
 

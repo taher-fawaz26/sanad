@@ -18,22 +18,29 @@ class BusinessProgressChecklistItem {
 /// Profile-completion summary card — Figma `business-visibility-card`
 /// (`4253:26207`).
 ///
-/// Pure presentation: [completionPercent] and [items] are computed by the
-/// caller from whatever data is already available (session, local section
-/// state); this widget owns no bloc and makes no API calls.
+/// Pure presentation: every value is computed by the caller from
+/// `GET service-provider/completion` (see `ProviderCompletionEntity`) —
+/// this widget owns no bloc and makes no API calls, and never re-derives
+/// completeness itself.
 class BusinessProgressSection extends StatelessWidget {
   const BusinessProgressSection({
     required this.completionPercent,
     required this.items,
+    required this.visibleToCustomers,
+    required this.requiredCompleted,
+    required this.requiredTotal,
     super.key,
   });
 
-  /// 0–100.
+  /// 0–100, straight from `ProviderCompletionEntity.percentage`.
   final int completionPercent;
   final List<BusinessProgressChecklistItem> items;
 
-  int get _completedCount => items.where((item) => item.completed).length;
-  bool get _isComplete => items.isNotEmpty && _completedCount == items.length;
+  /// Straight from `ProviderCompletionEntity.visibleToCustomers` — `true`
+  /// only when every required step is complete.
+  final bool visibleToCustomers;
+  final int requiredCompleted;
+  final int requiredTotal;
 
   @override
   Widget build(BuildContext context) {
@@ -89,7 +96,7 @@ class BusinessProgressSection extends StatelessWidget {
               ],
             ),
             const AppDivider(),
-            if (!_isComplete) ...[
+            if (!visibleToCustomers) ...[
               const _HiddenFromCustomersBadge(),
               Text(
                 "Your business won't appear in customer search until all "
@@ -114,7 +121,7 @@ class BusinessProgressSection extends StatelessWidget {
               spacing: 4,
               children: [
                 Text(
-                  '$_completedCount / ${items.length}',
+                  '$requiredCompleted / $requiredTotal',
                   style: typography.regularNormal.copyWith(
                     fontWeight: FontWeight.w600,
                   ),

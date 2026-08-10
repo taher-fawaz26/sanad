@@ -1,16 +1,21 @@
-import 'package:organization_settings/src/data/models/national_id_response.dart';
+import 'package:organization_settings/src/data/models/me_media_response.dart';
 import 'package:organization_settings/src/data/models/service_provider_category_response.dart';
-import 'package:organization_settings/src/data/models/service_provider_media_response.dart';
-import 'package:organization_settings/src/data/models/trade_license_response.dart';
+import 'package:organization_settings/src/domain/entities/business_profile_status.dart';
 import 'package:organization_settings/src/domain/entities/organization_profile_entity.dart';
 import 'package:organization_settings/src/domain/entities/social_profiles_entity.dart';
 
-/// Mirrors `BusinessProfileMeResponseDto` exactly.
+/// Mirrors `MeBusinessProfileDto` exactly — nested under `businessProfile` in
+/// the `GET /settings` response.
+///
+/// Does NOT carry `personalLegalData`/`tradeLicenseLegalData` — those live
+/// under the separate `GET service-provider/legal-data` endpoint (see
+/// `LegalDataRemoteDataSource`); the repository layer merges them into
+/// [OrganizationProfileEntity] from that other call.
 class BusinessProfileMeResponse {
   const BusinessProfileMeResponse({
     required this.id,
     required this.categories,
-    required this.isReviewed,
+    required this.status,
     required this.createdAt,
     required this.updatedAt,
     this.businessName,
@@ -22,18 +27,12 @@ class BusinessProfileMeResponse {
     this.profileImage,
     this.description,
     this.socialProfiles,
-    this.personalLegalData,
-    this.tradeLicenseLegalData,
     this.rejectionReason,
   });
 
   factory BusinessProfileMeResponse.fromJson(Map<String, dynamic> json) {
     final coverImage = json['coverImage'] as Map<String, dynamic>?;
     final profileImage = json['profileImage'] as Map<String, dynamic>?;
-    final personalLegalData =
-        json['personalLegalData'] as Map<String, dynamic>?;
-    final tradeLicenseLegalData =
-        json['tradeLicenseLegalData'] as Map<String, dynamic>?;
     final socialProfiles = json['socialProfiles'] as Map<String, dynamic>?;
 
     return BusinessProfileMeResponse(
@@ -45,10 +44,10 @@ class BusinessProfileMeResponse {
       tradeLicenseNumber: json['tradeLicenseNumber'] as String?,
       coverImage: coverImage == null
           ? null
-          : ServiceProviderMediaResponse.fromJson(coverImage),
+          : MeMediaResponse.fromJson(coverImage),
       profileImage: profileImage == null
           ? null
-          : ServiceProviderMediaResponse.fromJson(profileImage),
+          : MeMediaResponse.fromJson(profileImage),
       description: json['description'] as String?,
       categories: (json['categories'] as List<dynamic>)
           .map(
@@ -58,13 +57,7 @@ class BusinessProfileMeResponse {
           )
           .toList(),
       socialProfiles: socialProfiles,
-      personalLegalData: personalLegalData == null
-          ? null
-          : NationalIdResponse.fromJson(personalLegalData),
-      tradeLicenseLegalData: tradeLicenseLegalData == null
-          ? null
-          : TradeLicenseResponse.fromJson(tradeLicenseLegalData),
-      isReviewed: json['isReviewed'] as bool,
+      status: BusinessProfileStatus.fromJson(json['status'] as String),
       rejectionReason: json['rejectionReason'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
@@ -77,17 +70,15 @@ class BusinessProfileMeResponse {
   final String? businessPhone;
   final String? ownerEmiratesId;
   final String? tradeLicenseNumber;
-  final ServiceProviderMediaResponse? coverImage;
-  final ServiceProviderMediaResponse? profileImage;
+  final MeMediaResponse? coverImage;
+  final MeMediaResponse? profileImage;
   final String? description;
   final List<ServiceProviderCategoryResponse> categories;
 
   /// Raw `Map<String, String>` from the backend — `socialLinks`, including
   /// `website` when provided.
   final Map<String, dynamic>? socialProfiles;
-  final NationalIdResponse? personalLegalData;
-  final TradeLicenseResponse? tradeLicenseLegalData;
-  final bool isReviewed;
+  final BusinessProfileStatus status;
   final String? rejectionReason;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -104,9 +95,7 @@ class BusinessProfileMeResponse {
     description: description,
     categories: categories.map((category) => category.toEntity()).toList(),
     socialProfiles: _socialProfilesEntity(),
-    personalLegalData: personalLegalData?.toEntity(),
-    tradeLicenseLegalData: tradeLicenseLegalData?.toEntity(),
-    isReviewed: isReviewed,
+    status: status,
     rejectionReason: rejectionReason,
     createdAt: createdAt,
     updatedAt: updatedAt,

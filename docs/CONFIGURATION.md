@@ -2,7 +2,10 @@
 
 ## Environment Selection
 
+Run from an app directory — the repository root is a Melos workspace, not a Flutter app:
+
 ```bash
+cd apps/sanad_provider   # or apps/sanad_client
 flutter run --dart-define=ENV=dev     # Default
 flutter run --dart-define=ENV=qa
 flutter run --dart-define=ENV=stage
@@ -105,6 +108,8 @@ Registered in `app_di.dart` during bootstrap.
 ## Build Commands with Config
 
 ```bash
+cd apps/sanad_provider   # or apps/sanad_client
+
 # Development (default)
 flutter run
 

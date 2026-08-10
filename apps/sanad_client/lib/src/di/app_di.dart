@@ -3,6 +3,7 @@ import 'package:app_logger/app_logger.dart';
 import 'package:auth/auth.dart';
 import 'package:contact_verification/contact_verification.dart';
 import 'package:core/core.dart';
+import 'package:deep_linking/deep_linking.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:localization/localization.dart';
@@ -47,6 +48,9 @@ Future<void> configureDependencies() async {
       sl<SessionManager>().clear().ignore();
     },
   );
+
+  // ── Deep linking (OS-level incoming URI → GoRouter location) ─────────────
+  DeepLinkingDI.init(config: AppConfig.deepLinkConfig);
 
   // ── Feature modules ────────────────────────────────────────────────────────
   moduleRegistry = ModuleRegistry([

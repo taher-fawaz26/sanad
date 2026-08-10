@@ -16,7 +16,6 @@ abstract final class ValidationMessageKeys {
   static const String formNameInvalid = 'validation.form.name_invalid';
   static const String formGoogleMapsUrlInvalid =
       'validation.form.google_maps_url_invalid';
-  static const String passwordPolicy = 'validation.form.password_policy';
   static const String minLengthPrefix = 'validation.form.min_length::';
   static const String maxLengthPrefix = 'validation.form.max_length::';
 

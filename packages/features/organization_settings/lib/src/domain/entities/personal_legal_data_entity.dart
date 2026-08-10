@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:organization_settings/src/domain/entities/legal_data_status.dart';
 import 'package:organization_settings/src/domain/entities/media_entity.dart';
 
 /// The organization owner's Emirates ID data, extracted by the backend from
@@ -6,8 +7,7 @@ import 'package:organization_settings/src/domain/entities/media_entity.dart';
 class PersonalLegalDataEntity extends Equatable {
   const PersonalLegalDataEntity({
     required this.id,
-    required this.isExpired,
-    required this.isExpiringSoon,
+    required this.status,
     required this.createdAt,
     required this.updatedAt,
     this.fullNameEnglish,
@@ -35,8 +35,7 @@ class PersonalLegalDataEntity extends Equatable {
 
   /// `male` / `female`, as returned by the backend.
   final String? gender;
-  final bool isExpired;
-  final bool isExpiringSoon;
+  final LegalDataStatus status;
   final MediaEntity? frontMedia;
   final MediaEntity? backMedia;
   final DateTime createdAt;
@@ -52,8 +51,7 @@ class PersonalLegalDataEntity extends Equatable {
     dateOfBirth,
     expiryDate,
     gender,
-    isExpired,
-    isExpiringSoon,
+    status,
     frontMedia,
     backMedia,
     createdAt,

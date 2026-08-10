@@ -1,8 +1,10 @@
 import 'package:app_assets/app_assets.dart';
-import 'package:branches/branches.dart';
+import 'package:branches/branches.dart'
+    show BranchScheduleFormatter, BranchTimeSlotEntity;
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:organization_settings/src/domain/entities/working_hours_day_entity.dart';
 import 'package:organization_settings/src/presentation/widgets/sections/working_hours_section.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
@@ -52,7 +54,7 @@ class _EditWorkingHoursSheetBodyState
 
   Future<void> _openAddDaySheet() async {
     final existingDays = _entries.map((entry) => entry.dayId).toSet();
-    final availableDays = BranchWeekdays.all
+    final availableDays = WorkingHoursDayIds.all
         .where((day) => !existingDays.contains(day))
         .toList();
 

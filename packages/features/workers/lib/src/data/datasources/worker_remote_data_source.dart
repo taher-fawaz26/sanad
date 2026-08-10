@@ -59,7 +59,6 @@ class WorkerRemoteDataSourceImpl implements WorkerRemoteDataSource {
     path: WorkerApiPaths.workers,
     method: RequestMethod.get,
     query: {
-      'type': 'worker',
       'page': page,
       'limit': limit,
       if (search != null && search.isNotEmpty) 'search': search,

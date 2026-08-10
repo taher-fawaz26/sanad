@@ -28,6 +28,30 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+
+            <!-- Android App Links — one host per environment, since this
+                 manifest is shared across all dart define ENV builds.
+                 android:autoVerify requires a matching
+                 /.well-known/assetlinks.json on each host (see
+                 docs/DEEP_LINKING.md). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="links.trysanad.us"/>
+                <data android:scheme="https" android:host="stage-links.trysanad.us"/>
+                <data android:scheme="https" android:host="qa-links.trysanad.us"/>
+                <data android:scheme="https" android:host="dev-links.trysanad.us"/>
+            </intent-filter>
+
+            <!-- Custom-scheme fallback — works without domain verification,
+                 useful for QA before assetlinks.json is published. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="sanadclient"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

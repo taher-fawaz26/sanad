@@ -45,6 +45,10 @@ dependencies:
     path: ../../network
   otp:
     path: ../otp
+  provider_rbac:
+    path: ../provider_rbac
+  services:
+    path: ../services
   sheet_navigation:
     path: ../../sheet_navigation
   workers:

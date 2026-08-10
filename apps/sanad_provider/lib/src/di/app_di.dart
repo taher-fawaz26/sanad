@@ -5,6 +5,7 @@ import 'package:auth/auth.dart';
 import 'package:branches/branches.dart';
 import 'package:contact_verification/contact_verification.dart';
 import 'package:core/core.dart';
+import 'package:deep_linking/deep_linking.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -15,6 +16,7 @@ import 'package:media_upload/media_upload.dart';
 import 'package:network/network.dart';
 import 'package:organization_settings/organization_settings.dart';
 import 'package:permissions/permissions.dart';
+import 'package:provider_rbac/provider_rbac.dart';
 import 'package:registration/registration.dart';
 import 'package:sanad_provider/src/config/app_config.dart';
 import 'package:sanad_provider/src/routing/provider_navigator.dart';
@@ -66,6 +68,9 @@ Future<void> configureDependencies() async {
   // ── Media upload (shared multipart-upload pipeline; no FeatureModule) ────
   MediaUploadDI.init();
 
+  // ── Deep linking (OS-level incoming URI → GoRouter location) ─────────────
+  DeepLinkingDI.init(config: AppConfig.deepLinkConfig);
+
   sl
     ..registerLazySingleton<LocationService>(
       () => LocationServiceImpl(sl<PermissionService>()),
@@ -88,6 +93,7 @@ Future<void> configureDependencies() async {
     BranchesModule(),
     ServicesModule(),
     WorkersModule(),
+    ProviderRbacModule(),
     InvitationModule(),
     RegistrationModule(),
     AssetPickerModule(

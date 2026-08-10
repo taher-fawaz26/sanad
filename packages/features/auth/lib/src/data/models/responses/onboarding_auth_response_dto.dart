@@ -28,7 +28,10 @@ class OnboardingAuthResponseModel extends OnboardingAuthEntity {
     return OnboardingAuthResponseModel(
       status: AuthSessionStatus.fromString(rawStatus),
       onboardingToken: json['onboardingToken'] as String,
-      isEmailVerified: json['isEmailVerified'] as bool,
+      // The live `OnboardingAuthResponseDto` (signup/verify, social/signup)
+      // has no `isEmailVerified` field at all — default rather than throw so
+      // this DTO doesn't crash on a schema it was never actually part of.
+      isEmailVerified: json['isEmailVerified'] as bool? ?? false,
       isProfileCreated: json['isProfileCreated'] as bool,
       user: UserModel.fromJson(Map<String, dynamic>.from(rawUser)),
     );

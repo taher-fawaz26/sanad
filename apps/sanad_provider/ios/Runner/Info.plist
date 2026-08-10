@@ -80,5 +80,21 @@
 		<string>Sanad Provider uses the camera to capture your Emirates ID and trade licence during registration.</string>
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>Sanad Provider needs access to your photos so you can upload your Emirates ID and trade licence during registration.</string>
+		<!-- Custom-scheme deep-link fallback — works without domain
+			 verification, useful for QA before Associated Domains /
+			 apple-app-site-association is published. Universal Links
+			 (the production path) are configured via Runner.entitlements,
+			 not here. -->
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleURLName</key>
+				<string>com.sanad.provider.deeplink</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>sanadprovider</string>
+				</array>
+			</dict>
+		</array>
 	</dict>
 </plist>

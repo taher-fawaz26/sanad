@@ -1,5 +1,15 @@
 # OTP + Sheet Navigation Migration — Final Report
 
+> **Historical / superseded.** This report predates the 2026 Auth
+> backend-contract refactor. Several classes named below —
+> `AuthOtpVerifier`, `RequestEmailOtpUseCase`, `VerifyEmailOtpUseCase`, and
+> `AuthValidateEmailEvent` — were subsequently removed; the split login/signup
+> auth contract no longer fits a single generic verifier. See the current
+> `packages/features/auth` source (and `packages/features/otp/README.md`) for
+> the live implementation. The rest of this report (sheet-navigation
+> migration, OTP package extraction) remains accurate as a point-in-time
+> record.
+
 ## 1. Migrated features
 
 | Feature | Before | After |

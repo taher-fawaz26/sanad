@@ -108,6 +108,7 @@ class RegistrationDocumentRepository implements DocumentFlowRepository {
     final request = ProfileCompletionRequest(
       emiratesIdFrontId: frontId,
       emiratesIdBackId: backId,
+      userType: providerType.userType,
       tradeLicenseId: isOrganization
           ? params.uploadedIds[DocumentType.tradeLicense]
           : null,
@@ -118,16 +119,12 @@ class RegistrationDocumentRepository implements DocumentFlowRepository {
       representativeFullName: isOrganization
           ? (params.context.get<String>('representativeName') ?? '')
           : null,
-      representativeEmail: isOrganization
-          ? (params.context.get<String>('email') ?? '')
-          : null,
     );
 
     return _networkGuard
         .execute(
           action: _remote.completeProfile(
             authorizationToken: token,
-            endpoint: providerType.profileEndpoint,
             request: request,
           ),
         )

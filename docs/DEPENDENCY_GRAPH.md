@@ -12,8 +12,6 @@ flowchart TB
   subgraph features [Feature Packages]
     Auth[auth]
     OTP[otp]
-    FP[forgot_password]
-    CP[change_password]
   end
 
   subgraph ui [UI Packages]
@@ -57,8 +55,6 @@ flowchart TB
   Auth --> DS
   Auth --> Loc
   OTP --> Auth
-  FP --> Auth
-  FP --> OTP
 
   DS --> Core
   DS --> Assets
@@ -90,7 +86,7 @@ core, app_assets (parallel foundation layers, no edge between them)
       ↓
 design_system
       ↓
-feature packages (auth, otp, forgot_password, change_password)
+feature packages (auth, otp)
       ↓
 applications (sanad_client, sanad_provider)
 ```
@@ -105,7 +101,7 @@ Forbidden:
 - `auth` → `sanad_provider` (package importing app)
 - `domain` → `data` (layer violation)
 - `core` ↔ `app_assets` (either direction — both are independent foundation packages)
-- **`design_system` → any feature package** (`auth`, `otp`, `forgot_password`, `change_password`) — verified zero violations by direct source inspection of `packages/design_system/pubspec.yaml` and `lib/`. Re-verify with a workspace-wide import grep before merging any future change to `design_system`.
+- **`design_system` → any feature package** (`auth`, `otp`) — verified zero violations by direct source inspection of `packages/design_system/pubspec.yaml` and `lib/`. Re-verify with a workspace-wide import grep before merging any future change to `design_system`.
 
 ## Layer Dependencies (Feature Packages)
 
@@ -119,7 +115,7 @@ routes/ → (path constants only)
 
 ## Known Issues
 
-- `api`, `analytics`, `notifications`, `change_password` are stubs with minimal implementation
+- `api`, `analytics`, `notifications` are stubs with minimal implementation
 - `shared_models` is an empty stub overlapping `domain` — see the Naming Recommendation in `docs/PACKAGE_GUIDE.md`. Not deleted, not renamed; do not add new code to it until that decision is made.
 
 ## Removed Packages

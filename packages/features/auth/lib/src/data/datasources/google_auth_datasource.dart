@@ -1,15 +1,24 @@
 import 'package:auth/src/data/endpoints/auth_api_paths.dart';
 import 'package:auth/src/data/models/auth_response_model.dart';
+import 'package:auth/src/data/models/responses/login_response_dto.dart';
 import 'package:auth/src/domain/entities/auth_response_entity.dart';
+import 'package:auth/src/domain/entities/login_result_entity.dart';
 import 'package:core/core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:network/network.dart';
 
-// ignore: one_member_abstracts — consistent with AuthRemoteDataSource pattern
+/// Google OAuth — exchanges a Firebase ID token for a SANAD session.
+///
+/// Split into [socialSignup] / [socialLogin] to mirror the backend's split
+/// endpoints (`auth/social/signup` vs `auth/social/login`) — the Firebase
+/// hand-off (Google popup → Firebase credential) is identical either way;
+/// only the SANAD endpoint posted to, and therefore the response shape,
+/// differs.
 abstract class GoogleAuthDataSource {
-  TaskEither<Failure, AuthResponseEntity> signInWithGoogle();
+  TaskEither<Failure, AuthResponseEntity> socialSignup();
+  TaskEither<Failure, LoginResult> socialLogin();
 }
 
 class GoogleAuthDataSourceImpl implements GoogleAuthDataSource {
@@ -25,8 +34,7 @@ class GoogleAuthDataSourceImpl implements GoogleAuthDataSource {
   final GoogleSignIn _googleSignIn;
   final FirebaseAuth _firebaseAuth;
 
-  @override
-  TaskEither<Failure, AuthResponseEntity> signInWithGoogle() =>
+  TaskEither<Failure, String> _obtainFirebaseToken() =>
       TaskEither<Failure, String>.tryCatch(
         () async {
           final googleUser = await _googleSignIn.signIn();
@@ -54,13 +62,29 @@ class GoogleAuthDataSourceImpl implements GoogleAuthDataSource {
           }
           return NetworkFailure(message: error.toString());
         },
-      ).flatMap(
+      );
+
+  @override
+  TaskEither<Failure, AuthResponseEntity> socialSignup() =>
+      _obtainFirebaseToken().flatMap(
         (firebaseToken) => _apiClient.request<AuthResponseEntity>(
-          path: AuthApiPaths.googleSignIn,
+          path: AuthApiPaths.socialSignup,
           method: RequestMethod.post,
           body: {'strategy': 'google', 'firebaseTokenId': firebaseToken},
           parser: (data) =>
               AuthResponseModel.fromJson(data as Map<String, dynamic>),
+        ),
+      );
+
+  @override
+  TaskEither<Failure, LoginResult> socialLogin() =>
+      _obtainFirebaseToken().flatMap(
+        (firebaseToken) => _apiClient.request<LoginResult>(
+          path: AuthApiPaths.socialLogin,
+          method: RequestMethod.post,
+          body: {'strategy': 'google', 'firebaseTokenId': firebaseToken},
+          parser: (data) =>
+              LoginResponseModel.fromJson(data as Map<String, dynamic>),
         ),
       );
 }

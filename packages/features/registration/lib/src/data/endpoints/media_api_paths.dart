@@ -13,15 +13,12 @@ abstract final class MediaApiPaths {
   /// Uses the onboarding Bearer token.
   static const extract = 'auth/extract';
 
-  /// `POST auth/profile/individual-provider` — complete profile for individual.
+  /// `POST auth/profile` — complete provider profile
+  /// (`CreateProviderProfileDto`).
   ///
-  /// Body: `{ emiratesIdFrontId, emiratesIdBackId, fullName }`.
+  /// Body: `{ emiratesIdFrontId, emiratesIdBackId, userType,
+  /// fullName? (individualProvider), businessName?, representativeFullName?,
+  /// tradeLicenseId? (organizationProvider) }`.
   /// Uses the onboarding Bearer token.
-  static const individualProvider = 'auth/profile/individual-provider';
-
-  /// `POST auth/profile/company-provider` — complete profile for organization.
-  ///
-  /// Body: `{ emiratesIdFrontId, emiratesIdBackId, tradeLicenseId, businessName, representativeFullName, representativeEmail }`.
-  /// Uses the onboarding Bearer token.
-  static const companyProvider = 'auth/profile/company-provider';
+  static const profile = 'auth/profile';
 }

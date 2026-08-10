@@ -52,14 +52,15 @@ layer_order:
       - testing
       - permissions
       - device
+      - deep_linking
       - test_verify
   - tier: 3
     packages: [maps, asset_picker, sheet_navigation, otp]
   - tier: 4
     packages:
-      [auth, services, workers, change_password, document_flow, contact_verification, media_upload]
+      [auth, services, workers, document_flow, contact_verification, media_upload]
   - tier: 5
-    packages: [forgot_password, invitation, registration, account_settings]
+    packages: [invitation, registration, account_settings, provider_rbac]
   - tier: 6
     packages: [branches]
   - tier: 7

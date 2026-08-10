@@ -46,7 +46,7 @@ Per feature package:
 
 ## Clean Architecture Checklist
 
-Per feature package (`auth`, `otp`, `forgot_password` as reference):
+Per feature package (`auth`, `otp` as reference):
 - [ ] `domain/repositories/` — abstract contracts only
 - [ ] `domain/usecases/` — one use case per action
 - [ ] `data/repositories/` — implementations only

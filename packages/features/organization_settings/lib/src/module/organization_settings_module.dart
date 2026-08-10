@@ -23,6 +23,7 @@ class OrganizationSettingsModule extends FeatureModule {
   List<String> get dependencies => const [
     'account_settings',
     'contact_verification',
+    'services',
   ];
 
   @override

@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
-/// Body for `POST /auth/email/request-otp`.
+/// `EmailDto` — body shared by `POST /auth/signup`, `POST /auth/login`, and
+/// `POST /auth/resend-otp`.
 class EmailOtpRequest extends Equatable {
   const EmailOtpRequest({required this.email});
 

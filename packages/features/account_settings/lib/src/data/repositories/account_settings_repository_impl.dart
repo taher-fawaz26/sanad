@@ -14,14 +14,6 @@ class AccountSettingsRepositoryImpl implements AccountSettingsRepository {
   final NetworkGuard _networkGuard;
 
   @override
-  TaskEither<Failure, AccountSettingsEntity> getAccountSettings() =>
-      _networkGuard.execute(
-        action: _remote.getAccountSettings().map(
-          (response) => response.toEntity(),
-        ),
-      );
-
-  @override
   TaskEither<Failure, AccountSettingsEntity> updateAccountSettings(
     UpdateAccountSettingsParams params,
   ) => _networkGuard.execute(

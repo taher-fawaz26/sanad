@@ -7,9 +7,32 @@ sealed class AuthEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-/// Request an OTP for [email] (shared by Sign In and Sign Up).
+/// Request an OTP for [email] under the given [intent] — sign-in and
+/// create-account hit different backend endpoints (`auth/login` vs
+/// `auth/signup`), so the caller must say which up front.
 class AuthRequestOtpEvent extends AuthEvent {
-  const AuthRequestOtpEvent(this.email);
+  const AuthRequestOtpEvent({required this.email, required this.intent});
+
+  final String email;
+  final AuthFlowIntent intent;
+
+  @override
+  List<Object?> get props => [email, intent];
+}
+
+/// Resend the active OTP for [email] (single endpoint regardless of intent).
+class AuthResendOtpEvent extends AuthEvent {
+  const AuthResendOtpEvent(this.email);
+
+  final String email;
+
+  @override
+  List<Object?> get props => [email];
+}
+
+/// Fetch the server-driven resend cooldown for [email].
+class AuthResendInfoRequestedEvent extends AuthEvent {
+  const AuthResendInfoRequestedEvent(this.email);
 
   final String email;
 
@@ -30,14 +53,12 @@ class AuthDeleteAccountEvent extends AuthEvent {
 
 class AuthCheckSignInStatusEvent extends AuthEvent {}
 
-class AuthGoogleSignInEvent extends AuthEvent {}
+/// Google sign-in under the given [intent].
+class AuthGoogleSignInEvent extends AuthEvent {
+  const AuthGoogleSignInEvent(this.intent);
 
-class AuthValidateEmailEvent extends AuthEvent {
-  const AuthValidateEmailEvent({required this.email, required this.isLogin});
-
-  final String email;
-  final bool isLogin;
+  final AuthFlowIntent intent;
 
   @override
-  List<Object?> get props => [email];
+  List<Object?> get props => [intent];
 }

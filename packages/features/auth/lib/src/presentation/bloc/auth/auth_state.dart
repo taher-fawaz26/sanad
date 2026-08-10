@@ -17,14 +17,16 @@ class AuthOtpRequestLoadingState extends AuthState {
   const AuthOtpRequestLoadingState();
 }
 
-/// OTP dispatched — navigate to the shared OTP screen for [email].
+/// OTP dispatched — navigate to the shared OTP screen for [email] under
+/// [intent].
 class AuthOtpSentState extends AuthState {
-  const AuthOtpSentState(this.email);
+  const AuthOtpSentState({required this.email, required this.intent});
 
   final String email;
+  final AuthFlowIntent intent;
 
   @override
-  List<Object?> get props => [email];
+  List<Object?> get props => [email, intent];
 }
 
 class AuthOtpRequestFailureState extends AuthState {
@@ -36,8 +38,28 @@ class AuthOtpRequestFailureState extends AuthState {
   List<Object?> get props => [failure];
 }
 
-// ─── Post-authentication (reached via `otp`'s AuthOtpVerifier, or Google
-// sign-in) ───────────────────────────────────────────────────────────────
+// ─── Resend info (server-driven cooldown) ──────────────────────────────────
+
+class AuthResendInfoState extends AuthState {
+  const AuthResendInfoState(this.resendInfo);
+
+  final ResendInfo resendInfo;
+
+  @override
+  List<Object?> get props => [resendInfo];
+}
+
+class AuthResendInfoFailureState extends AuthState {
+  const AuthResendInfoFailureState(this.failure);
+
+  final Failure failure;
+
+  @override
+  List<Object?> get props => [failure];
+}
+
+// ─── Post-authentication (reached via OTP verify in `EmailOtpPage`, or
+// Google sign-in here) ──────────────────────────────────────────────────────
 
 /// Existing user — session started, navigate to the dashboard.
 class AuthAuthenticatedState extends AuthState {
@@ -61,6 +83,12 @@ class AuthOnboardingRequiredState extends AuthState {
 
   @override
   List<Object?> get props => [email, onboardingToken];
+}
+
+/// Account exists but is suspended (`LoginResponseDto.status: SUSPENDED`) —
+/// both tokens are null on the wire, so there is nothing to persist.
+class AuthSuspendedState extends AuthState {
+  const AuthSuspendedState();
 }
 
 // ─── Logout ─────────────────────────────────────────────────────────────────
@@ -145,28 +173,4 @@ class AuthCheckSignInStatusFailureState extends AuthState {
 
   @override
   List<Object?> get props => [message];
-}
-
-// ─── Validate Email ──────────────────────────────────────────────────────────
-
-class AuthValidateEmailLoadingState extends AuthState {
-  const AuthValidateEmailLoadingState();
-}
-
-class AuthValidateEmailSuccessState extends AuthState {
-  const AuthValidateEmailSuccessState(this.emailExists);
-
-  final bool emailExists;
-
-  @override
-  List<Object?> get props => [emailExists];
-}
-
-class AuthValidateEmailFailureState extends AuthState {
-  const AuthValidateEmailFailureState(this.failure);
-
-  final Failure failure;
-
-  @override
-  List<Object?> get props => [failure];
 }

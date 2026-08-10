@@ -22,7 +22,7 @@ Reference for clean architecture decisions in the Sanad monorepo.
 ```
 apps (sanad_client, sanad_provider)
   ↓
-feature packages (auth, otp, forgot_password)
+feature packages (auth, otp)
   ↓
 UI packages (design_system, shared_widgets, localization)
   ↓

@@ -82,9 +82,35 @@ void main() {
     });
   });
 
+  group('UserType.fromString — legacy alias', () {
+    test('retired "companyProvider" wire/cache value still parses', () {
+      // A session cached by a pre-rename build may still have this value on
+      // disk — must self-heal rather than crash the splash screen.
+      expect(
+        UserType.fromString('companyProvider'),
+        UserType.organizationProvider,
+      );
+      expect(
+        UserType.fromString('COMPANYPROVIDER'),
+        UserType.organizationProvider,
+      );
+    });
+
+    test('current wire value parses directly', () {
+      expect(
+        UserType.fromString('organizationProvider'),
+        UserType.organizationProvider,
+      );
+    });
+
+    test('manager is a top-level userType distinct from worker', () {
+      expect(UserType.fromString('manager'), UserType.manager);
+    });
+  });
+
   group('AuthSessionResponseModel.fromJson — profile oneOf by userType', () {
     test('company provider — live payload, business fields null', () {
-      // Verbatim from live POST /auth/email/verify for
+      // Verbatim from live POST /auth/profile for
       // seed-company-provider-1@sanad.test.
       final response = AuthResponseModel.fromJson({
         'accessToken': 'access-token',
@@ -95,7 +121,7 @@ void main() {
         'user': {
           'id': 'e3521ee5-3f43-4af1-819b-8c0f1f164a5f',
           'email': 'seed-company-provider-1@sanad.test',
-          'userType': 'companyProvider',
+          'userType': 'organizationProvider',
           'isVerified': true,
           'isActive': true,
         },
@@ -118,7 +144,7 @@ void main() {
       });
 
       final session = response as AuthSessionEntity;
-      expect(session.user.type, UserType.companyProvider);
+      expect(session.user.type, UserType.organizationProvider);
       expect(session.profile, isA<BusinessProviderProfileModel>());
       final profile = session.profile! as BusinessProviderProfileModel;
       expect(profile.businessName, 'Company Provider 1 LLC');
@@ -186,7 +212,7 @@ void main() {
           'user': {
             'id': 'fresh-1',
             'email': 'fresh@sanad.test',
-            'userType': 'companyProvider',
+            'userType': 'organizationProvider',
             'isVerified': true,
             'isActive': true,
           },
@@ -216,7 +242,7 @@ void main() {
           'user': {
             'id': 'x',
             'email': 'x@x.com',
-            'userType': 'companyProvider',
+            'userType': 'organizationProvider',
             'isVerified': true,
             'isActive': true,
           },
@@ -295,7 +321,7 @@ void main() {
     test(
       'profile omitted entirely — tolerated despite isProfileCreated: true',
       () {
-        // Real-world behavior: auth/email/verify sometimes omits `profile` even
+        // Real-world behavior: auth/profile sometimes omits `profile` even
         // when isProfileCreated is true. Swagger marks profile as required, but
         // production does not always honor that — this must not throw.
         final response = AuthResponseModel.fromJson({
@@ -307,7 +333,7 @@ void main() {
           'user': {
             'id': 'sub-123',
             'email': 'user@example.com',
-            'userType': 'companyProvider',
+            'userType': 'organizationProvider',
           },
           'permissions': ['*'],
         });
@@ -374,7 +400,7 @@ void main() {
           'user': {
             'id': 'e3521ee5',
             'email': 'seed@sanad.test',
-            'userType': 'companyProvider',
+            'userType': 'organizationProvider',
             'isVerified': true,
             'isActive': true,
           },

@@ -1,11 +1,17 @@
-import 'package:branches/branches.dart';
+import 'package:branches/branches.dart'
+    show BranchScheduleFormatter, BranchTimeSlotEntity;
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:organization_settings/src/domain/entities/category_entity.dart';
+import 'package:organization_settings/src/domain/entities/legal_data_status.dart';
 import 'package:organization_settings/src/domain/entities/organization_profile_entity.dart';
+import 'package:organization_settings/src/domain/entities/provider_completion_entity.dart';
+import 'package:organization_settings/src/domain/entities/social_profiles_entity.dart';
+import 'package:organization_settings/src/domain/entities/working_hours_day_entity.dart';
 import 'package:organization_settings/src/presentation/bloc/organization_settings/organization_settings_bloc.dart';
 import 'package:organization_settings/src/presentation/widgets/bottom_sheets/edit_category_bottom_sheet.dart';
 import 'package:organization_settings/src/presentation/widgets/bottom_sheets/edit_identity_bottom_sheet.dart';
@@ -23,25 +29,14 @@ import 'package:organization_settings/src/presentation/widgets/sections/working_
 import 'package:organization_settings/src/routes/organization_settings_routes.dart';
 import 'package:shared_ui/shared_ui.dart';
 
-/// Preview categories until category *editing* is wired to a real backend
-/// endpoint (`GET /service-provider/me` only exposes the organization's
-/// already-selected categories, not the full catalog to pick from).
-const _kPreviewCategories = [
-  CategoryOption(id: 'car_service', name: 'Car Service'),
-  CategoryOption(id: 'oil_change', name: 'Oil Change'),
-  CategoryOption(id: 'brake_inspection', name: 'Brake Inspection'),
-  CategoryOption(id: 'tire_rotation', name: 'Tire Rotation'),
-  CategoryOption(id: 'battery_check', name: 'Battery Check'),
-];
-
 /// General organization settings view-mode page.
 ///
-/// Reads the organization's full settings profile from
-/// [OrganizationSettingsBloc] — `GET /service-provider/me` — the single
-/// source of truth for every section on this page. Category, social profile,
-/// and working hours *editing* remain local/mocked (no PATCH endpoints exist
-/// yet); the read-only display always reflects the backend profile until a
-/// local edit is made in the current session.
+/// Reads the organization's business profile, working hours, and
+/// profile-completion checklist from [OrganizationSettingsBloc] — the single
+/// source of truth for every section on this page. Category, description,
+/// social-profile, and working-hours edits all go through the bloc, which
+/// persists them via the real backend endpoints (`PATCH
+/// service-provider/settings`, `PUT service-provider/working-hours`).
 class GeneralSettingsPage extends StatelessWidget {
   /// Creates the general settings page.
   const GeneralSettingsPage({super.key});
@@ -65,75 +60,29 @@ class _GeneralSettingsView extends StatefulWidget {
 }
 
 class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
-  /// Null until the user edits categories locally this session — until then
-  /// the read view shows the backend profile's categories.
-  Set<String>? _localSelectedCategoryIds;
-
-  /// Null until the user edits social profiles locally this session.
-  SocialProfilesData? _localSocialProfiles;
-
-  /// No backend field exists for working hours yet — this stays local/mocked
-  /// exactly as before.
-  List<WorkingHoursEditEntry> _workingHoursEntries = const [
-    WorkingHoursEditEntry(dayId: 'SATURDAY', from: '09:00', to: '18:00'),
-    WorkingHoursEditEntry(dayId: 'SUNDAY', from: '09:00', to: '18:00'),
-    WorkingHoursEditEntry(dayId: 'MONDAY', from: '09:00', to: '18:00'),
-  ];
-
-  List<String> _categoryNames(OrganizationProfileEntity profile) {
-    final localIds = _localSelectedCategoryIds;
-    if (localIds != null) {
-      return _kPreviewCategories
-          .where((category) => localIds.contains(category.id))
-          .map((category) => category.name)
-          .toList();
-    }
-    return profile.categories.map((category) => category.name).toList();
-  }
-
-  SocialProfilesData _socialProfiles(OrganizationProfileEntity profile) {
-    final local = _localSocialProfiles;
-    if (local != null) return local;
-
-    final social = profile.socialProfiles;
-    return SocialProfilesData(
-      facebook: social?.facebook,
-      tiktok: social?.tiktok,
-      instagram: social?.instagram,
-      x: social?.x,
-      websiteUrl: social?.websiteUrl,
-    );
-  }
-
   List<BusinessProgressChecklistItem> _progressChecklist(
-    OrganizationProfileEntity profile,
+    ProviderCompletionEntity? completion,
   ) {
-    return [
-      BusinessProgressChecklistItem(
-        label: 'Phone Number',
-        completed: profile.businessPhone != null,
-      ),
-      BusinessProgressChecklistItem(
-        label: 'Email Address',
-        completed: profile.businessEmail != null,
-      ),
-      BusinessProgressChecklistItem(
-        label: 'Category',
-        completed: profile.categories.isNotEmpty,
-      ),
-      BusinessProgressChecklistItem(
-        label: 'Working Hours',
-        completed: _workingHoursEntries.isNotEmpty,
-      ),
-    ];
+    final items = completion?.items ?? const [];
+    return items
+        .map(
+          (item) => BusinessProgressChecklistItem(
+            label: item.label,
+            completed: item.completed,
+          ),
+        )
+        .toList();
   }
 
   OrganizationProfileStatus _headerStatus(
     OrganizationProfileEntity profile,
-    bool checklistComplete,
+    ProviderCompletionEntity? completion,
   ) {
     if (profile.isReviewed) return OrganizationProfileStatus.published;
-    if (!checklistComplete) return OrganizationProfileStatus.incomplete;
+    if (completion != null && !completion.visibleToCustomers) {
+      return OrganizationProfileStatus.incomplete;
+    }
+    if (completion == null) return OrganizationProfileStatus.incomplete;
     return OrganizationProfileStatus.inReview;
   }
 
@@ -147,13 +96,10 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
       entries.add(
         ComplianceDocumentEntry(
           documentTitle: 'Emirates ID',
-          status: _legalDataStatus(
-            isExpired: personal.isExpired,
-            isExpiringSoon: personal.isExpiringSoon,
-          ),
+          status: _legalDataStatus(personal.status),
           licenseNumber: personal.idNumber,
           expiryDate: _formatIsoDate(personal.expiryDate),
-          countdownText: personal.isExpiringSoon
+          countdownText: personal.status == LegalDataStatus.expiringSoon
               ? _countdownText(personal.expiryDate)
               : null,
           onUpdateDocument: _updateLegalDocuments,
@@ -166,13 +112,10 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
       entries.add(
         ComplianceDocumentEntry(
           documentTitle: 'Trade License',
-          status: _legalDataStatus(
-            isExpired: tradeLicense.isExpired,
-            isExpiringSoon: tradeLicense.isExpiringSoon,
-          ),
+          status: _legalDataStatus(tradeLicense.status),
           licenseNumber: tradeLicense.licenseNumber,
           expiryDate: _formatIsoDate(tradeLicense.expiryDate),
-          countdownText: tradeLicense.isExpiringSoon
+          countdownText: tradeLicense.status == LegalDataStatus.expiringSoon
               ? _countdownText(tradeLicense.expiryDate)
               : null,
           onUpdateDocument: _updateLegalDocuments,
@@ -183,14 +126,12 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
     return entries;
   }
 
-  ComplianceDocumentStatus _legalDataStatus({
-    required bool isExpired,
-    required bool isExpiringSoon,
-  }) {
-    if (isExpired) return ComplianceDocumentStatus.expired;
-    if (isExpiringSoon) return ComplianceDocumentStatus.expiring;
-    return ComplianceDocumentStatus.verified;
-  }
+  ComplianceDocumentStatus _legalDataStatus(LegalDataStatus status) =>
+      switch (status) {
+        LegalDataStatus.expired => ComplianceDocumentStatus.expired,
+        LegalDataStatus.expiringSoon => ComplianceDocumentStatus.expiring,
+        LegalDataStatus.verified => ComplianceDocumentStatus.verified,
+      };
 
   String? _formatIsoDate(String? isoDate) {
     if (isoDate == null) return null;
@@ -234,14 +175,38 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
     }
   }
 
-  Future<void> _editCategories() async {
-    final result = await showEditCategoryBottomSheet(
+  Future<void> _editDescription(String? currentDescription) async {
+    final result = await showEditIdentityBottomSheet(
       context: context,
-      categories: _kPreviewCategories,
-      initialSelectedIds: _localSelectedCategoryIds ?? const {},
+      initialDescription: currentDescription,
     );
     if (result == null || !mounted) return;
-    setState(() => _localSelectedCategoryIds = result);
+    context.read<OrganizationSettingsBloc>().add(
+      OrganizationSettingsDescriptionSaved(result),
+    );
+  }
+
+  Future<void> _editCategories(
+    List<CategoryEntity> catalog,
+    List<CategoryEntity> selected,
+  ) async {
+    final result = await showEditCategoryBottomSheet(
+      context: context,
+      categories: catalog
+          .map(
+            (category) => CategoryOption(id: category.id, name: category.name),
+          )
+          .toList(),
+      initialSelectedIds: selected.map((category) => category.id).toSet(),
+    );
+    if (result == null || !mounted) return;
+
+    final selectedCategories = catalog
+        .where((category) => result.contains(category.id))
+        .toList();
+    context.read<OrganizationSettingsBloc>().add(
+      OrganizationSettingsCategoriesSaved(selectedCategories),
+    );
   }
 
   Future<void> _editSocialProfiles(SocialProfilesData current) async {
@@ -250,28 +215,58 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
       initial: current,
     );
     if (result == null || !mounted) return;
-    setState(() => _localSocialProfiles = result);
+    context.read<OrganizationSettingsBloc>().add(
+      OrganizationSettingsSocialProfilesSaved(
+        SocialProfilesEntity(
+          facebook: result.facebook,
+          tiktok: result.tiktok,
+          instagram: result.instagram,
+          x: result.x,
+          websiteUrl: result.websiteUrl,
+        ),
+      ),
+    );
   }
 
-  Future<void> _editWorkingHours() async {
+  Future<void> _editWorkingHours(List<WorkingHoursDayEntity> current) async {
+    final entries = <WorkingHoursEditEntry>[
+      for (final day in current)
+        for (final slot in day.slots)
+          WorkingHoursEditEntry(dayId: day.day, from: slot.from, to: slot.to),
+    ];
+
     final result = await showEditWorkingHoursBottomSheet(
       context: context,
-      initialEntries: _workingHoursEntries,
+      initialEntries: entries,
     );
     if (result == null || !mounted) return;
-    setState(() => _workingHoursEntries = result);
+
+    final availability = result
+        .map(
+          (entry) => WorkingHoursDayEntity(
+            day: entry.dayId,
+            slots: [WorkingHoursSlotEntity(from: entry.from, to: entry.to)],
+          ),
+        )
+        .toList();
+
+    context.read<OrganizationSettingsBloc>().add(
+      OrganizationSettingsWorkingHoursSaved(availability),
+    );
   }
 
-  List<WorkingHoursEntry> get _workingHoursViewEntries => _workingHoursEntries
-      .map(
-        (entry) => WorkingHoursEntry(
-          dayLabel: BranchScheduleFormatter.localizedDay(entry.dayId),
+  List<WorkingHoursEntry> _workingHoursViewEntries(
+    List<WorkingHoursDayEntity> availability,
+  ) => [
+    for (final day in availability)
+      for (final slot in day.slots)
+        WorkingHoursEntry(
+          dayLabel: BranchScheduleFormatter.localizedDay(day.day),
           hoursLabel: BranchScheduleFormatter.formatSlot(
-            BranchTimeSlotEntity(from: entry.from, to: entry.to),
+            BranchTimeSlotEntity(from: slot.from, to: slot.to),
           ),
         ),
-      )
-      .toList();
+  ];
 
   void _showComingSoon(BuildContext context) {
     showAppSnackbar(
@@ -287,7 +282,8 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
 
     return BlocBuilder<OrganizationSettingsBloc, OrganizationSettingsState>(
       builder: (context, state) {
-        final profile = state.organization?.profile;
+        final profile = state.organization;
+        final completion = state.completion;
 
         return AppScrollPage(
           backgroundColor: colors.surface,
@@ -328,40 +324,37 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
                         name: profile.businessName,
                         coverUrl: profile.coverImage?.url,
                         logoUrl: profile.profileImage?.url,
-                        status: _headerStatus(
-                          profile,
-                          _progressChecklist(profile).every(
-                            (item) => item.completed,
-                          ),
+                        status: _headerStatus(profile, completion),
+                      ),
+                    ),
+                    const AppSliverGap(sectionSpacing),
+                    if (completion != null)
+                      AppSliverBox(
+                        child: BusinessProgressSection(
+                          completionPercent: completion.percentage.round(),
+                          items: _progressChecklist(completion),
+                          visibleToCustomers: completion.visibleToCustomers,
+                          requiredCompleted: completion.requiredCompleted,
+                          requiredTotal: completion.requiredTotal,
                         ),
                       ),
-                    ),
-                    const AppSliverGap(sectionSpacing),
-                    AppSliverBox(
-                      child: BusinessProgressSection(
-                        completionPercent:
-                            ((_progressChecklist(profile)
-                                            .where((item) => item.completed)
-                                            .length /
-                                        _progressChecklist(profile).length) *
-                                    100)
-                                .round(),
-                        items: _progressChecklist(profile),
-                      ),
-                    ),
-                    const AppSliverGap(sectionSpacing),
+                    if (completion != null) const AppSliverGap(sectionSpacing),
                     AppSliverBox(
                       child: IdentitySection(
-                        onEdit: () =>
-                            showEditIdentityBottomSheet(context: context),
+                        onEdit: () => _editDescription(profile.description),
                         businessDescription: profile.description,
                       ),
                     ),
                     const AppSliverGap(sectionSpacing),
                     AppSliverBox(
                       child: CategorySection(
-                        selectedCategories: _categoryNames(profile),
-                        onEdit: _editCategories,
+                        selectedCategories: profile.categories
+                            .map((category) => category.name)
+                            .toList(),
+                        onEdit: () => _editCategories(
+                          state.categoryCatalog,
+                          profile.categories,
+                        ),
                       ),
                     ),
                     const AppSliverGap(sectionSpacing),
@@ -379,14 +372,22 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
                     AppSliverBox(
                       child: Builder(
                         builder: (context) {
-                          final social = _socialProfiles(profile);
+                          final social = profile.socialProfiles;
                           return SocialProfilesSection(
-                            onEdit: () => _editSocialProfiles(social),
-                            facebook: social.facebook,
-                            tiktok: social.tiktok,
-                            instagram: social.instagram,
-                            x: social.x,
-                            websiteUrl: social.websiteUrl,
+                            onEdit: () => _editSocialProfiles(
+                              SocialProfilesData(
+                                facebook: social?.facebook,
+                                tiktok: social?.tiktok,
+                                instagram: social?.instagram,
+                                x: social?.x,
+                                websiteUrl: social?.websiteUrl,
+                              ),
+                            ),
+                            facebook: social?.facebook,
+                            tiktok: social?.tiktok,
+                            instagram: social?.instagram,
+                            x: social?.x,
+                            websiteUrl: social?.websiteUrl,
                           );
                         },
                       ),
@@ -400,8 +401,8 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
                     const AppSliverGap(sectionSpacing),
                     AppSliverBox(
                       child: WorkingHoursSection(
-                        entries: _workingHoursViewEntries,
-                        onEdit: _editWorkingHours,
+                        entries: _workingHoursViewEntries(state.workingHours),
+                        onEdit: () => _editWorkingHours(state.workingHours),
                       ),
                     ),
                   ],

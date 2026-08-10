@@ -1,6 +1,7 @@
 import 'package:auth/src/presentation/bloc/auth/auth_bloc.dart';
 import 'package:auth/src/presentation/pages/email_otp_page.dart';
 import 'package:auth/src/routes/auth_routes.dart';
+import 'package:auth/src/routing/auth_otp_route_args.dart';
 import 'package:core/core.dart' show sl;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -24,8 +25,9 @@ abstract final class AuthShell {
         routes: children,
       );
 
-  /// The shared OTP route. The email is passed as the route `extra`; navigating
-  /// here without one bounces back to login.
+  /// The shared OTP route. The `{email, intent}` pair is passed as the route
+  /// `extra` ([AuthOtpRouteArgs]) — navigating here without one bounces back
+  /// to login.
   ///
   /// [onAuthenticated] runs for an existing user (session started);
   /// [onOnboarding] runs for a new user that must complete registration.
@@ -40,11 +42,15 @@ abstract final class AuthShell {
   }) => GoRoute(
     path: AuthRoutes.otp,
     redirect: (context, state) =>
-        state.extra is String ? null : AuthRoutes.login,
-    builder: (context, state) => EmailOtpPage(
-      email: state.extra! as String,
-      onAuthenticated: () => onAuthenticated(context),
-      onOnboarding: (email, token) => onOnboarding(context, email, token),
-    ),
+        state.extra is AuthOtpRouteArgs ? null : AuthRoutes.login,
+    builder: (context, state) {
+      final args = state.extra! as AuthOtpRouteArgs;
+      return EmailOtpPage(
+        email: args.email,
+        intent: args.intent,
+        onAuthenticated: () => onAuthenticated(context),
+        onOnboarding: (email, token) => onOnboarding(context, email, token),
+      );
+    },
   );
 }

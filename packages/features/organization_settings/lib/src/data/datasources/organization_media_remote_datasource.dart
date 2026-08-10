@@ -45,15 +45,14 @@ class OrganizationMediaRemoteDataSourceImpl
         onProgress: onProgress,
       )
       .flatMap(
-        (uploaded) => _apiClient
-            .request<OrganizationMediaResponse>(
-              path: slot.endpoint,
-              method: RequestMethod.patch,
-              body: {'mediaId': uploaded.id},
-              parser: (data) => OrganizationMediaResponse.fromJson(
-                data as Map<String, dynamic>,
-              ).withUrlFallback(uploaded.url),
-            ),
+        (uploaded) => _apiClient.request<OrganizationMediaResponse>(
+          path: slot.endpoint,
+          method: RequestMethod.patch,
+          body: {'mediaId': uploaded.id},
+          parser: (data) => OrganizationMediaResponse.fromJson(
+            data as Map<String, dynamic>,
+          ).withUrlFallback(uploaded.url),
+        ),
       );
 
   @override
