@@ -10,6 +10,7 @@ abstract class PlacesProvider {
     String? language,
     LatLng? location,
     int? radiusMeters,
+    String? types,
   });
 
   TaskEither<Failure, LatLng> getPlaceDetails({

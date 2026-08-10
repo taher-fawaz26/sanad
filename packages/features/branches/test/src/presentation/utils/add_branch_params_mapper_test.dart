@@ -247,6 +247,39 @@ void main() {
         'ChIJRULP3yjK9T4RqYPvJA6bEHo',
       ]);
     });
+
+    test('deduplicates the same place_id discovered via auto + manual areas '
+        'while preserving first-seen order', () {
+      final draft = completeDraft.copyWith(
+        servingAreas: const [
+          ServingArea(
+            placeId: 'ChIJ_dup',
+            name: 'Auto-discovered',
+            address: '',
+            latLng: LatLng(25.0, 55.0),
+          ),
+          ServingArea(
+            placeId: 'ChIJ_unique',
+            name: 'Unique Area',
+            address: '',
+            latLng: LatLng(25.1, 55.1),
+          ),
+          ServingArea(
+            placeId: 'ChIJ_dup',
+            name: 'Manually re-added',
+            address: '',
+            latLng: LatLng(25.0, 55.0),
+          ),
+        ],
+      );
+
+      final params = AddBranchParamsMapper.toCreateParams(
+        draft,
+        companySchedule: companySchedule,
+      );
+
+      expect(params.servingAreaPlaceIds, ['ChIJ_dup', 'ChIJ_unique']);
+    });
   });
 
   group('AddBranchParamsMapper.toUpdateParams', () {

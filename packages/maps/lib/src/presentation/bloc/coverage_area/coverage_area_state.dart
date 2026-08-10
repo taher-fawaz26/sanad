@@ -7,6 +7,19 @@ enum CoverageAreaStatus {
   failure,
 }
 
+/// Status of the Google-only area *discovery* specifically — distinct from
+/// [CoverageAreaStatus], which tracks the center/address readiness that
+/// gates [CoverageAreaState.canConfirm]. A discovery can fail or come back
+/// empty/partial while the location itself is still perfectly resolved.
+enum CoverageAreaDiscoveryStatus {
+  initial,
+  loading,
+  success,
+  empty,
+  partialFailure,
+  failure,
+}
+
 enum CoverageAreaCameraSource {
   none,
   programmatic,
@@ -24,6 +37,7 @@ class CoverageAreaState extends Equatable {
     this.extraAreas = const [],
     this.failure,
     this.cameraSource = CoverageAreaCameraSource.none,
+    this.discoveryStatus = CoverageAreaDiscoveryStatus.initial,
   });
 
   static const double defaultRadiusKm = 5;
@@ -44,6 +58,7 @@ class CoverageAreaState extends Equatable {
   final List<ServingArea> extraAreas;
   final Failure? failure;
   final CoverageAreaCameraSource cameraSource;
+  final CoverageAreaDiscoveryStatus discoveryStatus;
 
   /// True only when the centre is *known* to be in another country — a null
   /// geocode never blocks a legitimate in-country point.
@@ -77,6 +92,7 @@ class CoverageAreaState extends Equatable {
     List<ServingArea>? extraAreas,
     Failure? failure,
     CoverageAreaCameraSource? cameraSource,
+    CoverageAreaDiscoveryStatus? discoveryStatus,
     bool clearFailure = false,
     bool clearAddress = false,
   }) {
@@ -93,6 +109,7 @@ class CoverageAreaState extends Equatable {
       extraAreas: extraAreas ?? this.extraAreas,
       failure: clearFailure ? null : (failure ?? this.failure),
       cameraSource: cameraSource ?? this.cameraSource,
+      discoveryStatus: discoveryStatus ?? this.discoveryStatus,
     );
   }
 
@@ -108,5 +125,6 @@ class CoverageAreaState extends Equatable {
     extraAreas,
     failure,
     cameraSource,
+    discoveryStatus,
   ];
 }

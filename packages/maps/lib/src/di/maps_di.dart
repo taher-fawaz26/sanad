@@ -37,6 +37,7 @@ abstract final class MapsDI {
 
   static void init({MapsConfig config = const MapsConfig()}) {
     sl
+      ..registerLazySingleton<MapsConfig>(() => config)
       ..registerLazySingleton<LocationsRepository>(
         () => LocationsRepositoryImpl(sl<BaseApiClient>()),
       )
@@ -65,6 +66,9 @@ abstract final class MapsDI {
                 apiKey: config.placesApiKey!,
                 dio: _createPlacesDio(),
                 countryCode: config.countryCode,
+                gridSpacingKm: config.servingAreaDiscovery.gridSpacingKm,
+                maxSamples: config.servingAreaDiscovery.maxSamples,
+                concurrency: config.servingAreaDiscovery.concurrency,
               )
             : const NoopNearbyAreasRepository(),
       )

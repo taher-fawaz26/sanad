@@ -1,4 +1,5 @@
-import 'package:easy_localization/easy_localization.dart' show DateFormat, NumberFormat;
+import 'package:easy_localization/easy_localization.dart'
+    show DateFormat, NumberFormat;
 import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart' show DateFormat, NumberFormat;
 
@@ -9,15 +10,12 @@ abstract final class AppIntlLocale {
 
   static const String _arabicWesternDigits = 'ar_AE';
 
-  static String intlTag(Locale locale) =>
-      locale.languageCode == 'ar'
-          ? _arabicWesternDigits
-          : locale.toLanguageTag();
+  static String intlTag(Locale locale) => locale.languageCode == 'ar'
+      ? _arabicWesternDigits
+      : locale.toLanguageTag();
 
   static Locale materialPickerLocale(Locale uiLocale) =>
-      uiLocale.languageCode == 'ar'
-          ? const Locale('ar', 'AE')
-          : uiLocale;
+      uiLocale.languageCode == 'ar' ? const Locale('ar', 'AE') : uiLocale;
 
   static String westernizeDigits(String input) => input.replaceAllMapped(
     RegExp('[٠-٩۰-۹]'),

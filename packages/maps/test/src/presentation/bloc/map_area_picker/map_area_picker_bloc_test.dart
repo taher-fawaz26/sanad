@@ -185,6 +185,24 @@ void main() {
               ),
         ],
       );
+
+      blocTest<MapAreaPickerBloc, MapAreaPickerState>(
+        'restricts search to region-type places (excludes businesses/POIs)',
+        build: () {
+          when(
+            () => searchPlaces(any()),
+          ).thenReturn(TaskEither.right([_tPrediction]));
+          return buildBloc(withPlaces: true);
+        },
+        act: (bloc) => bloc.add(MapAreaPickerQueryChanged('dubai')),
+        verify: (_) {
+          final captured = verify(
+            () => searchPlaces(captureAny()),
+          ).captured;
+          final params = captured.single as SearchPlacesParams;
+          expect(params.types, '(regions)');
+        },
+      );
     });
 
     group('MapAreaPickerPredictionSelected', () {

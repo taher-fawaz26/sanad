@@ -136,6 +136,120 @@ void main() {
           expect(bloc.state.address, _tAddress);
           expect(bloc.state.autoAreas, [_tAutoAreaDubaiMarina, _tAutoAreaJbr]);
           expect(bloc.state.mode, CoverageMode.create);
+          expect(
+            bloc.state.discoveryStatus,
+            CoverageAreaDiscoveryStatus.success,
+          );
+        },
+      );
+
+      blocTest<CoverageAreaBloc, CoverageAreaState>(
+        'zero discovered areas -> discoveryStatus.empty',
+        build: () {
+          when(() => resolveCoverageLocation(any())).thenReturn(
+            TaskEither.right(
+              const CoverageLocation(
+                center: _tPosition,
+                address: _tAddress,
+                nearbyAreas: [],
+              ),
+            ),
+          );
+          return buildBloc();
+        },
+        act: (bloc) => bloc.add(
+          const CoverageAreaStarted(
+            mode: CoverageMode.create,
+            initialCenter: _tPosition,
+          ),
+        ),
+        wait: const Duration(milliseconds: 50),
+        verify: (bloc) {
+          expect(
+            bloc.state.discoveryStatus,
+            CoverageAreaDiscoveryStatus.empty,
+          );
+        },
+      );
+
+      blocTest<CoverageAreaBloc, CoverageAreaState>(
+        'partial discovery failure -> discoveryStatus.partialFailure, '
+        'areas are still shown',
+        build: () {
+          when(() => resolveCoverageLocation(any())).thenReturn(
+            TaskEither.right(
+              const CoverageLocation(
+                center: _tPosition,
+                address: _tAddress,
+                nearbyAreas: [_tAutoAreaDubaiMarina],
+                hadPartialFailure: true,
+              ),
+            ),
+          );
+          return buildBloc();
+        },
+        act: (bloc) => bloc.add(
+          const CoverageAreaStarted(
+            mode: CoverageMode.create,
+            initialCenter: _tPosition,
+          ),
+        ),
+        wait: const Duration(milliseconds: 50),
+        verify: (bloc) {
+          expect(
+            bloc.state.discoveryStatus,
+            CoverageAreaDiscoveryStatus.partialFailure,
+          );
+          expect(bloc.state.autoAreas, [_tAutoAreaDubaiMarina]);
+          expect(bloc.state.status, CoverageAreaStatus.ready);
+        },
+      );
+
+      blocTest<CoverageAreaBloc, CoverageAreaState>(
+        'a stale resolve must not overwrite the latest state',
+        build: () {
+          var call = 0;
+          when(() => resolveCoverageLocation(any())).thenAnswer((_) {
+            call++;
+            if (call == 1) {
+              // First (stale) request resolves slowly with old data.
+              return TaskEither(() async {
+                await Future<void>.delayed(const Duration(milliseconds: 60));
+                return Right(
+                  const CoverageLocation(
+                    center: _tPosition,
+                    address: 'Stale Address',
+                    nearbyAreas: [_tAutoAreaDubaiMarina],
+                  ),
+                );
+              });
+            }
+            // Second (latest) request resolves fast with fresh data.
+            return TaskEither.right(
+              const CoverageLocation(
+                center: _tPosition2,
+                address: 'Fresh Address',
+                nearbyAreas: [_tAutoAreaJbr],
+              ),
+            );
+          });
+          return buildBloc();
+        },
+        act: (bloc) async {
+          bloc.add(
+            const CoverageAreaStarted(
+              mode: CoverageMode.create,
+              initialCenter: _tPosition,
+            ),
+          );
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+          bloc.add(const CoverageAreaMapMoved(_tPosition2));
+        },
+        wait: const Duration(milliseconds: 100),
+        verify: (bloc) {
+          // The stale first resolve must never win over the newer one.
+          expect(bloc.state.address, 'Fresh Address');
+          expect(bloc.state.autoAreas, [_tAutoAreaJbr]);
         },
       );
 

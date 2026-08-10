@@ -9,6 +9,7 @@ abstract class PlacesRepository {
     String? language,
     LatLng? biasLocation,
     int? biasRadiusMeters,
+    String? types,
   });
 
   TaskEither<Failure, LatLng> getPlaceCoordinates({

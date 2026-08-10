@@ -53,6 +53,56 @@ abstract final class GeoMath {
     );
   }
 
+  /// Generates a square-lattice grid of sample points covering the circle of
+  /// [radiusKm] around [center], spaced [spacingKm] apart, keeping only
+  /// points within the circle (plus [center] itself, always included).
+  ///
+  /// Used to sample a bounded area for reverse-geocode area discovery, since
+  /// no Google API can enumerate geographic areas within a radius directly.
+  static List<LatLng> gridSamplePoints(
+    LatLng center, {
+    required double radiusKm,
+    required double spacingKm,
+  }) {
+    if (radiusKm <= 0 || spacingKm <= 0) return [center];
+
+    final points = <LatLng>[center];
+    final steps = (radiusKm / spacingKm).ceil();
+
+    for (var i = -steps; i <= steps; i++) {
+      for (var j = -steps; j <= steps; j++) {
+        if (i == 0 && j == 0) continue;
+        final north = i * spacingKm;
+        final east = j * spacingKm;
+        final point = _offsetByKmComponents(
+          center,
+          northKm: north,
+          eastKm: east,
+        );
+        if (distanceKm(center, point) <= radiusKm) {
+          points.add(point);
+        }
+      }
+    }
+    return points;
+  }
+
+  /// Offsets [origin] by independent north/east components in km. Equivalent
+  /// to a local planar approximation, accurate enough at neighborhood scale.
+  static LatLng _offsetByKmComponents(
+    LatLng origin, {
+    required double northKm,
+    required double eastKm,
+  }) {
+    final latRad = origin.latitude * math.pi / 180;
+    final newLat = origin.latitude + (northKm / _kmPerDegree);
+    final kmPerDegreeLng = _kmPerDegree * math.cos(latRad);
+    final newLng = kmPerDegreeLng == 0
+        ? origin.longitude
+        : origin.longitude + (eastKm / kmPerDegreeLng);
+    return LatLng(newLat, newLng);
+  }
+
   /// Haversine distance between two points in km.
   static double distanceKm(LatLng a, LatLng b) {
     final dLat = (b.latitude - a.latitude) * math.pi / 180;

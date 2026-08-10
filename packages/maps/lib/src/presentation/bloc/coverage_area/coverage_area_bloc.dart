@@ -240,6 +240,7 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
         center: center,
         radiusKm: resolvedRadius,
         cameraSource: cameraSource,
+        discoveryStatus: CoverageAreaDiscoveryStatus.loading,
         clearFailure: true,
       ),
     );
@@ -259,6 +260,7 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
           state.copyWith(
             status: CoverageAreaStatus.failure,
             failure: failure,
+            discoveryStatus: CoverageAreaDiscoveryStatus.failure,
           ),
         );
       },
@@ -277,10 +279,23 @@ class CoverageAreaBloc extends Bloc<CoverageAreaEvent, CoverageAreaState> {
             mode: effectiveMode,
             autoAreas: _autoAreasController.items,
             cameraSource: cameraSource,
+            discoveryStatus: _discoveryStatusFor(
+              areas: areas,
+              hadPartialFailure: location.hadPartialFailure,
+            ),
           ),
         );
       },
     );
+  }
+
+  CoverageAreaDiscoveryStatus _discoveryStatusFor({
+    required List<ServingArea> areas,
+    required bool hadPartialFailure,
+  }) {
+    if (hadPartialFailure) return CoverageAreaDiscoveryStatus.partialFailure;
+    if (areas.isEmpty) return CoverageAreaDiscoveryStatus.empty;
+    return CoverageAreaDiscoveryStatus.success;
   }
 
   CoverageMode _effectiveMode({required bool elevateMode}) {

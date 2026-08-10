@@ -41,4 +41,79 @@ void main() {
     expect(params['components'], 'country:ae');
     expect(params['region'], 'ae');
   });
+
+  test('normalizes language to a subtag (ar_AE -> ar)', () async {
+    await provider.autocomplete(query: 'marina', language: 'ar_AE').run();
+
+    final params =
+        verify(
+              () => dio.get<Map<String, dynamic>>(
+                any(),
+                queryParameters: captureAny(named: 'queryParameters'),
+              ),
+            ).captured.first
+            as Map<String, dynamic>;
+
+    expect(params['language'], 'ar');
+  });
+
+  test('normalizes language to a subtag (en-US -> en)', () async {
+    await provider.autocomplete(query: 'marina', language: 'en-US').run();
+
+    final params =
+        verify(
+              () => dio.get<Map<String, dynamic>>(
+                any(),
+                queryParameters: captureAny(named: 'queryParameters'),
+              ),
+            ).captured.first
+            as Map<String, dynamic>;
+
+    expect(params['language'], 'en');
+  });
+
+  test('omits language when null', () async {
+    await provider.autocomplete(query: 'marina').run();
+
+    final params =
+        verify(
+              () => dio.get<Map<String, dynamic>>(
+                any(),
+                queryParameters: captureAny(named: 'queryParameters'),
+              ),
+            ).captured.first
+            as Map<String, dynamic>;
+
+    expect(params.containsKey('language'), isFalse);
+  });
+
+  test('passes through the types restriction when provided', () async {
+    await provider.autocomplete(query: 'marina', types: '(regions)').run();
+
+    final params =
+        verify(
+              () => dio.get<Map<String, dynamic>>(
+                any(),
+                queryParameters: captureAny(named: 'queryParameters'),
+              ),
+            ).captured.first
+            as Map<String, dynamic>;
+
+    expect(params['types'], '(regions)');
+  });
+
+  test('omits types when not provided', () async {
+    await provider.autocomplete(query: 'marina').run();
+
+    final params =
+        verify(
+              () => dio.get<Map<String, dynamic>>(
+                any(),
+                queryParameters: captureAny(named: 'queryParameters'),
+              ),
+            ).captured.first
+            as Map<String, dynamic>;
+
+    expect(params.containsKey('types'), isFalse);
+  });
 }

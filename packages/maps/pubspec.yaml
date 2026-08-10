@@ -12,6 +12,8 @@ environment:
 dependencies:
   app_assets:
     path: ../app_assets
+  app_logger:
+    path: ../app_logger
   core:
     path: ../core
   design_system:

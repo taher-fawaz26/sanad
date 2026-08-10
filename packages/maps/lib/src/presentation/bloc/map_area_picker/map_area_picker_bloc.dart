@@ -131,6 +131,9 @@ class MapAreaPickerBloc extends Bloc<MapAreaPickerEvent, MapAreaPickerState> {
       query: query,
       language: _localeIdentifier,
       biasLocation: state.position,
+      // Serving areas are geographic areas, not businesses — restrict
+      // predictions to Google's region type collection.
+      types: '(regions)',
     );
     if (result == null) return;
 

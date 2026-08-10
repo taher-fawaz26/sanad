@@ -21,6 +21,7 @@ class PlacesRepositoryImpl implements PlacesRepository {
     String? language,
     LatLng? biasLocation,
     int? biasRadiusMeters,
+    String? types,
   }) {
     return _provider.autocomplete(
       query: query,
@@ -28,6 +29,7 @@ class PlacesRepositoryImpl implements PlacesRepository {
       language: language,
       location: biasLocation,
       radiusMeters: biasRadiusMeters,
+      types: types,
     );
   }
 

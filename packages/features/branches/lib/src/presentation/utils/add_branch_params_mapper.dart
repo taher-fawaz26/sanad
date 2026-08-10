@@ -96,11 +96,15 @@ abstract final class AddBranchParamsMapper {
   // manually-added areas), so their place_ids are real Google ids the backend
   // accepts. We still drop empty and synthetic, geocoder-derived ids
   // (coordinate keys like `latlng:25.07,55.13`) — those are local fallbacks,
-  // not Google place_ids. See `ServingArea.placeId`.
+  // not Google place_ids. See `ServingArea.placeId`. Auto and manually-added
+  // areas can independently resolve to the same place_id (e.g. a manually
+  // picked area also discovered by the grid), so dedup while preserving
+  // first-seen order.
   static List<String> _servingAreaPlaceIds(AddBranchDraft draft) => draft
       .servingAreas
       .map((a) => a.placeId)
       .where((id) => id.isNotEmpty && !id.startsWith('latlng:'))
+      .toSet()
       .toList(growable: false);
 
   static List<String>? _serviceIds(AddBranchDraft draft) =>

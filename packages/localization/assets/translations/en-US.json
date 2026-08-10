@@ -312,7 +312,8 @@
       "done": "Done",
       "confirm": "Confirm Coverage",
       "select_from_search_hint": "Please select an area from the search results.",
-      "outside_uae": "The coverage centre must be inside the UAE"
+      "outside_uae": "The coverage centre must be inside the UAE",
+      "partial_discovery_notice": "Some nearby areas could not be found. Coverage may be incomplete — you can add missing areas manually."
     },
     "load_error_title": "Couldn't load your branches",
     "load_error_description": "Check your connection and try again.",

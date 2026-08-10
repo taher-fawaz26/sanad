@@ -20,10 +20,14 @@ class CoverageAreaPage extends StatefulWidget {
 }
 
 class _CoverageAreaPageState extends State<CoverageAreaPage> {
-  static const _minRadiusKm = 1.0;
-  static const _maxRadiusKm = 30.0;
   static const _mapOverlayAlpha = 0.45;
   static const _radiusSnapThresholdKm = 0.01;
+
+  // Radius bounds come from MapsConfig (product/config limits, not hardcoded
+  // here): min matches the backend's `radiusKm >= 1`; max is the product
+  // ceiling on how large a single grid-tessellated discovery may be.
+  double get _minRadiusKm => 1;
+  double get _maxRadiusKm => sl<MapsConfig>().servingAreaDiscovery.maxRadiusKm;
 
   final _radiusDebouncer = Debouncer(delay: const Duration(milliseconds: 400));
   final _radiusController = MapRadiusController();
@@ -253,6 +257,24 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
                                 style: context.appTypography.smallNormal
                                     .copyWith(
                                       color: context.appColors.error,
+                                    ),
+                              ),
+                            ),
+                          ] else if (state.discoveryStatus ==
+                              CoverageAreaDiscoveryStatus.partialFailure) ...[
+                            // Discovery is bounded, grid-tessellated reverse
+                            // geocoding — never claim exhaustive coverage.
+                            SizedBox(height: AppSpacing.sm),
+                            Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: AppSpacing.xl,
+                              ),
+                              child: Text(
+                                'branches.coverage_area.partial_discovery_notice'
+                                    .tr(),
+                                style: context.appTypography.smallNormal
+                                    .copyWith(
+                                      color: context.appColors.textSecondary,
                                     ),
                               ),
                             ),

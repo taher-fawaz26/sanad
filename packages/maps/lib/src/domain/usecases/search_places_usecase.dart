@@ -10,14 +10,20 @@ class SearchPlacesParams extends Equatable {
     required this.query,
     this.language,
     this.biasLocation,
+    this.types,
   });
 
   final String query;
   final String? language;
   final LatLng? biasLocation;
 
+  /// Restricts predictions to a Google Autocomplete type collection, e.g.
+  /// `'(regions)'` to exclude businesses/POIs and only return geographic
+  /// areas. Null keeps the default (unrestricted) behavior.
+  final String? types;
+
   @override
-  List<Object?> get props => [query, language, biasLocation];
+  List<Object?> get props => [query, language, biasLocation, types];
 }
 
 class SearchPlacesUseCase
@@ -33,5 +39,6 @@ class SearchPlacesUseCase
     query: params.query,
     language: params.language,
     biasLocation: params.biasLocation,
+    types: params.types,
   );
 }

@@ -27,16 +27,18 @@ class ResolveCoverageLocationUseCase
     );
 
     return geocodeTask.flatMap(
-      (geocoded) => _resolveNearbyAreas(
-        ResolveNearbyAreasParams(intent: intent),
-      ).map(
-        (nearbyAreas) => CoverageLocation(
-          center: intent.center,
-          address: geocoded.formattedAddress,
-          nearbyAreas: nearbyAreas,
-          isoCountryCode: geocoded.isoCountryCode,
-        ),
-      ),
+      (geocoded) =>
+          _resolveNearbyAreas(
+            ResolveNearbyAreasParams(intent: intent),
+          ).map(
+            (nearbyAreasResult) => CoverageLocation(
+              center: intent.center,
+              address: geocoded.formattedAddress,
+              nearbyAreas: nearbyAreasResult.areas,
+              isoCountryCode: geocoded.isoCountryCode,
+              hadPartialFailure: nearbyAreasResult.hadPartialFailure,
+            ),
+          ),
     );
   }
 }

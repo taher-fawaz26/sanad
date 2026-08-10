@@ -64,8 +64,9 @@ FailureErrorDisplay failureErrorDisplay(
   final hasMessage = failure != null && failure.message.trim().isNotEmpty;
   return FailureErrorDisplay(
     title: genericTitleKey.tr(),
-    description:
-        hasMessage ? failure.localizedMessage() : genericDescriptionKey.tr(),
+    description: hasMessage
+        ? failure.localizedMessage()
+        : genericDescriptionKey.tr(),
     isConnectivity: false,
     isRetryable: failure?.isRetryable ?? true,
   );

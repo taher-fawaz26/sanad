@@ -8,6 +8,7 @@ class CoverageLocation extends Equatable {
     required this.address,
     required this.nearbyAreas,
     this.isoCountryCode,
+    this.hadPartialFailure = false,
   });
 
   final LatLng center;
@@ -18,6 +19,16 @@ class CoverageLocation extends Equatable {
   /// keep the coverage centre inside the supported country.
   final String? isoCountryCode;
 
+  /// True when area discovery succeeded partially — some grid samples
+  /// failed but others returned areas. Coverage may be incomplete.
+  final bool hadPartialFailure;
+
   @override
-  List<Object?> get props => [center, address, nearbyAreas, isoCountryCode];
+  List<Object?> get props => [
+    center,
+    address,
+    nearbyAreas,
+    isoCountryCode,
+    hadPartialFailure,
+  ];
 }

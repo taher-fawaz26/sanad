@@ -35,21 +35,26 @@ void main() {
   group('FailureLocalizer.localizedMessage — backend prose passthrough', () {
     test('returns multi-word server prose verbatim', () {
       expect(
-        const ServerFailure(message: 'Cannot delete the only branch')
-            .localizedMessage(),
+        const ServerFailure(
+          message: 'Cannot delete the only branch',
+        ).localizedMessage(),
         'Cannot delete the only branch',
       );
     });
 
-    test('returns SINGLE-word prose verbatim (contains-space regression fix)',
-        () {
-      // The old `message.contains(' ')` heuristic would have treated
-      // "Forbidden" as an i18n key and shown a broken literal. It must not.
-      expect(
-        const UnauthorizedRoleFailure(message: 'Forbidden').localizedMessage(),
-        'Forbidden',
-      );
-    });
+    test(
+      'returns SINGLE-word prose verbatim (contains-space regression fix)',
+      () {
+        // The old `message.contains(' ')` heuristic would have treated
+        // "Forbidden" as an i18n key and shown a broken literal. It must not.
+        expect(
+          const UnauthorizedRoleFailure(
+            message: 'Forbidden',
+          ).localizedMessage(),
+          'Forbidden',
+        );
+      },
+    );
   });
 
   group('ValidationFailureLocalizer.localizedMessages', () {

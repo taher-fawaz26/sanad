@@ -28,6 +28,7 @@ class PlaceSearchRunner {
     required String query,
     String? language,
     LatLng? biasLocation,
+    String? types,
   }) async {
     final useCase = _searchPlacesUseCase;
     if (useCase == null) return null;
@@ -38,6 +39,7 @@ class PlaceSearchRunner {
         query: query,
         language: language,
         biasLocation: biasLocation,
+        types: types,
       ),
     ).run();
     if (!_searchOp.isCurrent(token)) return null;

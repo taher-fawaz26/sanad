@@ -68,6 +68,74 @@ void main() {
       });
     });
 
+    group('gridSamplePoints', () {
+      test('always includes the center', () {
+        const center = LatLng(25.0, 55.0);
+        final points = GeoMath.gridSamplePoints(
+          center,
+          radiusKm: 5,
+          spacingKm: 1.5,
+        );
+        expect(points, contains(center));
+      });
+
+      test('every generated point is within the radius', () {
+        const center = LatLng(25.0, 55.0);
+        const radiusKm = 5.0;
+        final points = GeoMath.gridSamplePoints(
+          center,
+          radiusKm: radiusKm,
+          spacingKm: 1.5,
+        );
+        for (final point in points) {
+          expect(
+            GeoMath.distanceKm(center, point),
+            lessThanOrEqualTo(radiusKm + 0.01),
+          );
+        }
+      });
+
+      test('denser spacing yields more sample points for the same radius', () {
+        const center = LatLng(25.0, 55.0);
+        final dense = GeoMath.gridSamplePoints(
+          center,
+          radiusKm: 10,
+          spacingKm: 1.0,
+        );
+        final sparse = GeoMath.gridSamplePoints(
+          center,
+          radiusKm: 10,
+          spacingKm: 3.0,
+        );
+        expect(dense.length, greaterThan(sparse.length));
+      });
+
+      test('larger radius yields more sample points for the same spacing', () {
+        const center = LatLng(25.0, 55.0);
+        final small = GeoMath.gridSamplePoints(
+          center,
+          radiusKm: 3,
+          spacingKm: 1.5,
+        );
+        final large = GeoMath.gridSamplePoints(
+          center,
+          radiusKm: 12,
+          spacingKm: 1.5,
+        );
+        expect(large.length, greaterThan(small.length));
+      });
+
+      test('zero radius returns only the center', () {
+        const center = LatLng(25.0, 55.0);
+        final points = GeoMath.gridSamplePoints(
+          center,
+          radiusKm: 0,
+          spacingKm: 1.5,
+        );
+        expect(points, [center]);
+      });
+    });
+
     group('boundsForRadius', () {
       test('produces southwest < northeast', () {
         const center = LatLng(25.0, 55.0);

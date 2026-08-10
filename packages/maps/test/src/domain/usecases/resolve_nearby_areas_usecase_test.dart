@@ -35,14 +35,18 @@ void main() {
           languageCode: 'ar_AE',
         ),
       ).thenReturn(
-        TaskEither.right(const [
-          ServingArea(
-            placeId: 'ChIJ_near',
-            name: 'منطقة',
-            address: '',
-            latLng: center,
+        TaskEither.right(
+          const NearbyAreasResult(
+            areas: [
+              ServingArea(
+                placeId: 'ChIJ_near',
+                name: 'منطقة',
+                address: '',
+                latLng: center,
+              ),
+            ],
           ),
-        ]),
+        ),
       );
 
       final result = await useCase(
@@ -55,7 +59,14 @@ void main() {
         ),
       ).run();
 
-      expect(result.getOrElse((_) => []).single.placeId, 'ChIJ_near');
+      expect(
+        result
+            .getOrElse((_) => const NearbyAreasResult(areas: []))
+            .areas
+            .single
+            .placeId,
+        'ChIJ_near',
+      );
       verify(
         () => repository.resolveNearbyAreas(
           center: center,

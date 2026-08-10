@@ -5,6 +5,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:maps/src/data/models/place_prediction_dto.dart';
 import 'package:maps/src/domain/entities/place_prediction.dart';
 import 'package:maps/src/domain/failures/places_failure.dart';
+import 'package:maps/src/presentation/utils/locale_subtag.dart';
 import 'package:maps/src/services/places_provider.dart';
 
 class GooglePlacesProvider implements PlacesProvider {
@@ -34,6 +35,7 @@ class GooglePlacesProvider implements PlacesProvider {
     String? language,
     LatLng? location,
     int? radiusMeters,
+    String? types,
   }) {
     return TaskEither.tryCatch(
       () async {
@@ -45,10 +47,13 @@ class GooglePlacesProvider implements PlacesProvider {
           'components': 'country:$_countryCode',
           'region': _countryCode,
           if (sessionToken != null) 'sessiontoken': sessionToken,
-          if (language != null) 'language': language,
+          if (localeSubtag(language) case final lang?) 'language': lang,
           if (location != null)
             'location': '${location.latitude},${location.longitude}',
           if (radiusMeters != null) 'radius': radiusMeters.toString(),
+          // e.g. '(regions)' to restrict predictions to geographic areas
+          // (locality/sublocality/admin levels), excluding businesses/POIs.
+          if (types != null) 'types': types,
         };
 
         final response = await _dio.get<Map<String, dynamic>>(
