@@ -70,3 +70,16 @@ final class LocationPickerPredictionSelected extends LocationPickerEvent {
 final class LocationPickerPredictionsCleared extends LocationPickerEvent {
   const LocationPickerPredictionsCleared();
 }
+
+/// Internal — dispatched once [CheckLocationPermissionUseCase] resolves.
+///
+/// Fired fire-and-forget from [LocationPickerStarted] so the permission check
+/// never delays the initial ready/geocoding state.
+final class LocationPickerPermissionChecked extends LocationPickerEvent {
+  const LocationPickerPermissionChecked(this.status);
+
+  final LocationPermissionStatus status;
+
+  @override
+  List<Object?> get props => [status];
+}

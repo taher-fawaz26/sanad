@@ -17,6 +17,7 @@ class AppConfirmationContent extends StatelessWidget {
     this.destructive = false,
     this.padHorizontal = true,
     this.padTop = true,
+    this.badge,
     super.key,
   });
 
@@ -28,6 +29,10 @@ class AppConfirmationContent extends StatelessWidget {
   final bool destructive;
   final VoidCallback onConfirm;
   final VoidCallback onCancel;
+
+  /// Optional entity chip/badge rendered between [title] and [description]
+  /// (e.g. the service-name pill on the delete/pause/resume/edit sheets).
+  final Widget? badge;
 
   /// Applies [BottomSheetTokens.horizontalPadding] when hosted in a sheet.
   final bool padHorizontal;
@@ -74,6 +79,10 @@ class AppConfirmationContent extends StatelessWidget {
               height: 32 / 24,
             ),
           ),
+          if (badge != null) ...[
+            SizedBox(height: AppSpacing.sm),
+            Align(alignment: Alignment.centerLeft, child: badge),
+          ],
           SizedBox(height: innerGap),
           Text(
             description,

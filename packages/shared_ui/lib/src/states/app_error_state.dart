@@ -37,17 +37,17 @@ class AppErrorState extends StatelessWidget {
     return Center(
       child: switch (style) {
         AppErrorStateStyle.network => AppNetworkFailureState(
-            title: title,
-            description: description,
-            retryLabel: retryLabel,
-            onRetry: onRetry,
-          ),
+          title: title,
+          description: description,
+          retryLabel: retryLabel,
+          onRetry: onRetry,
+        ),
         AppErrorStateStyle.generic => AppGenericEmptyState(
-            title: title,
-            description: description,
-            actionLabel: retryLabel,
-            onAction: onRetry,
-          ),
+          title: title,
+          description: description,
+          actionLabel: retryLabel,
+          onAction: onRetry,
+        ),
       },
     );
   }

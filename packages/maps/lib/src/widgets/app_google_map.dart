@@ -1,3 +1,4 @@
+import 'package:app_logger/app_logger.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -83,12 +84,14 @@ class _AppGoogleMapState extends State<AppGoogleMap> {
   bool _mapReady = false;
 
   void _onMapCreated(GoogleMapController controller) {
+    appLogger.d('[AppGoogleMap] onMapCreated — map ready');
     if (mounted) setState(() => _mapReady = true);
     widget.onMapCreated?.call(controller);
   }
 
   @override
   Widget build(BuildContext context) {
+    appLogger.d('[AppGoogleMap] building GoogleMap (PlatformView requested)');
     return Stack(
       children: [
         GoogleMap(

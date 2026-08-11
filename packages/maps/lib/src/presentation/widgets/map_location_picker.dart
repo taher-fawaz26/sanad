@@ -1,4 +1,5 @@
 import 'package:app_assets/app_assets.dart';
+import 'package:app_logger/app_logger.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:equatable/equatable.dart';
@@ -67,6 +68,30 @@ class MapLocationPicker extends StatefulWidget {
 class MapLocationPickerState extends State<MapLocationPicker> {
   final _cameraController = MapCameraController();
 
+  /// Gates the real map/Bloc content behind the sheet's first frame.
+  ///
+  /// GoogleMap's Android PlatformView creation blocks the platform thread
+  /// while it bootstraps Google Play Services natively (Dynamite module
+  /// load, JNI, EGL context) — this can take multiple seconds. If that
+  /// widget is present in the very first build of this (already-expensive)
+  /// sheet route, the whole UI — including the sheet's own entrance
+  /// animation — freezes with no feedback until it resolves. Staying on a
+  /// cheap skeleton for exactly one frame lets the sheet paint first, so the
+  /// expensive PlatformView creation happens once something is already
+  /// visible on screen. Do NOT remove this gate as a "simplification" — it
+  /// is the actual fix, not decoration.
+  bool _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      appLogger.d('[MapLocationPicker] sheet first frame rendered');
+      if (!mounted) return;
+      setState(() => _ready = true);
+    });
+  }
+
   @override
   void dispose() {
     _cameraController.dispose();
@@ -119,7 +144,20 @@ class MapLocationPickerState extends State<MapLocationPicker> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_ready) {
+      return _LocationPickerSkeleton(
+        mapHeight: widget.mapHeight,
+        showSearchBar: widget.showSearchBar,
+        showAddressField: widget.showAddressField,
+        showConfirmButton: widget.showConfirmButton,
+      );
+    }
+    return _buildContent(context);
+  }
+
+  Widget _buildContent(BuildContext context) {
     final localeIdentifier = Localizations.localeOf(context).toString();
+    appLogger.d('[MapLocationPicker] location/map init starting');
 
     return BlocProvider(
       create: (_) => sl<LocationPickerBloc>()
@@ -194,6 +232,7 @@ class MapLocationPickerState extends State<MapLocationPicker> {
         position: state.position,
         isLoadingMap: state.isLoadingMap,
         isGeocoding: state.isGeocoding,
+        hasLocationPermission: state.hasLocationPermission,
       ),
       builder: (context, mapState) {
         final bloc = context.read<LocationPickerBloc>();
@@ -202,6 +241,7 @@ class MapLocationPickerState extends State<MapLocationPicker> {
           position: mapState.position,
           isLoadingMap: mapState.isLoadingMap,
           isGeocoding: mapState.isGeocoding,
+          hasLocationPermission: mapState.hasLocationPermission,
           initialCameraPosition: InitialCameraResolver.resolveCamera(
             existingLocation: widget.existingLocation,
             initialLocation: widget.initialLocation,
@@ -290,19 +330,80 @@ class MapLocationPickerState extends State<MapLocationPicker> {
   }
 }
 
+/// Cheap placeholder painted for exactly one frame while [MapLocationPicker]
+/// waits for the sheet's first frame — see [MapLocationPickerState._ready].
+/// Contains no Bloc, no [AppGoogleMap]: nothing here can trigger the
+/// expensive native PlatformView bootstrap.
+class _LocationPickerSkeleton extends StatelessWidget {
+  const _LocationPickerSkeleton({
+    required this.mapHeight,
+    required this.showSearchBar,
+    required this.showAddressField,
+    required this.showConfirmButton,
+  });
+
+  final double mapHeight;
+  final bool showSearchBar;
+  final bool showAddressField;
+  final bool showConfirmButton;
+
+  Widget _block({required double height, double? width}) {
+    return AppShimmer(
+      child: Builder(
+        builder: (context) => Container(
+          width: width,
+          height: responsiveDimension(height),
+          decoration: BoxDecoration(
+            color: context.appColors.onBackground,
+            borderRadius: BorderRadius.circular(responsiveDimension(12)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (showSearchBar) ...[
+          _block(height: 48),
+          SizedBox(height: AppSpacing.md),
+        ],
+        _block(height: mapHeight),
+        SizedBox(height: AppSpacing.md),
+        if (showAddressField) ...[
+          _block(height: 56),
+          if (showConfirmButton) SizedBox(height: AppSpacing.md),
+        ],
+        if (showConfirmButton) _block(height: 48),
+      ],
+    );
+  }
+}
+
 class _MapState extends Equatable {
   const _MapState({
     required this.position,
     required this.isLoadingMap,
     required this.isGeocoding,
+    required this.hasLocationPermission,
   });
 
   final LatLng? position;
   final bool isLoadingMap;
   final bool isGeocoding;
+  final bool hasLocationPermission;
 
   @override
-  List<Object?> get props => [position, isLoadingMap, isGeocoding];
+  List<Object?> get props => [
+    position,
+    isLoadingMap,
+    isGeocoding,
+    hasLocationPermission,
+  ];
 }
 
 class _MapView extends StatelessWidget {
@@ -314,6 +415,7 @@ class _MapView extends StatelessWidget {
     required this.onCameraIdle,
     required this.isLoadingMap,
     required this.isGeocoding,
+    required this.hasLocationPermission,
     this.position,
     this.pinMarker,
   });
@@ -321,6 +423,11 @@ class _MapView extends StatelessWidget {
   final LatLng? position;
   final bool isLoadingMap;
   final bool isGeocoding;
+
+  /// Gates [AppGoogleMap.myLocationEnabled] — never enable the MyLocation
+  /// layer before permission is actually known to be granted (see
+  /// [LocationPickerState.hasLocationPermission]).
+  final bool hasLocationPermission;
   final CameraPosition initialCameraPosition;
   final MapCameraController cameraController;
   final Widget? pinMarker;
@@ -344,10 +451,13 @@ class _MapView extends StatelessWidget {
               cameraTargetBounds: CameraTargetBounds(
                 DefaultMapViewport.uaeBounds,
               ),
-              onMapCreated: cameraController.onMapCreated,
+              onMapCreated: (controller) {
+                appLogger.d('[MapLocationPicker] GoogleMap onMapCreated');
+                cameraController.onMapCreated(controller);
+              },
               onCameraMove: cameraController.onCameraMove,
               onCameraIdle: onCameraIdle,
-              myLocationEnabled: position != null,
+              myLocationEnabled: hasLocationPermission && position != null,
               tiltGesturesEnabled: false,
               rotateGesturesEnabled: false,
             ),

@@ -12,17 +12,17 @@ forbidden_edges:
     to: design_system
     reason: app_assets is a leaf asset package
   - from: design_system
-    to: "packages/features/**"
+    to: [auth, otp, contact_verification, media_upload, document_flow, account_settings, branches, workers, services, provider_rbac]
     reason: design_system must not depend on feature packages
   - from: design_system
     to: shared_ui
     reason: design_system is a pure UI foundation and must never depend on the application-UI layer built on top of it
   - from: shared_ui
-    to: "packages/features/**"
+    to: [auth, otp, contact_verification, media_upload, document_flow, account_settings, branches, workers, services, provider_rbac]
     reason: shared_ui must remain feature-independent
   - from: "*"
-    to: "apps/**"
-    reason: packages must never depend on apps
+    to: [apps/sanad_client, apps/sanad_provider, apps/design_catalog]
+    reason: packages must never depend on apps (app-local packages under apps/*/packages/ are fine — only the app roots themselves are forbidden)
 
 deleted_packages:
   - shared_widgets
@@ -60,13 +60,14 @@ layer_order:
     packages:
       [auth, services, workers, document_flow, contact_verification, media_upload]
   - tier: 5
-    packages: [invitation, registration, account_settings, provider_rbac]
+    packages: [account_settings, provider_rbac]
   - tier: 6
     packages: [branches]
+  # invitation, registration, and organization_settings are no longer separate
+  # workspace packages — they were folded into apps/sanad_provider/lib/src/features/
+  # as plain app features (zero package-level dependents; app-local packages are
+  # reserved for provider-only features that OTHER packages still import).
   - tier: 7
-    # organization_settings depends on branches (working-hours/branch widgets).
-    packages: [organization_settings]
-  - tier: 8
     packages: [sanad_client, sanad_provider, design_catalog]
 
 # Within-package layer import rules (enforced by scan_imports.dart)

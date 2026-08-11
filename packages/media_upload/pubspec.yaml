@@ -1,0 +1,35 @@
+name: media_upload
+description: >
+  Feature-agnostic media upload pipeline — validation, multipart upload with
+  per-item progress/retry, and a bounded-concurrency BLoC. Sits on top of
+  asset_picker's picking primitives; any feature (registration, organization
+  settings, products, branches, documents, profile) consumes this instead of
+  reimplementing its own uploader.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+  flutter: ">=3.19.0"
+
+dependencies:
+  asset_picker:
+    path: ../asset_picker
+  core:
+    path: ../core
+  dio: ^5.8.0+1
+  equatable: ^2.1.0
+  flutter:
+    sdk: flutter
+  flutter_bloc: ^9.1.1
+  fpdart: ^1.2.0
+  network:
+    path: ../network
+
+dev_dependencies:
+  bloc_test: ^10.0.0
+  flutter_test:
+    sdk: flutter
+  mocktail: ^1.0.4
+  very_good_analysis: ^9.0.0

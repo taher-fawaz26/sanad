@@ -29,6 +29,7 @@ class LocationPickerState extends Equatable {
     this.searchStatus = PlaceSearchStatus.idle,
     this.searchError,
     this.searchQuery = '',
+    this.hasLocationPermission = false,
   });
 
   /// Country the picked location must belong to (the UAE).
@@ -46,6 +47,13 @@ class LocationPickerState extends Equatable {
   final PlaceSearchStatus searchStatus;
   final String? searchError;
   final String searchQuery;
+
+  /// Whether location permission is currently granted. Only ever flips to
+  /// true from a passive [CheckLocationPermissionUseCase] check — never
+  /// implies a permission request was made. Gates [AppGoogleMap]'s
+  /// `myLocationEnabled` so the MyLocation layer is never requested before
+  /// permission is actually granted.
+  final bool hasLocationPermission;
 
   /// True only when the pin is *known* to be in another country — a null
   /// geocode never blocks a legitimate in-country point.
@@ -88,6 +96,7 @@ class LocationPickerState extends Equatable {
     PlaceSearchStatus? searchStatus,
     String? searchError,
     String? searchQuery,
+    bool? hasLocationPermission,
     bool clearFailure = false,
     bool clearAddress = false,
     bool clearPredictions = false,
@@ -112,6 +121,8 @@ class LocationPickerState extends Equatable {
           searchError ??
           (clearSearchError || clearPredictions ? null : this.searchError),
       searchQuery: searchQuery ?? this.searchQuery,
+      hasLocationPermission:
+          hasLocationPermission ?? this.hasLocationPermission,
     );
   }
 
@@ -127,5 +138,6 @@ class LocationPickerState extends Equatable {
     searchStatus,
     searchError,
     searchQuery,
+    hasLocationPermission,
   ];
 }

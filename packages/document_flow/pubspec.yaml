@@ -1,0 +1,43 @@
+name: document_flow
+description: >-
+  Reusable document upload / OCR extraction / review / submit workflow —
+  domain, data contracts, presentation (Bloc + widgets). No document flow
+  logic should live outside this package.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+  flutter: ">=3.19.0"
+
+dependencies:
+  app_assets:
+    path: ../app_assets
+  asset_picker:
+    path: ../asset_picker
+  core:
+    path: ../core
+  design_system:
+    path: ../design_system
+  equatable: ^2.1.0
+  flutter:
+    sdk: flutter
+  flutter_bloc: ^9.1.1
+  fpdart: ^1.2.0
+  go_router: ^17.3.0
+  localization:
+    path: ../localization
+  network:
+    path: ../network
+  shared_ui:
+    path: ../shared_ui
+
+dev_dependencies:
+  bloc_test: ^10.0.0
+  flutter_test:
+    sdk: flutter
+  mocktail: ^1.0.4
+  testing:
+    path: ../testing
+  very_good_analysis: ^9.0.0

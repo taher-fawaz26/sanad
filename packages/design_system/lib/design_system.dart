@@ -21,6 +21,7 @@ export 'src/components/app_divider.dart';
 export 'src/components/app_feature_icon.dart';
 export 'src/components/app_field_action.dart';
 export 'src/components/app_grouped_key_value_list.dart';
+export 'src/components/app_image_placeholder.dart';
 export 'src/components/app_key_value_card.dart';
 export 'src/components/app_map_link_card.dart';
 export 'src/components/app_modal_sheet.dart';
@@ -74,7 +75,7 @@ export 'src/theme/app_theme.dart';
 // internals with zero usage outside this package — access colors via
 // `context.appColors` instead. `field_tokens.dart` (`FieldTokens`) IS
 // exported below: it has real external consumers (e.g. `AppOtpField` in
-// `packages/features/otp`).
+// `packages/otp`).
 export 'src/theme/colors/app_colors.dart';
 export 'src/theme/colors/field_tokens.dart';
 // Tokens — single barrel; see src/theme/tokens.dart for the full re-export

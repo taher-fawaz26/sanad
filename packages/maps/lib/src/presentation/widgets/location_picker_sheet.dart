@@ -1,3 +1,4 @@
+import 'package:app_logger/app_logger.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -16,6 +17,7 @@ Future<LocationPickerResult?> showLocationPickerSheet(
   MapConfiguration configuration = const MapConfiguration(),
   Widget? pinMarker,
 }) {
+  appLogger.d('[showLocationPickerSheet] opening sheet');
   return SheetNavigator.push<LocationPickerResult>(
     context,
     Builder(

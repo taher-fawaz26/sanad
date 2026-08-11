@@ -12,6 +12,7 @@ import 'package:maps/src/domain/repositories/location_repository.dart';
 import 'package:maps/src/domain/repositories/locations_repository.dart';
 import 'package:maps/src/domain/repositories/nearby_areas_repository.dart';
 import 'package:maps/src/domain/repositories/places_repository.dart';
+import 'package:maps/src/domain/usecases/check_location_permission_usecase.dart';
 import 'package:maps/src/domain/usecases/forward_geocode_usecase.dart';
 import 'package:maps/src/domain/usecases/get_cities_usecase.dart';
 import 'package:maps/src/domain/usecases/get_current_location_usecase.dart';
@@ -86,6 +87,9 @@ abstract final class MapsDI {
       )
       ..registerLazySingleton(
         () => OpenLocationSettingsUseCase(sl<LocationRepository>()),
+      )
+      ..registerLazySingleton(
+        () => CheckLocationPermissionUseCase(sl<LocationRepository>()),
       );
 
     if (config.placesEnabled) {
@@ -116,6 +120,7 @@ abstract final class MapsDI {
           reverseGeocodeUseCase: sl<ReverseGeocodeUseCase>(),
           forwardGeocodeUseCase: sl<ForwardGeocodeUseCase>(),
           openLocationSettingsUseCase: sl<OpenLocationSettingsUseCase>(),
+          checkLocationPermissionUseCase: sl<CheckLocationPermissionUseCase>(),
           searchPlacesUseCase: config.placesEnabled
               ? sl<SearchPlacesUseCase>()
               : null,

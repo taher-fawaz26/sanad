@@ -7,13 +7,12 @@ environment:
 
 workspace:
   - packages/deep_linking
-  - packages/features/contact_verification
-  - packages/features/document_flow
-  - packages/features/media_upload
+  - packages/contact_verification
+  - packages/document_flow
+  - packages/media_upload
   - packages/shared_ui
-  - packages/features/workers
-  - packages/features/account_settings
-  - packages/features/organization_settings
+  - apps/sanad_provider/packages/workers
+  - packages/account_settings
   - apps/sanad_client
   - apps/sanad_provider
   - apps/design_catalog
@@ -26,11 +25,9 @@ workspace:
   - packages/core
   - packages/design_system
   - packages/device
-  - packages/features/auth
-  - packages/features/branches
-  - packages/features/invitation
-  - packages/features/registration
-  - packages/features/services
+  - packages/auth
+  - apps/sanad_provider/packages/branches
+  - apps/sanad_provider/packages/services
   - packages/flavors
   - packages/localization
   - packages/media
@@ -38,8 +35,8 @@ workspace:
   - packages/network
   - packages/notifications
   - packages/permissions
-  - packages/features/otp
-  - packages/features/provider_rbac
+  - packages/otp
+  - apps/sanad_provider/packages/provider_rbac
   - packages/sheet_navigation
   - packages/storage
   - packages/testing

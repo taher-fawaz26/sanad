@@ -15,23 +15,31 @@ dependencies:
   asset_picker:
     path: ../../packages/asset_picker
   account_settings:
-    path: ../../packages/features/account_settings
+    path: ../../packages/account_settings
   auth:
-    path: ../../packages/features/auth
+    path: ../../packages/auth
   bottom_nav_bar:
     path: ../../packages/bottom_nav_bar
   branches:
-    path: ../../packages/features/branches
+    path: ./packages/branches
+  contact_verification:
+    path: ../../packages/contact_verification
+  document_flow:
+    path: ../../packages/document_flow
+  media:
+    path: ../../packages/media
   media_upload:
-    path: ../../packages/features/media_upload
-  organization_settings:
-    path: ../../packages/features/organization_settings
+    path: ../../packages/media_upload
+  otp:
+    path: ../../packages/otp
   provider_rbac:
-    path: ../../packages/features/provider_rbac
+    path: ./packages/provider_rbac
   services:
-    path: ../../packages/features/services
+    path: ./packages/services
+  sheet_navigation:
+    path: ../../packages/sheet_navigation
   workers:
-    path: ../../packages/features/workers
+    path: ./packages/workers
   core:
     path: ../../packages/core
   cupertino_icons: ^1.0.8
@@ -48,13 +56,14 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_bloc: ^9.1.1
+  flutter_hooks: ^0.21.3+1
   flutter_screenutil: ^5.9.3
   flutter_secure_storage: ^10.3.1
+  flutter_svg: ^2.0.9
+  fpdart: ^1.2.0
   go_router: ^17.3.0
   hive_ce: ^2.10.1
   hydrated_bloc: ^11.0.0
-  invitation:
-    path: ../../packages/features/invitation
   localization:
     path: ../../packages/localization
   maps:
@@ -65,16 +74,18 @@ dependencies:
   permissions:
     path: ../../packages/permissions
   provider: ^6.1.5
-  registration:
-    path: ../../packages/features/registration
   storage:
     path: ../../packages/storage
 
 dev_dependencies:
+  bloc_test: ^10.0.0
   flutter_launcher_icons: ^0.14.3
   flutter_native_splash: ^2.4.6
   flutter_test:
     sdk: flutter
+  mocktail: ^1.0.4
+  testing:
+    path: ../../packages/testing
   very_good_analysis: ^9.0.0
 
 flutter_launcher_icons:

@@ -100,7 +100,10 @@ class PackageInfo {
     );
   }
 
-  bool get isApp => relativePath.startsWith('apps/');
+  /// True only for the app root itself (e.g. `apps/sanad_provider`), not for
+  /// app-local packages nested under it (e.g. `apps/sanad_provider/packages/branches`).
+  bool get isApp =>
+      relativePath.startsWith('apps/') && relativePath.split('/').length == 2;
 }
 
 List<String> topologicalSort(Map<String, Set<String>> graph) {

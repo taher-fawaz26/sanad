@@ -1,0 +1,45 @@
+name: services
+description: >
+  Services feature — list provider services and select services via action sheet.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+  flutter: ">=3.19.0"
+
+dependencies:
+  app_assets:
+    path: ../../../../packages/app_assets
+  asset_picker:
+    path: ../../../../packages/asset_picker
+  core:
+    path: ../../../../packages/core
+  design_system:
+    path: ../../../../packages/design_system
+  easy_localization: ^3.0.8
+  equatable: ^2.1.0
+  flutter:
+    sdk: flutter
+  flutter_bloc: ^9.1.1
+  fpdart: ^1.2.0
+  go_router: ^17.3.0
+  localization:
+    path: ../../../../packages/localization
+  media_upload:
+    path: ../../../../packages/media_upload
+  network:
+    path: ../../../../packages/network
+  shared_ui:
+    path: ../../../../packages/shared_ui
+  sheet_navigation:
+    path: ../../../../packages/sheet_navigation
+
+dev_dependencies:
+  bloc_test: ^10.0.0
+  flutter_screenutil: ^5.9.3
+  flutter_test:
+    sdk: flutter
+  mocktail: ^1.0.4
+  very_good_analysis: ^9.0.0

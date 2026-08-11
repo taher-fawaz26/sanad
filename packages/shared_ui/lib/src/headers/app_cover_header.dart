@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 /// user scrolls.
 class AppCoverHeader extends StatelessWidget {
   const AppCoverHeader({
-    required this.coverImageUrl,
+    this.coverImageUrl,
     super.key,
     this.foreground,
     this.expandedHeight = 220,
@@ -18,7 +18,7 @@ class AppCoverHeader extends StatelessWidget {
     this.actions,
   });
 
-  final String coverImageUrl;
+  final String? coverImageUrl;
   final Widget? foreground;
   final double expandedHeight;
   final double collapsedHeight;
@@ -43,7 +43,7 @@ class AppCoverHeader extends StatelessWidget {
         background: Stack(
           fit: StackFit.expand,
           children: [
-            AppNetworkImage(coverImageUrl),
+            AppNetworkImage(coverImageUrl ?? ''),
             if (foreground != null) foreground!,
           ],
         ),

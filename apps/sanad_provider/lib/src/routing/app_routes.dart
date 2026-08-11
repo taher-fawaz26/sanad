@@ -1,5 +1,5 @@
 import 'package:account_settings/account_settings.dart';
-import 'package:organization_settings/organization_settings.dart';
+import 'package:sanad_provider/src/features/organization_settings/organization_settings.dart';
 
 /// sanad_provider route paths for app-shell pages.
 ///

@@ -1,8 +1,12 @@
+import 'dart:async';
+
+import 'package:app_logger/app_logger.dart';
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:maps/src/domain/entities/place_prediction.dart';
+import 'package:maps/src/domain/usecases/check_location_permission_usecase.dart';
 import 'package:maps/src/domain/usecases/forward_geocode_usecase.dart';
 import 'package:maps/src/domain/usecases/get_place_details_usecase.dart';
 import 'package:maps/src/domain/usecases/open_location_settings_usecase.dart';
@@ -11,6 +15,7 @@ import 'package:maps/src/domain/usecases/search_places_usecase.dart';
 import 'package:maps/src/presentation/models/place_search_status.dart';
 import 'package:maps/src/presentation/utils/latest_operation.dart';
 import 'package:maps/src/presentation/utils/place_search_runner.dart';
+import 'package:maps/src/services/location_service.dart';
 
 part 'location_picker_event.dart';
 part 'location_picker_state.dart';
@@ -21,11 +26,13 @@ class LocationPickerBloc
     required ReverseGeocodeUseCase reverseGeocodeUseCase,
     required ForwardGeocodeUseCase forwardGeocodeUseCase,
     required OpenLocationSettingsUseCase openLocationSettingsUseCase,
+    CheckLocationPermissionUseCase? checkLocationPermissionUseCase,
     SearchPlacesUseCase? searchPlacesUseCase,
     GetPlaceDetailsUseCase? getPlaceDetailsUseCase,
   }) : _reverseGeocodeUseCase = reverseGeocodeUseCase,
        _forwardGeocodeUseCase = forwardGeocodeUseCase,
        _openLocationSettingsUseCase = openLocationSettingsUseCase,
+       _checkLocationPermissionUseCase = checkLocationPermissionUseCase,
        _getPlaceDetailsUseCase = getPlaceDetailsUseCase,
        _searchRunner = PlaceSearchRunner(
          searchPlacesUseCase: searchPlacesUseCase,
@@ -38,11 +45,13 @@ class LocationPickerBloc
     on<LocationPickerQueryChanged>(_onQueryChanged);
     on<LocationPickerPredictionSelected>(_onPredictionSelected);
     on<LocationPickerPredictionsCleared>(_onPredictionsCleared);
+    on<LocationPickerPermissionChecked>(_onPermissionChecked);
   }
 
   final ReverseGeocodeUseCase _reverseGeocodeUseCase;
   final ForwardGeocodeUseCase _forwardGeocodeUseCase;
   final OpenLocationSettingsUseCase _openLocationSettingsUseCase;
+  final CheckLocationPermissionUseCase? _checkLocationPermissionUseCase;
   final GetPlaceDetailsUseCase? _getPlaceDetailsUseCase;
   final PlaceSearchRunner _searchRunner;
 
@@ -57,8 +66,14 @@ class LocationPickerBloc
     LocationPickerStarted event,
     Emitter<LocationPickerState> emit,
   ) async {
+    appLogger.d('[LocationPickerBloc] started (map/location init begins)');
     _localeIdentifier = event.localeIdentifier;
     final token = _geocodeOp.begin();
+
+    // Fire-and-forget: never let the permission check delay the initial
+    // ready/geocoding emission below — myLocationEnabled simply stays false
+    // until this resolves and LocationPickerPermissionChecked lands.
+    unawaited(_checkPermission());
 
     if (event.initialPosition != null) {
       final hasAddress =
@@ -286,6 +301,40 @@ class LocationPickerBloc
     Emitter<LocationPickerState> emit,
   ) {
     emit(state.copyWith(clearPredictions: true));
+  }
+
+  /// Checks (never requests) location permission and, if the bloc is still
+  /// open, feeds the result back in through [LocationPickerPermissionChecked]
+  /// — added as an event rather than emitted directly so it stays safe to
+  /// call from a detached/unawaited context.
+  Future<void> _checkPermission() async {
+    final useCase = _checkLocationPermissionUseCase;
+    if (useCase == null) return;
+
+    appLogger.d('[LocationPickerBloc] permission check: requested');
+    final result = await useCase(const NoParams()).run();
+    if (isClosed) return;
+
+    result.fold(
+      (failure) => appLogger.w(
+        '[LocationPickerBloc] permission check failed: ${failure.message}',
+      ),
+      (status) {
+        appLogger.d('[LocationPickerBloc] permission check: result=$status');
+        add(LocationPickerPermissionChecked(status));
+      },
+    );
+  }
+
+  void _onPermissionChecked(
+    LocationPickerPermissionChecked event,
+    Emitter<LocationPickerState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        hasLocationPermission: event.status == LocationPermissionStatus.granted,
+      ),
+    );
   }
 
   Future<void> _reverseGeocode(

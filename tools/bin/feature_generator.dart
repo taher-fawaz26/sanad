@@ -66,12 +66,12 @@ Direct dart run:
   dart run bin/feature_generator.dart <name> --app client
 
 Modes:
-  shared           Full clean-arch package under packages/features/
+  shared           Full clean-arch package under packages/
   provider         UI-only scaffold under apps/sanad_provider/
   client           UI-only scaffold under apps/sanad_client/
 
 Options (append after mode):
-  with-backend     Also create packages/features/<name>/ when using provider|client
+  with-backend     Also create packages/<name>/ when using provider|client
   assets           Add assets/ folder and pubspec declaration
   no-tests         Skip test stub generation
 ''');
@@ -176,9 +176,9 @@ class FeatureNames {
 }
 
 void _createSharedPackage(Workspace ws, FeatureNames n, _FeatureFlags flags) {
-  final pkgDir = p.join(ws.root, 'packages', 'features', n.snake);
+  final pkgDir = p.join(ws.root, 'packages', n.snake);
   if (Directory(pkgDir).existsSync()) {
-    print('Error: packages/features/${n.snake} already exists');
+    print('Error: packages/${n.snake} already exists');
     exit(1);
   }
 
@@ -186,7 +186,7 @@ void _createSharedPackage(Workspace ws, FeatureNames n, _FeatureFlags flags) {
   _registerPackage(ws, n.snake);
   _appendL10nKeys(ws, n.snake);
 
-  print('✅ Created packages/features/${n.snake}/');
+  print('✅ Created packages/${n.snake}/');
   print('   Run: melos bootstrap');
   print('   Add: ${n.pascal}Module() to app module list');
 }
@@ -363,7 +363,7 @@ import 'package:${n.snake}/${n.snake}.dart';
 Call `${n.pascal}DI.init()` during app bootstrap, or register `${n.pascal}Module()`.
 ''');
 
-  // Core source files — abbreviated scaffold matching packages/features/auth patterns
+  // Core source files — abbreviated scaffold matching packages/auth patterns
   _writeSharedSources(pkgDir, n, flags);
 }
 
@@ -726,10 +726,10 @@ void main() {
 
 void _registerPackage(Workspace ws, String name) {
   final rootPubspecPath = p.join(ws.root, 'pubspec.yaml');
-  final entry = '  - packages/features/$name';
+  final entry = '  - packages/$name';
 
   final content = File(rootPubspecPath).readAsStringSync();
-  if (content.contains('packages/features/$name')) return;
+  if (content.contains('packages/$name')) return;
   final updated = content.replaceFirst('workspace:', 'workspace:\n$entry');
   File(rootPubspecPath).writeAsStringSync(updated);
 }

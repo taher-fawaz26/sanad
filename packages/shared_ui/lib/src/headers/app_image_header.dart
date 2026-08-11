@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 /// image.
 class AppImageHeader extends StatelessWidget {
   const AppImageHeader({
-    required this.imageUrl,
+    this.imageUrl,
     super.key,
     this.overlay,
     this.expandedHeight = 280,
@@ -18,7 +18,7 @@ class AppImageHeader extends StatelessWidget {
     this.actions,
   });
 
-  final String imageUrl;
+  final String? imageUrl;
   final Widget? overlay;
   final double expandedHeight;
   final bool pinned;
@@ -44,7 +44,7 @@ class AppImageHeader extends StatelessWidget {
         background: Stack(
           fit: StackFit.expand,
           children: [
-            AppNetworkImage(imageUrl),
+            AppNetworkImage(imageUrl ?? ''),
             if (overlay != null) overlay!,
           ],
         ),

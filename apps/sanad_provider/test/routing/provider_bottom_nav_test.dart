@@ -1,3 +1,4 @@
+import 'package:app_assets/app_assets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sanad_provider/src/routing/app_routes.dart';
 import 'package:sanad_provider/src/routing/shell/provider_bottom_nav.dart';
@@ -31,18 +32,40 @@ void main() {
       expect(ProviderBottomNavDestination.settings.route, AppRoutes.settings);
     });
 
-    test('permanent tabs match Figma visual order', () {
+    test('permanent tabs order: Home, Services, Requests, Messages, '
+        'Settings', () {
       expect(ProviderBottomNavDestination.permanentTabs, [
         ProviderBottomNavDestination.home,
+        ProviderBottomNavDestination.services,
         ProviderBottomNavDestination.requests,
         ProviderBottomNavDestination.messages,
         ProviderBottomNavDestination.settings,
       ]);
       expect(ProviderBottomNavDestination.home.isPermanentTab, isTrue);
+      expect(ProviderBottomNavDestination.services.isPermanentTab, isTrue);
       expect(ProviderBottomNavDestination.requests.isPermanentTab, isTrue);
       expect(ProviderBottomNavDestination.messages.isPermanentTab, isTrue);
       expect(ProviderBottomNavDestination.settings.isPermanentTab, isTrue);
-      expect(ProviderBottomNavDestination.services.isPermanentTab, isFalse);
+    });
+
+    test('Services sits immediately after Home and before Requests', () {
+      final tabs = ProviderBottomNavDestination.permanentTabs;
+      final homeIndex = tabs.indexOf(ProviderBottomNavDestination.home);
+      final servicesIndex = tabs.indexOf(ProviderBottomNavDestination.services);
+      final requestsIndex = tabs.indexOf(ProviderBottomNavDestination.requests);
+      expect(servicesIndex, homeIndex + 1);
+      expect(requestsIndex, servicesIndex + 1);
+    });
+
+    test('Services reuses the existing service.svg navigation icon asset', () {
+      expect(
+        ProviderBottomNavDestination.services.iconAsset,
+        AppNavigationIcons.service,
+      );
+      expect(
+        ProviderBottomNavDestination.services.selectedIconAsset,
+        AppNavigationIcons.serviceFilled,
+      );
     });
 
     test('settings opens menu sheet instead of navigating immediately', () {

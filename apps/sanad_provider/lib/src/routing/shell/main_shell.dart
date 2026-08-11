@@ -1,7 +1,7 @@
 import 'package:bottom_nav_bar/bottom_nav_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:organization_settings/organization_settings.dart';
+import 'package:sanad_provider/src/features/organization_settings/organization_settings.dart';
 import 'package:sanad_provider/src/routing/shell/provider_bottom_nav.dart';
 import 'package:sanad_provider/src/routing/shell/provider_bottom_nav_items.dart';
 import 'package:sanad_provider/src/routing/shell/provider_bottom_nav_theme.dart';
@@ -38,8 +38,8 @@ class MainShell extends StatelessWidget {
         ) ??
         ProviderBottomNavDestination.home;
 
-    // Services is deep-link only — keep Home selected when that branch is
-    // somehow active so no invisible tab appears highlighted.
+    // Falls back to Home if a non-permanent-tab branch is ever active, so no
+    // invisible tab appears highlighted.
     final selectedItem = activeDestination.isPermanentTab
         ? activeDestination
         : ProviderBottomNavDestination.home;

@@ -7,6 +7,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:maps/src/domain/entities/geocoded_address.dart';
 import 'package:maps/src/domain/entities/place_prediction.dart';
+import 'package:maps/src/domain/usecases/check_location_permission_usecase.dart';
 import 'package:maps/src/domain/usecases/forward_geocode_usecase.dart';
 import 'package:maps/src/domain/usecases/get_place_details_usecase.dart';
 import 'package:maps/src/domain/usecases/open_location_settings_usecase.dart';
@@ -15,6 +16,7 @@ import 'package:maps/src/domain/usecases/search_places_usecase.dart';
 import 'package:maps/src/presentation/bloc/location_picker/location_picker_bloc.dart';
 import 'package:maps/src/presentation/models/place_search_status.dart';
 import 'package:maps/src/services/location_failure_codes.dart';
+import 'package:maps/src/services/location_service.dart';
 import 'package:mocktail/mocktail.dart';
 
 class _MockReverseGeocode extends Mock implements ReverseGeocodeUseCase {}
@@ -26,6 +28,9 @@ class _MockOpenSettings extends Mock implements OpenLocationSettingsUseCase {}
 class _MockSearchPlaces extends Mock implements SearchPlacesUseCase {}
 
 class _MockGetPlaceDetails extends Mock implements GetPlaceDetailsUseCase {}
+
+class _MockCheckLocationPermission extends Mock
+    implements CheckLocationPermissionUseCase {}
 
 const _tPosition = LatLng(25.0, 55.0);
 const _tAddress = 'Dubai Marina, Dubai';
@@ -51,11 +56,13 @@ void main() {
   late _MockOpenSettings openSettings;
   late _MockSearchPlaces searchPlaces;
   late _MockGetPlaceDetails getPlaceDetails;
+  late _MockCheckLocationPermission checkLocationPermission;
 
   LocationPickerBloc buildBloc({bool withPlaces = false}) => LocationPickerBloc(
     reverseGeocodeUseCase: reverseGeocode,
     forwardGeocodeUseCase: forwardGeocode,
     openLocationSettingsUseCase: openSettings,
+    checkLocationPermissionUseCase: checkLocationPermission,
     searchPlacesUseCase: withPlaces ? searchPlaces : null,
     getPlaceDetailsUseCase: withPlaces ? getPlaceDetails : null,
   );
@@ -82,6 +89,10 @@ void main() {
     openSettings = _MockOpenSettings();
     searchPlaces = _MockSearchPlaces();
     getPlaceDetails = _MockGetPlaceDetails();
+    checkLocationPermission = _MockCheckLocationPermission();
+    when(() => checkLocationPermission(any())).thenReturn(
+      TaskEither.right(LocationPermissionStatus.denied),
+    );
   });
 
   group('LocationPickerBloc', () {
@@ -401,6 +412,51 @@ void main() {
             (s) => s.status,
             'status',
             LocationPickerStatus.ready,
+          ),
+        ],
+      );
+    });
+
+    group('LocationPickerPermissionChecked', () {
+      blocTest<LocationPickerBloc, LocationPickerState>(
+        'LocationPickerStarted checks permission without delaying ready state',
+        build: () {
+          when(() => checkLocationPermission(any())).thenReturn(
+            TaskEither.right(LocationPermissionStatus.granted),
+          );
+          return buildBloc();
+        },
+        act: (bloc) => bloc.add(LocationPickerStarted()),
+        wait: const Duration(milliseconds: 10),
+        expect: () => [
+          isA<LocationPickerState>()
+              .having((s) => s.status, 'status', LocationPickerStatus.ready)
+              .having(
+                (s) => s.hasLocationPermission,
+                'hasLocationPermission',
+                isFalse,
+              ),
+          isA<LocationPickerState>().having(
+            (s) => s.hasLocationPermission,
+            'hasLocationPermission',
+            isTrue,
+          ),
+        ],
+      );
+
+      blocTest<LocationPickerBloc, LocationPickerState>(
+        'denied permission keeps hasLocationPermission false',
+        build: buildBloc,
+        act: (bloc) => bloc.add(
+          const LocationPickerPermissionChecked(
+            LocationPermissionStatus.denied,
+          ),
+        ),
+        expect: () => [
+          isA<LocationPickerState>().having(
+            (s) => s.hasLocationPermission,
+            'hasLocationPermission',
+            isFalse,
           ),
         ],
       );

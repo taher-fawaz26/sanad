@@ -13,9 +13,9 @@ dependencies:
   app_logger:
     path: ../../packages/app_logger
   account_settings:
-    path: ../../packages/features/account_settings
+    path: ../../packages/account_settings
   auth:
-    path: ../../packages/features/auth
+    path: ../../packages/auth
   core:
     path: ../../packages/core
   cupertino_icons: ^1.0.8

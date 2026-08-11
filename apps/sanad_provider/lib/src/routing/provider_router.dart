@@ -4,13 +4,15 @@ import 'package:core/core.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:go_router/go_router.dart';
 import 'package:network/network.dart';
-import 'package:organization_settings/organization_settings.dart';
-import 'package:registration/registration.dart';
+import 'package:provider_rbac/provider_rbac.dart';
+import 'package:sanad_provider/src/features/organization_settings/organization_settings.dart';
+import 'package:sanad_provider/src/features/registration/registration.dart';
 import 'package:sanad_provider/src/di/app_di.dart';
 import 'package:sanad_provider/src/features/home/home_page.dart';
 import 'package:sanad_provider/src/features/messages/messages_page.dart';
 import 'package:sanad_provider/src/features/requests/requests_page.dart';
 import 'package:sanad_provider/src/routing/app_routes.dart';
+import 'package:sanad_provider/src/routing/provider_capabilities.dart';
 import 'package:sanad_provider/src/routing/provider_navigator.dart';
 import 'package:sanad_provider/src/routing/shell/main_shell.dart';
 import 'package:services/services.dart';
@@ -27,6 +29,8 @@ GoRouter buildProviderRouter() {
       ...AppRoutes.protected,
       ...BranchRoutes.protectedRoutes,
       ...WorkerRoutes.protectedRoutes,
+      ...ProviderRbacRoutes.protectedRoutes,
+      ...ServiceRoutes.protectedRoutes,
     },
   );
 
@@ -68,15 +72,11 @@ GoRouter buildProviderRouter() {
     ),
     redirect: (context, state) {
       if (state.matchedLocation == AuthRoutes.splash) return null;
-
-      final isProtected =
-          AppRoutes.protected.contains(state.matchedLocation) ||
-          BranchRoutes.isProtectedRoute(state.matchedLocation) ||
-          WorkerRoutes.isProtectedRoute(state.matchedLocation);
-      if (isProtected && authStatus.status != AuthStatus.authenticated) {
-        return AuthRoutes.login;
-      }
-      return null;
+      return resolveProviderRedirect(
+        location: state.matchedLocation,
+        isAuthenticated: authStatus.status == AuthStatus.authenticated,
+        canManageOrganization: sl<SessionManager>().canManageOrganization,
+      );
     },
     routes: [
       AuthShell.buildShellRoute(
@@ -171,4 +171,42 @@ GoRouter buildProviderRouter() {
       ),
     ],
   );
+}
+
+/// Pure redirect decision for [buildProviderRouter] — extracted so the
+/// auth-guard and organization-only-route rules are unit-testable without
+/// standing up GoRouter/DI.
+///
+/// [location] must already be [GoRouterState.matchedLocation]; the splash
+/// route is handled by the caller before this is invoked.
+String? resolveProviderRedirect({
+  required String location,
+  required bool isAuthenticated,
+  required bool canManageOrganization,
+}) {
+  final isProtected =
+      AppRoutes.protected.contains(location) ||
+      BranchRoutes.isProtectedRoute(location) ||
+      WorkerRoutes.isProtectedRoute(location) ||
+      ProviderRbacRoutes.isProtectedRoute(location) ||
+      ServiceRoutes.isProtectedRoute(location);
+  if (isProtected && !isAuthenticated) {
+    return AuthRoutes.login;
+  }
+
+  // Organization-only surfaces: branches, workers/team (+invitations),
+  // provider RBAC, and the organization setup/KPI hub itself (NOT its
+  // `/settings/general` or `/settings/legal-documents` children, which
+  // both persona types may reach). Individual providers are redirected to
+  // General Settings rather than shown a 403/empty organization page.
+  final isOrgOnlyRoute =
+      BranchRoutes.isProtectedRoute(location) ||
+      WorkerRoutes.isProtectedRoute(location) ||
+      ProviderRbacRoutes.isProtectedRoute(location) ||
+      location == OrganizationSettingsRoutes.hub;
+  if (isOrgOnlyRoute && isAuthenticated && !canManageOrganization) {
+    return OrganizationSettingsRoutes.general;
+  }
+
+  return null;
 }

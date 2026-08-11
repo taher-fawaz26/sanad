@@ -140,9 +140,7 @@ class _ProfileHeaderDelegate extends SliverPersistentHeaderDelegate {
         fit: StackFit.expand,
         children: [
           Positioned.fill(
-            child: coverImageUrl != null
-                ? AppNetworkImage(coverImageUrl!)
-                : ColoredBox(color: colors.primary),
+            child: AppNetworkImage(coverImageUrl ?? ''),
           ),
           Positioned.fill(
             child: DecoratedBox(
@@ -381,22 +379,22 @@ class _Avatar extends StatelessWidget {
       child: SizedBox(
         width: size,
         height: size,
-        child: imageUrl != null
+        child: imageUrl != null && imageUrl!.isNotEmpty
             ? AppNetworkImage(imageUrl!, width: size, height: size)
-            : ColoredBox(
+            : initials != null && initials!.isNotEmpty
+            ? ColoredBox(
                 color: colors.disabled,
-                child: initials != null && initials!.isNotEmpty
-                    ? Center(
-                        child: Text(
-                          initials!,
-                          style: context.appTypography.regularNormal.copyWith(
-                            color: colors.onPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      )
-                    : null,
-              ),
+                child: Center(
+                  child: Text(
+                    initials!,
+                    style: context.appTypography.regularNormal.copyWith(
+                      color: colors.onPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              )
+            : AppImagePlaceholder(width: size, height: size),
       ),
     );
 

@@ -7,6 +7,9 @@ abstract final class AppSvgs {
 
   static const String _base = 'assets/svgs';
 
+  /// Image / photo placeholder — missing URL or load error (`#26A68C` tile).
+  static const String imagePlaceholder = '$_base/image_placeholder.svg';
+
   // ── Featured icons ─────────────────────────────────────────────────────────
 
   /// Lightning bolt — featured icon primary / gray default.

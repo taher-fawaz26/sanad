@@ -11,7 +11,7 @@ import 'package:sanad_provider/src/routing/app_routes.dart';
 /// | 0 | [home] | `/home` | Permanent tab |
 /// | 1 | [messages] | `/messages` | Permanent tab |
 /// | 2 | [requests] | `/requests` | Permanent tab |
-/// | 3 | [services] | `/services` | Hidden (deep-link only) |
+/// | 3 | [services] | `/services` | Permanent tab |
 /// | 4 | [settings] | `/settings` | Opens settings menu sheet |
 enum ProviderBottomNavDestination {
   home,
@@ -40,10 +40,13 @@ enum ProviderBottomNavDestination {
   /// navigating immediately.
   bool get opensSettingsMenu => this == settings;
 
-  /// Permanent tabs in visual order — Figma `1526:12109`
-  /// (Home → Requests → Messages → Settings).
+  /// Permanent tabs in visual order — Home → Services → Requests → Messages
+  /// → Settings. Services was hidden (deep-link only) until it shipped a
+  /// bottom-nav entry point; it's inserted immediately after Home and
+  /// before Requests, with the remaining tabs keeping their prior order.
   static const List<ProviderBottomNavDestination> permanentTabs = [
     home,
+    services,
     requests,
     messages,
     settings,

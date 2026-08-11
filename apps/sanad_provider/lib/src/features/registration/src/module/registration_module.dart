@@ -1,0 +1,155 @@
+import 'package:auth/auth.dart' show AuthStatus, AuthStatusNotifier;
+import 'package:core/core.dart';
+import 'package:document_flow/document_flow.dart';
+import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:sanad_provider/src/features/registration/src/di/registration_di.dart';
+import 'package:sanad_provider/src/features/registration/src/presentation/cubit/registration_details_cubit.dart';
+import 'package:sanad_provider/src/features/registration/src/presentation/pages/extracting_documents_page.dart';
+import 'package:sanad_provider/src/features/registration/src/presentation/pages/identity_verification_page.dart';
+import 'package:sanad_provider/src/features/registration/src/presentation/pages/individual_details_page.dart';
+import 'package:sanad_provider/src/features/registration/src/presentation/pages/organization_details_page.dart';
+import 'package:sanad_provider/src/features/registration/src/presentation/pages/review_information_page.dart';
+import 'package:sanad_provider/src/features/registration/src/presentation/pages/select_account_type_page.dart';
+import 'package:sanad_provider/src/features/registration/src/presentation/pages/trade_licence_page.dart';
+import 'package:sanad_provider/src/features/registration/src/presentation/registration_document_flow_config.dart';
+import 'package:sanad_provider/src/features/registration/src/routes/registration_navigation.dart';
+import 'package:sanad_provider/src/features/registration/src/routes/registration_routes.dart';
+import 'package:shared_ui/shared_ui.dart';
+
+/// Wires up the sign-up flow.
+///
+/// A [ShellRoute] wraps all sub-routes so a single [RegistrationDetailsCubit]
+/// (registration-only fields: onboarding token, provider type, names) and a
+/// single [DocumentFlowBloc] (the shared upload/extract/submit pipeline) are
+/// created once when the user enters a `/signup/*` step and disposed
+/// automatically when they leave the entire flow. Card steps are wrapped in
+/// [AuthScreenShell]; the full-screen extraction step renders its own
+/// gradient scaffold.
+class RegistrationModule extends FeatureModule {
+  @override
+  String get name => 'registration';
+
+  @override
+  String get version => '0.1.0';
+
+  @override
+  List<String> get dependencies => const [];
+
+  @override
+  void registerDependencies() => RegistrationDI.init();
+
+  /// Steps rendered inside the white [AuthScreenShell] card by this module.
+  ///
+  /// Identity verification and trade licence are excluded: they self-wrap in
+  /// RegistrationSliverShell (or AuthScreenShell until migrated) so the
+  /// footer can be pinned above the scroll area via a measured overlay.
+  static const Set<String> _authShellSteps = {
+    RegistrationRoutes.selectAccountType,
+    RegistrationRoutes.organizationDetails,
+    RegistrationRoutes.individualDetails,
+    RegistrationRoutes.reviewInformation,
+  };
+
+  /// Card steps that show a back chevron on the gradient header.
+  static const Set<String> _stepsWithBack = {
+    RegistrationRoutes.selectAccountType,
+    RegistrationRoutes.organizationDetails,
+    RegistrationRoutes.individualDetails,
+  };
+
+  /// Title shown in the collapsed hero bar for each step.
+  static const Map<String, String> _stepTitles = {
+    RegistrationRoutes.selectAccountType: 'registration.account_type_title',
+    RegistrationRoutes.organizationDetails: 'registration.org_details_title',
+    RegistrationRoutes.individualDetails:
+        'registration.individual_details_title',
+    RegistrationRoutes.reviewInformation: 'registration.review_title',
+  };
+
+  @override
+  List<RouteBase> routes(FeatureRouteContext routeContext) => [
+    ShellRoute(
+      // Guard: bounce an already-authenticated user out of registration
+      // (e.g. hard-back after profile completion) before anything builds.
+      redirect: (context, state) {
+        final auth = sl<AuthStatusNotifier>();
+        if (auth.status == AuthStatus.authenticated) {
+          return routeContext.homeRoute;
+        }
+        return null;
+      },
+      builder: (context, state, child) {
+        final path = state.uri.path;
+        final useAuthShell = _authShellSteps.contains(path);
+        final showBack = _stepsWithBack.contains(path);
+        final titleKey = _stepTitles[path];
+
+        return MultiBlocProvider(
+          providers: [
+            BlocProvider(create: (_) => RegistrationDetailsCubit()),
+            BlocProvider(
+              create: (_) => DocumentFlowBloc(
+                config: registrationDocumentFlowConfig,
+                uploadMedia: sl<UploadMediaUseCase>(
+                  instanceName: registrationDocumentFlowInstance,
+                ),
+                extractDocuments: sl<ExtractDocumentsUseCase>(
+                  instanceName: registrationDocumentFlowInstance,
+                ),
+                submitDocuments: sl<SubmitDocumentsUseCase>(
+                  instanceName: registrationDocumentFlowInstance,
+                ),
+                fetchDocuments: sl<FetchDocumentsUseCase>(
+                  instanceName: registrationDocumentFlowInstance,
+                ),
+              ),
+            ),
+          ],
+          child: useAuthShell
+              ? AuthScreenShell(
+                  onBack: showBack
+                      ? () => RegistrationNavigation.popStep(context)
+                      : null,
+                  title: titleKey?.tr(),
+                  child: child,
+                )
+              : child,
+        );
+      },
+      routes: [
+        GoRoute(
+          path: RegistrationRoutes.selectAccountType,
+          builder: (context, state) => const SelectAccountTypePage(),
+        ),
+        GoRoute(
+          path: RegistrationRoutes.organizationDetails,
+          builder: (context, state) => const OrganizationDetailsPage(),
+        ),
+        GoRoute(
+          path: RegistrationRoutes.individualDetails,
+          builder: (context, state) => const IndividualDetailsPage(),
+        ),
+        GoRoute(
+          path: RegistrationRoutes.identityVerification,
+          builder: (context, state) => const IdentityVerificationPage(),
+        ),
+        GoRoute(
+          path: RegistrationRoutes.tradeLicence,
+          builder: (context, state) => const TradeLicencePage(),
+        ),
+        GoRoute(
+          path: RegistrationRoutes.extracting,
+          builder: (context, state) => const ExtractingDocumentsPage(),
+        ),
+        GoRoute(
+          path: RegistrationRoutes.reviewInformation,
+          builder: (context, state) => ReviewInformationPage(
+            homeRoute: routeContext.homeRoute,
+          ),
+        ),
+      ],
+    ),
+  ];
+}
