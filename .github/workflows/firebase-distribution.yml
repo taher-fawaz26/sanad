@@ -3,25 +3,9 @@ name: Firebase Distribution (Android)
 on:
   push:
     branches: [development]
-    paths:
-      - "apps/**"
-      - "packages/**"
-      - "pubspec.yaml"
-      - ".github/workflows/firebase-distribution.yml"
-  workflow_dispatch:
-    inputs:
-      app:
-        description: "App to distribute"
-        type: choice
-        options: [both, client, provider]
-        default: both
-      release_notes:
-        description: "Optional release notes override"
-        type: string
-        required: false
 
 concurrency:
-  group: firebase-android-${{ github.ref }}-${{ github.event.inputs.app || 'both' }}
+  group: firebase-android-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -35,10 +19,6 @@ jobs:
     name: android-${{ matrix.app }}
     runs-on: ubuntu-latest
     environment: development
-    if: >-
-      github.event_name != 'workflow_dispatch' ||
-      github.event.inputs.app == 'both' ||
-      github.event.inputs.app == matrix.app
     strategy:
       fail-fast: false
       matrix:
@@ -58,65 +38,9 @@ jobs:
       - name: Bootstrap
         run: melos bootstrap
 
-      - name: Decode keystore (client)
-        if: matrix.app == 'client'
-        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64_CLIENT }}" | base64 -d > apps/sanad_client/android/app/upload-keystore.jks
-
-      - name: Write key.properties (client)
-        if: matrix.app == 'client'
-        run: |
-          cat > apps/sanad_client/android/key.properties <<EOF
-          storeFile=upload-keystore.jks
-          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD_CLIENT }}
-          keyAlias=${{ secrets.ANDROID_KEY_ALIAS_CLIENT }}
-          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD_CLIENT }}
-          EOF
-
-      - name: Decode keystore (provider)
-        if: matrix.app == 'provider'
-        run: echo "${{ secrets.PROVIDER_ANDROID_KEYSTORE_BASE64 }}" | base64 -d > apps/sanad_provider/android/app/upload-keystore.jks
-
-      - name: Write key.properties (provider)
-        if: matrix.app == 'provider'
-        run: |
-          cat > apps/sanad_provider/android/key.properties <<EOF
-          storeFile=upload-keystore.jks
-          storePassword=${{ secrets.PROVIDER_ANDROID_KEYSTORE_PASSWORD }}
-          keyAlias=${{ secrets.PROVIDER_ANDROID_KEY_ALIAS }}
-          keyPassword=${{ secrets.PROVIDER_ANDROID_KEY_PASSWORD }}
-          EOF
-
-      - name: Write provider Maps key (native + Dart)
-        if: matrix.app == 'provider'
-        run: |
-          mkdir -p apps/sanad_provider/dart_defines
-          echo '{ "MAPS_API_KEY": "${{ secrets.MAPS_API_KEY_ANDROID }}" }' > apps/sanad_provider/dart_defines/android.json
-          echo "MAPS_API_KEY=${{ secrets.MAPS_API_KEY_ANDROID }}" > apps/sanad_provider/android/local.properties
-
       - name: Build APK
         working-directory: apps/sanad_${{ matrix.app }}
-        run: |
-          EXTRA=""
-          if [ "${{ matrix.app }}" = "provider" ]; then
-            EXTRA="--dart-define-from-file=dart_defines/android.json"
-          fi
-          flutter build apk --release --build-number=${{ github.run_number }} $EXTRA
-
-      - name: Compose release notes
-        id: notes
-        env:
-          NOTES_INPUT: ${{ github.event.inputs.release_notes }}
-          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
-        run: |
-          NOTES="$NOTES_INPUT"
-          if [ -z "$NOTES" ]; then
-            NOTES="${COMMIT_MESSAGE:-Manual distribution} (${GITHUB_SHA::7})"
-          fi
-          {
-            echo "value<<NOTES_EOF"
-            echo "$NOTES"
-            echo "NOTES_EOF"
-          } >> "$GITHUB_OUTPUT"
+        run: flutter build apk --release --build-number=${{ github.run_number }}
 
       - name: Upload to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1
@@ -124,11 +48,4 @@ jobs:
           appId: ${{ matrix.app == 'client' && vars.FIREBASE_ANDROID_APPID_CLIENT || vars.FIREBASE_ANDROID_APPID_PROVIDER }}
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           groups: ${{ vars.FIREBASE_ANDROID_GROUPS }}
-          releaseNotes: ${{ steps.notes.outputs.value }}
           file: apps/sanad_${{ matrix.app }}/build/app/outputs/flutter-apk/app-release.apk
-
-      - name: Summary
-        if: always()
-        run: |
-          echo "### Firebase — sanad_${{ matrix.app }} (Android)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- build number \`${{ github.run_number }}\` · groups \`${{ vars.FIREBASE_ANDROID_GROUPS }}\` · result \`${{ job.status }}\`" >> "$GITHUB_STEP_SUMMARY"
