@@ -12,8 +12,9 @@ abstract final class ServiceRoutes {
   static const String requestNew = '/services/request-new';
 
   /// Per-service detail screen, nested under [list]. Reached with the full
-  /// `ServiceRecordEntity` via the route `extra` (the list already holds it)
-  /// — the `:id` segment is for deep-linkability only, not used to re-fetch.
+  /// `ProviderServiceEntity` via the route `extra` (the list already holds
+  /// it) — the `:id` segment is for deep-linkability only, not used to
+  /// re-fetch.
   static const String details = '/services/:id';
 
   static String detailsFor(String id) => '/services/$id';
@@ -25,7 +26,7 @@ abstract final class ServiceRoutes {
   static String requestDetailsFor(String id) => '/services/requests/$id';
 
   /// Edit Service form, nested under [list]. Reached with the full
-  /// `ServiceRecordEntity` via the route `extra`.
+  /// `ProviderServiceEntity` via the route `extra`.
   static const String edit = '/services/:id/edit';
 
   static String editFor(String id) => '/services/$id/edit';

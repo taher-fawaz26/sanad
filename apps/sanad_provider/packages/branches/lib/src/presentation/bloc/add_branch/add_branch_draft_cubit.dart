@@ -96,11 +96,11 @@ class AddBranchDraftCubit extends Cubit<AddBranchDraft> {
     );
   }
 
-  void updateServices(List<ServiceEntity> services) {
+  void updateServices(List<CatalogServiceSelection> services) {
     emit(state.copyWith(selectedServices: services));
   }
 
-  void removeService(ServiceEntity service) {
+  void removeService(CatalogServiceSelection service) {
     emit(
       state.copyWith(
         selectedServices: state.selectedServices

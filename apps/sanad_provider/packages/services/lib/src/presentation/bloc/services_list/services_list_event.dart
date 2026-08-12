@@ -28,12 +28,21 @@ final class ServicesListSearchChangedEvent extends ServicesListEvent {
   List<Object?> get props => [query];
 }
 
+final class ServicesListStatusChangedEvent extends ServicesListEvent {
+  const ServicesListStatusChangedEvent(this.status);
+
+  final ProviderServiceStatus status;
+
+  @override
+  List<Object?> get props => [status];
+}
+
 /// Folds a mutated service (status toggle) back into the list, sent by the
 /// page after [ServiceActionBloc] succeeds.
 final class ServiceReplacedInListEvent extends ServicesListEvent {
   const ServiceReplacedInListEvent(this.service);
 
-  final ServiceRecordEntity service;
+  final ProviderServiceEntity service;
 
   @override
   List<Object?> get props => [service];

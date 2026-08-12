@@ -3,8 +3,9 @@ part of 'services_list_bloc.dart';
 class ServicesListState extends Equatable {
   const ServicesListState({
     this.status = RequestStatus.initial,
-    this.services = const <ServiceRecordEntity>[],
+    this.services = const <ProviderServiceEntity>[],
     this.searchQuery = '',
+    this.statusFilter = ProviderServiceStatus.all,
     this.failure,
     this.page = 1,
     this.totalPages = 1,
@@ -12,8 +13,9 @@ class ServicesListState extends Equatable {
   });
 
   final RequestStatus status;
-  final List<ServiceRecordEntity> services;
+  final List<ProviderServiceEntity> services;
   final String searchQuery;
+  final ProviderServiceStatus statusFilter;
   final Failure? failure;
   final int page;
   final int totalPages;
@@ -25,8 +27,9 @@ class ServicesListState extends Equatable {
 
   ServicesListState copyWith({
     RequestStatus? status,
-    List<ServiceRecordEntity>? services,
+    List<ProviderServiceEntity>? services,
     String? searchQuery,
+    ProviderServiceStatus? statusFilter,
     Failure? failure,
     int? page,
     int? totalPages,
@@ -36,6 +39,7 @@ class ServicesListState extends Equatable {
     status: status ?? this.status,
     services: services ?? this.services,
     searchQuery: searchQuery ?? this.searchQuery,
+    statusFilter: statusFilter ?? this.statusFilter,
     failure: clearFailure ? null : (failure ?? this.failure),
     page: page ?? this.page,
     totalPages: totalPages ?? this.totalPages,
@@ -47,6 +51,7 @@ class ServicesListState extends Equatable {
     status,
     services,
     searchQuery,
+    statusFilter,
     failure,
     page,
     totalPages,

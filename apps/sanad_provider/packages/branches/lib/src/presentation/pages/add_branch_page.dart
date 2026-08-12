@@ -522,7 +522,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
             BlocSelector<
               AddBranchDraftCubit,
               AddBranchDraft,
-              List<ServiceEntity>
+              List<CatalogServiceSelection>
             >(
               selector: (state) => state.selectedServices,
               builder: (context, services) {

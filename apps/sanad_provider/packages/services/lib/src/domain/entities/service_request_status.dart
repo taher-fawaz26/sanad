@@ -1,20 +1,22 @@
-/// `ServiceRequestResponseDto.status` — exactly the three backend values.
+/// `ServiceRequest.status` — `all` is a filter-only value, never returned
+/// by the backend.
 enum ServiceRequestStatus {
-  pending,
+  underReview,
   approved,
-  rejected
-  ;
+  rejected,
+  all;
 
   static ServiceRequestStatus fromApi(String value) => switch (value) {
-    'PENDING' => ServiceRequestStatus.pending,
-    'APPROVED' => ServiceRequestStatus.approved,
-    'REJECTED' => ServiceRequestStatus.rejected,
-    _ => ServiceRequestStatus.pending,
+    'underreview' => ServiceRequestStatus.underReview,
+    'approved' => ServiceRequestStatus.approved,
+    'rejected' => ServiceRequestStatus.rejected,
+    _ => ServiceRequestStatus.all,
   };
 
   String toApi() => switch (this) {
-    ServiceRequestStatus.pending => 'PENDING',
-    ServiceRequestStatus.approved => 'APPROVED',
-    ServiceRequestStatus.rejected => 'REJECTED',
+    ServiceRequestStatus.underReview => 'underreview',
+    ServiceRequestStatus.approved => 'approved',
+    ServiceRequestStatus.rejected => 'rejected',
+    ServiceRequestStatus.all => 'all',
   };
 }

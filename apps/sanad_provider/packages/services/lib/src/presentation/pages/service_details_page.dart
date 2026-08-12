@@ -4,31 +4,34 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:services/src/domain/entities/service_record_entity.dart';
+import 'package:services/src/domain/entities/provider_service_entity.dart';
+import 'package:services/src/domain/entities/provider_service_overview_entity.dart';
+import 'package:services/src/domain/entities/provider_service_status.dart';
+import 'package:services/src/domain/usecases/get_provider_service_overview_usecase.dart';
 import 'package:services/src/presentation/bloc/service_action/service_action_bloc.dart';
+import 'package:services/src/presentation/widgets/manage_service_images_section.dart';
 import 'package:services/src/presentation/widgets/service_actions_bottom_sheet.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 /// Per-service detail screen — Figma `4715:26284` (active) / `5119:42089`
 /// (paused).
 ///
-/// Receives the already-loaded [ServiceRecordEntity] via the route `extra`
-/// (the dashboard list already holds the full record — no extra
-/// `GET /services/{id}` round trip needed). Per-service request/revenue/
-/// completion-rate metrics are not shown with real numbers: the real
-/// `GET /services/analytics` endpoint always reports `dataAvailable: false`
-/// today (see `ServiceMetricsSection`), so this screen renders the same
-/// "not available yet" placeholder rather than fabricating figures.
+/// Receives the already-loaded [ProviderServiceEntity] via the route
+/// `extra` (`GET /provider-services`'s row already carries everything this
+/// screen needs). Per-service metrics are wired separately via
+/// `GET /provider-services/overview/:id`, gated on `dataAvailable` — see
+/// `ServiceMetricsSection`.
 class ServiceDetailsPage extends StatefulWidget {
   const ServiceDetailsPage({required this.service, super.key});
 
-  final ServiceRecordEntity service;
+  final ProviderServiceEntity service;
 
   @override
   State<ServiceDetailsPage> createState() => _ServiceDetailsPageState();
 }
 
 class _ServiceDetailsPageState extends State<ServiceDetailsPage> {
-  late ServiceRecordEntity _service;
+  late ProviderServiceEntity _service;
 
   @override
   void initState() {
@@ -61,7 +64,7 @@ class _ServiceDetailsPageState extends State<ServiceDetailsPage> {
                   padding: EdgeInsets.all(AppSpacing.xl),
                   children: [
                     _Header(service: _service, onMoreTap: _onMoreTap),
-                    if (!_service.isActive) ...[
+                    if (_service.status != ProviderServiceStatus.active) ...[
                       SizedBox(height: AppSpacing.lg),
                       AppAlert(
                         type: AppAlertType.warning,
@@ -69,9 +72,13 @@ class _ServiceDetailsPageState extends State<ServiceDetailsPage> {
                       ),
                     ],
                     SizedBox(height: AppSpacing.lg),
-                    const _MetricsUnavailableCard(),
+                    _ServiceOverviewCard(serviceId: _service.id),
                     SizedBox(height: AppSpacing.lg),
-                    _InfoSection(service: _service),
+                    _InfoSection(
+                      service: _service,
+                      onServiceUpdated: (updated) =>
+                          setState(() => _service = updated),
+                    ),
                   ],
                 ),
               ),
@@ -101,19 +108,20 @@ class _ServiceDetailsPageState extends State<ServiceDetailsPage> {
 class _Header extends StatelessWidget {
   const _Header({required this.service, required this.onMoreTap});
 
-  final ServiceRecordEntity service;
+  final ProviderServiceEntity service;
   final VoidCallback onMoreTap;
 
   @override
   Widget build(BuildContext context) {
     final typography = context.appTypography;
     final colors = context.appColors;
+    final isActive = service.status == ProviderServiceStatus.active;
 
     return Row(
       children: [
         Expanded(
           child: Text(
-            service.name,
+            service.serviceName,
             style: typography
                 .bold(typography.title2)
                 .copyWith(
@@ -123,10 +131,10 @@ class _Header extends StatelessWidget {
         ),
         SizedBox(width: AppSpacing.sm),
         AppStatusBadge(
-          label: service.isActive
+          label: isActive
               ? 'services.status_active'.tr()
               : 'services.status_inactive'.tr(),
-          type: service.isActive
+          type: isActive
               ? AppStatusBadgeType.success
               : AppStatusBadgeType.warning,
         ),
@@ -144,16 +152,78 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// Same "analytics coming soon" placeholder as the dashboard's
-/// `ServiceMetricsSection` — no per-service `GET /services/analytics` data
-/// exists yet (`dataAvailable` is always `false`).
-class _MetricsUnavailableCard extends StatelessWidget {
-  const _MetricsUnavailableCard();
+/// Live per-service overview — `GET /provider-services/overview/:id`,
+/// gated on `dataAvailable` (currently always `false` server-side, so this
+/// renders the same "coming soon" placeholder as the dashboard's
+/// `ServiceMetricsSection` until the backend has real data).
+class _ServiceOverviewCard extends StatefulWidget {
+  const _ServiceOverviewCard({required this.serviceId});
+
+  final String serviceId;
+
+  @override
+  State<_ServiceOverviewCard> createState() => _ServiceOverviewCardState();
+}
+
+class _ServiceOverviewCardState extends State<_ServiceOverviewCard> {
+  ProviderServiceOverviewEntity? _overview;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final result = await sl<GetProviderServiceOverviewUseCase>()(
+      widget.serviceId,
+    ).run();
+    if (!mounted) return;
+    setState(() {
+      _isLoading = false;
+      _overview = result.fold((_) => null, (overview) => overview);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) return const ShimmerListSkeleton();
+
     final colors = context.appColors;
     final typography = context.appTypography;
+    final overview = _overview;
+
+    if (overview == null || !overview.dataAvailable) {
+      return Container(
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSpacing.xl,
+          vertical: AppSpacing.lg,
+        ),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(AppDimension.radiusMd),
+          border: Border.all(color: colors.palettes.sky.shade200),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'services.metrics_unavailable_title'.tr(),
+              style: typography
+                  .semiBold(typography.regularNormal)
+                  .copyWith(color: colors.textPrimary),
+            ),
+            SizedBox(height: AppSpacing.xs),
+            Text(
+              'services.metrics_unavailable_description'.tr(),
+              style: typography.smallNormal.copyWith(color: colors.textMuted),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Container(
       width: double.infinity,
@@ -166,19 +236,19 @@ class _MetricsUnavailableCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppDimension.radiusMd),
         border: Border.all(color: colors.palettes.sky.shade200),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Text(
-            'services.metrics_unavailable_title'.tr(),
-            style: typography
-                .semiBold(typography.regularNormal)
-                .copyWith(color: colors.textPrimary),
+          Expanded(
+            child: _OverviewStat(
+              label: 'services.metric_orders'.tr(),
+              value: overview.totalRequests.toString(),
+            ),
           ),
-          SizedBox(height: AppSpacing.xs),
-          Text(
-            'services.metrics_unavailable_description'.tr(),
-            style: typography.smallNormal.copyWith(color: colors.textMuted),
+          Expanded(
+            child: _OverviewStat(
+              label: 'services.metric_completion_rate'.tr(),
+              value: '${overview.completionRate}%',
+            ),
           ),
         ],
       ),
@@ -186,10 +256,41 @@ class _MetricsUnavailableCard extends StatelessWidget {
   }
 }
 
-class _InfoSection extends StatelessWidget {
-  const _InfoSection({required this.service});
+class _OverviewStat extends StatelessWidget {
+  const _OverviewStat({required this.label, required this.value});
 
-  final ServiceRecordEntity service;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final typography = context.appTypography;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: typography.smallNormal.copyWith(color: colors.textSecondary),
+        ),
+        SizedBox(height: AppSpacing.xs),
+        Text(
+          value,
+          style: typography
+              .medium(typography.title3)
+              .copyWith(color: colors.textPrimary, letterSpacing: -0.48),
+        ),
+      ],
+    );
+  }
+}
+
+class _InfoSection extends StatelessWidget {
+  const _InfoSection({required this.service, required this.onServiceUpdated});
+
+  final ProviderServiceEntity service;
+  final ValueChanged<ProviderServiceEntity> onServiceUpdated;
 
   @override
   Widget build(BuildContext context) {
@@ -211,7 +312,7 @@ class _InfoSection extends StatelessWidget {
         children: [
           _InfoRow(
             label: 'services.details.service_name'.tr(),
-            value: service.name,
+            value: service.serviceName,
           ),
           _InfoDivider(),
           _InfoRow(
@@ -226,34 +327,11 @@ class _InfoSection extends StatelessWidget {
               value: service.description!,
             ),
           ],
-          if (service.media.isNotEmpty) ...[
-            _InfoDivider(),
-            Text(
-              'services.details.images'.tr(),
-              style: context.appTypography.smallNormal.copyWith(
-                color: colors.textSecondary,
-              ),
-            ),
-            SizedBox(height: AppSpacing.sm),
-            SizedBox(
-              height: responsiveDimension(72),
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: service.media.length,
-                separatorBuilder: (_, _) => SizedBox(width: AppSpacing.sm),
-                itemBuilder: (context, index) => ClipRRect(
-                  borderRadius: BorderRadius.circular(AppDimension.radiusSm),
-                  child: Image.network(
-                    service.media[index].url,
-                    width: responsiveDimension(72),
-                    height: responsiveDimension(72),
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                  ),
-                ),
-              ),
-            ),
-          ],
+          _InfoDivider(),
+          ManageServiceImagesSection(
+            service: service,
+            onServiceUpdated: onServiceUpdated,
+          ),
         ],
       ),
     );

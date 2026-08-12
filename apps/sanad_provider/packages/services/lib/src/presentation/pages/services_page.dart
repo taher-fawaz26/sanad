@@ -5,8 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
-import 'package:services/src/domain/entities/service_analytics_entity.dart';
-import 'package:services/src/domain/entities/service_record_entity.dart';
+import 'package:services/src/domain/entities/provider_service_entity.dart';
 import 'package:services/src/domain/entities/service_request_entity.dart';
 import 'package:services/src/domain/entities/service_request_status.dart';
 import 'package:services/src/presentation/bloc/service_action/service_action_bloc.dart';
@@ -26,11 +25,12 @@ import 'package:shared_ui/shared_ui.dart';
 /// Provider services screen — Figma `4715:25922` (dashboard) and
 /// `4715:23588` (empty state).
 ///
-/// Real backend integration: services list (`GET /services`), analytics
-/// (`GET /services/analytics`), and the provider's own service requests
-/// (`GET /service-requests/mine`). Expects `ServicesListBloc`,
-/// `ServiceActionBloc`, `ServiceAnalyticsBloc`, and `ServiceRequestsListBloc`
-/// above it in the tree (wired by `ServicesModule`).
+/// Real backend integration: provider services list
+/// (`GET /provider-services`), overview (`GET /provider-services/overview`),
+/// and the provider's own service requests (`GET /service-requests`).
+/// Expects `ServicesListBloc`, `ServiceActionBloc`, `ServiceAnalyticsBloc`,
+/// and `ServiceRequestsListBloc` above it in the tree (wired by
+/// `ServicesModule`).
 class ProviderServicesPage extends StatefulWidget {
   /// Creates the provider services dashboard / empty-state screen.
   ///
@@ -200,21 +200,6 @@ class _DashboardHeader extends StatelessWidget {
   }
 }
 
-/// Matches a service's real per-service row from `GET /services/analytics`'s
-/// `perService` list — shown regardless of `dataAvailable` (see
-/// `ProviderServiceCardData.fromEntity`).
-ServiceMetricsEntity? _metricsFor(
-  ServiceAnalyticsState state,
-  String serviceId,
-) {
-  final perService = state.analytics?.perService;
-  if (perService == null) return null;
-  for (final metrics in perService) {
-    if (metrics.serviceId == serviceId) return metrics;
-  }
-  return null;
-}
-
 class _MyServicesContent extends StatefulWidget {
   const _MyServicesContent({required this.state, required this.onAddService});
 
@@ -236,7 +221,7 @@ class _MyServicesContentState extends State<_MyServicesContent> {
     super.dispose();
   }
 
-  void _onServiceTap(BuildContext context, ServiceRecordEntity service) {
+  void _onServiceTap(BuildContext context, ProviderServiceEntity service) {
     context.push(ServiceRoutes.detailsFor(service.id), extra: service).then((
       _,
     ) {
@@ -307,13 +292,7 @@ class _MyServicesContentState extends State<_MyServicesContent> {
                 key: ValueKey(service.id),
                 padding: EdgeInsets.only(bottom: AppSpacing.xl),
                 child: ServiceProviderCard(
-                  data: ProviderServiceCardData.fromEntity(
-                    service,
-                    perServiceMetrics: context
-                        .select<ServiceAnalyticsBloc, ServiceMetricsEntity?>(
-                          (bloc) => _metricsFor(bloc.state, service.id),
-                        ),
-                  ),
+                  data: ProviderServiceCardData.fromEntity(service),
                   onTap: () => _onServiceTap(context, service),
                   onMoreTap: () => showServiceActionsBottomSheet(
                     context: context,
@@ -355,15 +334,10 @@ class _ServicesErrorState extends StatelessWidget {
   }
 }
 
-/// Client-side status filter for the Service Requests tab — Figma
-/// `4749:20243`'s All/Review/Approved/Rejected chips.
-///
-/// Filters only what `ServiceRequestsListBloc` has already loaded; the
-/// backend/bloc have no server-side status-filter or search parameter, so
-/// this intentionally does not request additional pages per filter (see
-/// audit blockers).
-enum _RequestFilter { all, review, approved, rejected }
-
+/// Server-side status filter for the Service Requests tab — Figma
+/// `4749:20243`'s All/Review/Approved/Rejected chips, backed by
+/// `GET /service-requests?status=`. Search likewise hits the server
+/// (`?search=`), matching the requested service name.
 class _ServiceRequestsContent extends StatefulWidget {
   const _ServiceRequestsContent();
 
@@ -373,30 +347,14 @@ class _ServiceRequestsContent extends StatefulWidget {
 }
 
 class _ServiceRequestsContentState extends State<_ServiceRequestsContent> {
-  final _searchController = TextEditingController();
-  _RequestFilter _filter = _RequestFilter.all;
-  String _query = '';
+  late final _searchController = TextEditingController(
+    text: context.read<ServiceRequestsListBloc>().state.searchQuery,
+  );
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-
-  List<ServiceRequestEntity> _filtered(List<ServiceRequestEntity> requests) {
-    return requests.where((request) {
-      final matchesFilter = switch (_filter) {
-        _RequestFilter.all => true,
-        _RequestFilter.review => request.status == ServiceRequestStatus.pending,
-        _RequestFilter.approved =>
-          request.status == ServiceRequestStatus.approved,
-        _RequestFilter.rejected =>
-          request.status == ServiceRequestStatus.rejected,
-      };
-      if (!matchesFilter) return false;
-      if (_query.isEmpty) return true;
-      return request.displayName.toLowerCase().contains(_query.toLowerCase());
-    }).toList();
   }
 
   @override
@@ -418,12 +376,6 @@ class _ServiceRequestsContentState extends State<_ServiceRequestsContent> {
           );
         }
 
-        if (state.requests.isEmpty) {
-          return const ServiceRequestsEmptyState();
-        }
-
-        final filtered = _filtered(state.requests);
-
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -442,18 +394,26 @@ class _ServiceRequestsContentState extends State<_ServiceRequestsContent> {
                     variant: AppSearchFieldVariant.bordered,
                     hint: 'services.search_hint'.tr(),
                     showMicIcon: false,
-                    onChanged: (value) => setState(() => _query = value),
+                    onChanged: (value) => context
+                        .read<ServiceRequestsListBloc>()
+                        .add(ServiceRequestsListSearchChangedEvent(value)),
                   ),
                   SizedBox(height: AppSpacing.md),
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: [
-                        for (final option in _RequestFilter.values) ...[
+                        for (final option in ServiceRequestStatus.values) ...[
                           AppChip(
                             label: _filterLabel(option),
-                            selected: _filter == option,
-                            onTap: () => setState(() => _filter = option),
+                            selected: state.statusFilter == option,
+                            onTap: () => context
+                                .read<ServiceRequestsListBloc>()
+                                .add(
+                                  ServiceRequestsListStatusChangedEvent(
+                                    option,
+                                  ),
+                                ),
                           ),
                           SizedBox(width: AppSpacing.sm),
                         ],
@@ -464,7 +424,7 @@ class _ServiceRequestsContentState extends State<_ServiceRequestsContent> {
               ),
             ),
             Expanded(
-              child: filtered.isEmpty
+              child: state.requests.isEmpty
                   ? const ServiceRequestsEmptyState()
                   : AppRefreshIndicator(
                       onRefresh: () async =>
@@ -486,17 +446,18 @@ class _ServiceRequestsContentState extends State<_ServiceRequestsContent> {
                         child: ListView.separated(
                           padding: EdgeInsets.all(AppSpacing.xl),
                           itemCount:
-                              filtered.length + (state.loadingMore ? 1 : 0),
+                              state.requests.length +
+                              (state.loadingMore ? 1 : 0),
                           separatorBuilder: (_, _) =>
                               SizedBox(height: AppSpacing.md),
                           itemBuilder: (context, index) {
-                            if (index >= filtered.length) {
+                            if (index >= state.requests.length) {
                               return const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 16),
                                 child: Center(child: AppLoadingIndicator()),
                               );
                             }
-                            final request = filtered[index];
+                            final request = state.requests[index];
                             return ServiceRequestListItem(
                               key: ValueKey(request.id),
                               request: request,
@@ -516,10 +477,11 @@ class _ServiceRequestsContentState extends State<_ServiceRequestsContent> {
     );
   }
 
-  static String _filterLabel(_RequestFilter filter) => switch (filter) {
-    _RequestFilter.all => 'services.requests_filter_all'.tr(),
-    _RequestFilter.review => 'services.requests_filter_review'.tr(),
-    _RequestFilter.approved => 'services.requests_filter_approved'.tr(),
-    _RequestFilter.rejected => 'services.requests_filter_rejected'.tr(),
+  static String _filterLabel(ServiceRequestStatus status) => switch (status) {
+    ServiceRequestStatus.all => 'services.requests_filter_all'.tr(),
+    ServiceRequestStatus.underReview =>
+      'services.requests_filter_review'.tr(),
+    ServiceRequestStatus.approved => 'services.requests_filter_approved'.tr(),
+    ServiceRequestStatus.rejected => 'services.requests_filter_rejected'.tr(),
   };
 }

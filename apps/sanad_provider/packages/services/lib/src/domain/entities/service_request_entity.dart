@@ -1,57 +1,52 @@
 import 'package:equatable/equatable.dart';
-import 'package:services/src/domain/entities/service_media_entity.dart';
-import 'package:services/src/domain/entities/service_request_category_summary_entity.dart';
+import 'package:services/src/domain/entities/category_ref_entity.dart';
+import 'package:services/src/domain/entities/media_ref_entity.dart';
 import 'package:services/src/domain/entities/service_request_status.dart';
 
-/// `ServiceRequestResponseDto` — a provider's request for a new
-/// service/category, from `POST /service-requests` and
-/// `GET /service-requests/mine`.
+/// A provider's request for a service that doesn't exist in the catalog
+/// (`/service-requests`).
+///
+/// [description], [rejectionReason], and [images] are only populated by the
+/// detail endpoint (`GET /service-requests/:id`) — list rows
+/// (`GET /service-requests`) carry everything else. Approval does not mean
+/// the provider can use the service yet; admin still has to add it to the
+/// catalog.
 class ServiceRequestEntity extends Equatable {
   const ServiceRequestEntity({
     required this.id,
-    required this.requestedServiceName,
-    required this.requestedCategoryName,
-    required this.description,
+    required this.name,
+    required this.unifiedRequestId,
+    required this.category,
     required this.status,
-    required this.rejectionReason,
-    required this.reviewedAt,
-    required this.providerId,
-    required this.resultingCategory,
-    required this.media,
     required this.createdAt,
     required this.updatedAt,
+    this.description,
+    this.rejectionReason,
+    this.images = const [],
   });
 
   final String id;
-  final String? requestedServiceName;
-  final String? requestedCategoryName;
-  final String description;
+  final String name;
+  final String unifiedRequestId;
+  final CategoryRefEntity category;
   final ServiceRequestStatus status;
-  final String? rejectionReason;
-  final DateTime? reviewedAt;
-  final String providerId;
-  final ServiceRequestCategorySummaryEntity? resultingCategory;
-  final List<ServiceMediaEntity> media;
   final DateTime createdAt;
   final DateTime updatedAt;
-
-  /// Display label: `requestedServiceName` when present, else
-  /// `requestedCategoryName` (the DTO guarantees at least one is set).
-  String get displayName => requestedServiceName ?? requestedCategoryName ?? '';
+  final String? description;
+  final String? rejectionReason;
+  final List<MediaRefEntity> images;
 
   @override
   List<Object?> get props => [
     id,
-    requestedServiceName,
-    requestedCategoryName,
-    description,
+    name,
+    unifiedRequestId,
+    category,
     status,
-    rejectionReason,
-    reviewedAt,
-    providerId,
-    resultingCategory,
-    media,
     createdAt,
     updatedAt,
+    description,
+    rejectionReason,
+    images,
   ];
 }

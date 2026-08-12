@@ -36,7 +36,7 @@ class AddBranchDraft extends Equatable {
   final List<BranchAvailabilityEntity> customSchedule;
   final double? coverageRadiusKm;
   final List<ServingArea> servingAreas;
-  final List<ServiceEntity> selectedServices;
+  final List<CatalogServiceSelection> selectedServices;
   final List<WorkerEntity> selectedWorkers;
 
   /// Whether the user has entered anything worth guarding with a
@@ -102,7 +102,7 @@ class AddBranchDraft extends Equatable {
     List<BranchAvailabilityEntity>? customSchedule,
     double? Function()? coverageRadiusKm,
     List<ServingArea>? servingAreas,
-    List<ServiceEntity>? selectedServices,
+    List<CatalogServiceSelection>? selectedServices,
     List<WorkerEntity>? selectedWorkers,
   }) => AddBranchDraft(
     branchName: branchName ?? this.branchName,

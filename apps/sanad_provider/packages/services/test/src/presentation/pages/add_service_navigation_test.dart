@@ -10,8 +10,8 @@ import 'package:media_upload/media_upload.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:services/src/domain/entities/category_record_entity.dart';
 import 'package:services/src/domain/entities/pagination_meta_entity.dart';
+import 'package:services/src/domain/usecases/create_provider_service_usecase.dart';
 import 'package:services/src/domain/usecases/create_service_request_usecase.dart';
-import 'package:services/src/domain/usecases/create_service_usecase.dart';
 import 'package:services/src/domain/usecases/get_categories_usecase.dart';
 import 'package:services/src/presentation/bloc/add_service/add_service_bloc.dart';
 import 'package:services/src/presentation/bloc/request_new_service/request_new_service_bloc.dart';
@@ -52,7 +52,8 @@ class _FakeGetCategoriesUseCase implements GetCategoriesUseCase {
   );
 }
 
-class _MockCreateServiceUseCase extends Mock implements CreateServiceUseCase {}
+class _MockCreateProviderServiceUseCase extends Mock
+    implements CreateProviderServiceUseCase {}
 
 class _MockCreateServiceRequestUseCase extends Mock
     implements CreateServiceRequestUseCase {}
@@ -117,7 +118,7 @@ void main() {
       )
       ..registerFactory<AddServiceBloc>(
         () => AddServiceBloc(
-          createServiceUseCase: _MockCreateServiceUseCase(),
+          createProviderServiceUseCase: _MockCreateProviderServiceUseCase(),
         ),
       )
       ..registerFactory<RequestNewServiceBloc>(

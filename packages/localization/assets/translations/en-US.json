@@ -334,7 +334,6 @@
     "tab_my_services": "My Services",
     "tab_service_request": "Service request",
     "metric_orders": "Orders",
-    "metric_revenue": "Revenue",
     "metric_completion_rate": "Completion Rate",
     "metric_cancelled": "{percent}% Cancelled",
     "search_hint": "Search service requests...",
@@ -345,9 +344,6 @@
     "card_requests": "Requests",
     "card_revenue": "Revenue",
     "currency_aed": "AED",
-    "more_actions": "More actions",
-    "action_activate": "Activate Service",
-    "action_deactivate": "Deactivate Service",
     "action_edit": "Edit Service",
     "action_pause": "Pause Service",
     "action_resume": "Resume Service",
@@ -393,8 +389,7 @@
       "paused_banner": "This service is currently paused and won't appear to customers.",
       "service_name": "Service Name",
       "category": "Category",
-      "description": "Service Description",
-      "images": "Images"
+      "description": "Service Description"
     },
     "request_details": {
       "title": "Service Request",
@@ -426,12 +421,8 @@
     "add_service": {
       "request_new_service": "Request a New Service",
       "category_label": "Category",
-      "category_hint": "Select a category",
       "service_name_label": "Name of Service",
-      "service_name_hint": "Enter the service name",
       "search_hint": "Search",
-      "price_label": "Price",
-      "price_hint": "0.00",
       "service_select_hint": "Select Service",
       "inline_not_found_prefix": "Didn't find your service?",
       "inline_request_link": " Request New service",
@@ -439,16 +430,8 @@
       "description_hint": "Describe the service and explain what customers will request.",
       "ai_enhance": "Enhance with AI",
       "images_label": "Images",
-      "images_count_label": "Service images ({count}/{max})",
-      "images_max_badge": "Max {max} images",
-      "images_upload_label": "Upload a photos",
       "images_max_size_caption": "PNG, JPG, or SVG. Max 5 MB. Recommended size: 1200 × 800 px",
       "images_add_label": "Add Image",
-      "images_main_badge": "Main",
-      "images_uploaded_success": "Uploaded Successfully",
-      "images_uploading": "Uploading...",
-      "images_failed": "Failed",
-      "images_retry": "Retry",
       "create_button": "Create"
     },
     "edit_service": {
@@ -462,7 +445,6 @@
       "service_name_hint": "Enter the service name",
       "category_name_label": "Requested Category Name",
       "category_name_hint": "Enter a new category name",
-      "name_or_category_hint": "Provide a service name, a category name, or both.",
       "description_label": "Service Description",
       "description_hint": "Describe the service and explain what customers will request.",
       "submit_button": "Request"
@@ -836,11 +818,13 @@
     "profile_complete_error_message": "We couldn't complete your registration. Please check your connection and try again.",
     "extraction_failed_title": "Extraction Failed",
     "extraction_failed_retry": "Failed to extract document information. Please check your connection and try again."
-  },  "document_flow": {
+  },
+  "document_flow": {
     "title": "Document Flow",
     "empty_title": "No document_flow yet",
     "empty_description": "Your document_flow will appear here"
-  },  "contact_verification": {
+  },
+  "contact_verification": {
     "title": "Contact Verification",
     "empty_title": "No contact_verification yet",
     "empty_description": "Your contact_verification will appear here"

@@ -5,20 +5,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
-import 'package:media_upload/media_upload.dart';
-import 'package:services/src/domain/entities/service_record_entity.dart';
-import 'package:services/src/domain/usecases/update_service_usecase.dart';
+import 'package:services/src/domain/entities/provider_service_entity.dart';
+import 'package:services/src/domain/usecases/update_provider_service_description_usecase.dart';
 import 'package:services/src/presentation/bloc/edit_service/edit_service_bloc.dart';
 import 'package:services/src/presentation/widgets/edit_service_form_body.dart';
 import 'package:services/src/presentation/widgets/service_confirmation_sheet.dart';
 
-/// Edit Service screen — submits `PATCH /services/{id}` via
-/// [EditServiceBloc]. Reached from `ServiceRoutes.editFor` with the
-/// [ServiceRecordEntity] being edited passed via the route `extra`.
+/// Edit Service screen — submits `PATCH /provider-services/{id}` (description
+/// only) via [EditServiceBloc]. Reached from `ServiceRoutes.editFor` with the
+/// [ProviderServiceEntity] being edited passed via the route `extra`.
 class EditServicePage extends StatefulWidget {
   const EditServicePage({required this.service, super.key});
 
-  final ServiceRecordEntity service;
+  final ProviderServiceEntity service;
 
   @override
   State<EditServicePage> createState() => _EditServicePageState();
@@ -30,70 +29,58 @@ class _EditServicePageState extends State<EditServicePage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => sl<MediaUploadBloc>(
-        param1: const MediaUploadConfig(
-          maxFileSize: 5 * 1024 * 1024,
-          maxFiles: 5,
-          allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
-        ),
-      ),
-      child: BlocListener<EditServiceBloc, EditServiceState>(
-        listener: _handleEditServiceState,
-        child: PopScope(
-          canPop: false,
-          onPopInvokedWithResult: (didPop, result) {
-            if (didPop) return;
-            _onBackPressed(context);
-          },
-          child: Scaffold(
-            backgroundColor: context.appColors.surface,
-            body: SafeArea(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  AppNavBar(
-                    title: 'services.edit_service.title'.tr(),
-                    showBackButton: true,
-                    onLeadingTap: () => _onBackPressed(context),
-                    trailing: AppNotificationIcon(
-                      hasUnread: true,
-                      onTap: () {},
-                    ),
-                  ),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppSpacing.lg,
-                        vertical: AppSpacing.md,
-                      ),
-                      child: EditServiceFormBody(
-                        key: _formBodyKey,
-                        service: widget.service,
-                        onCompletenessChanged: (complete) {
-                          if (_isFormComplete == complete) return;
-                          setState(() => _isFormComplete = complete);
-                        },
-                      ),
-                    ),
-                  ),
-                  Padding(
+    return BlocListener<EditServiceBloc, EditServiceState>(
+      listener: _handleEditServiceState,
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          _onBackPressed(context);
+        },
+        child: Scaffold(
+          backgroundColor: context.appColors.surface,
+          body: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AppNavBar(
+                  title: 'services.edit_service.title'.tr(),
+                  showBackButton: true,
+                  onLeadingTap: () => _onBackPressed(context),
+                  trailing: AppNotificationIcon(hasUnread: true, onTap: () {}),
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
                     padding: EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xl,
+                      horizontal: AppSpacing.lg,
                       vertical: AppSpacing.md,
                     ),
-                    child: BlocBuilder<EditServiceBloc, EditServiceState>(
-                      builder: (context, state) => AppButtonPresets.primary(
-                        label: 'services.edit_service.save_button'.tr(),
-                        onPressed: _isFormComplete && !state.isSubmitting
-                            ? _onSave
-                            : null,
-                        isLoading: state.isSubmitting,
-                      ),
+                    child: EditServiceFormBody(
+                      key: _formBodyKey,
+                      service: widget.service,
+                      onCompletenessChanged: (complete) {
+                        if (_isFormComplete == complete) return;
+                        setState(() => _isFormComplete = complete);
+                      },
                     ),
                   ),
-                ],
-              ),
+                ),
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                    vertical: AppSpacing.md,
+                  ),
+                  child: BlocBuilder<EditServiceBloc, EditServiceState>(
+                    builder: (context, state) => AppButtonPresets.primary(
+                      label: 'services.edit_service.save_button'.tr(),
+                      onPressed: _isFormComplete && !state.isSubmitting
+                          ? _onSave
+                          : null,
+                      isLoading: state.isSubmitting,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -127,27 +114,12 @@ class _EditServicePageState extends State<EditServicePage> {
   void _onSave() {
     final formState = _formBodyKey.currentState;
     if (formState == null) return;
-    final price = formState.price;
-    if (price == null) return;
-
-    final mediaIds = context
-        .read<MediaUploadBloc>()
-        .state
-        .items
-        .where((item) => item.isSuccess)
-        .map((item) => item.mediaId)
-        .whereType<String>()
-        .toList();
 
     context.read<EditServiceBloc>().add(
       EditServiceSubmittedEvent(
-        UpdateServiceParams(
+        UpdateProviderServiceDescriptionParams(
           id: widget.service.id,
-          name: formState.name,
           description: formState.description,
-          categoryId: formState.categoryId,
-          price: price,
-          mediaIds: mediaIds,
         ),
       ),
     );

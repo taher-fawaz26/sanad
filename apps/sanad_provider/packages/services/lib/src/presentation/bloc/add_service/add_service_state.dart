@@ -8,14 +8,14 @@ class AddServiceState extends Equatable {
   });
 
   final RequestStatus status;
-  final ServiceRecordEntity? createdService;
+  final ProviderServiceEntity? createdService;
   final Failure? failure;
 
   bool get isSubmitting => status == RequestStatus.loading;
 
   AddServiceState copyWith({
     RequestStatus? status,
-    ServiceRecordEntity? createdService,
+    ProviderServiceEntity? createdService,
     Failure? failure,
     bool clearFailure = false,
   }) => AddServiceState(

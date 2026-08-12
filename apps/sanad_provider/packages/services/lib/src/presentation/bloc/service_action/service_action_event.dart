@@ -19,27 +19,28 @@ final class ServiceDeleteRequestedEvent extends ServiceActionEvent {
 final class ServiceStatusToggleRequestedEvent extends ServiceActionEvent {
   const ServiceStatusToggleRequestedEvent({
     required this.serviceId,
-    required this.isActive,
+    required this.status,
   });
 
   final String serviceId;
-  final bool isActive;
+  final ProviderServiceStatus status;
 
   @override
-  List<Object?> get props => [serviceId, isActive];
+  List<Object?> get props => [serviceId, status];
 }
 
 /// Notifies this bloc's listeners (the dashboard list, the details page)
 /// that [service] changed via a flow this bloc doesn't own directly — the
 /// real mutation already happened via [EditServiceBloc]'s
-/// `PATCH /services/{id}`; this just re-broadcasts the result through the
-/// same `updatedService` plumbing [ServiceStatusToggleRequestedEvent]/
-/// [ServiceDeleteRequestedEvent] already use, so both pages fold it in the
-/// same way regardless of which one presented the actions sheet.
+/// `PATCH /provider-services/{id}`; this just re-broadcasts the result
+/// through the same `updatedService` plumbing
+/// [ServiceStatusToggleRequestedEvent]/[ServiceDeleteRequestedEvent] already
+/// use, so both pages fold it in the same way regardless of which one
+/// presented the actions sheet.
 final class ServiceExternallyUpdatedEvent extends ServiceActionEvent {
   const ServiceExternallyUpdatedEvent(this.service);
 
-  final ServiceRecordEntity service;
+  final ProviderServiceEntity service;
 
   @override
   List<Object?> get props => [service];

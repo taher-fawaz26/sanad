@@ -94,7 +94,10 @@ void main() {
         draft.selectedServices.map((s) => s.name).toList(),
         ['Service 1', 'Service 2'],
       );
-      expect(draft.selectedServices.every((s) => s.category.isEmpty), isTrue);
+      expect(
+        draft.selectedServices.every((s) => s.categoryName.isEmpty),
+        isTrue,
+      );
     });
 
     test('reconstructs workers with id, name, role and status', () {

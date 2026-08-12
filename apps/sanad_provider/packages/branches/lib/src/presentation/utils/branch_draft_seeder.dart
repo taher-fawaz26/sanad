@@ -63,15 +63,15 @@ abstract final class BranchDraftSeeder {
     );
   }
 
-  static List<ServiceEntity> _services(BranchEntity branch) {
+  static List<CatalogServiceSelection> _services(BranchEntity branch) {
     final ids = branch.serviceIds ?? const [];
     final names = branch.serviceNames ?? const [];
     return [
       for (var i = 0; i < ids.length; i++)
-        ServiceEntity(
+        CatalogServiceSelection(
           id: ids[i],
           name: i < names.length ? names[i] : '',
-          category: '',
+          categoryName: '',
         ),
     ];
   }

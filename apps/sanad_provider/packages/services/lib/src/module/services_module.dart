@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:services/src/di/services_di.dart';
-import 'package:services/src/domain/entities/service_record_entity.dart';
+import 'package:services/src/domain/entities/provider_service_entity.dart';
 import 'package:services/src/domain/entities/service_request_entity.dart';
 import 'package:services/src/presentation/bloc/add_service/add_service_bloc.dart';
 import 'package:services/src/presentation/bloc/request_new_service/request_new_service_bloc.dart';
@@ -77,7 +77,7 @@ class ServicesModule extends FeatureModule {
           path: ':id',
           builder: (context, state) {
             final extra = state.extra;
-            if (extra is! ServiceRecordEntity) {
+            if (extra is! ProviderServiceEntity) {
               return const _MissingRouteArgs();
             }
             return BlocProvider(
@@ -90,7 +90,7 @@ class ServicesModule extends FeatureModule {
               path: 'edit',
               builder: (context, state) {
                 final extra = state.extra;
-                if (extra is! ServiceRecordEntity) {
+                if (extra is! ProviderServiceEntity) {
                   return const _MissingRouteArgs();
                 }
                 return BlocProvider(

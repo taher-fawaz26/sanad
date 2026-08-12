@@ -1,26 +1,37 @@
-/// API path constants for the real services/categories/service-requests
-/// surface, confirmed against the live OpenAPI spec
+/// API path constants for the real categories / catalog / provider-services
+/// / service-requests surface, confirmed against the live OpenAPI spec
 /// (`https://dev-api.trysanad.us/api/docs-json`).
-///
-/// There used to be a second, singular `ServiceApiPaths`/`ServiceRepository`
-/// pointed at `'provider/services'` for the branch-service-assignment
-/// picker — that path does not exist on the live backend at all. It has
-/// been removed; the picker (`select_service_action_sheet.dart`) now loads
-/// from this same `services` contract via `GetServicesListUseCase`.
 abstract final class ServicesApiPaths {
   ServicesApiPaths._();
 
   static const String categories = 'categories';
 
-  static const String services = 'services';
-
-  static String service(String id) => 'services/$id';
-
-  static String serviceStatus(String id) => 'services/$id/status';
-
-  static const String serviceAnalytics = 'services/analytics';
-
   static const String serviceRequests = 'service-requests';
 
-  static const String myServiceRequests = 'service-requests/mine';
+  static String serviceRequest(String id) => 'service-requests/$id';
+
+  /// Catalog discovery only — `GET services?...` is the browsable master
+  /// catalog a provider picks a `serviceId` from. Not "my services".
+  static const String catalogServices = 'services';
+
+  static const String providerServices = 'provider-services';
+
+  static String providerService(String id) => 'provider-services/$id';
+
+  static String providerServiceStatus(String id) =>
+      'provider-services/$id/status';
+
+  static const String providerServicesOverview = 'provider-services/overview';
+
+  static String providerServiceOverview(String id) =>
+      'provider-services/overview/$id';
+
+  static String providerServiceImages(String id) =>
+      'provider-services/$id/images';
+
+  static String providerServiceImage(String id, String imageId) =>
+      'provider-services/$id/images/$imageId';
+
+  static String providerServiceImagePrimary(String id, String imageId) =>
+      'provider-services/$id/images/$imageId/primary';
 }

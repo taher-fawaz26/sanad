@@ -17,9 +17,9 @@ class AddBranchServicesStep extends StatelessWidget {
     super.key,
   });
 
-  final List<ServiceEntity> selectedServices;
+  final List<CatalogServiceSelection> selectedServices;
   final VoidCallback onAddServices;
-  final ValueChanged<ServiceEntity>? onRemoveService;
+  final ValueChanged<CatalogServiceSelection>? onRemoveService;
 
   bool get _hasServices => selectedServices.isNotEmpty;
 
@@ -59,9 +59,9 @@ class _ServicesSetContent extends StatelessWidget {
     this.onRemoveService,
   });
 
-  final List<ServiceEntity> selectedServices;
+  final List<CatalogServiceSelection> selectedServices;
   final VoidCallback onAddServices;
-  final ValueChanged<ServiceEntity>? onRemoveService;
+  final ValueChanged<CatalogServiceSelection>? onRemoveService;
 
   @override
   Widget build(BuildContext context) {

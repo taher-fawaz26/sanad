@@ -1,6 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
-import 'package:services/src/domain/entities/service_analytics_entity.dart';
-import 'package:services/src/domain/entities/service_record_entity.dart';
+import 'package:services/src/domain/entities/provider_service_entity.dart';
+import 'package:services/src/domain/entities/provider_service_status.dart';
 
 /// UI model for a provider service card on the services dashboard.
 class ProviderServiceCardData {
@@ -17,35 +17,28 @@ class ProviderServiceCardData {
     this.showMoreAction = true,
   });
 
-  /// Builds card data from the real `ServiceResponseDto`-backed entity.
+  /// Builds card data from the real `ProviderServiceDto`-backed entity
+  /// (`GET /provider-services`).
   ///
-  /// [perServiceMetrics] is the matching `ServiceMetricsDto` row from
-  /// `GET /services/analytics`'s `perService` list, matched by
-  /// `service.id`. Shown as-is (including `0`) once the analytics call
-  /// resolves — unlike the dashboard's aggregate `ServiceMetricsSection`,
-  /// per-card stats are not gated on `dataAvailable` (product decision:
-  /// `perService` rows are real per-service data from the same response,
-  /// just mostly zero until bookings exist). Falls back to a "—"
-  /// placeholder only while analytics hasn't loaded yet / no matching row
-  /// exists for this service.
-  factory ProviderServiceCardData.fromEntity(
-    ServiceRecordEntity service, {
-    ServiceMetricsEntity? perServiceMetrics,
-  }) => ProviderServiceCardData(
-    id: service.id,
-    name: service.name,
-    category: service.category.name,
-    description: service.description ?? '',
-    statusLabel: service.isActive
-        ? 'services.status_active'.tr()
-        : 'services.status_inactive'.tr(),
-    isActive: service.isActive,
-    requestsCount: perServiceMetrics?.requestCount.toString() ?? '—',
-    revenueLabel: perServiceMetrics == null
-        ? '—'
-        : '${perServiceMetrics.revenue} ${'services.currency_aed'.tr()}',
-    coverImageUrl: service.media.isEmpty ? null : service.media.first.url,
-  );
+  /// [requestsCount]/[revenueLabel] are static "0" placeholders — the new
+  /// contract has no price/revenue field anywhere and no per-card request
+  /// count on this endpoint (only a fleet-wide overview, currently always
+  /// `dataAvailable: false`). Shown as `0` per product decision until the
+  /// backend exposes real per-service numbers here.
+  factory ProviderServiceCardData.fromEntity(ProviderServiceEntity service) =>
+      ProviderServiceCardData(
+        id: service.id,
+        name: service.serviceName,
+        category: service.category.name,
+        description: service.description ?? '',
+        statusLabel: service.status == ProviderServiceStatus.active
+            ? 'services.status_active'.tr()
+            : 'services.status_inactive'.tr(),
+        isActive: service.status == ProviderServiceStatus.active,
+        requestsCount: '0',
+        revenueLabel: '0 ${'services.currency_aed'.tr()}',
+        coverImageUrl: service.primaryImage?.url,
+      );
 
   final String id;
   final String name;

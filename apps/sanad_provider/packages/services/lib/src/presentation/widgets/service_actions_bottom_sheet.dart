@@ -4,7 +4,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:services/src/domain/entities/service_record_entity.dart';
+import 'package:services/src/domain/entities/provider_service_entity.dart';
+import 'package:services/src/domain/entities/provider_service_status.dart';
 import 'package:services/src/presentation/bloc/service_action/service_action_bloc.dart';
 import 'package:services/src/presentation/widgets/service_confirmation_sheet.dart';
 import 'package:services/src/routes/service_routes.dart';
@@ -22,7 +23,7 @@ import 'package:sheet_navigation/sheet_navigation.dart';
 /// details page fold it in the same way.
 Future<void> showServiceActionsBottomSheet({
   required BuildContext context,
-  required ServiceRecordEntity service,
+  required ProviderServiceEntity service,
 }) {
   final bloc = context.read<ServiceActionBloc>();
   final pageContext = context;
@@ -49,8 +50,10 @@ class _ServiceActionsSheetBody extends StatelessWidget {
     required this.pageContext,
   });
 
-  final ServiceRecordEntity service;
+  final ProviderServiceEntity service;
   final BuildContext pageContext;
+
+  bool get _isActive => service.status == ProviderServiceStatus.active;
 
   @override
   Widget build(BuildContext context) {
@@ -69,13 +72,13 @@ class _ServiceActionsSheetBody extends StatelessWidget {
         ),
         const AppDivider(),
         _ServiceActionRow(
-          label: service.isActive
+          label: _isActive
               ? 'services.action_pause'.tr()
               : 'services.action_resume'.tr(),
-          icon: service.isActive
+          icon: _isActive
               ? Icons.pause_circle_outline
               : Icons.play_circle_outline,
-          color: service.isActive ? colors.warning : colors.primary,
+          color: _isActive ? colors.warning : colors.primary,
           onTap: () => _onStatusTogglePressed(context),
         ),
         const AppDivider(),
@@ -97,13 +100,13 @@ class _ServiceActionsSheetBody extends StatelessWidget {
       context: pageContext,
       title: 'services.edit_confirm_title'.tr(),
       description: 'services.edit_confirm_description'.tr(),
-      serviceName: service.name,
+      serviceName: service.serviceName,
       actionLabel: 'services.edit_confirm_action'.tr(),
       cancelLabel: 'services.edit_confirm_cancel'.tr(),
     );
     if (!(confirmed ?? false) || !pageContext.mounted) return;
 
-    final updated = await pageContext.push<ServiceRecordEntity>(
+    final updated = await pageContext.push<ProviderServiceEntity>(
       ServiceRoutes.editFor(service.id),
       extra: service,
     );
@@ -118,7 +121,7 @@ class _ServiceActionsSheetBody extends StatelessWidget {
     Navigator.of(context).pop();
     if (!pageContext.mounted) return;
 
-    final isActive = service.isActive;
+    final isActive = _isActive;
     final confirmed = await showServiceConfirmationSheet(
       context: pageContext,
       title: isActive
@@ -127,7 +130,7 @@ class _ServiceActionsSheetBody extends StatelessWidget {
       description: isActive
           ? 'services.pause_confirm_description'.tr()
           : 'services.resume_confirm_description'.tr(),
-      serviceName: service.name,
+      serviceName: service.serviceName,
       actionLabel: isActive
           ? 'services.pause_confirm'.tr()
           : 'services.resume_confirm_action'.tr(),
@@ -141,7 +144,9 @@ class _ServiceActionsSheetBody extends StatelessWidget {
       pageContext.read<ServiceActionBloc>().add(
         ServiceStatusToggleRequestedEvent(
           serviceId: service.id,
-          isActive: !isActive,
+          status: isActive
+              ? ProviderServiceStatus.inactive
+              : ProviderServiceStatus.active,
         ),
       );
     }
@@ -155,7 +160,7 @@ class _ServiceActionsSheetBody extends StatelessWidget {
       context: pageContext,
       title: 'services.delete_confirm_title'.tr(),
       description: 'services.delete_confirm_description'.tr(),
-      serviceName: service.name,
+      serviceName: service.serviceName,
       actionLabel: 'services.delete_confirm'.tr(),
       cancelLabel: 'services.cancel'.tr(),
       destructive: true,

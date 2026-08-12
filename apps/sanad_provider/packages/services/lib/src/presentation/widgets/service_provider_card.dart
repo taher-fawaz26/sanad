@@ -94,15 +94,17 @@ class ServiceProviderCard extends StatelessWidget {
                       label: data.category,
                       tone: AppChipTone.softNeutral,
                     ),
-                    SizedBox(height: AppSpacing.md),
-                    Text(
-                      data.description,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: typography.smallNormal.copyWith(
-                        color: colors.textSecondary,
+                    if (data.description.isNotEmpty) ...[
+                      SizedBox(height: AppSpacing.md),
+                      Text(
+                        data.description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: typography.smallNormal.copyWith(
+                          color: colors.textSecondary,
+                        ),
                       ),
-                    ),
+                    ],
                     SizedBox(height: AppSpacing.md),
                     Divider(
                       height: 1,
@@ -125,40 +127,8 @@ class ServiceProviderCard extends StatelessWidget {
   }
 }
 
-class _MoreButton extends StatelessWidget {
-  const _MoreButton({this.onTap});
-
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final size = responsiveDimension(32);
-
-    return Material(
-      color: context.appColors.palettes.dark.shade950.withValues(alpha: 0.4),
-      borderRadius: BorderRadius.circular(size / 2),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(size / 2),
-        child: SizedBox(
-          width: size,
-          height: size,
-          child: Icon(
-            Icons.more_vert,
-            size: AppDimension.iconSm,
-            color: context.appColors.surface,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _StatsRow extends StatelessWidget {
-  const _StatsRow({
-    required this.requestsCount,
-    required this.revenueLabel,
-  });
+  const _StatsRow({required this.requestsCount, required this.revenueLabel});
 
   final String requestsCount;
   final String revenueLabel;
@@ -249,9 +219,7 @@ class _StatItem extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: typography
                     .semiBold(typography.smallTight)
-                    .copyWith(
-                      color: colors.primary,
-                    ),
+                    .copyWith(color: colors.primary),
               ),
             ],
           ),
@@ -260,3 +228,33 @@ class _StatItem extends StatelessWidget {
     );
   }
 }
+
+class _MoreButton extends StatelessWidget {
+  const _MoreButton({this.onTap});
+
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = responsiveDimension(32);
+
+    return Material(
+      color: context.appColors.palettes.dark.shade950.withValues(alpha: 0.4),
+      borderRadius: BorderRadius.circular(size / 2),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(size / 2),
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: Icon(
+            Icons.more_vert,
+            size: AppDimension.iconSm,
+            color: context.appColors.surface,
+          ),
+        ),
+      ),
+    );
+  }
+}
+

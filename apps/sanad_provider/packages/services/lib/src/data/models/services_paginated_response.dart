@@ -2,7 +2,7 @@ import 'package:services/src/domain/entities/pagination_meta_entity.dart';
 
 /// Parses the `{data: [...], meta: {totalItems, itemCount, itemsPerPage,
 /// totalPages, currentPage}}` envelope shared by `GET /categories`,
-/// `GET /services`, and `GET /service-requests/mine`.
+/// `GET /services`, `GET /provider-services`, and `GET /service-requests`.
 ServicesPagedResult<T> parseServicesPage<T>(
   dynamic data,
   T Function(Map<String, dynamic>) itemParser,

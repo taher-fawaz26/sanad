@@ -6,24 +6,19 @@ import 'package:services/src/domain/repositories/service_requests_repository.dar
 
 class CreateServiceRequestParams extends Equatable {
   const CreateServiceRequestParams({
-    this.requestedServiceName,
-    this.requestedCategoryName,
+    required this.name,
+    required this.categoryId,
     required this.description,
-    required this.mediaIds,
+    this.imageIds,
   });
 
-  final String? requestedServiceName;
-  final String? requestedCategoryName;
+  final String name;
+  final String categoryId;
   final String description;
-  final List<String> mediaIds;
+  final List<String>? imageIds;
 
   @override
-  List<Object?> get props => [
-    requestedServiceName,
-    requestedCategoryName,
-    description,
-    mediaIds,
-  ];
+  List<Object?> get props => [name, categoryId, description, imageIds];
 }
 
 class CreateServiceRequestUseCase
@@ -36,9 +31,9 @@ class CreateServiceRequestUseCase
   TaskEither<Failure, ServiceRequestEntity> call(
     CreateServiceRequestParams params,
   ) => _repository.createServiceRequest(
-    requestedServiceName: params.requestedServiceName,
-    requestedCategoryName: params.requestedCategoryName,
+    name: params.name,
+    categoryId: params.categoryId,
     description: params.description,
-    mediaIds: params.mediaIds,
+    imageIds: params.imageIds,
   );
 }

@@ -6,10 +6,10 @@ import 'package:services/src/presentation/bloc/service_analytics/service_analyti
 
 /// Dashboard KPI cards — Figma `4715:26122`.
 ///
-/// Backed by `GET /services/analytics`. The live backend always reports
-/// `dataAvailable: false` today (booking entity not implemented yet), so
-/// this renders an explicit "not available yet" placeholder rather than the
-/// zeroed metrics whenever that flag is false.
+/// Backed by `GET /provider-services/overview`. The live backend always
+/// reports `dataAvailable: false` today, so this renders an explicit "not
+/// available yet" placeholder rather than the stub zeros whenever that flag
+/// is false. There is no price/revenue on the new contract.
 class ServiceMetricsSection extends StatelessWidget {
   const ServiceMetricsSection({super.key});
 
@@ -24,12 +24,11 @@ class ServiceMetricsSection extends StatelessWidget {
           return _AnalyticsUnavailableCard();
         }
 
-        final analytics = state.analytics!;
+        final overview = state.overview!;
         return _MetricsGrid(
-          orders: analytics.overall.totalRequests.toString(),
-          revenue: analytics.overall.totalRevenue.toString(),
-          completionRate: '${analytics.completion.completionRate}%',
-          cancelledPercent: analytics.completion.cancelledCount.toString(),
+          orders: overview.totalRequests.toString(),
+          completionRate: '${overview.completionRate}%',
+          cancelledPercent: overview.cancelledCount.toString(),
         );
       },
     );
@@ -76,13 +75,11 @@ class _AnalyticsUnavailableCard extends StatelessWidget {
 class _MetricsGrid extends StatelessWidget {
   const _MetricsGrid({
     required this.orders,
-    required this.revenue,
     required this.completionRate,
     required this.cancelledPercent,
   });
 
   final String orders;
-  final String revenue;
   final String completionRate;
   final String cancelledPercent;
 
@@ -96,40 +93,14 @@ class _MetricsGrid extends StatelessWidget {
       children: [
         SizedBox(
           height: cardHeight,
-          child: Row(
-            children: [
-              Expanded(
-                child: _MetricCard(
-                  label: 'services.metric_orders'.tr(),
-                  child: Text(
-                    orders,
-                    style: typography
-                        .medium(typography.title3)
-                        .copyWith(
-                          color: colors.textPrimary,
-                          letterSpacing: -0.48,
-                        ),
-                  ),
-                ),
-              ),
-              SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: _MetricCard(
-                  label: 'services.metric_revenue'.tr(),
-                  child: Text(
-                    '$revenue ${'services.currency_aed'.tr()}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: typography
-                        .medium(typography.title3)
-                        .copyWith(
-                          color: colors.textPrimary,
-                          letterSpacing: -0.48,
-                        ),
-                  ),
-                ),
-              ),
-            ],
+          child: _MetricCard(
+            label: 'services.metric_orders'.tr(),
+            child: Text(
+              orders,
+              style: typography
+                  .medium(typography.title3)
+                  .copyWith(color: colors.textPrimary, letterSpacing: -0.48),
+            ),
           ),
         ),
         SizedBox(height: AppSpacing.md),

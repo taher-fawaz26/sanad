@@ -334,7 +334,6 @@
     "tab_my_services": "خدماتي",
     "tab_service_request": "طلبات الخدمة",
     "metric_orders": "الطلبات",
-    "metric_revenue": "الإيرادات",
     "metric_completion_rate": "معدل الإنجاز",
     "metric_cancelled": "{percent}% ملغاة",
     "search_hint": "ابحث في طلبات الخدمة...",
@@ -345,9 +344,6 @@
     "card_requests": "الطلبات",
     "card_revenue": "الإيرادات",
     "currency_aed": "درهم",
-    "more_actions": "المزيد",
-    "action_activate": "تفعيل الخدمة",
-    "action_deactivate": "إيقاف الخدمة",
     "action_edit": "تعديل الخدمة",
     "action_pause": "إيقاف الخدمة مؤقتًا",
     "action_resume": "استئناف الخدمة",
@@ -393,8 +389,7 @@
       "paused_banner": "هذه الخدمة متوقفة مؤقتًا الآن ولن تظهر للعملاء.",
       "service_name": "اسم الخدمة",
       "category": "الفئة",
-      "description": "وصف الخدمة",
-      "images": "الصور"
+      "description": "وصف الخدمة"
     },
     "request_details": {
       "title": "طلب الخدمة",
@@ -426,12 +421,8 @@
     "add_service": {
       "request_new_service": "طلب خدمة جديدة",
       "category_label": "الفئة",
-      "category_hint": "اختر فئة",
       "service_name_label": "اسم الخدمة",
-      "service_name_hint": "أدخل اسم الخدمة",
       "search_hint": "بحث",
-      "price_label": "السعر",
-      "price_hint": "0.00",
       "service_select_hint": "اختر الخدمة",
       "inline_not_found_prefix": "لم تجد خدمتك؟",
       "inline_request_link": " طلب خدمة جديدة",
@@ -439,16 +430,8 @@
       "description_hint": "صف الخدمة واشرح ما سيطلبه العملاء.",
       "ai_enhance": "تحسين بالذكاء الاصطناعي",
       "images_label": "الصور",
-      "images_count_label": "صور الخدمة ({count}/{max})",
-      "images_max_badge": "الحد الأقصى {max} صور",
-      "images_upload_label": "تحميل صور",
       "images_max_size_caption": "PNG أو JPG أو SVG. الحد الأقصى 5 ميجابايت. المقاس المقترح: 1200 × 800 بكسل",
       "images_add_label": "إضافة صورة",
-      "images_main_badge": "رئيسية",
-      "images_uploaded_success": "تم الرفع بنجاح",
-      "images_uploading": "جارٍ الرفع...",
-      "images_failed": "فشل",
-      "images_retry": "إعادة المحاولة",
       "create_button": "إنشاء"
     },
     "edit_service": {
@@ -462,7 +445,6 @@
       "service_name_hint": "أدخل اسم الخدمة",
       "category_name_label": "اسم الفئة المطلوبة",
       "category_name_hint": "أدخل اسم فئة جديدة",
-      "name_or_category_hint": "أدخل اسم الخدمة أو اسم الفئة أو كلاهما.",
       "description_label": "وصف الخدمة",
       "description_hint": "صف الخدمة واشرح ما سيطلبه العملاء.",
       "submit_button": "طلب"
@@ -836,11 +818,13 @@
     "profile_complete_error_message": "تعذّر إكمال تسجيلك. تحقق من اتصالك بالإنترنت وحاول مرة أخرى.",
     "extraction_failed_title": "فشل الاستخراج",
     "extraction_failed_retry": "فشل استخراج بيانات المستند. تحقق من اتصالك بالإنترنت وحاول مرة أخرى."
-  },  "document_flow": {
+  },
+  "document_flow": {
     "title": "",
     "empty_title": "",
     "empty_description": ""
-  },  "contact_verification": {
+  },
+  "contact_verification": {
     "title": "",
     "empty_title": "",
     "empty_description": ""

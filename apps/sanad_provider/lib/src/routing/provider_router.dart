@@ -2,6 +2,7 @@ import 'package:auth/auth.dart';
 import 'package:branches/branches.dart';
 import 'package:core/core.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:network/network.dart';
 import 'package:provider_rbac/provider_rbac.dart';
@@ -124,16 +125,40 @@ GoRouter buildProviderRouter() {
                 routes: [
                   GoRoute(
                     path: AppRoutes.services,
-                    builder: (context, state) => const ProviderServicesPage(),
+                    // Mirrors `ServicesModule.routes()`'s bloc wiring for the
+                    // same path — required because `ProviderServicesPage`
+                    // reads `ServicesListBloc`/`ServiceActionBloc`/
+                    // `ServiceAnalyticsBloc`/`ServiceRequestsListBloc` from
+                    // context; without these providers here, reaching
+                    // Services via the bottom tab (this shell branch) rather
+                    // than a push crashes with a missing-provider error.
+                    builder: (context, state) => MultiBlocProvider(
+                      providers: [
+                        BlocProvider(create: (_) => sl<ServicesListBloc>()),
+                        BlocProvider(create: (_) => sl<ServiceActionBloc>()),
+                        BlocProvider(
+                          create: (_) => sl<ServiceAnalyticsBloc>(),
+                        ),
+                        BlocProvider(
+                          create: (_) => sl<ServiceRequestsListBloc>(),
+                        ),
+                      ],
+                      child: const ProviderServicesPage(),
+                    ),
                     routes: [
                       GoRoute(
                         path: 'add',
-                        builder: (context, state) => const AddServicePage(),
+                        builder: (context, state) => BlocProvider(
+                          create: (_) => sl<AddServiceBloc>(),
+                          child: const AddServicePage(),
+                        ),
                       ),
                       GoRoute(
                         path: 'request-new',
-                        builder: (context, state) =>
-                            const RequestNewServicePage(),
+                        builder: (context, state) => BlocProvider(
+                          create: (_) => sl<RequestNewServiceBloc>(),
+                          child: const RequestNewServicePage(),
+                        ),
                       ),
                     ],
                   ),

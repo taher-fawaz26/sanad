@@ -10,17 +10,20 @@ class GetMyServiceRequestsParams extends Equatable {
   const GetMyServiceRequestsParams({
     this.page = 1,
     this.limit = 10,
+    this.search,
     this.status,
   });
 
   final int page;
   final int limit;
+  final String? search;
   final ServiceRequestStatus? status;
 
   @override
-  List<Object?> get props => [page, limit, status];
+  List<Object?> get props => [page, limit, search, status];
 }
 
+/// Lists the provider's own service requests (`GET /service-requests`).
 class GetMyServiceRequestsUseCase
     implements
         UseCase<
@@ -34,9 +37,10 @@ class GetMyServiceRequestsUseCase
   @override
   TaskEither<Failure, ServicesPagedResult<ServiceRequestEntity>> call(
     GetMyServiceRequestsParams params,
-  ) => _repository.getMyServiceRequests(
+  ) => _repository.getServiceRequests(
     page: params.page,
     limit: params.limit,
+    search: params.search,
     status: params.status,
   );
 }

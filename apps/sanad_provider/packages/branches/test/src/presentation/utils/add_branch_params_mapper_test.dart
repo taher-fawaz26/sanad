@@ -53,7 +53,7 @@ void main() {
       ),
     ],
     selectedServices: [
-      ServiceEntity(id: 's1', name: 'Haircut', category: 'Hair'),
+      CatalogServiceSelection(id: 's1', name: 'Haircut', categoryName: 'Hair'),
     ],
     selectedWorkers: [
       WorkerEntity(

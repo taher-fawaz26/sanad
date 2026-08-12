@@ -13,20 +13,16 @@ import 'package:sheet_navigation/sheet_navigation.dart';
 /// `media_upload` integration, no bespoke upload logic.
 ///
 /// Renders a Services-specific 2-column card grid ([ServiceImageCard]) that
-/// matches Figma `5261:44387`/`5222:44137` exactly (filename caption, inline
-/// status row, "Main" badge, "⋮" menu) — [MediaUploadBloc] still owns every
+/// matches Figma `5261:44387`/`5222:44137` (filename caption, inline status
+/// row, "Main" badge, "⋮" menu) — [MediaUploadBloc] still owns every
 /// upload/progress/retry/remove behaviour, this widget is presentation only.
-/// The empty state is a dashed "Upload a photos" drop zone.
 ///
-/// Per-image "⋮" menu (Figma `5239:5772`, Set as main image / Delete):
-/// `MediaUploadTileData` has no persisted "main image" concept and the real
-/// `CreateServiceParams`/`mediaIds` submission has no primary-image field
-/// either, so "main image" is tracked as UI-only local state (defaults to
-/// the first successfully-uploaded image, matching the Figma reference)
-/// and nothing is persisted on submit (see audit blockers).
-///
-/// The empty state (`_ImagesDropZone`) is a plain bordered "Add Image" tile
-/// matching Figma `4715:24468`, not a dashed drop zone.
+/// The first successfully-uploaded image is shown with the "Main" badge —
+/// this mirrors the real backend rule (`POST /provider-services`: the
+/// first entry in `imageIds` becomes primary), so there is no separate
+/// "set main" action here; upload order is the only control. Once a
+/// service exists, primary is managed live via
+/// `ManageServiceImagesSection` on Service Details instead.
 class AddServiceImagesField extends StatefulWidget {
   /// Creates the Images field. Expects a `MediaUploadBloc` above it in the
   /// widget tree (see `AddServicePage`'s `BlocProvider`).
@@ -37,8 +33,6 @@ class AddServiceImagesField extends StatefulWidget {
 }
 
 class _AddServiceImagesFieldState extends State<AddServiceImagesField> {
-  String? _mainImageId;
-
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<MediaUploadBloc, MediaUploadState>(
@@ -119,14 +113,12 @@ class _AddServiceImagesFieldState extends State<AddServiceImagesField> {
     List<MediaUploadTileData> items,
     int maxFiles,
   ) {
-    final mainId =
-        _mainImageId ??
-        items
-            .firstWhere(
-              (i) => i.status == MediaUploadTileStatus.success,
-              orElse: () => items.first,
-            )
-            .id;
+    final mainId = items
+        .firstWhere(
+          (i) => i.status == MediaUploadTileStatus.success,
+          orElse: () => items.first,
+        )
+        .id;
     final canAddMore = items.length < maxFiles;
 
     return Wrap(
@@ -138,7 +130,7 @@ class _AddServiceImagesFieldState extends State<AddServiceImagesField> {
             key: ValueKey(item.id),
             data: item,
             isMain: item.id == mainId,
-            onMenuTap: () => _onImageMenu(context, item.id),
+            onMenuTap: () => _onDeleteImage(context, item.id),
             onRetry: () => context.read<MediaUploadBloc>().add(
               MediaUploadRetryRequested(item.id),
             ),
@@ -146,25 +138,6 @@ class _AddServiceImagesFieldState extends State<AddServiceImagesField> {
         if (canAddMore) ServiceImageAddCard(onTap: () => _pickImages(context)),
       ],
     );
-  }
-
-  Future<void> _onImageMenu(BuildContext context, String id) async {
-    final action = await SheetNavigator.push<_ImageMenuAction>(
-      context,
-      _ImageMenuSheet(isMain: _mainImageId == id),
-      settings: const SheetRouteSettings(
-        sheetSize: SheetSize.expanded,
-        padChild: false,
-      ),
-    );
-
-    if (!context.mounted || action == null) return;
-    switch (action) {
-      case _ImageMenuAction.setMain:
-        setState(() => _mainImageId = id);
-      case _ImageMenuAction.delete:
-        await _onDeleteImage(context, id);
-    }
   }
 
   Future<void> _onDeleteImage(BuildContext context, String id) async {
@@ -178,7 +151,6 @@ class _AddServiceImagesFieldState extends State<AddServiceImagesField> {
     );
     if ((confirmed ?? false) && context.mounted) {
       context.read<MediaUploadBloc>().add(MediaUploadRemoveRequested(id));
-      if (_mainImageId == id) setState(() => _mainImageId = null);
     }
   }
 
@@ -202,86 +174,6 @@ class _AddServiceImagesFieldState extends State<AddServiceImagesField> {
         MediaUploadStatus.success => MediaUploadTileStatus.success,
         MediaUploadStatus.failure => MediaUploadTileStatus.failure,
       };
-}
-
-enum _ImageMenuAction { setMain, delete }
-
-/// Figma `5239:5772` — per-image "⋮" menu.
-class _ImageMenuSheet extends StatelessWidget {
-  const _ImageMenuSheet({required this.isMain});
-
-  final bool isMain;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SizedBox(height: AppSpacing.lg),
-        _MenuRow(
-          icon: isMain ? Icons.star : Icons.star_border,
-          label: 'services.image_menu_set_main'.tr(),
-          color: colors.textPrimary,
-          onTap: () => Navigator.of(context).pop(_ImageMenuAction.setMain),
-        ),
-        const AppDivider(),
-        _MenuRow(
-          icon: Icons.delete_outline,
-          label: 'services.image_menu_delete'.tr(),
-          color: colors.error,
-          onTap: () => Navigator.of(context).pop(_ImageMenuAction.delete),
-        ),
-      ],
-    );
-  }
-}
-
-class _MenuRow extends StatelessWidget {
-  const _MenuRow({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final typography = context.appTypography;
-
-    return Material(
-      color: colors.surface,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: AppSpacing.xl,
-            vertical: AppSpacing.lg,
-          ),
-          child: Row(
-            children: [
-              Icon(icon, size: 24, color: color),
-              SizedBox(width: AppSpacing.lg),
-              Expanded(
-                child: Text(
-                  label,
-                  style: typography.regularNormal.copyWith(color: color),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _ImagesDropZone extends StatelessWidget {

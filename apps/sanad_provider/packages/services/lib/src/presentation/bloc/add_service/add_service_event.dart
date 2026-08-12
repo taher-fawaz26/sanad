@@ -10,7 +10,7 @@ sealed class AddServiceEvent extends Equatable {
 final class AddServiceSubmittedEvent extends AddServiceEvent {
   const AddServiceSubmittedEvent(this.params);
 
-  final CreateServiceParams params;
+  final CreateProviderServiceParams params;
 
   @override
   List<Object?> get props => [params];

@@ -1,7 +1,7 @@
 import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
-import 'package:services/src/domain/entities/service_entity.dart';
+import 'package:services/src/domain/entities/catalog_service_selection.dart';
 
 /// Bordered service row — Figma add-branch `Service Card` (`962:6343`).
 ///
@@ -14,7 +14,7 @@ class ServiceListCard extends StatelessWidget {
     this.onRemove,
   });
 
-  final ServiceEntity service;
+  final CatalogServiceSelection service;
   final VoidCallback? onTap;
 
   /// Shows a trailing trash button when provided.
@@ -73,7 +73,7 @@ class ServiceListCard extends StatelessWidget {
                   ),
                   SizedBox(height: responsiveDimension(2)),
                   Text(
-                    service.category,
+                    service.categoryName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: typography.smallTight.copyWith(

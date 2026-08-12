@@ -1,23 +1,55 @@
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:localization/localization.dart';
 import 'package:services/src/domain/entities/service_request_entity.dart';
 import 'package:services/src/domain/entities/service_request_status.dart';
+import 'package:services/src/domain/usecases/get_service_request_usecase.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 /// Service Request detail screen — Figma `4715:24988` (under review),
 /// `4715:25178` (rejected), `4715:25265` (approved). Visual state adapts to
 /// [ServiceRequestEntity.status].
 ///
-/// Reuses the same entity already loaded by `ServiceRequestsListBloc` — no
-/// new fetch. The Figma frames also show a "Unified Request No." (e.g.
-/// `REQ-MD-88390`); `ServiceRequestEntity` has no such formatted-number
-/// field, so it's intentionally omitted here rather than fabricated (see
-/// audit blockers).
-class RequestDetailsPage extends StatelessWidget {
+/// The list row passed via the route `extra` carries the status/dates but
+/// not `description`/`rejectionReason`/`images` — this screen fetches the
+/// full detail via `GET /service-requests/:id` on open.
+class RequestDetailsPage extends StatefulWidget {
   const RequestDetailsPage({required this.request, super.key});
 
   final ServiceRequestEntity request;
+
+  @override
+  State<RequestDetailsPage> createState() => _RequestDetailsPageState();
+}
+
+class _RequestDetailsPageState extends State<RequestDetailsPage> {
+  late ServiceRequestEntity _request = widget.request;
+  bool _isLoadingDetail = true;
+  Failure? _detailFailure;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDetail();
+  }
+
+  Future<void> _loadDetail() async {
+    final result = await sl<GetServiceRequestUseCase>()(_request.id).run();
+    if (!mounted) return;
+    result.fold(
+      (failure) => setState(() {
+        _isLoadingDetail = false;
+        _detailFailure = failure;
+      }),
+      (detail) => setState(() {
+        _isLoadingDetail = false;
+        _request = detail;
+      }),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,15 +80,47 @@ class RequestDetailsPage extends StatelessWidget {
                         .copyWith(color: colors.textPrimary),
                   ),
                   SizedBox(height: AppSpacing.lg),
-                  _RequestDetailsCard(request: request),
+                  _RequestDetailsCard(request: _request),
                   SizedBox(height: AppSpacing.lg),
-                  _InfoSection(request: request),
+                  if (_isLoadingDetail)
+                    const Center(child: AppLoadingIndicator())
+                  else if (_detailFailure != null)
+                    _DetailErrorState(
+                      failure: _detailFailure,
+                      onRetry: () {
+                        setState(() => _isLoadingDetail = true);
+                        _loadDetail();
+                      },
+                    )
+                  else
+                    _InfoSection(request: _request),
                 ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _DetailErrorState extends StatelessWidget {
+  const _DetailErrorState({required this.onRetry, this.failure});
+
+  final Failure? failure;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final display = failureErrorDisplay(failure);
+    return AppErrorState(
+      style: display.isConnectivity
+          ? AppErrorStateStyle.network
+          : AppErrorStateStyle.generic,
+      title: display.title,
+      description: display.description,
+      retryLabel: failureRetryLabel(),
+      onRetry: display.isRetryable ? onRetry : null,
     );
   }
 }
@@ -125,7 +189,13 @@ class _RequestDetailsCard extends StatelessWidget {
             label: 'services.request_details.submitted_date'.tr(),
             value: _formatDate(request.createdAt),
           ),
-          if (request.status == ServiceRequestStatus.pending) ...[
+          SizedBox(height: AppSpacing.lg),
+          _MetaRow(
+            icon: Icons.tag_outlined,
+            label: 'services.request_details.request_no'.tr(),
+            value: request.unifiedRequestId,
+          ),
+          if (request.status == ServiceRequestStatus.underReview) ...[
             SizedBox(height: AppSpacing.lg),
             AppAlert(
               type: AppAlertType.warning,
@@ -150,16 +220,19 @@ class _RequestDetailsCard extends StatelessWidget {
   }
 
   static String _statusLabel(ServiceRequestStatus status) => switch (status) {
-    ServiceRequestStatus.pending => 'services.request_status_pending'.tr(),
+    ServiceRequestStatus.underReview =>
+      'services.request_status_pending'.tr(),
     ServiceRequestStatus.approved => 'services.request_status_approved'.tr(),
     ServiceRequestStatus.rejected => 'services.request_status_rejected'.tr(),
+    ServiceRequestStatus.all => '',
   };
 
   static AppStatusBadgeType _statusType(ServiceRequestStatus status) =>
       switch (status) {
-        ServiceRequestStatus.pending => AppStatusBadgeType.warning,
+        ServiceRequestStatus.underReview => AppStatusBadgeType.warning,
         ServiceRequestStatus.approved => AppStatusBadgeType.success,
         ServiceRequestStatus.rejected => AppStatusBadgeType.alert,
+        ServiceRequestStatus.all => AppStatusBadgeType.warning,
       };
 }
 
@@ -253,8 +326,6 @@ class _InfoSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final typography = context.appTypography;
-    final categoryName =
-        request.resultingCategory?.name ?? request.requestedCategoryName;
 
     return Container(
       width: double.infinity,
@@ -272,25 +343,26 @@ class _InfoSection extends StatelessWidget {
         children: [
           _InfoRow(
             label: 'services.request_details.service_name'.tr(),
-            value: request.displayName,
+            value: request.name,
           ),
-          if (categoryName != null && categoryName.isNotEmpty) ...[
+          Divider(height: 1, thickness: 1, color: colors.palettes.sky.shade200),
+          _InfoRow(
+            label: 'services.request_details.category'.tr(),
+            value: request.category.name,
+          ),
+          if (request.description != null &&
+              request.description!.isNotEmpty) ...[
             Divider(
               height: 1,
               thickness: 1,
               color: colors.palettes.sky.shade200,
             ),
             _InfoRow(
-              label: 'services.request_details.category'.tr(),
-              value: categoryName,
+              label: 'services.request_details.description'.tr(),
+              value: request.description!,
             ),
           ],
-          Divider(height: 1, thickness: 1, color: colors.palettes.sky.shade200),
-          _InfoRow(
-            label: 'services.request_details.description'.tr(),
-            value: request.description,
-          ),
-          if (request.media.isNotEmpty) ...[
+          if (request.images.isNotEmpty) ...[
             Divider(
               height: 1,
               thickness: 1,
@@ -307,12 +379,12 @@ class _InfoSection extends StatelessWidget {
               height: responsiveDimension(72),
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                itemCount: request.media.length,
+                itemCount: request.images.length,
                 separatorBuilder: (_, _) => SizedBox(width: AppSpacing.sm),
                 itemBuilder: (context, index) => ClipRRect(
                   borderRadius: BorderRadius.circular(AppDimension.radiusSm),
                   child: Image.network(
-                    request.media[index].url,
+                    request.images[index].url,
                     width: responsiveDimension(72),
                     height: responsiveDimension(72),
                     fit: BoxFit.cover,

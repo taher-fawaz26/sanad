@@ -101,7 +101,7 @@ class _RequestNewServicePageState extends State<RequestNewServicePage> {
                           label: 'services.request_new_service.submit_button'
                               .tr(),
                           onPressed: _isFormComplete && !state.isSubmitting
-                              ? _onSubmit
+                              ? () => _onSubmit(context)
                               : null,
                           isLoading: state.isSubmitting,
                         ),
@@ -115,11 +115,17 @@ class _RequestNewServicePageState extends State<RequestNewServicePage> {
     );
   }
 
-  void _onSubmit() {
+  /// [context] must be a descendant of the `BlocProvider<MediaUploadBloc>`
+  /// created in [build] — e.g. the `BlocBuilder` context below, not
+  /// `State.context`, which is an ancestor of that provider and can't see
+  /// it.
+  void _onSubmit(BuildContext context) {
     final formState = _formBodyKey.currentState;
     if (formState == null) return;
+    final categoryId = formState.categoryId;
+    if (categoryId == null) return;
 
-    final mediaIds = context
+    final imageIds = context
         .read<MediaUploadBloc>()
         .state
         .items
@@ -127,15 +133,14 @@ class _RequestNewServicePageState extends State<RequestNewServicePage> {
         .map((item) => item.mediaId)
         .whereType<String>()
         .toList();
-    if (mediaIds.isEmpty) return;
 
     context.read<RequestNewServiceBloc>().add(
       RequestNewServiceSubmittedEvent(
         CreateServiceRequestParams(
-          requestedServiceName: formState.requestedServiceName,
-          requestedCategoryName: formState.requestedCategoryName,
+          name: formState.name,
+          categoryId: categoryId,
           description: formState.description,
-          mediaIds: mediaIds,
+          imageIds: imageIds.isEmpty ? null : imageIds,
         ),
       ),
     );

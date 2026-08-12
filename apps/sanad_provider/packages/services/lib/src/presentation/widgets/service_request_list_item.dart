@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:services/src/domain/entities/service_request_entity.dart';
 import 'package:services/src/domain/entities/service_request_status.dart';
 
-/// A single submitted service-request row — `GET /service-requests/mine`.
+/// A single submitted service-request row — `GET /service-requests`.
 class ServiceRequestListItem extends StatelessWidget {
   const ServiceRequestListItem({required this.request, super.key, this.onTap});
 
@@ -35,7 +35,7 @@ class ServiceRequestListItem extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      request.displayName,
+                      request.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: typography
@@ -51,15 +51,18 @@ class ServiceRequestListItem extends StatelessWidget {
                   ),
                 ],
               ),
-              SizedBox(height: AppSpacing.sm),
-              Text(
-                request.description,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: typography.smallNormal.copyWith(
-                  color: colors.textSecondary,
+              if (request.description != null &&
+                  request.description!.isNotEmpty) ...[
+                SizedBox(height: AppSpacing.sm),
+                Text(
+                  request.description!,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: typography.smallNormal.copyWith(
+                    color: colors.textSecondary,
+                  ),
                 ),
-              ),
+              ],
               if (request.status == ServiceRequestStatus.rejected &&
                   (request.rejectionReason ?? '').isNotEmpty) ...[
                 SizedBox(height: AppSpacing.sm),
@@ -89,15 +92,18 @@ class ServiceRequestListItem extends StatelessWidget {
   }
 
   static String _statusLabel(ServiceRequestStatus status) => switch (status) {
-    ServiceRequestStatus.pending => 'services.request_status_pending'.tr(),
+    ServiceRequestStatus.underReview =>
+      'services.request_status_pending'.tr(),
     ServiceRequestStatus.approved => 'services.request_status_approved'.tr(),
     ServiceRequestStatus.rejected => 'services.request_status_rejected'.tr(),
+    ServiceRequestStatus.all => '',
   };
 
   static AppStatusBadgeType _statusType(ServiceRequestStatus status) =>
       switch (status) {
-        ServiceRequestStatus.pending => AppStatusBadgeType.warning,
+        ServiceRequestStatus.underReview => AppStatusBadgeType.warning,
         ServiceRequestStatus.approved => AppStatusBadgeType.success,
         ServiceRequestStatus.rejected => AppStatusBadgeType.alert,
+        ServiceRequestStatus.all => AppStatusBadgeType.warning,
       };
 }

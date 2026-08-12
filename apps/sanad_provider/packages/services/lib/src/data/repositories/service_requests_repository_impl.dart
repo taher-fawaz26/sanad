@@ -14,33 +14,43 @@ class ServiceRequestsRepositoryImpl implements ServiceRequestsRepository {
 
   @override
   TaskEither<Failure, ServiceRequestEntity> createServiceRequest({
-    String? requestedServiceName,
-    String? requestedCategoryName,
+    required String name,
+    required String categoryId,
     required String description,
-    required List<String> mediaIds,
+    List<String>? imageIds,
   }) => _remoteDataSource
       .createServiceRequest(
         CreateServiceRequestDto(
-          requestedServiceName: requestedServiceName,
-          requestedCategoryName: requestedCategoryName,
+          name: name,
+          categoryId: categoryId,
           description: description,
-          mediaIds: mediaIds,
+          imageIds: imageIds,
         ),
       )
       .map((dto) => dto.toEntity());
 
   @override
   TaskEither<Failure, ServicesPagedResult<ServiceRequestEntity>>
-  getMyServiceRequests({
+  getServiceRequests({
     int page = 1,
     int limit = 10,
+    String? search,
     ServiceRequestStatus? status,
   }) => _remoteDataSource
-      .getMyServiceRequests(page: page, limit: limit, status: status)
+      .getServiceRequests(
+        page: page,
+        limit: limit,
+        search: search,
+        status: status,
+      )
       .map(
         (paged) => ServicesPagedResult(
           items: paged.items.map((dto) => dto.toEntity()).toList(),
           meta: paged.meta,
         ),
       );
+
+  @override
+  TaskEither<Failure, ServiceRequestEntity> getServiceRequest(String id) =>
+      _remoteDataSource.getServiceRequest(id).map((dto) => dto.toEntity());
 }

@@ -14,14 +14,14 @@ class ServiceActionState extends Equatable {
   /// Id of the service currently being mutated, so the page can show a
   /// per-card busy indicator.
   final String? processingId;
-  final ServiceRecordEntity? updatedService;
+  final ProviderServiceEntity? updatedService;
   final String? deletedServiceId;
   final Failure? failure;
 
   ServiceActionState copyWith({
     RequestStatus? status,
     String? processingId,
-    ServiceRecordEntity? updatedService,
+    ProviderServiceEntity? updatedService,
     String? deletedServiceId,
     Failure? failure,
     bool clearFailure = false,

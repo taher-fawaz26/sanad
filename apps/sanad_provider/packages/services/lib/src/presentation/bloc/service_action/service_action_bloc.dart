@@ -1,9 +1,10 @@
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:services/src/domain/entities/service_record_entity.dart';
-import 'package:services/src/domain/usecases/delete_service_usecase.dart';
-import 'package:services/src/domain/usecases/update_service_status_usecase.dart';
+import 'package:services/src/domain/entities/provider_service_entity.dart';
+import 'package:services/src/domain/entities/provider_service_status.dart';
+import 'package:services/src/domain/usecases/delete_provider_service_usecase.dart';
+import 'package:services/src/domain/usecases/set_provider_service_status_usecase.dart';
 
 part 'service_action_event.dart';
 part 'service_action_state.dart';
@@ -16,18 +17,18 @@ part 'service_action_state.dart';
 /// `ServiceReplacedInListEvent` / `ServiceRemovedFromListEvent`.
 class ServiceActionBloc extends Bloc<ServiceActionEvent, ServiceActionState> {
   ServiceActionBloc({
-    required DeleteServiceUseCase deleteServiceUseCase,
-    required UpdateServiceStatusUseCase updateServiceStatusUseCase,
-  }) : _deleteServiceUseCase = deleteServiceUseCase,
-       _updateServiceStatusUseCase = updateServiceStatusUseCase,
+    required DeleteProviderServiceUseCase deleteProviderServiceUseCase,
+    required SetProviderServiceStatusUseCase setProviderServiceStatusUseCase,
+  }) : _deleteProviderServiceUseCase = deleteProviderServiceUseCase,
+       _setProviderServiceStatusUseCase = setProviderServiceStatusUseCase,
        super(const ServiceActionState()) {
     on<ServiceDeleteRequestedEvent>(_onDelete);
     on<ServiceStatusToggleRequestedEvent>(_onStatusToggle);
     on<ServiceExternallyUpdatedEvent>(_onExternallyUpdated);
   }
 
-  final DeleteServiceUseCase _deleteServiceUseCase;
-  final UpdateServiceStatusUseCase _updateServiceStatusUseCase;
+  final DeleteProviderServiceUseCase _deleteProviderServiceUseCase;
+  final SetProviderServiceStatusUseCase _setProviderServiceStatusUseCase;
 
   Future<void> _onDelete(
     ServiceDeleteRequestedEvent event,
@@ -40,7 +41,7 @@ class ServiceActionBloc extends Bloc<ServiceActionEvent, ServiceActionState> {
         clearFailure: true,
       ),
     );
-    final result = await _deleteServiceUseCase(event.serviceId).run();
+    final result = await _deleteProviderServiceUseCase(event.serviceId).run();
     result.fold(
       (failure) => emit(
         state.copyWith(status: RequestStatus.failure, failure: failure),
@@ -65,8 +66,8 @@ class ServiceActionBloc extends Bloc<ServiceActionEvent, ServiceActionState> {
         clearFailure: true,
       ),
     );
-    final result = await _updateServiceStatusUseCase(
-      UpdateServiceStatusParams(id: event.serviceId, isActive: event.isActive),
+    final result = await _setProviderServiceStatusUseCase(
+      SetProviderServiceStatusParams(id: event.serviceId, status: event.status),
     ).run();
     result.fold(
       (failure) => emit(

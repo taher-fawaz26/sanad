@@ -6,13 +6,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
 import 'package:media_upload/media_upload.dart';
-import 'package:services/src/domain/usecases/create_service_usecase.dart';
+import 'package:services/src/domain/usecases/create_provider_service_usecase.dart';
 import 'package:services/src/presentation/bloc/add_service/add_service_bloc.dart';
 import 'package:services/src/presentation/widgets/add_service_form_body.dart';
 import 'package:services/src/presentation/widgets/service_confirmation_sheet.dart';
 import 'package:services/src/routes/service_routes.dart';
 
-/// Add Service screen — submits `POST /services` via [AddServiceBloc].
+/// Add Service screen — submits `POST /provider-services` via
+/// [AddServiceBloc].
 class AddServicePage extends StatefulWidget {
   /// Creates the Add Service screen.
   const AddServicePage({super.key});
@@ -92,7 +93,7 @@ class _AddServicePageState extends State<AddServicePage> {
                       builder: (context, state) => AppButtonPresets.primary(
                         label: 'services.add_service.create_button'.tr(),
                         onPressed: _isFormComplete && !state.isSubmitting
-                            ? _onCreate
+                            ? () => _onCreate(context)
                             : null,
                         isLoading: state.isSubmitting,
                       ),
@@ -134,14 +135,17 @@ class _AddServicePageState extends State<AddServicePage> {
     }
   }
 
-  void _onCreate() {
+  /// [context] must be a descendant of the `BlocProvider<MediaUploadBloc>`
+  /// created in [build] — e.g. the `BlocBuilder` context below, not
+  /// `State.context`, which is an ancestor of that provider and can't see
+  /// it.
+  void _onCreate(BuildContext context) {
     final formState = _formBodyKey.currentState;
     if (formState == null) return;
-    final categoryId = formState.categoryId;
-    final price = formState.price;
-    if (categoryId == null || price == null) return;
+    final serviceId = formState.serviceId;
+    if (serviceId == null) return;
 
-    final mediaIds = context
+    final imageIds = context
         .read<MediaUploadBloc>()
         .state
         .items
@@ -149,15 +153,14 @@ class _AddServicePageState extends State<AddServicePage> {
         .map((item) => item.mediaId)
         .whereType<String>()
         .toList();
+    if (imageIds.isEmpty) return;
 
     context.read<AddServiceBloc>().add(
       AddServiceSubmittedEvent(
-        CreateServiceParams(
-          name: formState.name,
+        CreateProviderServiceParams(
+          serviceId: serviceId,
           description: formState.description,
-          categoryId: categoryId,
-          price: price,
-          mediaIds: mediaIds.isEmpty ? null : mediaIds,
+          imageIds: imageIds,
         ),
       ),
     );

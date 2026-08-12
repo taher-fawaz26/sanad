@@ -1,23 +1,21 @@
 /// `CreateServiceRequestDto` — POST /service-requests request body.
 class CreateServiceRequestDto {
   const CreateServiceRequestDto({
-    this.requestedServiceName,
-    this.requestedCategoryName,
+    required this.name,
+    required this.categoryId,
     required this.description,
-    required this.mediaIds,
+    this.imageIds,
   });
 
-  final String? requestedServiceName;
-  final String? requestedCategoryName;
+  final String name;
+  final String categoryId;
   final String description;
-  final List<String> mediaIds;
+  final List<String>? imageIds;
 
   Map<String, dynamic> toJson() => {
-    if (requestedServiceName != null && requestedServiceName!.isNotEmpty)
-      'requestedServiceName': requestedServiceName,
-    if (requestedCategoryName != null && requestedCategoryName!.isNotEmpty)
-      'requestedCategoryName': requestedCategoryName,
+    'name': name,
+    'categoryId': categoryId,
     'description': description,
-    'mediaIds': mediaIds,
+    if (imageIds != null && imageIds!.isNotEmpty) 'imageIds': imageIds,
   };
 }
