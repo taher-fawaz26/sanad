@@ -131,22 +131,14 @@ class AppEmptyState extends StatelessWidget {
       ),
     );
 
-    // When the parent gives a bounded (often tight) height — e.g. remaining
-    // space below filters — scroll instead of overflowing the Column.
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (!constraints.hasBoundedHeight) {
-          return content;
-        }
-
-        return SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(child: content),
-          ),
-        );
-      },
-    );
+    // Centered within whatever bounded space the parent gives, and
+    // shrink-wrapped when the height is unbounded. Deliberately NOT wrapped in
+    // a `LayoutBuilder`: `infinite_scroll_pagination` renders first-page
+    // status indicators inside a `SliverFillRemaining` that measures the
+    // child's intrinsic height, and `LayoutBuilder` throws under intrinsic
+    // sizing ("does not support returning intrinsic dimensions"). `Center`
+    // supports intrinsics, so every paged list can show this state safely.
+    return Center(child: content);
   }
 }
 

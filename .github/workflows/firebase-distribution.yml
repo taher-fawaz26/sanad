@@ -38,6 +38,11 @@ jobs:
       - name: Bootstrap
         run: melos bootstrap
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: wrapper
+
       - name: Build APK
         working-directory: apps/sanad_${{ matrix.app }}
         run: flutter build apk --release --build-number=${{ github.run_number }}

@@ -41,6 +41,7 @@ export 'src/presentation/pages/workers_page.dart';
 // Presentation — services (ports)
 export 'src/presentation/services/worker_branch_assigner.dart';
 export 'src/presentation/services/worker_role_assigner.dart';
+export 'src/presentation/services/worker_roles_tab.dart';
 // Presentation — widgets
 export 'src/presentation/widgets/action_confirmation_sheet.dart';
 export 'src/presentation/widgets/invitation_actions_bottom_sheet.dart';
