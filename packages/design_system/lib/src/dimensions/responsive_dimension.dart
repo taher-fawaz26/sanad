@@ -1,4 +1,4 @@
-﻿import 'package:flutter/cupertino.dart' show BuildContext, MediaQuery;
+import 'package:flutter/cupertino.dart' show BuildContext, MediaQuery;
 import 'package:flutter/material.dart' show BuildContext, MediaQuery;
 import 'package:flutter/widgets.dart' show BuildContext, MediaQuery;
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -109,9 +109,6 @@ abstract final class AppDimension {
   /// 4 dp — badges, tags (Figma extra-small radius).
   static double get radiusXs => responsiveDimension(4);
 
-  /// 6 dp — inner segment pill (segmented controls).
-  static double get radiusSegmentInner => responsiveDimension(6);
-
   /// 8 dp — small rounding (text fields small tier).
   static double get radiusSm => responsiveDimension(8);
 
@@ -121,7 +118,9 @@ abstract final class AppDimension {
   /// 24 dp — large rounding (cards, containers).
   static double get radiusLg => responsiveDimension(24);
 
-  /// 20 dp — compact status pill (Figma `3149:3920` active tickets).
+  /// 20 dp — compact status pill (Figma `3149:3920` active tickets); also
+  /// the segmented-control item radius (Figma `5579:26572`'s "radius-lg" —
+  /// note this is a different value than [radiusLg] itself, which is 24 dp).
   static double get radiusTicketPill => responsiveDimension(20);
 
   /// 16 dp — profile details section cards (Figma `4176:4197`).
@@ -157,6 +156,8 @@ abstract final class AppDimension {
 
   // ── Fields heights & widths ────────────────────────────────────────────────
   static double get fieldHeightSm => responsiveDimension(36);
+
+  /// Also the segmented-control item height (Figma `5579:26572`).
   static double get fieldHeightMd => responsiveDimension(40);
   static double get fieldHeightLg => responsiveDimension(48);
 
@@ -269,11 +270,9 @@ abstract final class AppDimension {
   /// Hairline border width (1 dp), e.g. thin card outlines.
   static double get borderHairline => responsiveDimension(1);
 
-  /// Segmented control track inset — LTR (`40:7332`).
-  static double get controlTrackInsetLtr => responsiveDimension(5);
-
-  /// Segmented control track inset — RTL (`48:1667`).
-  static double get controlTrackInsetRtl => responsiveDimension(6);
+  /// Segmented control track horizontal padding — direction-independent
+  /// (Figma `5579:26572`, `5579:25923`).
+  static double get controlTrackPaddingHorizontal => responsiveDimension(6);
 
   /// Search bar cancel action area width (`40:6999`).
   static double get searchCancelAreaWidth => responsiveDimension(69);

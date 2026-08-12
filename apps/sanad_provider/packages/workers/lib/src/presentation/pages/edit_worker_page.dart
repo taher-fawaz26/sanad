@@ -48,6 +48,7 @@ class _EditWorkerPageState extends State<EditWorkerPage> {
               AppNavBar(
                 title: 'workers.edit_worker.title'.tr(),
                 showBackButton: true,
+                onLeadingTap: () => context.pop(),
               ),
               Expanded(
                 child: SingleChildScrollView(

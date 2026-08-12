@@ -87,6 +87,7 @@ class _RolesListPageState extends State<RolesListPage> {
               AppNavBar(
                 title: 'provider_rbac.title'.tr(),
                 showBackButton: true,
+                onLeadingTap: () => context.pop(),
                 trailing: GestureDetector(
                   onTap: () async {
                     final created = await context.push<bool>(

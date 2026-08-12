@@ -1,9 +1,21 @@
+import 'package:app_assets/app_assets.dart';
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
+import 'package:branches/src/domain/entities/branch_type.dart';
 import 'package:branches/src/presentation/utils/branch_schedule_formatter.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:maps/maps.dart';
+
+/// Localized label for a [BranchType]. Shared by the branch details "Branch
+/// Info" section and the add-branch review header caption.
+String branchTypeLabel(BranchType type) => switch (type) {
+  BranchType.mainBranch => 'branches.add_branch.branch_type_main_branch'.tr(),
+  BranchType.headquarters =>
+    'branches.add_branch.branch_type_headquarters'.tr(),
+  BranchType.mainStore => 'branches.add_branch.branch_type_main_store'.tr(),
+  BranchType.warehouse => 'branches.add_branch.branch_type_warehouse'.tr(),
+};
 
 /// Normalized data for [BranchSummaryView], shared by the add-branch review
 /// screen (draft source) and the branch details screen (saved-branch source).
@@ -12,6 +24,7 @@ class BranchSummaryData {
     required this.title,
     required this.badgeLabel,
     required this.badgeType,
+    required this.branchTypeLabel,
     required this.phone,
     required this.schedule,
     required this.areaNames,
@@ -20,6 +33,7 @@ class BranchSummaryData {
     this.caption,
     this.position,
     this.address,
+    this.cityName,
     this.managerName,
     this.isCustomSchedule = false,
   });
@@ -28,8 +42,10 @@ class BranchSummaryData {
   final String? caption;
   final String badgeLabel;
   final AppStatusBadgeType badgeType;
+  final String branchTypeLabel;
   final LatLng? position;
   final String? address;
+  final String? cityName;
   final String phone;
   final String? managerName;
   final bool isCustomSchedule;
@@ -50,6 +66,11 @@ class BranchSummaryView extends StatelessWidget {
     this.onOpenMaps,
     this.onViewAllServices,
     this.onViewAllWorkers,
+    this.onEditBranchInfo,
+    this.onEditContact,
+    this.onEditWorkingHours,
+    this.onEditCoverage,
+    this.onEditTeam,
     super.key,
   });
 
@@ -60,6 +81,15 @@ class BranchSummaryView extends StatelessWidget {
   final VoidCallback? onOpenMaps;
   final VoidCallback? onViewAllServices;
   final VoidCallback? onViewAllWorkers;
+
+  /// When non-null, the corresponding section renders a pencil that invokes
+  /// it. Left null (the default) on the add-branch review screen, where
+  /// sections must stay read-only/pencil-free.
+  final VoidCallback? onEditBranchInfo;
+  final VoidCallback? onEditContact;
+  final VoidCallback? onEditWorkingHours;
+  final VoidCallback? onEditCoverage;
+  final VoidCallback? onEditTeam;
 
   @override
   Widget build(BuildContext context) {
@@ -77,9 +107,17 @@ class BranchSummaryView extends StatelessWidget {
               onOpenMaps: onOpenMaps,
             ),
           ],
-          _ContactSection(data: data),
-          _WorkingHoursSection(data: data),
-          _CoverageSection(areaNames: data.areaNames),
+          // Only rendered on Branch Details (where an edit callback is
+          // supplied) — the add-branch review screen never showed a
+          // dedicated Branch Info section and must keep its layout intact.
+          if (onEditBranchInfo != null)
+            _BranchInfoSection(data: data, onEdit: onEditBranchInfo),
+          _ContactSection(data: data, onEdit: onEditContact),
+          _WorkingHoursSection(data: data, onEdit: onEditWorkingHours),
+          _CoverageSection(
+            areaNames: data.areaNames,
+            onEdit: onEditCoverage,
+          ),
           _ServicesSection(
             serviceNames: data.serviceNames,
             visibleCount: _visibleServiceCount,
@@ -89,12 +127,26 @@ class BranchSummaryView extends StatelessWidget {
             initials: data.workerInitials,
             visibleCount: _visibleTeamCount,
             onViewAll: onViewAllWorkers,
+            onEdit: onEditTeam,
           ),
         ],
       ),
     );
   }
 }
+
+/// Trailing pencil icon used by section headers that support editing.
+/// Mirrors the icon used by `AppSectionHeader` (`shared_ui`) so the visual
+/// language matches other section-edit affordances in the app.
+Widget _sectionEditIcon(BuildContext context) => AppSvgPicture.asset(
+  AppSvgs.branchEdit,
+  width: 20,
+  height: 20,
+  colorFilter: ColorFilter.mode(
+    context.appColors.textPrimary,
+    BlendMode.srcIn,
+  ),
+);
 
 class _Header extends StatelessWidget {
   const _Header({required this.data});
@@ -230,10 +282,52 @@ class _MapPreview extends StatelessWidget {
   }
 }
 
-class _ContactSection extends StatelessWidget {
-  const _ContactSection({required this.data});
+class _BranchInfoSection extends StatelessWidget {
+  const _BranchInfoSection({required this.data, this.onEdit});
 
   final BranchSummaryData data;
+  final VoidCallback? onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppSection(
+          title: 'branches.details.section_branch_info'.tr(),
+          size: AppSectionSize.compact,
+          trailing: onEdit != null
+              ? AppSectionTrailing.icon
+              : AppSectionTrailing.none,
+          trailingIcon: onEdit != null ? _sectionEditIcon(context) : null,
+          onTrailingTap: onEdit,
+        ),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          child: AppGroupedKeyValueList(
+            items: [
+              GroupedKeyValueItem(
+                title: 'branches.add_branch.branch_type'.tr(),
+                value: data.branchTypeLabel,
+              ),
+              if (data.cityName != null && data.cityName!.isNotEmpty)
+                GroupedKeyValueItem(
+                  title: 'branches.add_branch.city'.tr(),
+                  value: data.cityName!,
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ContactSection extends StatelessWidget {
+  const _ContactSection({required this.data, this.onEdit});
+
+  final BranchSummaryData data;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -243,6 +337,11 @@ class _ContactSection extends StatelessWidget {
         AppSection(
           title: 'branches.details.section_contact'.tr(),
           size: AppSectionSize.compact,
+          trailing: onEdit != null
+              ? AppSectionTrailing.icon
+              : AppSectionTrailing.none,
+          trailingIcon: onEdit != null ? _sectionEditIcon(context) : null,
+          onTrailingTap: onEdit,
         ),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -266,9 +365,10 @@ class _ContactSection extends StatelessWidget {
 }
 
 class _WorkingHoursSection extends StatelessWidget {
-  const _WorkingHoursSection({required this.data});
+  const _WorkingHoursSection({required this.data, this.onEdit});
 
   final BranchSummaryData data;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -281,20 +381,37 @@ class _WorkingHoursSection extends StatelessWidget {
         _scheduleItem(day, byDay[day], closedLabel, colors.error),
     ];
 
+    final badge = data.isCustomSchedule
+        ? AppStatusBadge(
+            label: 'branches.details.schedule_custom'.tr(),
+            type: AppStatusBadgeType.info,
+            size: AppStatusBadgeSize.compact,
+          )
+        : null;
+    final hasTrailing = badge != null || onEdit != null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AppSection(
           title: 'branches.details.section_working_hours'.tr(),
           size: AppSectionSize.compact,
-          trailing: data.isCustomSchedule
+          trailing: hasTrailing
               ? AppSectionTrailing.custom
               : AppSectionTrailing.none,
-          trailingWidget: data.isCustomSchedule
-              ? AppStatusBadge(
-                  label: 'branches.details.schedule_custom'.tr(),
-                  type: AppStatusBadgeType.info,
-                  size: AppStatusBadgeSize.compact,
+          trailingWidget: hasTrailing
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: AppSpacing.sm,
+                  children: [
+                    if (badge != null) badge,
+                    if (onEdit != null)
+                      InkWell(
+                        onTap: onEdit,
+                        borderRadius: BorderRadius.circular(8),
+                        child: _sectionEditIcon(context),
+                      ),
+                  ],
                 )
               : null,
         ),
@@ -324,9 +441,10 @@ class _WorkingHoursSection extends StatelessWidget {
 }
 
 class _CoverageSection extends StatelessWidget {
-  const _CoverageSection({required this.areaNames});
+  const _CoverageSection({required this.areaNames, this.onEdit});
 
   final List<String> areaNames;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -338,6 +456,11 @@ class _CoverageSection extends StatelessWidget {
         AppSection(
           title: 'branches.details.section_coverage'.tr(),
           size: AppSectionSize.compact,
+          trailing: onEdit != null
+              ? AppSectionTrailing.icon
+              : AppSectionTrailing.none,
+          trailingIcon: onEdit != null ? _sectionEditIcon(context) : null,
+          onTrailingTap: onEdit,
         ),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -441,16 +564,27 @@ class _TeamSection extends StatelessWidget {
     required this.initials,
     required this.visibleCount,
     this.onViewAll,
+    this.onEdit,
   });
 
   final List<String> initials;
   final int visibleCount;
   final VoidCallback? onViewAll;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final overflow = initials.length - visibleCount;
+    final viewAll = initials.isEmpty
+        ? null
+        : _ViewAllLink(
+            label: 'branches.review.workers_count'.tr(
+              namedArgs: {'count': '${initials.length}'},
+            ),
+            onTap: onViewAll,
+          );
+    final hasTrailing = viewAll != null || onEdit != null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -458,17 +592,24 @@ class _TeamSection extends StatelessWidget {
         AppSection(
           title: 'branches.details.section_team'.tr(),
           size: AppSectionSize.compact,
-          trailing: initials.isEmpty
-              ? AppSectionTrailing.none
-              : AppSectionTrailing.custom,
-          trailingWidget: initials.isEmpty
-              ? null
-              : _ViewAllLink(
-                  label: 'branches.review.workers_count'.tr(
-                    namedArgs: {'count': '${initials.length}'},
-                  ),
-                  onTap: onViewAll,
-                ),
+          trailing: hasTrailing
+              ? AppSectionTrailing.custom
+              : AppSectionTrailing.none,
+          trailingWidget: hasTrailing
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: AppSpacing.sm,
+                  children: [
+                    if (viewAll != null) viewAll,
+                    if (onEdit != null)
+                      InkWell(
+                        onTap: onEdit,
+                        borderRadius: BorderRadius.circular(8),
+                        child: _sectionEditIcon(context),
+                      ),
+                  ],
+                )
+              : null,
         ),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),

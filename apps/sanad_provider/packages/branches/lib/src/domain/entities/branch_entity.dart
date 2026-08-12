@@ -89,6 +89,62 @@ class BranchEntity extends Equatable {
   /// Convenience display: `"Address, City"`.
   String get displayAddress => '$branchAddress, $city';
 
+  /// Returns a copy with the given fields replaced. Used to apply a single
+  /// section's edits on top of the current branch before rebuilding the full
+  /// PATCH payload — see `AddBranchParamsMapper.fromBranch`.
+  BranchEntity copyWith({
+    String? branchName,
+    String? branchAddress,
+    String? city,
+    String? branchPhone,
+    bool? isAvailable,
+    BranchAvailabilityMode? availabilityMode,
+    BranchType? branchType,
+    String? cityId,
+    String? cityNameAr,
+    String? branchManagerId,
+    String? branchManagerName,
+    double? lat,
+    double? lng,
+    double? radiusKm,
+    String? googleMapsLink,
+    String? socialMediaLink,
+    List<BranchAvailabilityEntity>? availability,
+    List<String>? servingAreaPlaceIds,
+    List<String>? servingAreaNames,
+    List<ServingArea>? servingAreas,
+    List<String>? serviceIds,
+    List<String>? serviceNames,
+    List<BranchWorkerEntity>? workers,
+    DateTime? createdAt,
+  }) => BranchEntity(
+    id: id,
+    branchName: branchName ?? this.branchName,
+    branchAddress: branchAddress ?? this.branchAddress,
+    city: city ?? this.city,
+    branchPhone: branchPhone ?? this.branchPhone,
+    isAvailable: isAvailable ?? this.isAvailable,
+    availabilityMode: availabilityMode ?? this.availabilityMode,
+    branchType: branchType ?? this.branchType,
+    cityId: cityId ?? this.cityId,
+    cityNameAr: cityNameAr ?? this.cityNameAr,
+    branchManagerId: branchManagerId ?? this.branchManagerId,
+    branchManagerName: branchManagerName ?? this.branchManagerName,
+    lat: lat ?? this.lat,
+    lng: lng ?? this.lng,
+    radiusKm: radiusKm ?? this.radiusKm,
+    googleMapsLink: googleMapsLink ?? this.googleMapsLink,
+    socialMediaLink: socialMediaLink ?? this.socialMediaLink,
+    availability: availability ?? this.availability,
+    servingAreaPlaceIds: servingAreaPlaceIds ?? this.servingAreaPlaceIds,
+    servingAreaNames: servingAreaNames ?? this.servingAreaNames,
+    servingAreas: servingAreas ?? this.servingAreas,
+    serviceIds: serviceIds ?? this.serviceIds,
+    serviceNames: serviceNames ?? this.serviceNames,
+    workers: workers ?? this.workers,
+    createdAt: createdAt ?? this.createdAt,
+  );
+
   @override
   List<Object?> get props => [
     id,

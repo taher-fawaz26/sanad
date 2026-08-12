@@ -126,40 +126,42 @@ class _AppTextFieldState extends State<AppTextField> {
               ),
               SizedBox(height: _labelGap),
             ],
-            SizedBox(
-              height: _fieldHeight,
-              child: Material(
+            _wrapFieldHeight(
+              Material(
                 type: MaterialType.transparency,
                 child: TextField(
-                controller: widget.controller,
-                focusNode: widget.focusNode,
-                enabled: widget.enabled,
-                readOnly: widget.readOnly,
-                autofocus: widget.autofocus,
-                obscureText: widget.obscureText,
-                keyboardType: widget.keyboardType,
-                textInputAction: widget.textInputAction,
-                onChanged: (value) {
-                  field.didChange(value);
-                  widget.onChanged?.call(value);
-                },
-                onSubmitted: widget.onSubmitted,
-                inputFormatters: widget.inputFormatters,
-                maxLines: widget.maxLines,
-                textCapitalization: widget.textCapitalization,
-                style: FieldTokens.valueStyle(
-                  typography,
-                  colors,
-                  brightness,
+                  controller: widget.controller,
+                  focusNode: widget.focusNode,
                   enabled: widget.enabled,
+                  readOnly: widget.readOnly,
+                  autofocus: widget.autofocus,
+                  obscureText: widget.obscureText,
+                  keyboardType:
+                      widget.keyboardType ??
+                      (widget.maxLines > 1 ? TextInputType.multiline : null),
+                  textInputAction: widget.textInputAction,
+                  onChanged: (value) {
+                    field.didChange(value);
+                    widget.onChanged?.call(value);
+                  },
+                  onSubmitted: widget.onSubmitted,
+                  inputFormatters: widget.inputFormatters,
+                  minLines: widget.maxLines > 1 ? widget.maxLines : null,
+                  maxLines: widget.maxLines,
+                  textCapitalization: widget.textCapitalization,
+                  style: FieldTokens.valueStyle(
+                    typography,
+                    colors,
+                    brightness,
+                    enabled: widget.enabled,
+                  ),
+                  decoration: _buildDecoration(
+                    colors: colors,
+                    typography: typography,
+                    brightness: brightness,
+                    hasError: hasError,
+                  ),
                 ),
-                decoration: _buildDecoration(
-                  colors: colors,
-                  typography: typography,
-                  brightness: brightness,
-                  hasError: hasError,
-                ),
-              ),
               ),
             ),
             if (hasError) ...[
@@ -189,12 +191,30 @@ class _AppTextFieldState extends State<AppTextField> {
     return field.errorText;
   }
 
+  /// Single-line fields keep the Figma 48px height. Multiline fields size
+  /// from padding + line-height × maxLines so maxLines is visible.
+  Widget _wrapFieldHeight(Widget child) {
+    if (widget.maxLines <= 1) {
+      return SizedBox(height: _fieldHeight, child: child);
+    }
+    return SizedBox(height: _multilineFieldHeight, child: child);
+  }
+
+  /// Matches Figma single-line math: vertical padding × 2 + 16 line height,
+  /// extended by `(maxLines - 1)` additional lines.
+  double get _multilineFieldHeight {
+    final lineHeight = responsiveDimension(16);
+    return _fieldHeight + lineHeight * (widget.maxLines - 1);
+  }
+
   InputDecoration _buildDecoration({
     required AppColors colors,
     required AppTypography typography,
     required Brightness brightness,
     required bool hasError,
   }) {
+    final isMultiline = widget.maxLines > 1;
+
     return InputDecoration(
       hintText: widget.hint,
       hintStyle: FieldTokens.hintStyle(
@@ -207,8 +227,17 @@ class _AppTextFieldState extends State<AppTextField> {
       suffixIcon: _buildSuffixIcon(enabled: widget.enabled),
       prefixIconConstraints: FieldTokens.prefixIconConstraints(),
       suffixIconConstraints: widget.trailing != null
-          ? FieldTokens.trailingSuffixConstraints()
+          ? (isMultiline
+                ? BoxConstraints(minHeight: _multilineFieldHeight)
+                : FieldTokens.trailingSuffixConstraints())
           : FieldTokens.suffixIconConstraints(),
+      // Override theme maxHeight: 48 so multiline fields can grow.
+      constraints: isMultiline
+          ? BoxConstraints(
+              minHeight: _multilineFieldHeight,
+              maxHeight: _multilineFieldHeight,
+            )
+          : null,
       filled: true,
       fillColor: FieldTokens.background(
         colors,
@@ -289,7 +318,9 @@ class _AppTextFieldState extends State<AppTextField> {
           end: responsiveDimension(FieldTokens.trailingPadding),
         ),
         child: Align(
-          alignment: AlignmentDirectional.centerEnd,
+          alignment: widget.maxLines > 1
+              ? AlignmentDirectional.topEnd
+              : AlignmentDirectional.centerEnd,
           child: AppFieldTrailingView(
             trailing: widget.trailing!,
             enabled: enabled,

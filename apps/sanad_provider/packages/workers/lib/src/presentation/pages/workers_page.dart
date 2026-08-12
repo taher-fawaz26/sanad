@@ -223,6 +223,7 @@ class _WorkersPageState extends State<WorkersPage> {
             AppNavBar(
               title: 'workers.title'.tr(),
               showBackButton: true,
+              onLeadingTap: () => context.pop(),
               trailing: AppNotificationIcon(onTap: () {}),
             ),
             Padding(
@@ -230,12 +231,22 @@ class _WorkersPageState extends State<WorkersPage> {
                 horizontal: AppSpacing.lg,
                 vertical: AppSpacing.sm,
               ),
-              child: AppSegmentedControl(
-                segments: [
-                  'workers.tab_team'.tr(),
-                  'workers.tab_invitations'.tr(),
+              child: AppSegmentedControl<int>(
+                items: [
+                  AppSegmentedControlItem(
+                    value: 0,
+                    label: 'workers.tab_team'.tr(),
+                  ),
+                  AppSegmentedControlItem(
+                    value: 1,
+                    label: 'workers.tab_invitations'.tr(),
+                  ),
+                  AppSegmentedControlItem(
+                    value: 2,
+                    label: 'workers.tab_permissions'.tr(),
+                  ),
                 ],
-                selectedIndex: _selectedTab,
+                selectedValue: _selectedTab,
                 onChanged: _onTabChanged,
               ),
             ),
@@ -253,7 +264,20 @@ class _WorkersPageState extends State<WorkersPage> {
     );
   }
 
+  /// The "Permissions" segment has no in-page pane — it opens the existing
+  /// standalone Roles & Permissions screen (`provider_rbac` package). The
+  /// raw path is duplicated here rather than importing
+  /// `ProviderRbacRoutes.list`: `provider_rbac` already depends on
+  /// `workers` (for its worker-roles integration), so a dependency in the
+  /// other direction would create a package cycle. Keep this in sync with
+  /// `ProviderRbacRoutes.list`.
+  static const _rolesPermissionsRoute = '/roles-permissions';
+
   void _onTabChanged(int index) {
+    if (index == 2) {
+      context.push(_rolesPermissionsRoute);
+      return;
+    }
     setState(() => _selectedTab = index);
     if (index == 1 &&
         context.read<InvitationsListBloc>().state.status ==

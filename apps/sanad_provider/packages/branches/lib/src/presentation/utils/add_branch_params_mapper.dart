@@ -1,5 +1,6 @@
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
 import 'package:branches/src/domain/entities/branch_availability_mode.dart';
+import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/domain/usecases/branch_usecase_params.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_state.dart';
 import 'package:branches/src/presentation/widgets/branch_schedule_section.dart';
@@ -111,4 +112,42 @@ abstract final class AddBranchParamsMapper {
       draft.selectedServices.isNotEmpty
       ? draft.selectedServices.map((s) => s.id).toList(growable: false)
       : null;
+
+  /// Builds a full-payload PATCH from the current [branch] state.
+  ///
+  /// Used by section-by-section Branch Details editing: apply a single
+  /// section's change via [BranchEntity.copyWith] first, then pass the
+  /// resulting entity here to reconstruct the complete update request so
+  /// unrelated fields are never dropped or nulled out. `serviceIds` is
+  /// intentionally omitted — the backend currently ignores it (deprecated;
+  /// `services` always returns `null`), so there is nothing to preserve.
+  ///
+  /// [workerIds] overrides the branch's current team — needed because the
+  /// worker-selection sheet returns `WorkerEntity` (from the `workers`
+  /// package), which isn't the same shape as [BranchEntity.workers], so the
+  /// Team section can't round-trip its edit through [BranchEntity.copyWith].
+  static UpdateBranchParams fromBranch(
+    BranchEntity branch, {
+    List<String>? workerIds,
+  }) {
+    return UpdateBranchParams(
+      id: branch.id,
+      branchName: branch.branchName.trim(),
+      branchAddress: branch.branchAddress,
+      branchPhone: UaePhoneValidator.normalize(branch.branchPhone),
+      branchType: branch.branchType,
+      cityId: branch.cityId,
+      branchManagerId: branch.branchManagerId,
+      lat: branch.lat,
+      lng: branch.lng,
+      radiusKm: branch.radiusKm,
+      googleMapsLink: branch.googleMapsLink,
+      socialMediaLink: branch.socialMediaLink,
+      availabilityMode: branch.availabilityMode,
+      availability: branch.availability,
+      servingAreaPlaceIds: branch.servingAreaPlaceIds,
+      workerIds:
+          workerIds ?? branch.workers.map((w) => w.id).toList(growable: false),
+    );
+  }
 }

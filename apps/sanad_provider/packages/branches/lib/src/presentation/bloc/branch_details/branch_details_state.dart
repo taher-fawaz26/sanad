@@ -8,6 +8,8 @@ class BranchDetailsState extends Equatable {
     this.branch,
     this.statusUpdateLoading = false,
     this.statusUpdateFailure,
+    this.sectionSaveStatus = RequestStatus.initial,
+    this.sectionSaveFailure,
   });
 
   final String? branchId;
@@ -19,9 +21,17 @@ class BranchDetailsState extends Equatable {
   final bool statusUpdateLoading;
   final Failure? statusUpdateFailure;
 
+  /// Status of the in-flight section edit (PATCH + rehydrating re-fetch),
+  /// kept separate from [status] so a section save never blanks the screen.
+  final RequestStatus sectionSaveStatus;
+  final Failure? sectionSaveFailure;
+
   bool get isLoading => status == RequestStatus.loading;
   bool get isSuccess => status == RequestStatus.success;
   bool get hasError => status == RequestStatus.failure;
+
+  bool get isSectionSaveLoading => sectionSaveStatus == RequestStatus.loading;
+  bool get isSectionSaveSuccess => sectionSaveStatus == RequestStatus.success;
 
   BranchDetailsState copyWith({
     String? branchId,
@@ -32,6 +42,9 @@ class BranchDetailsState extends Equatable {
     bool? statusUpdateLoading,
     Failure? statusUpdateFailure,
     bool clearStatusUpdateFailure = false,
+    RequestStatus? sectionSaveStatus,
+    Failure? sectionSaveFailure,
+    bool clearSectionSaveFailure = false,
   }) => BranchDetailsState(
     branchId: branchId ?? this.branchId,
     status: status ?? this.status,
@@ -41,6 +54,10 @@ class BranchDetailsState extends Equatable {
     statusUpdateFailure: clearStatusUpdateFailure
         ? null
         : (statusUpdateFailure ?? this.statusUpdateFailure),
+    sectionSaveStatus: sectionSaveStatus ?? this.sectionSaveStatus,
+    sectionSaveFailure: clearSectionSaveFailure
+        ? null
+        : (sectionSaveFailure ?? this.sectionSaveFailure),
   );
 
   @override
@@ -51,5 +68,7 @@ class BranchDetailsState extends Equatable {
     branch,
     statusUpdateLoading,
     statusUpdateFailure,
+    sectionSaveStatus,
+    sectionSaveFailure,
   ];
 }

@@ -26,6 +26,7 @@ import 'package:sanad_provider/src/features/organization_settings/src/domain/use
 import 'package:sanad_provider/src/features/organization_settings/src/domain/usecases/upload_organization_media_usecase.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/bloc/identity_header/identity_header_bloc.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/bloc/organization_settings/organization_settings_bloc.dart';
+import 'package:sanad_provider/src/features/organization_settings/src/presentation/bloc/provider_completion/provider_completion_bloc.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/bloc/provider_overview/provider_overview_bloc.dart';
 import 'package:services/services.dart';
 
@@ -143,6 +144,11 @@ abstract final class OrganizationSettingsDI {
       ..registerFactory(
         () => ProviderOverviewBloc(
           getOverview: sl<GetProviderOverviewUseCase>(),
+        ),
+      )
+      ..registerFactory(
+        () => ProviderCompletionBloc(
+          getCompletion: sl<GetProviderCompletionUseCase>(),
         ),
       )
       ..registerLazySingleton<DocumentFlowRepository>(

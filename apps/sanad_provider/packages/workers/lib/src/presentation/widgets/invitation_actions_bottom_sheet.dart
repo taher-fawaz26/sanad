@@ -41,7 +41,7 @@ Future<void> showInvitationActionsBottomSheet({
       ),
     ),
     settings: const SheetRouteSettings(
-      sheetSize: SheetSize.expanded,
+      sheetSize: SheetSize.content,
       padChild: false,
     ),
   );

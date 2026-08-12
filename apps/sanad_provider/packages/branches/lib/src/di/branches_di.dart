@@ -74,6 +74,7 @@ abstract final class BranchesDI {
         () => BranchDetailsBloc(
           getBranchUseCase: sl<GetBranchUseCase>(),
           updateBranchStatusUseCase: sl<UpdateBranchStatusUseCase>(),
+          updateBranchUseCase: sl<UpdateBranchUseCase>(),
         ),
       );
   }

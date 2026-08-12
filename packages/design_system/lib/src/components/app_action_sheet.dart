@@ -82,15 +82,29 @@ class AppActionSheet extends StatelessWidget {
                   SizedBox(height: AppSpacing.sm),
                 ],
                 if (child != null) child!,
-                for (var i = 0; i < items.length; i++) ...[
-                  if (i > 0 || child != null)
-                    Divider(height: 1, color: spec.dividerColor),
-                  _ActionSheetRow(
-                    item: items[i],
-                    spec: spec,
-                    colors: colors,
+                if (items.isNotEmpty)
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.sizeOf(context).height * 0.6,
+                    ),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (var i = 0; i < items.length; i++) ...[
+                            if (i > 0 || child != null)
+                              Divider(height: 1, color: spec.dividerColor),
+                            _ActionSheetRow(
+                              item: items[i],
+                              spec: spec,
+                              colors: colors,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
                   ),
-                ],
                 if (footer != null) ...[
                   Divider(height: 1, color: spec.dividerColor),
                   Padding(

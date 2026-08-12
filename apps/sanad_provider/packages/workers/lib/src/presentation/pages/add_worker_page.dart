@@ -39,6 +39,7 @@ class _AddWorkerPageState extends State<AddWorkerPage> {
               AppNavBar(
                 title: 'workers.add_worker.title'.tr(),
                 showBackButton: true,
+                onLeadingTap: () => context.pop(),
               ),
               Expanded(
                 child: SingleChildScrollView(

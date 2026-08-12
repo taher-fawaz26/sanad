@@ -4,38 +4,32 @@ import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/spacing/responsive_spacing.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
 import 'package:design_system/src/theme/typography/app_typography.dart';
-import 'package:design_system/src/theme/typography/responsive_font_scale.dart';
-import 'package:design_system/src/utils/constants/app_shadows.dart';
 import 'package:flutter/material.dart';
 
 /// Resolved styling for [AppSegmentedControl].
 @immutable
 class SegmentedControlStyleSpec {
   const SegmentedControlStyleSpec({
-    required this.trackHeight,
     required this.trackPadding,
     required this.trackDecoration,
-    required this.selectedSegmentRadius,
-    required this.unselectedSegmentRadius,
+    required this.itemHeight,
+    required this.itemRadius,
     required this.selectedBackground,
-    required this.unselectedBackground,
     required this.selectedShadow,
     required this.selectedLabelStyle,
     required this.unselectedLabelStyle,
-    required this.segmentPadding,
+    required this.disabledLabelStyle,
   });
 
-  final double trackHeight;
   final EdgeInsets trackPadding;
   final BoxDecoration trackDecoration;
-  final BorderRadius selectedSegmentRadius;
-  final BorderRadius unselectedSegmentRadius;
+  final double itemHeight;
+  final BorderRadius itemRadius;
   final Color selectedBackground;
-  final Color unselectedBackground;
   final List<BoxShadow>? selectedShadow;
   final TextStyle selectedLabelStyle;
   final TextStyle unselectedLabelStyle;
-  final EdgeInsets segmentPadding;
+  final TextStyle disabledLabelStyle;
 }
 
 /// Theme extension registered in [AppTheme] for Figma segmented controls.
@@ -44,7 +38,7 @@ class AppSegmentedControlTheme
     extends ThemeExtension<AppSegmentedControlTheme> {
   const AppSegmentedControlTheme({required this.spec});
 
-  /// Figma `Controls / Segmented Controls` (`40:7332`) spec (LTR default).
+  /// Figma `Tab (5 Tabs)` (`5579:26572`, `5579:25923`) spec.
   final SegmentedControlStyleSpec spec;
 
   @override
@@ -73,13 +67,12 @@ extension AppSegmentedControlThemeX on BuildContext {
       colors: appColors,
       typography: appTypography,
       brightness: Theme.of(this).brightness,
-      textDirection: Directionality.of(this),
       showError: showError,
     );
   }
 }
 
-/// Figma `Controls / Segmented Controls` (`40:7332`) token resolver.
+/// Figma `Tab (5 Tabs)` (`5579:26572`, `5579:25923`) token resolver.
 abstract final class SegmentedControlTokens {
   SegmentedControlTokens._();
 
@@ -93,7 +86,6 @@ abstract final class SegmentedControlTokens {
         colors: colors,
         typography: typography,
         brightness: brightness,
-        textDirection: TextDirection.ltr,
       ),
     );
   }
@@ -102,14 +94,17 @@ abstract final class SegmentedControlTokens {
     required AppColors colors,
     required AppTypography typography,
     required Brightness brightness,
-    required TextDirection textDirection,
     bool showError = false,
   }) {
     final isDark = brightness == Brightness.dark;
-    final isRtl = textDirection == TextDirection.rtl;
-    final trackInset = isRtl
-        ? AppDimension.controlTrackInsetRtl
-        : AppDimension.controlTrackInsetLtr;
+
+    // Figma only specifies the light-mode surface; dark mode falls back to
+    // the closest semantic tokens (no dark spec was provided).
+    final trackBackground = isDark ? colors.surface : colors.white;
+    final trackBorder = isDark ? colors.border : colors.slate200;
+    final unselectedColor = isDark
+        ? colors.textSecondary
+        : colors.palettes.sky.shade700;
 
     final errorBorder = showError
         ? Border.all(
@@ -118,41 +113,28 @@ abstract final class SegmentedControlTokens {
           )
         : null;
 
-    final labelSize = isDark ? 14.rfs : 12.rfs;
+    final baseLabelStyle = typography.smallTight.copyWith(
+      fontWeight: FontWeight.w500,
+      letterSpacing: 0,
+    );
 
     return SegmentedControlStyleSpec(
-      trackHeight: AppDimension.buttonMd,
-      trackPadding: EdgeInsets.all(trackInset),
+      trackPadding: EdgeInsets.symmetric(
+        horizontal: AppDimension.controlTrackPaddingHorizontal,
+        vertical: AppSpacing.xs,
+      ),
       trackDecoration: BoxDecoration(
-        color: colors.controlFill,
-        borderRadius: BorderRadius.circular(AppDimension.radiusSm),
-        border: errorBorder,
+        color: trackBackground,
+        borderRadius: BorderRadius.circular(AppDimension.radiusLg),
+        border: errorBorder ?? Border.all(color: trackBorder),
       ),
-      selectedSegmentRadius: BorderRadius.circular(
-        AppDimension.radiusSegmentInner,
-      ),
-      unselectedSegmentRadius: BorderRadius.circular(AppDimension.radiusSm),
-      selectedBackground: isDark ? colors.surfaceVariant : colors.surface,
-      unselectedBackground: colors.palettes.white.withValues(alpha: 0),
-      selectedShadow: AppShadows.small,
-      selectedLabelStyle: typography.labelSmall.copyWith(
-        fontSize: labelSize,
-        height: 1,
-        fontWeight: FontWeight.w500,
-        letterSpacing: 0,
-        color: colors.textPrimary,
-      ),
-      unselectedLabelStyle: typography.labelSmall.copyWith(
-        fontSize: 12.rfs,
-        height: 1,
-        fontWeight: FontWeight.w500,
-        letterSpacing: 0,
-        color: colors.textSecondary,
-      ),
-      segmentPadding: EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.sm,
-      ),
+      itemHeight: AppDimension.fieldHeightMd,
+      itemRadius: BorderRadius.circular(AppDimension.radiusTicketPill),
+      selectedBackground: colors.primary,
+      selectedShadow: null,
+      selectedLabelStyle: baseLabelStyle.copyWith(color: colors.white),
+      unselectedLabelStyle: baseLabelStyle.copyWith(color: unselectedColor),
+      disabledLabelStyle: baseLabelStyle.copyWith(color: colors.textMuted),
     );
   }
 }

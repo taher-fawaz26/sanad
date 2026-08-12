@@ -1,4 +1,3 @@
-import 'package:branches/src/domain/entities/branch_type.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_cubit.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_state.dart';
@@ -34,11 +33,13 @@ class BranchReviewBody extends StatelessWidget {
         return BranchSummaryView(
           data: BranchSummaryData(
             title: 'branches.company_name'.tr(),
-            caption: _branchTypeLabel(draft.branchType),
+            caption: branchTypeLabel(draft.branchType),
             badgeLabel: 'branches.status_active'.tr(),
             badgeType: AppStatusBadgeType.success,
+            branchTypeLabel: branchTypeLabel(draft.branchType),
             position: position,
             address: draft.branchAddress,
+            cityName: draft.selectedCity?.nameEn,
             phone: draft.phone,
             managerName: draft.selectedManager?.fullName,
             isCustomSchedule: draft.scheduleMode == BranchScheduleMode.custom,
@@ -68,11 +69,3 @@ class BranchReviewBody extends StatelessWidget {
     );
   }
 }
-
-String _branchTypeLabel(BranchType type) => switch (type) {
-  BranchType.mainBranch => 'branches.add_branch.branch_type_main_branch'.tr(),
-  BranchType.headquarters =>
-    'branches.add_branch.branch_type_headquarters'.tr(),
-  BranchType.mainStore => 'branches.add_branch.branch_type_main_store'.tr(),
-  BranchType.warehouse => 'branches.add_branch.branch_type_warehouse'.tr(),
-};

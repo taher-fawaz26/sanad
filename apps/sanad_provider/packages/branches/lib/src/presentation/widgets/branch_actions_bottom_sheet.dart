@@ -105,12 +105,6 @@ class _BranchActionsSheetBodyState extends State<_BranchActionsSheetBody> {
                       setUnderMaintenance: value,
                     ),
             ),
-            AppTableRow(
-              title: 'branches.actions.edit_branch'.tr(),
-              leading: AppTableLeading.icon,
-              leadingIcon: _actionIcon(AppSvgs.branchEdit, iconColor),
-              onTap: () => _onEditPressed(context, branch),
-            ),
             const AppDivider(),
             _DeleteBranchRow(
               onTap: () => _onDeletePressed(context, branch),
@@ -119,19 +113,6 @@ class _BranchActionsSheetBodyState extends State<_BranchActionsSheetBody> {
         );
       },
     );
-  }
-
-  Future<void> _onEditPressed(BuildContext context, BranchEntity branch) async {
-    Navigator.of(context).pop();
-    if (!widget.pageContext.mounted) return;
-    // Navigate by id only — the list branch may be a lighter payload than the
-    // full GET, so the wizard fetches complete details before prefilling.
-    final saved = await widget.pageContext.push<bool>(
-      BranchRoutes.editFor(branch.id),
-    );
-    if ((saved ?? false) && widget.pageContext.mounted) {
-      widget.pageContext.read<BranchesBloc>().add(const BranchesRefreshEvent());
-    }
   }
 
   Future<void> _onMaintenanceToggled({

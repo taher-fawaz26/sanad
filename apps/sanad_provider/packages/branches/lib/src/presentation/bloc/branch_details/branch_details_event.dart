@@ -30,3 +30,15 @@ final class BranchStatusToggleEvent extends BranchDetailsEvent {
   @override
   List<Object?> get props => [isAvailable];
 }
+
+/// Submits a full-payload branch PATCH built from a single section's edits
+/// (see `AddBranchParamsMapper.fromBranch`). On success, re-fetches the
+/// canonical branch details rather than trusting the local params.
+final class BranchSectionUpdated extends BranchDetailsEvent {
+  const BranchSectionUpdated(this.params);
+
+  final UpdateBranchParams params;
+
+  @override
+  List<Object?> get props => [params];
+}

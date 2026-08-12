@@ -67,18 +67,28 @@
     "tab_settings": "Settings",
     "general_settings": "General Settings",
     "account_settings": "Account Settings",
-    "roles_and_permissions": "Roles & Permissions",
     "coming_soon": "Coming soon",
     "stat_general_action": "view",
-    "stat_team_count": "144",
     "stat_team_label": "Team",
     "stat_team_action": "View Team",
-    "stat_branches_count": "8",
     "stat_branches_label": "Branches",
     "stat_branches_action": "View All",
-    "stat_invitations_count": "6",
     "stat_invitations_label": "Team",
     "stat_invitations_action": "Invitations",
+    "setup_title": "Complete your organization setup",
+    "setup_description": "Finish the required steps to make your business visible to customers and ready to receive service requests.",
+    "setup_hidden_badge": "Hidden from Customers",
+    "setup_stage_business_profile": "Business Profile",
+    "setup_stage_business_profile_subtitle": "Add phone, email, category and working hours",
+    "setup_stage_first_branch": "First Branch",
+    "setup_stage_first_branch_subtitle": "At least one branch",
+    "setup_stage_first_team": "First Team Member",
+    "setup_stage_first_team_subtitle": "At least one employee or manager",
+    "setup_stage_grow": "Grow Your Business",
+    "setup_stage_grow_subtitle": "Add team members and services",
+    "setup_required_summary": "{completed} of {total} required setup stages completed",
+    "setup_error_title": "Couldn't load setup progress",
+    "setup_retry": "Retry",
     "placeholder_title": "More settings coming soon",
     "placeholder_description": "Account and app settings will be available here in a future update.",
     "section_identity": "Identity",
@@ -155,6 +165,7 @@
       "action_failed": "Something went wrong. Please try again."
     },
     "details": {
+      "section_branch_info": "Branch Info",
       "section_contact": "Contact",
       "section_working_hours": "Working hours",
       "section_coverage": "Coverage area",
@@ -181,7 +192,8 @@
       "action_set_active": "Set to Active",
       "status_update_error": "Failed to update branch status",
       "no_team_members": "No team members assigned",
-      "no_serving_areas": "No coverage areas added"
+      "no_serving_areas": "No coverage areas added",
+      "team_min_workers_error": "At least one worker must be assigned to the branch."
     },
     "edit_branch": {
       "title": "Edit branch",
@@ -535,6 +547,7 @@
     "coming_soon": "Coming soon",
     "tab_team": "Team",
     "tab_invitations": "Invitations",
+    "tab_permissions": "Permissions",
     "invitations_empty_title": "No invitations yet",
     "invitations_empty_description": "Invite team members to get started.",
     "invitation_status_pending": "Pending",
@@ -581,7 +594,8 @@
       "error_try_again": "Try Again",
       "validation_required": "This field is required",
       "validation_email": "Please enter a valid email",
-      "validation_reserved_domain": "This email domain cannot receive invitations. Please use a real email address."
+      "validation_reserved_domain": "This email domain cannot receive invitations. Please use a real email address.",
+      "validation_name_format": "Name can only contain letters, spaces, dashes and apostrophes"
     },
     "edit_worker": {
       "title": "Edit Member Team",

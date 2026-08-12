@@ -81,6 +81,7 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
   /// [WorkerFormBody.requireContact] is true).
   bool get isComplete {
     if (fullName.isEmpty || jobTitle.isEmpty || type == null) return false;
+    if (_validateFullName(fullNameController.text) != null) return false;
     if (widget.requireContact) {
       if (_validateEmail(emailController.text) != null) return false;
       if (!isPhoneValid) return false;
@@ -146,6 +147,23 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
     'test.com',
   };
 
+  /// Mirrors the backend's `name` rule: letters, spaces, dashes, and
+  /// apostrophes only — no digits or other punctuation (backend rejects with
+  /// "...حروف ومسافات وشرطات وفواصل عليا فقط").
+  static final RegExp _namePattern = RegExp(
+    r"^[\p{L}\s'-]+$",
+    unicode: true,
+  );
+
+  String? _validateFullName(String? value) {
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) return 'workers.add_worker.validation_required'.tr();
+    if (!_namePattern.hasMatch(trimmed)) {
+      return 'workers.add_worker.validation_name_format'.tr();
+    }
+    return null;
+  }
+
   String? _validateEmail(String? value) {
     if (widget.emailReadOnly) return null;
     final trimmed = value?.trim() ?? '';
@@ -187,9 +205,7 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
             label: 'workers.add_worker.full_name_label'.tr(),
             hint: 'workers.add_worker.full_name_hint'.tr(),
             isRequired: true,
-            validator: (value) => (value?.trim().isEmpty ?? true)
-                ? 'workers.add_worker.validation_required'.tr()
-                : null,
+            validator: _validateFullName,
           ),
           SizedBox(height: AppSpacing.md),
           AppTextField(

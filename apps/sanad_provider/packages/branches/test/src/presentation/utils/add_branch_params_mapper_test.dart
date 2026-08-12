@@ -1,15 +1,19 @@
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
 import 'package:branches/src/domain/entities/branch_availability_mode.dart';
+import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/domain/entities/branch_manager_entity.dart';
 import 'package:branches/src/domain/entities/branch_time_slot_entity.dart';
 import 'package:branches/src/domain/entities/branch_type.dart';
+import 'package:branches/src/domain/entities/branch_worker_entity.dart';
+import 'package:branches/src/domain/entities/branch_worker_type.dart';
+import 'package:branches/src/domain/entities/worker_status.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_state.dart';
 import 'package:branches/src/presentation/utils/add_branch_params_mapper.dart';
 import 'package:branches/src/presentation/widgets/branch_schedule_section.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maps/maps.dart';
 import 'package:services/services.dart';
-import 'package:workers/workers.dart';
+import 'package:workers/workers.dart' hide WorkerStatus;
 
 void main() {
   const companySchedule = [
@@ -360,6 +364,213 @@ void main() {
         ),
         throwsArgumentError,
       );
+    });
+  });
+
+  group('AddBranchParamsMapper.fromBranch', () {
+    const completeBranch = BranchEntity(
+      id: 'branch-1',
+      branchName: 'Downtown Branch',
+      branchAddress: '123 Main St',
+      city: 'Dubai',
+      cityId: 'city-1',
+      cityNameAr: 'دبي',
+      branchPhone: '+971501234567',
+      isAvailable: true,
+      availabilityMode: BranchAvailabilityMode.custom,
+      branchType: BranchType.headquarters,
+      branchManagerId: 'mgr-1',
+      branchManagerName: 'Test Manager',
+      lat: 25.0,
+      lng: 55.0,
+      radiusKm: 5.0,
+      googleMapsLink: 'https://maps.google.com/x',
+      socialMediaLink: 'https://instagram.com/branch',
+      availability: customSchedule,
+      servingAreaPlaceIds: ['p1'],
+      servingAreaNames: ['Area 1'],
+      serviceIds: ['s1'],
+      serviceNames: ['Haircut'],
+      workers: [
+        BranchWorkerEntity(
+          id: 'w1',
+          fullName: 'John',
+          initials: 'J',
+          type: BranchWorkerType.worker,
+          status: WorkerStatus.active,
+        ),
+      ],
+    );
+
+    test('maps every field from the branch (full-payload PATCH)', () {
+      final params = AddBranchParamsMapper.fromBranch(completeBranch);
+
+      expect(params.id, 'branch-1');
+      expect(params.branchName, 'Downtown Branch');
+      expect(params.branchAddress, '123 Main St');
+      expect(params.branchPhone, '+971501234567');
+      expect(params.branchType, BranchType.headquarters);
+      expect(params.cityId, 'city-1');
+      expect(params.branchManagerId, 'mgr-1');
+      expect(params.lat, 25.0);
+      expect(params.lng, 55.0);
+      expect(params.radiusKm, 5.0);
+      expect(params.googleMapsLink, 'https://maps.google.com/x');
+      expect(params.socialMediaLink, 'https://instagram.com/branch');
+      expect(params.availabilityMode, BranchAvailabilityMode.custom);
+      expect(params.availability, customSchedule);
+      expect(params.servingAreaPlaceIds, ['p1']);
+      expect(params.workerIds, ['w1']);
+    });
+
+    test('omits serviceIds — backend ignores it (deprecated)', () {
+      final params = AddBranchParamsMapper.fromBranch(completeBranch);
+      expect(params.serviceIds, isNull);
+    });
+
+    test(
+      'editing one section preserves every other field '
+      '(Branch Info: name/type/city change only)',
+      () {
+        final updated = completeBranch.copyWith(
+          branchName: 'Renamed Branch',
+          branchType: BranchType.mainStore,
+          cityId: 'city-2',
+          city: 'Abu Dhabi',
+        );
+        final params = AddBranchParamsMapper.fromBranch(updated);
+
+        expect(params.branchName, 'Renamed Branch');
+        expect(params.branchType, BranchType.mainStore);
+        expect(params.cityId, 'city-2');
+        // Everything else must be untouched.
+        expect(params.branchAddress, completeBranch.branchAddress);
+        expect(params.branchPhone, completeBranch.branchPhone);
+        expect(params.branchManagerId, completeBranch.branchManagerId);
+        expect(params.lat, completeBranch.lat);
+        expect(params.lng, completeBranch.lng);
+        expect(params.radiusKm, completeBranch.radiusKm);
+        expect(params.availabilityMode, completeBranch.availabilityMode);
+        expect(params.availability, completeBranch.availability);
+        expect(
+          params.servingAreaPlaceIds,
+          completeBranch.servingAreaPlaceIds,
+        );
+        expect(params.workerIds, ['w1']);
+      },
+    );
+
+    test(
+      'editing Contact (phone + manager) preserves every other field',
+      () {
+        final updated = completeBranch.copyWith(
+          branchPhone: '+971509999999',
+          branchManagerId: 'mgr-2',
+          branchManagerName: 'New Manager',
+        );
+        final params = AddBranchParamsMapper.fromBranch(updated);
+
+        expect(params.branchPhone, '+971509999999');
+        expect(params.branchManagerId, 'mgr-2');
+        expect(params.branchName, completeBranch.branchName);
+        expect(params.branchAddress, completeBranch.branchAddress);
+        expect(params.cityId, completeBranch.cityId);
+        expect(params.branchType, completeBranch.branchType);
+        expect(params.lat, completeBranch.lat);
+        expect(params.lng, completeBranch.lng);
+        expect(params.radiusKm, completeBranch.radiusKm);
+        expect(params.availability, completeBranch.availability);
+        expect(
+          params.servingAreaPlaceIds,
+          completeBranch.servingAreaPlaceIds,
+        );
+        expect(params.workerIds, ['w1']);
+      },
+    );
+
+    test(
+      'editing Working Hours preserves every other field',
+      () {
+        const newSchedule = [
+          BranchAvailabilityEntity(
+            day: 'FRIDAY',
+            slots: [BranchTimeSlotEntity(from: '08:00', to: '16:00')],
+          ),
+        ];
+        final updated = completeBranch.copyWith(
+          availabilityMode: BranchAvailabilityMode.coreHours,
+          availability: newSchedule,
+        );
+        final params = AddBranchParamsMapper.fromBranch(updated);
+
+        expect(params.availabilityMode, BranchAvailabilityMode.coreHours);
+        expect(params.availability, newSchedule);
+        expect(params.branchName, completeBranch.branchName);
+        expect(params.branchPhone, completeBranch.branchPhone);
+        expect(params.branchManagerId, completeBranch.branchManagerId);
+        expect(params.lat, completeBranch.lat);
+        expect(params.radiusKm, completeBranch.radiusKm);
+        expect(
+          params.servingAreaPlaceIds,
+          completeBranch.servingAreaPlaceIds,
+        );
+        expect(params.workerIds, ['w1']);
+      },
+    );
+
+    test(
+      'editing Coverage (lat/lng/radius/serving areas) preserves every '
+      'other field',
+      () {
+        final updated = completeBranch.copyWith(
+          branchAddress: 'New Address',
+          lat: 26.0,
+          lng: 56.0,
+          radiusKm: 10.0,
+          servingAreaPlaceIds: ['p2', 'p3'],
+        );
+        final params = AddBranchParamsMapper.fromBranch(updated);
+
+        expect(params.branchAddress, 'New Address');
+        expect(params.lat, 26.0);
+        expect(params.lng, 56.0);
+        expect(params.radiusKm, 10.0);
+        expect(params.servingAreaPlaceIds, ['p2', 'p3']);
+        expect(params.branchName, completeBranch.branchName);
+        expect(params.branchPhone, completeBranch.branchPhone);
+        expect(params.branchManagerId, completeBranch.branchManagerId);
+        expect(params.availabilityMode, completeBranch.availabilityMode);
+        expect(params.availability, completeBranch.availability);
+        expect(params.workerIds, ['w1']);
+      },
+    );
+
+    test(
+      'editing Team (workerIds override) preserves every other field '
+      'and does not require BranchEntity.workers to change',
+      () {
+        final params = AddBranchParamsMapper.fromBranch(
+          completeBranch,
+          workerIds: ['w2', 'w3'],
+        );
+
+        expect(params.workerIds, ['w2', 'w3']);
+        expect(params.branchName, completeBranch.branchName);
+        expect(params.branchPhone, completeBranch.branchPhone);
+        expect(params.branchManagerId, completeBranch.branchManagerId);
+        expect(params.lat, completeBranch.lat);
+        expect(params.radiusKm, completeBranch.radiusKm);
+        expect(params.availabilityMode, completeBranch.availabilityMode);
+        expect(
+          params.servingAreaPlaceIds,
+          completeBranch.servingAreaPlaceIds,
+        );
+      },
+    );
+
+    test('normalizes an already-international phone idempotently', () {
+      final params = AddBranchParamsMapper.fromBranch(completeBranch);
+      expect(params.branchPhone, '+971501234567');
     });
   });
 }

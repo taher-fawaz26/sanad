@@ -110,6 +110,7 @@ class _RoleFormPageState extends State<RoleFormPage> {
                     ? 'provider_rbac.edit_role_title'.tr()
                     : 'provider_rbac.add_role_title'.tr(),
                 showBackButton: true,
+                onLeadingTap: () => context.pop(),
               ),
               Expanded(
                 child: SingleChildScrollView(

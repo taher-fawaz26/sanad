@@ -44,7 +44,7 @@ Future<void> showWorkerActionsBottomSheet({
       child: _WorkerActionsSheetBody(worker: worker, pageContext: pageContext),
     ),
     settings: const SheetRouteSettings(
-      sheetSize: SheetSize.expanded,
+      sheetSize: SheetSize.content,
       padChild: false,
     ),
   );
@@ -110,26 +110,6 @@ class _WorkerActionsSheetBody extends StatelessWidget {
             if (updated != null) {
               bloc.add(WorkerReplacedInListEvent(updated));
             }
-          },
-        ),
-        // Reset Password — always visible
-        AppTableRow(
-          title: 'workers.action_reset_password'.tr(),
-          leading: AppTableLeading.icon,
-          leadingIcon: AppSvgPicture.asset(
-            AppSvgs.workerResetPassword,
-            width: 24,
-            height: 24,
-            colorFilter: ColorFilter.mode(colors.textPrimary, BlendMode.srcIn),
-          ),
-          onTap: () {
-            Navigator.of(context).pop();
-            if (!pageContext.mounted) return;
-            // No provider reset-password endpoint exists yet.
-            showAppSnackbar(
-              context: pageContext,
-              title: 'workers.reset_password_coming_soon'.tr(),
-            );
           },
         ),
         const AppDivider(),

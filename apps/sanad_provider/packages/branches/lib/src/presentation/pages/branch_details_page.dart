@@ -1,8 +1,17 @@
+import 'package:branches/src/data/models/person_initials.dart';
 import 'package:branches/src/domain/entities/branch_availability_mode.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
+import 'package:branches/src/domain/entities/branch_manager_entity.dart';
+import 'package:branches/src/domain/usecases/get_company_schedule_usecase.dart';
 import 'package:branches/src/presentation/bloc/branch_details/branch_details_bloc.dart';
+import 'package:branches/src/presentation/models/coverage_area_args.dart';
+import 'package:branches/src/presentation/models/coverage_area_result.dart';
+import 'package:branches/src/presentation/utils/add_branch_params_mapper.dart';
 import 'package:branches/src/presentation/utils/branch_maps_launcher.dart';
+import 'package:branches/src/presentation/widgets/branch_info_edit_sheet.dart';
 import 'package:branches/src/presentation/widgets/branch_summary_view.dart';
+import 'package:branches/src/presentation/widgets/contact_edit_sheet.dart';
+import 'package:branches/src/presentation/widgets/working_hours_edit_sheet.dart';
 import 'package:branches/src/routes/branch_routes.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
@@ -13,11 +22,14 @@ import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
 import 'package:maps/maps.dart';
 import 'package:shared_ui/shared_ui.dart';
+import 'package:workers/workers.dart';
 
 /// Figma Branch Details screen (`365:14892`).
 ///
-/// Mirrors the add-branch review layout via [BranchSummaryView], swapping the
-/// footer action from "submit" to "Edit branch".
+/// Read-only by default; each editable section (Branch Info, Contact,
+/// Working Hours, Coverage, Team) has its own pencil that opens a focused
+/// bottom-sheet/section editor. Services stays read-only (see Phase 0 audit
+/// note in the migration plan — the backend currently ignores `serviceIds`).
 class BranchDetailsPage extends StatelessWidget {
   const BranchDetailsPage({required this.branchId, super.key});
 
@@ -27,10 +39,12 @@ class BranchDetailsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocConsumer<BranchDetailsBloc, BranchDetailsState>(
       listenWhen: (prev, curr) =>
-          prev.statusUpdateFailure != curr.statusUpdateFailure &&
-          curr.statusUpdateFailure != null,
+          (prev.statusUpdateFailure != curr.statusUpdateFailure &&
+              curr.statusUpdateFailure != null) ||
+          (prev.sectionSaveFailure != curr.sectionSaveFailure &&
+              curr.sectionSaveFailure != null),
       listener: (context, state) {
-        final failure = state.statusUpdateFailure;
+        final failure = state.sectionSaveFailure ?? state.statusUpdateFailure;
         showAppErrorSnackbar(
           context: context,
           title: failure != null
@@ -159,8 +173,10 @@ class _BranchDetailsContent extends StatelessWidget {
                   badgeType: branch.isAvailable
                       ? AppStatusBadgeType.success
                       : AppStatusBadgeType.warning,
+                  branchTypeLabel: branchTypeLabel(branch.branchType),
                   position: position,
                   address: branch.displayAddress,
+                  cityName: branch.city,
                   phone: branch.branchPhone,
                   managerName: branch.branchManagerName,
                   isCustomSchedule:
@@ -173,21 +189,173 @@ class _BranchDetailsContent extends StatelessWidget {
                   ],
                 ),
                 onOpenMaps: () => _openMaps(context),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsetsDirectional.fromSTEB(
-                AppSpacing.xl,
-                AppSpacing.sm,
-                AppSpacing.xl,
-                AppSpacing.sm,
-              ),
-              child: AppButton(
-                label: 'branches.details.edit_branch'.tr(),
-                onPressed: () => _openEdit(context),
+                onEditBranchInfo: () => _openBranchInfoEdit(context),
+                onEditContact: () => _openContactEdit(context),
+                onEditWorkingHours: () => _openWorkingHoursEdit(context),
+                onEditCoverage: () => _openCoverageEdit(context),
+                onEditTeam: () => _openTeamEdit(context),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openBranchInfoEdit(BuildContext context) async {
+    final initialCity = branch.cityId == null
+        ? null
+        : CityEntity(
+            id: branch.cityId!,
+            nameEn: branch.city,
+            nameAr: branch.cityNameAr ?? branch.city,
+          );
+
+    final result = await showBranchInfoEditSheet(
+      context: context,
+      initialName: branch.branchName,
+      initialType: branch.branchType,
+      initialCity: initialCity,
+    );
+    if (result == null || !context.mounted) return;
+
+    final updated = branch.copyWith(
+      branchName: result.branchName,
+      branchType: result.branchType,
+      cityId: result.city?.id,
+      city: result.city?.nameEn ?? branch.city,
+      cityNameAr: result.city?.nameAr,
+    );
+    context.read<BranchDetailsBloc>().add(
+      BranchSectionUpdated(AddBranchParamsMapper.fromBranch(updated)),
+    );
+  }
+
+  Future<void> _openContactEdit(BuildContext context) async {
+    final initialManager = branch.branchManagerId == null
+        ? null
+        : BranchManagerEntity(
+            id: branch.branchManagerId!,
+            fullName: branch.branchManagerName ?? '',
+            initials: personInitials(branch.branchManagerName ?? ''),
+          );
+
+    final result = await showContactEditSheet(
+      context: context,
+      initialPhone: branch.branchPhone,
+      initialManager: initialManager,
+    );
+    if (result == null || !context.mounted) return;
+
+    final updated = branch.copyWith(
+      branchPhone: result.branchPhone,
+      branchManagerId: result.manager?.id,
+      branchManagerName: result.manager?.fullName,
+    );
+    context.read<BranchDetailsBloc>().add(
+      BranchSectionUpdated(AddBranchParamsMapper.fromBranch(updated)),
+    );
+  }
+
+  Future<void> _openWorkingHoursEdit(BuildContext context) async {
+    // Fetched up front so the sheet renders its full content from the very
+    // first frame — swapping a loading state in after mount fights the
+    // sheet's auto-sizing (`SheetSize.content`) while it settles.
+    final scheduleResult = await sl<GetCompanyScheduleUseCase>()(
+      const NoParams(),
+    ).run();
+    if (!context.mounted) return;
+
+    final companySchedule = scheduleResult.fold((failure) => null, (s) => s);
+    if (companySchedule == null) {
+      showAppSnackbar(
+        context: context,
+        title: 'branches.details.status_update_error'.tr(),
+      );
+      return;
+    }
+
+    final result = await showWorkingHoursEditSheet(
+      context: context,
+      initialMode: branch.availabilityMode,
+      initialCustomSchedule: branch.availability ?? const [],
+      companySchedule: companySchedule,
+    );
+    if (result == null || !context.mounted) return;
+
+    final updated = branch.copyWith(
+      availabilityMode: result.availabilityMode,
+      availability: result.availability,
+    );
+    context.read<BranchDetailsBloc>().add(
+      BranchSectionUpdated(AddBranchParamsMapper.fromBranch(updated)),
+    );
+  }
+
+  Future<void> _openCoverageEdit(BuildContext context) async {
+    final status = await sl<LocationService>().checkPermission();
+    if (!context.mounted) return;
+    if (status == LocationPermissionStatus.permanentlyDenied ||
+        status == LocationPermissionStatus.serviceDisabled) {
+      showAppSnackbar(
+        context: context,
+        title: 'branches.add_branch.location_access_description'.tr(),
+      );
+      return;
+    }
+
+    final position = (branch.lat != null && branch.lng != null)
+        ? LatLng(branch.lat!, branch.lng!)
+        : null;
+
+    final result = await context.push<CoverageAreaResult>(
+      BranchRoutes.coverage,
+      extra: CoverageAreaArgs(
+        position: position,
+        address: branch.branchAddress,
+        radiusKm: branch.radiusKm,
+        servingAreas: branch.servingAreas,
+        mode: CoverageMode.edit,
+      ),
+    );
+    if (result == null || !context.mounted) return;
+
+    final updated = branch.copyWith(
+      branchAddress: result.address,
+      lat: result.position.latitude,
+      lng: result.position.longitude,
+      radiusKm: result.radiusKm,
+      servingAreas: result.servingAreas,
+      servingAreaPlaceIds: result.servingAreaPlaceIds,
+      servingAreaNames: [for (final area in result.servingAreas) area.name],
+    );
+    context.read<BranchDetailsBloc>().add(
+      BranchSectionUpdated(AddBranchParamsMapper.fromBranch(updated)),
+    );
+  }
+
+  Future<void> _openTeamEdit(BuildContext context) async {
+    final result = await showSelectWorkerActionSheet(
+      context: context,
+      initialSelectedIds: branch.workers.map((w) => w.id).toSet(),
+    );
+    if (result == null || !context.mounted) return;
+
+    if (result.selectedWorkers.isEmpty) {
+      showAppSnackbar(
+        context: context,
+        title: 'branches.details.team_min_workers_error'.tr(),
+      );
+      return;
+    }
+
+    context.read<BranchDetailsBloc>().add(
+      BranchSectionUpdated(
+        AddBranchParamsMapper.fromBranch(
+          branch,
+          workerIds: result.selectedWorkers
+              .map((w) => w.id)
+              .toList(growable: false),
         ),
       ),
     );
@@ -201,19 +369,6 @@ class _BranchDetailsContent extends StatelessWidget {
         context: context,
         title: 'branches.details.maps_unavailable'.tr(),
       );
-    }
-  }
-
-  /// Opens the shared wizard in edit mode, passing the already-loaded branch so
-  /// it prefills without a refetch. Refreshes details when a save succeeds.
-  Future<void> _openEdit(BuildContext context) async {
-    final bloc = context.read<BranchDetailsBloc>();
-    final saved = await context.push<bool>(
-      BranchRoutes.editFor(branch.id),
-      extra: branch,
-    );
-    if (saved ?? false) {
-      bloc.add(const BranchDetailsRefreshEvent());
     }
   }
 
@@ -233,14 +388,6 @@ class _BranchDetailsContent extends StatelessWidget {
           onTap: () {
             Navigator.of(context).pop();
             bloc.add(BranchStatusToggleEvent(isAvailable: !isActive));
-          },
-        ),
-        AppActionSheetItem(
-          label: 'branches.details.action_edit'.tr(),
-          leading: const Icon(Icons.edit_outlined),
-          onTap: () {
-            Navigator.of(context).pop();
-            _openEdit(context);
           },
         ),
         AppActionSheetItem(

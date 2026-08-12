@@ -103,12 +103,18 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
                         horizontal: AppSpacing.lg,
                         vertical: AppSpacing.sm,
                       ),
-                      child: AppSegmentedControl(
-                        segments: [
-                          'services.tab_my_services'.tr(),
-                          'services.tab_service_request'.tr(),
+                      child: AppSegmentedControl<int>(
+                        items: [
+                          AppSegmentedControlItem(
+                            value: 0,
+                            label: 'services.tab_my_services'.tr(),
+                          ),
+                          AppSegmentedControlItem(
+                            value: 1,
+                            label: 'services.tab_service_request'.tr(),
+                          ),
                         ],
-                        selectedIndex: _selectedTab,
+                        selectedValue: _selectedTab,
                         onChanged: (index) =>
                             setState(() => _selectedTab = index),
                       ),
@@ -407,9 +413,8 @@ class _ServiceRequestsContentState extends State<_ServiceRequestsContent> {
                           AppChip(
                             label: _filterLabel(option),
                             selected: state.statusFilter == option,
-                            onTap: () => context
-                                .read<ServiceRequestsListBloc>()
-                                .add(
+                            onTap: () =>
+                                context.read<ServiceRequestsListBloc>().add(
                                   ServiceRequestsListStatusChangedEvent(
                                     option,
                                   ),
@@ -479,8 +484,7 @@ class _ServiceRequestsContentState extends State<_ServiceRequestsContent> {
 
   static String _filterLabel(ServiceRequestStatus status) => switch (status) {
     ServiceRequestStatus.all => 'services.requests_filter_all'.tr(),
-    ServiceRequestStatus.underReview =>
-      'services.requests_filter_review'.tr(),
+    ServiceRequestStatus.underReview => 'services.requests_filter_review'.tr(),
     ServiceRequestStatus.approved => 'services.requests_filter_approved'.tr(),
     ServiceRequestStatus.rejected => 'services.requests_filter_rejected'.tr(),
   };

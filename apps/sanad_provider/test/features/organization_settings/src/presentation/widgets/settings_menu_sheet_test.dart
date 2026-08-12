@@ -7,7 +7,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:provider_rbac/provider_rbac.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/settings_menu_sheet.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/routes/organization_settings_routes.dart';
 
@@ -60,10 +59,6 @@ void main() {
         GoRoute(
           path: AccountSettingsRoutes.hub,
           builder: (context, state) => const _StubPage('account-settings'),
-        ),
-        GoRoute(
-          path: ProviderRbacRoutes.list,
-          builder: (context, state) => const _StubPage('roles-permissions'),
         ),
       ],
     );
@@ -137,26 +132,5 @@ void main() {
 
       expect(find.text('account-settings'), findsOneWidget);
     });
-  });
-
-  group('showSettingsMenuSheet — Roles & Permissions visibility', () {
-    testWidgets('organization provider sees the Roles & Permissions row', (
-      tester,
-    ) async {
-      when(() => session.isCompany).thenReturn(true);
-      await pumpSheetOpener(tester);
-
-      expect(find.text('settings.roles_and_permissions'), findsOneWidget);
-    });
-
-    testWidgets(
-      'individual provider does not see the Roles & Permissions row at all',
-      (tester) async {
-        when(() => session.isCompany).thenReturn(false);
-        await pumpSheetOpener(tester);
-
-        expect(find.text('settings.roles_and_permissions'), findsNothing);
-      },
-    );
   });
 }

@@ -67,18 +67,28 @@
     "tab_settings": "الإعدادات",
     "general_settings": "الإعدادات العامة",
     "account_settings": "إعدادات الحساب",
-    "roles_and_permissions": "الأدوار والصلاحيات",
     "coming_soon": "قريباً",
     "stat_general_action": "عرض",
-    "stat_team_count": "144",
     "stat_team_label": "الفريق",
     "stat_team_action": "عرض الفريق",
-    "stat_branches_count": "8",
     "stat_branches_label": "الفروع",
     "stat_branches_action": "عرض الكل",
-    "stat_invitations_count": "6",
     "stat_invitations_label": "الفريق",
     "stat_invitations_action": "الدعوات",
+    "setup_title": "أكمل إعداد مؤسستك",
+    "setup_description": "أكمل الخطوات المطلوبة لجعل نشاطك التجاري مرئياً للعملاء وجاهزاً لاستقبال طلبات الخدمة.",
+    "setup_hidden_badge": "مخفي عن العملاء",
+    "setup_stage_business_profile": "الملف التجاري",
+    "setup_stage_business_profile_subtitle": "أضف الهاتف والبريد الإلكتروني والفئة وساعات العمل",
+    "setup_stage_first_branch": "أول فرع",
+    "setup_stage_first_branch_subtitle": "فرع واحد على الأقل",
+    "setup_stage_first_team": "أول عضو في الفريق",
+    "setup_stage_first_team_subtitle": "موظف أو مدير واحد على الأقل",
+    "setup_stage_grow": "نمِّ نشاطك التجاري",
+    "setup_stage_grow_subtitle": "أضف أعضاء الفريق والخدمات",
+    "setup_required_summary": "تم إكمال {completed} من {total} مراحل الإعداد المطلوبة",
+    "setup_error_title": "تعذر تحميل تقدم الإعداد",
+    "setup_retry": "إعادة المحاولة",
     "placeholder_title": "المزيد من الإعدادات قريباً",
     "placeholder_description": "ستتوفر إعدادات الحساب والتطبيق هنا في تحديث مستقبلي.",
     "section_identity": "الهوية",
@@ -155,6 +165,7 @@
       "action_failed": "حدث خطأ. يرجى المحاولة مرة أخرى."
     },
     "details": {
+      "section_branch_info": "معلومات الفرع",
       "section_contact": "التواصل",
       "section_working_hours": "ساعات العمل",
       "section_coverage": "منطقة التغطية",
@@ -181,7 +192,8 @@
       "action_set_active": "تعيين كنشط",
       "status_update_error": "فشل تحديث حالة الفرع",
       "no_team_members": "لا يوجد أعضاء في الفريق",
-      "no_serving_areas": "لم تتم إضافة مناطق تغطية"
+      "no_serving_areas": "لم تتم إضافة مناطق تغطية",
+      "team_min_workers_error": "يجب تعيين عامل واحد على الأقل للفرع."
     },
     "edit_branch": {
       "title": "تعديل الفرع",
@@ -535,6 +547,7 @@
     "coming_soon": "قريباً",
     "tab_team": "الفريق",
     "tab_invitations": "الدعوات",
+    "tab_permissions": "الصلاحيات",
     "invitations_empty_title": "لا توجد دعوات بعد",
     "invitations_empty_description": "ادعُ أعضاء الفريق للبدء.",
     "invitation_status_pending": "معلّقة",
@@ -581,7 +594,8 @@
       "error_try_again": "حاول مرة أخرى",
       "validation_required": "هذا الحقل مطلوب",
       "validation_email": "يرجى إدخال بريد إلكتروني صحيح",
-      "validation_reserved_domain": "لا يمكن لهذا النطاق استقبال الدعوات. يرجى استخدام بريد إلكتروني حقيقي."
+      "validation_reserved_domain": "لا يمكن لهذا النطاق استقبال الدعوات. يرجى استخدام بريد إلكتروني حقيقي.",
+      "validation_name_format": "يجب أن يحتوي الاسم على حروف ومسافات وشرطات وفواصل عليا فقط"
     },
     "edit_worker": {
       "title": "تعديل عضو الفريق",

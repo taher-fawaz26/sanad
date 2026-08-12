@@ -1,0 +1,122 @@
+import 'package:branches/src/domain/entities/branch_manager_entity.dart';
+import 'package:branches/src/presentation/widgets/branch_manager_picker_field.dart';
+import 'package:core/core.dart';
+import 'package:design_system/design_system.dart';
+import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/material.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
+
+/// Result of a confirmed [ContactEditSheet] submission.
+class ContactEditResult {
+  const ContactEditResult({required this.branchPhone, this.manager});
+
+  final String branchPhone;
+  final BranchManagerEntity? manager;
+}
+
+/// Opens the Contact section editor. Pops `null` when dismissed without
+/// saving, otherwise a [ContactEditResult] with the confirmed fields.
+Future<ContactEditResult?> showContactEditSheet({
+  required BuildContext context,
+  required String initialPhone,
+  BranchManagerEntity? initialManager,
+}) {
+  return SheetNavigator.push<ContactEditResult>(
+    context,
+    ContactEditSheet(
+      initialPhone: initialPhone,
+      initialManager: initialManager,
+    ),
+    settings: SheetRouteSettings(
+      title: 'branches.details.section_contact'.tr(),
+    ),
+  );
+}
+
+/// Contact section editor — phone, manager. Shell-agnostic; pair with
+/// [SheetNavigator] (see [showContactEditSheet]).
+class ContactEditSheet extends StatefulWidget {
+  const ContactEditSheet({
+    required this.initialPhone,
+    this.initialManager,
+    super.key,
+  });
+
+  final String initialPhone;
+  final BranchManagerEntity? initialManager;
+
+  @override
+  State<ContactEditSheet> createState() => _ContactEditSheetState();
+}
+
+class _ContactEditSheetState extends State<ContactEditSheet> {
+  late final _phoneController = TextEditingController(
+    text: widget.initialPhone,
+  );
+  BranchManagerEntity? _manager;
+  bool _showErrors = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _manager = widget.initialManager;
+    _phoneController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  bool get _isValid => UaePhoneValidator.isValid(_phoneController.text.trim());
+
+  bool get _hasChanges =>
+      _phoneController.text.trim() != widget.initialPhone.trim() ||
+      _manager?.id != widget.initialManager?.id;
+
+  String? get _phoneError {
+    if (!_showErrors) return null;
+    return UaePhoneValidator.validationMessage(_phoneController.text.trim())
+        ?.tr();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AppPhoneField(
+          label: 'branches.add_branch.branch_phone'.tr(),
+          controller: _phoneController,
+          hint: 'branches.add_branch.branch_phone_hint'.tr(),
+          errorText: _phoneError,
+        ),
+        SizedBox(height: AppSpacing.md),
+        BranchManagerPickerField(
+          selectedManager: _manager,
+          onManagerSelected: (manager) => setState(() => _manager = manager),
+        ),
+        SizedBox(height: AppSpacing.xl),
+        AppButton(
+          label: 'branches.edit_branch.save_button'.tr(),
+          onPressed: _hasChanges ? _submit : null,
+        ),
+      ],
+    );
+  }
+
+  void _submit() {
+    if (!_isValid) {
+      setState(() => _showErrors = true);
+      return;
+    }
+    Navigator.of(context).pop(
+      ContactEditResult(
+        branchPhone: _phoneController.text.trim(),
+        manager: _manager,
+      ),
+    );
+  }
+}

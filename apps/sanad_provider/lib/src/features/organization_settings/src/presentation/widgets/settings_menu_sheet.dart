@@ -5,7 +5,6 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/routes/organization_settings_routes.dart';
-import 'package:provider_rbac/provider_rbac.dart';
 import 'package:sanad_provider/src/routing/provider_capabilities.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 
@@ -79,22 +78,6 @@ class _SettingsMenuSheetBody extends StatelessWidget {
               shellContext.push(AccountSettingsRoutes.hub);
             },
           ),
-          if (canManageOrganization) ...[
-            SizedBox(height: AppSpacing.sm),
-            AppTableRow(
-              title: 'settings.roles_and_permissions'.tr(),
-              trailing: AppTableTrailing.icon,
-              trailingIcon: Icon(
-                Icons.chevron_right,
-                size: 18,
-                color: colors.gray400,
-              ),
-              onTap: () {
-                SheetNavigator.pop(context);
-                shellContext.push(ProviderRbacRoutes.list);
-              },
-            ),
-          ],
         ],
       ),
     );
