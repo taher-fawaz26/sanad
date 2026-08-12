@@ -4,7 +4,8 @@ import 'dart:math';
 import 'package:core/core.dart';
 import 'package:dio/dio.dart';
 import 'package:network/network.dart' show TimeoutErrorInterceptor;
-import 'package:network/src/interceptors/timeout_error_interceptor.dart' show TimeoutErrorInterceptor;
+import 'package:network/src/interceptors/timeout_error_interceptor.dart'
+    show TimeoutErrorInterceptor;
 
 /// Retries connect/send/receive timeouts with exponential backoff + jitter.
 /// Register BEFORE [TimeoutErrorInterceptor] in [Dio.interceptors].
@@ -15,8 +16,8 @@ class RetryOnTimeoutInterceptor extends Interceptor {
     this.baseDelay = AppDurations.dioRetryBaseDelay,
     this.maxJitter = const Duration(milliseconds: 200),
     Random? random,
-  })  : _dio = dio,
-        _random = random ?? Random();
+  }) : _dio = dio,
+       _random = random ?? Random();
 
   final Dio _dio;
   final int maxRetries;

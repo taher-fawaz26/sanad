@@ -6,80 +6,81 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/routes/organization_settings_routes.dart';
 import 'package:sanad_provider/src/routing/provider_capabilities.dart';
-import 'package:sheet_navigation/sheet_navigation.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 /// Settings menu opened from the bottom-nav Settings tab — Figma `3829:5902`.
-Future<void> showSettingsMenuSheet(BuildContext context) {
-  // Capture the shell context — the sheet runs in a new route.
-  final shellContext = context;
+///
+/// Shown as a popover anchored to the tapped tab (pointer triangle included)
+/// rather than a bottom sheet. Pass [anchorKey] — the `GlobalKey` attached to
+/// the Settings tab tile — to anchor precisely; without it the popover
+/// anchors to [context]'s own bounds.
+void showSettingsMenuSheet(BuildContext context, {GlobalKey? anchorKey}) {
+  final colors = context.appColors;
+  final typography = context.appTypography;
+  final canManageOrganization = context.session.canManageOrganization;
+  final labelStyle = typography.bodyMedium.copyWith(color: colors.gray900);
 
-  return SheetNavigator.push<void>(
-    context,
-    _SettingsMenuSheetBody(shellContext: shellContext),
-    settings: const SheetRouteSettings(
-      enableDrag: false,
+  final menu = PopupMenu(
+    context: context,
+    config: MenuConfig.forList(
+      itemWidth: 180,
+      itemHeight: 52,
+      backgroundColor: colors.gray100,
     ),
+    items: [
+      MenuItem.forList(
+        title: 'settings.general_settings'.tr(),
+        image: Icon(Icons.settings_outlined, size: 20, color: colors.gray700),
+        textStyle: labelStyle,
+        textAlign: TextAlign.left,
+        userInfo: _SettingsMenuAction.general,
+      ),
+      MenuItem.forList(
+        title: 'settings.account_settings'.tr(),
+        image: Icon(Icons.person_outline, size: 20, color: colors.gray700),
+        textStyle: labelStyle,
+        textAlign: TextAlign.left,
+        userInfo: _SettingsMenuAction.account,
+      ),
+    ],
+    onClickMenu: (item) {
+      switch (item.menuUserInfo as _SettingsMenuAction) {
+        case _SettingsMenuAction.general:
+          // Organization providers land on the KPI/setup hub first (it hosts
+          // the "General settings" entry point); individual providers have
+          // no organization surfaces to see, so they go straight to the
+          // General Settings detail screen.
+          context.go(
+            canManageOrganization
+                ? OrganizationSettingsRoutes.hub
+                : OrganizationSettingsRoutes.general,
+          );
+        case _SettingsMenuAction.account:
+          context.push(AccountSettingsRoutes.hub);
+      }
+    },
   );
+
+  if (anchorKey != null) {
+    menu.show(widgetKey: anchorKey);
+  } else {
+    menu.show(rect: _bottomEdgeOf(context));
+  }
 }
 
-class _SettingsMenuSheetBody extends StatelessWidget {
-  const _SettingsMenuSheetBody({required this.shellContext});
+enum _SettingsMenuAction { general, account }
 
-  final BuildContext shellContext;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final canManageOrganization = context.session.canManageOrganization;
-
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.sm,
-        AppSpacing.md,
-        AppSpacing.sm,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AppTableRow(
-            title: 'settings.general_settings'.tr(),
-            trailing: AppTableTrailing.icon,
-            trailingIcon: Icon(
-              Icons.chevron_right,
-              size: 18,
-              color: colors.gray400,
-            ),
-            onTap: () {
-              SheetNavigator.pop(context);
-              // Organization providers land on the KPI/setup hub first (it
-              // hosts the "General settings" entry point); individual
-              // providers have no organization surfaces to see, so they go
-              // straight to the General Settings detail screen.
-              shellContext.go(
-                canManageOrganization
-                    ? OrganizationSettingsRoutes.hub
-                    : OrganizationSettingsRoutes.general,
-              );
-            },
-          ),
-          SizedBox(height: AppSpacing.sm),
-          AppTableRow(
-            title: 'settings.account_settings'.tr(),
-            trailing: AppTableTrailing.icon,
-            trailingIcon: Icon(
-              Icons.chevron_right,
-              size: 18,
-              color: colors.gray400,
-            ),
-            onTap: () {
-              SheetNavigator.pop(context);
-              shellContext.push(AccountSettingsRoutes.hub);
-            },
-          ),
-        ],
-      ),
-    );
-  }
+/// A thin anchor rect at the bottom edge of [context]'s bounds — used when no
+/// [GlobalKey] is given for the actual trigger. Anchoring to the trigger's
+/// full bounds (e.g. a full-screen route) would push the popover below the
+/// viewport; a bottom-edge sliver keeps it positioned just above instead.
+Rect _bottomEdgeOf(BuildContext context) {
+  final box = context.findRenderObject()! as RenderBox;
+  final topLeft = box.localToGlobal(Offset.zero);
+  return Rect.fromLTWH(
+    topLeft.dx,
+    topLeft.dy + box.size.height - 1,
+    box.size.width,
+    1,
+  );
 }

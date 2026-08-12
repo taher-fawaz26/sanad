@@ -97,3 +97,9 @@ dio_allowed_packages:
   - network
   - sanad_client
   - sanad_provider
+
+# Packages allowed to import infinite_scroll_pagination directly — it must
+# stay a presentation-only adapter (see shared_ui/lib/src/pagination/),
+# never a domain/data pagination abstraction.
+infinite_scroll_pagination_allowed_packages:
+  - shared_ui

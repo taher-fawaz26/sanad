@@ -33,77 +33,88 @@ class ServicesModule extends FeatureModule {
   @override
   void registerDependencies() => ServicesDI.init();
 
+  // The `/services` tree is intentionally NOT contributed here as a
+  // top-level route. It's embedded directly inside the provider app's
+  // bottom-nav shell branch via [shellRoute] (see `provider_router.dart`).
+  // Registering it both ways used to shadow the shell branch on first tab
+  // visit — `StatefulNavigationShell.goBranch` re-matches the full route
+  // tree the first time a branch is visited, so the plain top-level
+  // registration (listed before the shell route) won the match and rendered
+  // the page outside the shell, hiding the bottom nav bar.
   @override
-  List<RouteBase> routes(FeatureRouteContext ctx) => [
-    GoRoute(
-      path: ServiceRoutes.list,
-      builder: (context, state) => MultiBlocProvider(
-        providers: [
-          BlocProvider(create: (_) => sl<ServicesListBloc>()),
-          BlocProvider(create: (_) => sl<ServiceActionBloc>()),
-          BlocProvider(create: (_) => sl<ServiceAnalyticsBloc>()),
-          BlocProvider(create: (_) => sl<ServiceRequestsListBloc>()),
-        ],
-        child: ProviderServicesPage(
-          initialTab: state.extra is int ? state.extra as int : 0,
+  List<RouteBase> routes(FeatureRouteContext ctx) => const [];
+
+  /// The `/services` route tree — embedded as-is inside the provider app's
+  /// bottom-nav shell branch so pushes within it (details, edit, add, …)
+  /// stay inside the shell and keep the bottom nav bar visible.
+  static GoRoute shellRoute() => GoRoute(
+    path: ServiceRoutes.list,
+    builder: (context, state) => MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => sl<ServicesListBloc>()),
+        BlocProvider(create: (_) => sl<ServiceActionBloc>()),
+        BlocProvider(create: (_) => sl<ServiceAnalyticsBloc>()),
+        BlocProvider(create: (_) => sl<ServiceRequestsListBloc>()),
+      ],
+      child: ProviderServicesPage(
+        initialTab: state.extra is int ? state.extra as int : 0,
+      ),
+    ),
+    routes: [
+      GoRoute(
+        path: 'add',
+        builder: (context, state) => BlocProvider(
+          create: (_) => sl<AddServiceBloc>(),
+          child: const AddServicePage(),
         ),
       ),
-      routes: [
-        GoRoute(
-          path: 'add',
-          builder: (context, state) => BlocProvider(
-            create: (_) => sl<AddServiceBloc>(),
-            child: const AddServicePage(),
+      GoRoute(
+        path: 'request-new',
+        builder: (context, state) => BlocProvider(
+          create: (_) => sl<RequestNewServiceBloc>(),
+          child: const RequestNewServicePage(),
+        ),
+      ),
+      GoRoute(
+        path: 'requests/:id',
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is! ServiceRequestEntity) {
+            return const _MissingRouteArgs();
+          }
+          return RequestDetailsPage(request: extra);
+        },
+      ),
+      GoRoute(
+        path: ':id',
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is! ProviderServiceEntity) {
+            return const _MissingRouteArgs();
+          }
+          return BlocProvider(
+            create: (_) => sl<ServiceActionBloc>(),
+            child: ServiceDetailsPage(service: extra),
+          );
+        },
+        routes: [
+          GoRoute(
+            path: 'edit',
+            builder: (context, state) {
+              final extra = state.extra;
+              if (extra is! ProviderServiceEntity) {
+                return const _MissingRouteArgs();
+              }
+              return BlocProvider(
+                create: (_) => sl<EditServiceBloc>(),
+                child: EditServicePage(service: extra),
+              );
+            },
           ),
-        ),
-        GoRoute(
-          path: 'request-new',
-          builder: (context, state) => BlocProvider(
-            create: (_) => sl<RequestNewServiceBloc>(),
-            child: const RequestNewServicePage(),
-          ),
-        ),
-        GoRoute(
-          path: 'requests/:id',
-          builder: (context, state) {
-            final extra = state.extra;
-            if (extra is! ServiceRequestEntity) {
-              return const _MissingRouteArgs();
-            }
-            return RequestDetailsPage(request: extra);
-          },
-        ),
-        GoRoute(
-          path: ':id',
-          builder: (context, state) {
-            final extra = state.extra;
-            if (extra is! ProviderServiceEntity) {
-              return const _MissingRouteArgs();
-            }
-            return BlocProvider(
-              create: (_) => sl<ServiceActionBloc>(),
-              child: ServiceDetailsPage(service: extra),
-            );
-          },
-          routes: [
-            GoRoute(
-              path: 'edit',
-              builder: (context, state) {
-                final extra = state.extra;
-                if (extra is! ProviderServiceEntity) {
-                  return const _MissingRouteArgs();
-                }
-                return BlocProvider(
-                  create: (_) => sl<EditServiceBloc>(),
-                  child: EditServicePage(service: extra),
-                );
-              },
-            ),
-          ],
-        ),
-      ],
-    ),
-  ];
+        ],
+      ),
+    ],
+  );
 }
 
 /// Rendered instead of crashing when `:id`/`requests/:id` is reached without

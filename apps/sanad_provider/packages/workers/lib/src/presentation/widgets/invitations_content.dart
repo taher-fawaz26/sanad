@@ -3,7 +3,9 @@ import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:localization/localization.dart';
 import 'package:shared_ui/shared_ui.dart';
+import 'package:workers/src/domain/entities/invitation_entity.dart';
 import 'package:workers/src/presentation/bloc/invitations_list/invitations_list_bloc.dart';
 import 'package:workers/src/presentation/widgets/invitation_list_item.dart';
 import 'package:workers/src/presentation/widgets/worker_empty_states.dart';
@@ -47,56 +49,35 @@ class InvitationsContent extends StatelessWidget {
                     const InvitationsListRefreshEvent(),
                   );
                 },
-                child:
-                    state.status == RequestStatus.failure &&
-                        state.invitations.isEmpty
-                    ? AppFillRemainingScrollable(
-                        child: WorkerErrorState(
-                          failure: state.failure,
-                          onRetry: () => context
-                              .read<InvitationsListBloc>()
-                              .add(const InvitationsListRefreshEvent()),
-                        ),
-                      )
-                    : state.filteredInvitations.isEmpty
-                    ? const AppFillRemainingScrollable(child: _EmptyState())
-                    : NotificationListener<ScrollNotification>(
-                        onNotification: (notification) {
-                          if (notification.metrics.pixels >=
-                                  notification.metrics.maxScrollExtent - 200 &&
-                              state.hasMore &&
-                              !state.loadingMore) {
-                            context.read<InvitationsListBloc>().add(
-                              const InvitationsListLoadMoreEvent(),
-                            );
-                          }
-                          return false;
-                        },
-                        child: ListView.separated(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: EdgeInsets.only(
-                            left: AppSpacing.lg,
-                            right: AppSpacing.lg,
-                            bottom: AppSpacing.lg,
-                          ),
-                          itemCount:
-                              state.filteredInvitations.length +
-                              (state.loadingMore ? 1 : 0),
-                          separatorBuilder: (_, _) =>
-                              SizedBox(height: AppSpacing.sm),
-                          itemBuilder: (context, index) {
-                            if (index >= state.filteredInvitations.length) {
-                              return const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 16),
-                                child: Center(child: AppLoadingIndicator()),
-                              );
-                            }
-                            return InvitationListItem(
-                              invitation: state.filteredInvitations[index],
-                            );
-                          },
-                        ),
+                child: SanadPagedList<InvitationEntity>(
+                  state: toPagingState(state.pagination),
+                  fetchNextPage: () => context.read<InvitationsListBloc>().add(
+                    const InvitationsListLoadMoreEvent(),
+                  ),
+                  padding: EdgeInsets.only(
+                    left: AppSpacing.lg,
+                    right: AppSpacing.lg,
+                    bottom: AppSpacing.lg,
+                  ),
+                  separatorBuilder: (_, _) => SizedBox(height: AppSpacing.sm),
+                  itemBuilder: (context, invitation, index) =>
+                      InvitationListItem(invitation: invitation),
+                  firstPageErrorIndicatorBuilder: (_) => Center(
+                    child: WorkerErrorState(
+                      failure: state.failure,
+                      onRetry: () => context.read<InvitationsListBloc>().add(
+                        const InvitationsListRefreshEvent(),
                       ),
+                    ),
+                  ),
+                  newPageErrorIndicatorBuilder: (_) => _NextPageErrorRetry(
+                    onRetry: () => context.read<InvitationsListBloc>().add(
+                      const InvitationsListLoadMoreEvent(),
+                    ),
+                  ),
+                  noItemsFoundIndicatorBuilder: (_) =>
+                      const Center(child: _EmptyState()),
+                ),
               ),
             ),
           ],
@@ -115,6 +96,33 @@ class _EmptyState extends StatelessWidget {
       child: AppGenericEmptyState(
         title: 'workers.invitations_empty_title'.tr(),
         description: 'workers.invitations_empty_description'.tr(),
+      ),
+    );
+  }
+}
+
+/// Compact "load more failed" footer — mirrors the one in `workers_page.dart`
+/// (kept local since each list owns its own retry event type).
+class _NextPageErrorRetry extends StatelessWidget {
+  const _NextPageErrorRetry({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+      child: Center(
+        child: GestureDetector(
+          onTap: onRetry,
+          behavior: HitTestBehavior.opaque,
+          child: Text(
+            failureRetryLabel(),
+            style: context.appTypography.regularNormal.copyWith(
+              color: context.appColors.link,
+            ),
+          ),
+        ),
       ),
     );
   }

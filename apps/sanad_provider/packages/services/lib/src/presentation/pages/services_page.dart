@@ -76,13 +76,18 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
 
           return Scaffold(
             backgroundColor: showEmpty ? colors.surface : colors.background,
+            floatingActionButton: showEmpty
+                ? null
+                : AppFloatingActionButton(
+                    onPressed: _onAddService,
+                    semanticLabel: 'services.add_new_service'.tr(),
+                  ),
             body: SafeArea(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   AppNavBar(
                     title: 'services.title'.tr(),
-                    showBackButton: true,
                     onLeadingTap: () {
                       if (context.canPop()) context.pop();
                     },
@@ -97,7 +102,7 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
                       child: ServicesEmptyState(onAddService: _onAddService),
                     ),
                   ] else ...[
-                    _DashboardHeader(onAddService: _onAddService),
+                    const _DashboardHeader(),
                     Padding(
                       padding: EdgeInsets.symmetric(
                         horizontal: AppSpacing.lg,
@@ -172,9 +177,7 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
 }
 
 class _DashboardHeader extends StatelessWidget {
-  const _DashboardHeader({required this.onAddService});
-
-  final VoidCallback onAddService;
+  const _DashboardHeader();
 
   @override
   Widget build(BuildContext context) {
@@ -186,21 +189,9 @@ class _DashboardHeader extends StatelessWidget {
         horizontal: AppSpacing.xl,
         vertical: AppSpacing.sm,
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              'services.dashboard'.tr(),
-              style: typography.title3.copyWith(color: colors.textPrimary),
-            ),
-          ),
-          AppButton(
-            label: 'services.add_new_service'.tr(),
-            onPressed: onAddService,
-            type: AppButtonType.outline,
-            size: AppButtonSize.small,
-          ),
-        ],
+      child: Text(
+        'services.dashboard'.tr(),
+        style: typography.title3.copyWith(color: colors.textPrimary),
       ),
     );
   }
@@ -277,6 +268,7 @@ class _MyServicesContentState extends State<_MyServicesContent> {
           return false;
         },
         child: ListView(
+          controller: MainNavScrollController.maybeOf(context),
           padding: EdgeInsets.fromLTRB(
             AppSpacing.xl,
             AppSpacing.md,
@@ -449,6 +441,9 @@ class _ServiceRequestsContentState extends State<_ServiceRequestsContent> {
                           return false;
                         },
                         child: ListView.separated(
+                          controller: MainNavScrollController.maybeOf(
+                            context,
+                          ),
                           padding: EdgeInsets.all(AppSpacing.xl),
                           itemCount:
                               state.requests.length +

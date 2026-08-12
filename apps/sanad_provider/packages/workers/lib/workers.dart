@@ -6,7 +6,6 @@ export 'src/di/workers_di.dart';
 // Domain — entities
 export 'src/domain/entities/invitation_entity.dart';
 export 'src/domain/entities/invitation_status.dart';
-export 'src/domain/entities/paged_result.dart';
 export 'src/domain/entities/worker_assigned_branch.dart';
 export 'src/domain/entities/worker_entity.dart';
 export 'src/domain/entities/worker_status.dart';

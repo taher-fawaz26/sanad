@@ -9,8 +9,8 @@ class ModuleRegistry {
 
   /// All routes from registered modules using [context].
   List<RouteBase> allRoutes(FeatureRouteContext context) => [
-        for (final module in modules) ...module.routes(context),
-      ];
+    for (final module in modules) ...module.routes(context),
+  ];
 
   /// Registers dependencies and runs `initialize()` in load order.
   Future<void> initAll() async {

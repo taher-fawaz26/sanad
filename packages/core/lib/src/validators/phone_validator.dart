@@ -5,7 +5,14 @@ abstract final class PhoneValidator {
   PhoneValidator._();
 
   static const Set<String> strictCountries = <String>{
-    'AE', 'EG', 'SA', 'JO', 'QA', 'KW', 'BH', 'OM',
+    'AE',
+    'EG',
+    'SA',
+    'JO',
+    'QA',
+    'KW',
+    'BH',
+    'OM',
   };
 
   static bool isValid(

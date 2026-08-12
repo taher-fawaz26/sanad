@@ -2,12 +2,13 @@ import 'package:core/core.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:workers/src/data/datasources/worker_remote_data_source.dart';
 import 'package:workers/src/domain/entities/invitation_entity.dart';
-import 'package:workers/src/domain/entities/paged_result.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
 import 'package:workers/src/domain/entities/worker_status.dart';
 import 'package:workers/src/domain/repositories/worker_repository.dart';
+import 'package:workers/src/domain/usecases/invitations_query.dart';
 import 'package:workers/src/domain/usecases/invite_worker_usecase.dart';
 import 'package:workers/src/domain/usecases/update_worker_usecase.dart';
+import 'package:workers/src/domain/usecases/workers_query.dart';
 
 class WorkerRepositoryImpl implements WorkerRepository {
   const WorkerRepositoryImpl(this._remoteDataSource);
@@ -15,19 +16,10 @@ class WorkerRepositoryImpl implements WorkerRepository {
   final WorkerRemoteDataSource _remoteDataSource;
 
   @override
-  TaskEither<Failure, PagedResult<WorkerEntity>> getWorkers({
-    required int page,
-    required int limit,
-    String? search,
-  }) => _remoteDataSource
-      .getWorkers(page: page, limit: limit, search: search)
-      .map(
-        (paged) => PagedResult(
-          items: paged.items.map((dto) => dto.toEntity()).toList(),
-          currentPage: paged.currentPage,
-          totalPages: paged.totalPages,
-        ),
-      );
+  TaskEither<Failure, Page<WorkerEntity>> getWorkers(WorkersQuery query) =>
+      _remoteDataSource
+          .getWorkers(query)
+          .map((page) => page.mapItems((dto) => dto.toEntity()));
 
   @override
   TaskEither<Failure, WorkerEntity> getWorker(String id) =>
@@ -46,19 +38,11 @@ class WorkerRepositoryImpl implements WorkerRepository {
       .map((dto) => dto.toEntity());
 
   @override
-  TaskEither<Failure, PagedResult<InvitationEntity>> getInvitations({
-    required int page,
-    required int limit,
-    String? search,
-  }) => _remoteDataSource
-      .getInvitations(page: page, limit: limit, search: search)
-      .map(
-        (paged) => PagedResult(
-          items: paged.items.map((dto) => dto.toEntity()).toList(),
-          currentPage: paged.currentPage,
-          totalPages: paged.totalPages,
-        ),
-      );
+  TaskEither<Failure, Page<InvitationEntity>> getInvitations(
+    InvitationsQuery query,
+  ) => _remoteDataSource
+      .getInvitations(query)
+      .map((page) => page.mapItems((dto) => dto.toEntity()));
 
   @override
   TaskEither<Failure, Unit> inviteWorker(InviteWorkerParams params) =>

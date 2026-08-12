@@ -18,6 +18,10 @@ void main() {
   final layerRules = rules['layer_rules'] as YamlMap? ?? YamlMap();
   final dioAllowed =
       (rules['dio_allowed_packages'] as YamlList? ?? YamlList()).map((e) => e.toString()).toSet();
+  final ispAllowed =
+      (rules['infinite_scroll_pagination_allowed_packages'] as YamlList? ?? YamlList())
+          .map((e) => e.toString())
+          .toSet();
 
   for (final pkg in packages) {
     final libDir = Directory(p.join(pkg.absolutePath, 'lib'));
@@ -43,6 +47,13 @@ void main() {
 
         if (importPath.contains('package:dio/') && !dioAllowed.contains(pkg.name)) {
           violations.add('${pkg.name}/$relFile:${i + 1} — Dio outside network package');
+        }
+
+        if (importPath.contains('package:infinite_scroll_pagination/') &&
+            !ispAllowed.contains(pkg.name)) {
+          violations.add(
+            '${pkg.name}/$relFile:${i + 1} — infinite_scroll_pagination outside shared_ui',
+          );
         }
 
         final srcMatch = RegExp(r'package:([a-z_]+)/src/').firstMatch(importPath);

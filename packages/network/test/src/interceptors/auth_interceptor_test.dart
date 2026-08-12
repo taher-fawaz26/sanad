@@ -126,23 +126,25 @@ void main() {
       expect(tokens.refreshCalls, 0);
     });
 
-    test('_retriedKey guard prevents a second refresh on the same request',
-        () async {
-      tokens.refreshImpl = () async => 'a-2';
-      adapter.stagePathHandler((_) => _statusOnly(401));
+    test(
+      '_retriedKey guard prevents a second refresh on the same request',
+      () async {
+        tokens.refreshImpl = () async => 'a-2';
+        adapter.stagePathHandler((_) => _statusOnly(401));
 
-      // Two 401s in a row: first triggers refresh + retry; retry still 401 →
-      // interceptor must NOT refresh again because _authRetried is set.
-      await expectLater(
-        dio.get<dynamic>('/workers'),
-        throwsA(isA<DioException>()),
-      );
-      expect(tokens.refreshCalls, 1);
-    });
+        // Two 401s in a row: first triggers refresh + retry; retry still 401 →
+        // interceptor must NOT refresh again because _authRetried is set.
+        await expectLater(
+          dio.get<dynamic>('/workers'),
+          throwsA(isA<DioException>()),
+        );
+        expect(tokens.refreshCalls, 1);
+      },
+    );
 
     test('refresh failure clears tokens and fires onUnauthorized', () async {
-      tokens.refreshImpl =
-          () async => throw const TokenRefreshException('boom');
+      tokens.refreshImpl = () async =>
+          throw const TokenRefreshException('boom');
       adapter.stage((options) => _status(401, options));
 
       await expectLater(

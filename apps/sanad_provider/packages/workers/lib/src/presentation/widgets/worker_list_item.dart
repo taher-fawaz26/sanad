@@ -1,3 +1,4 @@
+import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -7,10 +8,21 @@ import 'package:shared_ui/shared_ui.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
 import 'package:workers/src/domain/entities/worker_status.dart';
 import 'package:workers/src/presentation/bloc/workers_list/workers_list_bloc.dart';
+import 'package:workers/src/presentation/widgets/worker_action_invokers.dart';
 import 'package:workers/src/presentation/widgets/worker_actions_bottom_sheet.dart';
 import 'package:workers/src/routes/worker_routes.dart';
 
+/// Swipe-group tag shared by every [WorkerListItem] so only one row's swipe
+/// actions stay open at a time — wrap the list in `AppSwipeActionsGroup`.
+const workerSwipeGroupTag = 'workers';
+
 /// Worker row — Figma team card (`1526:12324`).
+///
+/// Contextual actions (Edit / Suspend-Unsuspend / Delete) are reachable two
+/// ways: swipe-to-reveal (`AppSwipeActions`) and the `more_vert` action
+/// sheet — the sheet stays as the accessible fallback for users who can't
+/// perform a horizontal swipe gesture. Both surfaces call the exact same
+/// `WorkerActionCubit` methods via `worker_action_invokers.dart`.
 class WorkerListItem extends StatelessWidget {
   const WorkerListItem({required this.worker, super.key, this.onTap});
 
@@ -23,32 +35,72 @@ class WorkerListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final isSuspended = worker.status == WorkerStatus.inactive;
 
-    return AppEntityListItem(
-      title: worker.fullName,
-      caption: worker.role,
-      leading: AppAvatar(
-        image: worker.profilePicUrl != null && worker.profilePicUrl!.isNotEmpty
-            ? NetworkImage(worker.profilePicUrl!)
-            : null,
-        initials: worker.initials,
-        backgroundColor: colors.primary,
-        showStatusDot: worker.status == WorkerStatus.active,
-      ),
-      badge: _statusBadge(worker.status),
-      trailing: Semantics(
-        label: 'workers.more_actions'.tr(),
-        child: AppIconButton(
-          icon: Icons.more_vert,
-          iconColor: colors.textPrimary,
-          onTap: () => showWorkerActionsBottomSheet(
+    return AppSwipeActions(
+      groupTag: workerSwipeGroupTag,
+      actions: [
+        AppSwipeAction(
+          svgAsset: AppSvgs.branchEdit,
+          semanticLabel: 'workers.action_edit'.tr(),
+          onPressed: () => _editWorker(context),
+        ),
+        AppSwipeAction(
+          svgAsset: AppSvgs.workerSuspend,
+          semanticLabel: isSuspended
+              ? 'workers.action_unsuspend'.tr()
+              : 'workers.action_suspend'.tr(),
+          variant: AppSwipeActionVariant.warning,
+          onPressed: () => confirmAndChangeWorkerStatus(
             context: context,
             worker: worker,
+            isSuspending: !isSuspended,
           ),
         ),
+        AppSwipeAction(
+          svgAsset: AppSvgs.trashBold,
+          semanticLabel: 'workers.action_delete'.tr(),
+          variant: AppSwipeActionVariant.destructive,
+          onPressed: () =>
+              confirmAndDeleteWorker(context: context, worker: worker),
+        ),
+      ],
+      child: AppEntityListItem(
+        title: worker.fullName,
+        caption: worker.role,
+        leading: AppAvatar(
+          image:
+              worker.profilePicUrl != null && worker.profilePicUrl!.isNotEmpty
+              ? NetworkImage(worker.profilePicUrl!)
+              : null,
+          initials: worker.initials,
+          backgroundColor: colors.primary,
+          showStatusDot: worker.status == WorkerStatus.active,
+        ),
+        badge: _statusBadge(worker.status),
+        trailing: Semantics(
+          label: 'workers.more_actions'.tr(),
+          child: AppIconButton(
+            icon: Icons.more_vert,
+            iconColor: colors.textPrimary,
+            onTap: () => showWorkerActionsBottomSheet(
+              context: context,
+              worker: worker,
+            ),
+          ),
+        ),
+        onTap: onTap ?? () => _openDetails(context),
       ),
-      onTap: onTap ?? () => _openDetails(context),
     );
+  }
+
+  Future<void> _editWorker(BuildContext context) async {
+    final bloc = context.read<WorkersListBloc>();
+    final updated = await context.push<WorkerEntity>(
+      WorkerRoutes.editWorkerFor(worker.id),
+      extra: worker,
+    );
+    if (updated != null) bloc.add(WorkerReplacedInListEvent(updated));
   }
 
   Future<void> _openDetails(BuildContext context) async {

@@ -44,16 +44,15 @@ class ApiClientImpl implements BaseApiClient {
     RequestMethod method,
     Map<String, dynamic>? query,
     dynamic body,
-  ) =>
-      switch (method) {
-        RequestMethod.get => _dio.get(path, queryParameters: query),
-        RequestMethod.post =>
-          _dio.post(path, queryParameters: query, data: body),
-        RequestMethod.put =>
-          _dio.put(path, queryParameters: query, data: body),
-        RequestMethod.patch =>
-          _dio.patch(path, queryParameters: query, data: body),
-        RequestMethod.delete =>
-          _dio.delete(path, queryParameters: query, data: body),
-      };
+  ) => switch (method) {
+    RequestMethod.get => _dio.get(path, queryParameters: query),
+    RequestMethod.post => _dio.post(path, queryParameters: query, data: body),
+    RequestMethod.put => _dio.put(path, queryParameters: query, data: body),
+    RequestMethod.patch => _dio.patch(path, queryParameters: query, data: body),
+    RequestMethod.delete => _dio.delete(
+      path,
+      queryParameters: query,
+      data: body,
+    ),
+  };
 }

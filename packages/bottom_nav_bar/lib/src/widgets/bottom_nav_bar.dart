@@ -16,6 +16,7 @@ class BottomNavBar<T> extends StatelessWidget {
     required this.selectedItem,
     required this.onDestinationSelected,
     required this.theme,
+    this.destinationKeys,
     super.key,
   });
 
@@ -30,6 +31,11 @@ class BottomNavBar<T> extends StatelessWidget {
 
   /// Visual configuration.
   final BottomNavThemeData theme;
+
+  /// Optional [GlobalKey]s to attach to specific destination tiles, keyed by
+  /// [BottomNavDestination.item] — lets callers measure a tile's on-screen
+  /// position (e.g. to anchor a popover to it).
+  final Map<T, GlobalKey>? destinationKeys;
 
   bool get _isFlat => theme.centerGap <= 0;
 
@@ -81,6 +87,7 @@ class BottomNavBar<T> extends StatelessWidget {
             for (final destination in destinations)
               Expanded(
                 child: BottomNavDestinationTile<T>(
+                  key: destinationKeys?[destination.item],
                   destination: destination,
                   selected: destination.item == selectedItem,
                   theme: theme,
@@ -129,6 +136,7 @@ class BottomNavBar<T> extends StatelessWidget {
                   for (final destination in left)
                     Expanded(
                       child: BottomNavDestinationTile<T>(
+                        key: destinationKeys?[destination.item],
                         destination: destination,
                         selected: destination.item == selectedItem,
                         theme: theme,
@@ -139,6 +147,7 @@ class BottomNavBar<T> extends StatelessWidget {
                   for (final destination in right)
                     Expanded(
                       child: BottomNavDestinationTile<T>(
+                        key: destinationKeys?[destination.item],
                         destination: destination,
                         selected: destination.item == selectedItem,
                         theme: theme,

@@ -139,6 +139,8 @@ export 'tokens/status_badge_tokens.dart'
 export 'tokens/status_bar_tokens.dart' show StatusBarTokens;
 export 'tokens/stepper_tokens.dart'
     show AppStepperSize, StepperStyleSpec, StepperTokens;
+export 'tokens/swipe_actions_tokens.dart'
+    show AppSwipeActionVariant, SwipeActionSurfaceColors, SwipeActionsTokens;
 export 'tokens/switch_tokens.dart'
     show AppSwitchTheme, SwitchStyleSpec, SwitchTokens;
 export 'tokens/tab_bar_tokens.dart'

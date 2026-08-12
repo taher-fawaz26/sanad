@@ -5,36 +5,38 @@ import 'package:network/src/client/error_mapper.dart';
 
 void main() {
   DioException badResponse(int status, dynamic data) => DioException(
-        requestOptions: RequestOptions(path: '/x'),
-        response: Response<dynamic>(
-          requestOptions: RequestOptions(path: '/x'),
-          statusCode: status,
-          data: data,
-        ),
-        type: DioExceptionType.badResponse,
-      );
+    requestOptions: RequestOptions(path: '/x'),
+    response: Response<dynamic>(
+      requestOptions: RequestOptions(path: '/x'),
+      statusCode: status,
+      data: data,
+    ),
+    type: DioExceptionType.badResponse,
+  );
 
   group('ErrorMapper — validation (EH-S1-01)', () {
-    test('400 with message array maps to ValidationFailure with ALL messages',
-        () {
-      final failure = ErrorMapper.mapError(
-        badResponse(400, <String, dynamic>{
-          'message': <String>['Email is required', 'Password is too short'],
-          'error': 'Bad Request',
-          'statusCode': 400,
-        }),
-      );
+    test(
+      '400 with message array maps to ValidationFailure with ALL messages',
+      () {
+        final failure = ErrorMapper.mapError(
+          badResponse(400, <String, dynamic>{
+            'message': <String>['Email is required', 'Password is too short'],
+            'error': 'Bad Request',
+            'statusCode': 400,
+          }),
+        );
 
-      expect(failure, isA<ValidationFailure>());
-      failure as ValidationFailure;
-      expect(failure.messages, <String>[
-        'Email is required',
-        'Password is too short',
-      ]);
-      expect(failure.message, 'Email is required');
-      expect(failure.code, '400');
-      expect(failure.isValidation, isTrue);
-    });
+        expect(failure, isA<ValidationFailure>());
+        failure as ValidationFailure;
+        expect(failure.messages, <String>[
+          'Email is required',
+          'Password is too short',
+        ]);
+        expect(failure.message, 'Email is required');
+        expect(failure.code, '400');
+        expect(failure.isValidation, isTrue);
+      },
+    );
 
     test('400 with a single-message array still validates (length 1)', () {
       final failure = ErrorMapper.mapError(

@@ -17,6 +17,7 @@ dependencies:
     path: ../../../../packages/design_system
   shared_ui:
     path: ../../../../packages/shared_ui
+  bloc_concurrency: ^0.3.0
   easy_localization: ^3.0.8
   equatable: ^2.1.0
   flutter:

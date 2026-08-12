@@ -42,7 +42,13 @@ class AuthInterceptor extends Interceptor {
       if (token != null && token.isNotEmpty) {
         options.headers['Authorization'] = 'Bearer $token';
       }
-      _log('onRequest ${options.path} — token ${token == null ? "NULL" : token.isEmpty ? "EMPTY" : "present (${token.length} chars)"}');
+      _log(
+        'onRequest ${options.path} — token ${token == null
+            ? "NULL"
+            : token.isEmpty
+            ? "EMPTY"
+            : "present (${token.length} chars)"}',
+      );
     }
     handler.next(options);
   }

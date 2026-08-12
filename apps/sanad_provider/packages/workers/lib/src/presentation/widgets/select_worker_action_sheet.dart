@@ -34,7 +34,7 @@ Future<SelectWorkerResult?> showSelectWorkerActionSheet({
     initialSelectedIds: initialSelectedIds,
     loadItems: () async {
       final result = await sl<GetWorkersUseCase>()(
-        const GetWorkersParams(limit: 100),
+        const WorkersQuery(limit: 100),
       ).run();
       return result.fold((f) => throw f, (paged) => paged.items);
     },

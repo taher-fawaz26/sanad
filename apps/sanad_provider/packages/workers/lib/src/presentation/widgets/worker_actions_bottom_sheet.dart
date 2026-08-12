@@ -10,20 +10,8 @@ import 'package:workers/src/domain/entities/worker_status.dart';
 import 'package:workers/src/presentation/bloc/worker_action/worker_action_cubit.dart';
 import 'package:workers/src/presentation/bloc/workers_list/workers_list_bloc.dart';
 import 'package:workers/src/presentation/widgets/action_confirmation_sheet.dart';
+import 'package:workers/src/presentation/widgets/worker_action_invokers.dart';
 import 'package:workers/src/routes/worker_routes.dart';
-
-const ({AppButtonType type, bool destructive}) _suspendButton = (
-  type: AppButtonType.warning,
-  destructive: false,
-);
-const ({AppButtonType type, bool destructive}) _unsuspendButton = (
-  type: AppButtonType.primary,
-  destructive: false,
-);
-const ({AppButtonType type, bool destructive}) _deleteButton = (
-  type: AppButtonType.primary,
-  destructive: true,
-);
 
 /// Figma `Views / Bottom Sheets` worker actions (`1526:12517`).
 Future<void> showWorkerActionsBottomSheet({
@@ -123,7 +111,7 @@ class _WorkerActionsSheetBody extends StatelessWidget {
           onTap: () async {
             Navigator.of(context).pop();
             if (!pageContext.mounted) return;
-            await _showStatusConfirmation(
+            await confirmAndChangeWorkerStatus(
               context: pageContext,
               worker: worker,
               isSuspending: !isSuspended,
@@ -138,68 +126,10 @@ class _WorkerActionsSheetBody extends StatelessWidget {
           onTap: () async {
             Navigator.of(context).pop();
             if (!pageContext.mounted) return;
-            await _showDeleteConfirmation(
-              context: pageContext,
-              worker: worker,
-            );
+            await confirmAndDeleteWorker(context: pageContext, worker: worker);
           },
         ),
       ],
     );
-  }
-
-  Future<void> _showStatusConfirmation({
-    required BuildContext context,
-    required WorkerEntity worker,
-    required bool isSuspending,
-  }) async {
-    final btnConfig = isSuspending ? _suspendButton : _unsuspendButton;
-    final confirmed = await showWorkerConfirmationSheet(
-      context: context,
-      title: isSuspending
-          ? 'workers.suspend_title'.tr()
-          : 'workers.unsuspend_title'.tr(),
-      description: isSuspending
-          ? 'workers.suspend_description'.tr(
-              namedArgs: {'name': worker.fullName},
-            )
-          : 'workers.unsuspend_description'.tr(
-              namedArgs: {'name': worker.fullName},
-            ),
-      actionLabel: isSuspending
-          ? 'workers.suspend_action'.tr()
-          : 'workers.unsuspend_action'.tr(),
-      actionType: btnConfig.type,
-      destructive: btnConfig.destructive,
-      cancelLabel: 'workers.cancel'.tr(),
-    );
-
-    if ((confirmed ?? false) && context.mounted) {
-      await context.read<WorkerActionCubit>().changeStatus(
-        workerId: worker.id,
-        status: isSuspending ? WorkerStatus.inactive : WorkerStatus.active,
-      );
-    }
-  }
-
-  Future<void> _showDeleteConfirmation({
-    required BuildContext context,
-    required WorkerEntity worker,
-  }) async {
-    final confirmed = await showWorkerConfirmationSheet(
-      context: context,
-      title: 'workers.delete_title'.tr(),
-      description: 'workers.delete_description'.tr(
-        namedArgs: {'name': worker.fullName},
-      ),
-      actionLabel: 'workers.delete_action'.tr(),
-      actionType: _deleteButton.type,
-      destructive: _deleteButton.destructive,
-      cancelLabel: 'workers.cancel'.tr(),
-    );
-
-    if ((confirmed ?? false) && context.mounted) {
-      await context.read<WorkerActionCubit>().delete(worker.id);
-    }
   }
 }

@@ -4,32 +4,26 @@ import 'package:network/network.dart';
 import 'package:workers/src/data/endpoints/worker_api_paths.dart';
 import 'package:workers/src/data/models/create_invitation_dto.dart';
 import 'package:workers/src/data/models/invitation_dto.dart';
-import 'package:workers/src/data/models/sanad_page.dart';
 import 'package:workers/src/data/models/update_worker_dto.dart';
 import 'package:workers/src/data/models/update_worker_status_dto.dart';
 import 'package:workers/src/data/models/worker_dto.dart';
-import 'package:workers/src/domain/entities/paged_result.dart';
 import 'package:workers/src/domain/entities/worker_status.dart';
+import 'package:workers/src/domain/usecases/invitations_query.dart';
 import 'package:workers/src/domain/usecases/invite_worker_usecase.dart';
 import 'package:workers/src/domain/usecases/update_worker_usecase.dart';
+import 'package:workers/src/domain/usecases/workers_query.dart';
 
 abstract interface class WorkerRemoteDataSource {
-  TaskEither<Failure, PagedResult<WorkerDto>> getWorkers({
-    required int page,
-    required int limit,
-    String? search,
-  });
+  TaskEither<Failure, Page<WorkerDto>> getWorkers(WorkersQuery query);
   TaskEither<Failure, WorkerDto> getWorker(String id);
   TaskEither<Failure, Unit> deleteWorker(String id);
   TaskEither<Failure, WorkerDto> updateWorkerStatus(
     String id,
     WorkerStatus status,
   );
-  TaskEither<Failure, PagedResult<InvitationDto>> getInvitations({
-    required int page,
-    required int limit,
-    String? search,
-  });
+  TaskEither<Failure, Page<InvitationDto>> getInvitations(
+    InvitationsQuery query,
+  );
   TaskEither<Failure, Unit> inviteWorker(InviteWorkerParams params);
   TaskEither<Failure, Unit> resendInvitation(String id);
   TaskEither<Failure, Unit> cancelInvitation(String id);
@@ -51,20 +45,13 @@ class WorkerRemoteDataSourceImpl implements WorkerRemoteDataSource {
   }
 
   @override
-  TaskEither<Failure, PagedResult<WorkerDto>> getWorkers({
-    required int page,
-    required int limit,
-    String? search,
-  }) => _apiClient.request<PagedResult<WorkerDto>>(
-    path: WorkerApiPaths.workers,
-    method: RequestMethod.get,
-    query: {
-      'page': page,
-      'limit': limit,
-      if (search != null && search.isNotEmpty) 'search': search,
-    },
-    parser: (data) => parseSanadPage(data, WorkerDto.fromJson),
-  );
+  TaskEither<Failure, Page<WorkerDto>> getWorkers(WorkersQuery query) =>
+      _apiClient.request<Page<WorkerDto>>(
+        path: WorkerApiPaths.workers,
+        method: RequestMethod.get,
+        query: query.toQueryMap(),
+        parser: (data) => parsePage(data, WorkerDto.fromJson),
+      );
 
   @override
   TaskEither<Failure, WorkerDto> getWorker(String id) =>
@@ -93,19 +80,13 @@ class WorkerRemoteDataSourceImpl implements WorkerRemoteDataSource {
   );
 
   @override
-  TaskEither<Failure, PagedResult<InvitationDto>> getInvitations({
-    required int page,
-    required int limit,
-    String? search,
-  }) => _apiClient.request<PagedResult<InvitationDto>>(
+  TaskEither<Failure, Page<InvitationDto>> getInvitations(
+    InvitationsQuery query,
+  ) => _apiClient.request<Page<InvitationDto>>(
     path: WorkerApiPaths.invitations,
     method: RequestMethod.get,
-    query: {
-      'page': page,
-      'limit': limit,
-      if (search != null && search.isNotEmpty) 'search': search,
-    },
-    parser: (data) => parseSanadPage(data, InvitationDto.fromJson),
+    query: query.toQueryMap(),
+    parser: (data) => parsePage(data, InvitationDto.fromJson),
   );
 
   @override

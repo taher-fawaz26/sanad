@@ -32,9 +32,7 @@ class CertificatePinner {
 
   /// A pinner that never rejects — for tests or debug builds where the
   /// developer machine's local certs would otherwise fail every request.
-  const CertificatePinner.disabled()
-      : pinsByHost = const {},
-        enforce = false;
+  const CertificatePinner.disabled() : pinsByHost = const {}, enforce = false;
 
   /// Host → set of allowed base64 SHA-256 fingerprints of the DER cert.
   ///
@@ -51,8 +49,7 @@ class CertificatePinner {
   /// [enforce] is `true` and this is `false`, the adapter should treat all
   /// TLS connections as un-pinnable and fail closed — the safe interpretation
   /// of a misconfiguration.
-  bool get hasAnyPin =>
-      pinsByHost.values.any((pins) => pins.isNotEmpty);
+  bool get hasAnyPin => pinsByHost.values.any((pins) => pins.isNotEmpty);
 
   /// Verifies [cert] against the pin set for [host]. Returns `true` when
   /// [enforce] is `false`, or the certificate's SHA-256 matches a pin for

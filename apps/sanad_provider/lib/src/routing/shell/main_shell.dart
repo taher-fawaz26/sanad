@@ -1,32 +1,53 @@
 import 'package:bottom_nav_bar/bottom_nav_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hidable/hidable.dart';
 import 'package:sanad_provider/src/features/organization_settings/organization_settings.dart';
 import 'package:sanad_provider/src/routing/shell/provider_bottom_nav.dart';
 import 'package:sanad_provider/src/routing/shell/provider_bottom_nav_items.dart';
 import 'package:sanad_provider/src/routing/shell/provider_bottom_nav_theme.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 /// Provider app shell — flat bottom tab bar (Figma `1526:12109`).
-class MainShell extends StatelessWidget {
+class MainShell extends StatefulWidget {
   /// Creates the provider main shell.
   const MainShell({required this.navigationShell, super.key});
 
   /// Indexed-stack navigation shell from GoRouter.
   final StatefulNavigationShell navigationShell;
 
+  @override
+  State<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends State<MainShell> {
+  // Shared across every tab: only one branch is ever visible at a time, so a
+  // single controller can drive the bottom bar's hide-on-scroll regardless
+  // of which tab's scroll view is currently attached to it.
+  final _scrollController = ScrollController();
+
+  // Anchors the settings popover to the actual rendered Settings tab tile.
+  final GlobalKey _settingsTileKey = GlobalKey();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   void _goBranch(
     BuildContext context,
     ProviderBottomNavDestination destination,
   ) {
     if (destination.opensSettingsMenu) {
-      showSettingsMenuSheet(context);
+      showSettingsMenuSheet(context, anchorKey: _settingsTileKey);
       return;
     }
 
-    navigationShell.goBranch(
+    widget.navigationShell.goBranch(
       destination.shellBranchIndex,
       initialLocation:
-          destination.shellBranchIndex == navigationShell.currentIndex,
+          destination.shellBranchIndex == widget.navigationShell.currentIndex,
     );
   }
 
@@ -34,7 +55,7 @@ class MainShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final activeDestination =
         ProviderBottomNavDestination.fromShellBranch(
-          navigationShell.currentIndex,
+          widget.navigationShell.currentIndex,
         ) ??
         ProviderBottomNavDestination.home;
 
@@ -44,13 +65,34 @@ class MainShell extends StatelessWidget {
         ? activeDestination
         : ProviderBottomNavDestination.home;
 
+    final navTheme = providerBottomNavTheme(context);
+    // Hidable sizes its child with a fixed SizedBox (defaulting to the
+    // 56dp AppBar height) rather than measuring it — passing our actual
+    // total height (bar + bottom inset + safe area) keeps it from clamping
+    // BottomNavBar down and overflowing its destination tiles.
+    final barTotalHeight =
+        navTheme.barHeight +
+        navTheme.bottomInset +
+        MediaQuery.viewPaddingOf(context).bottom;
+
     return Scaffold(
-      body: navigationShell,
-      bottomNavigationBar: BottomNavBar(
-        destinations: ProviderBottomNavItems.destinations(context),
-        selectedItem: selectedItem,
-        theme: providerBottomNavTheme(context),
-        onDestinationSelected: (destination) => _goBranch(context, destination),
+      body: MainNavScrollController(
+        controller: _scrollController,
+        child: widget.navigationShell,
+      ),
+      bottomNavigationBar: Hidable(
+        controller: _scrollController,
+        preferredWidgetSize: Size.fromHeight(barTotalHeight),
+        child: BottomNavBar(
+          destinations: ProviderBottomNavItems.destinations(context),
+          selectedItem: selectedItem,
+          theme: navTheme,
+          destinationKeys: {
+            ProviderBottomNavDestination.settings: _settingsTileKey,
+          },
+          onDestinationSelected: (destination) =>
+              _goBranch(context, destination),
+        ),
       ),
     );
   }

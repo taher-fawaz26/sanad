@@ -8,7 +8,8 @@ class ApiErrorResponse {
 
   factory ApiErrorResponse.fromJson(Map<String, dynamic> json) =>
       ApiErrorResponse(
-        message: json['message'] as String? ??
+        message:
+            json['message'] as String? ??
             json['detail'] as String? ??
             'Unknown error',
         code: json['code'] as String?,

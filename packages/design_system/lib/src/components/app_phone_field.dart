@@ -107,10 +107,22 @@ class _AppPhoneFieldState extends State<AppPhoneField> {
   void _stripDialCodeFromController() {
     final national = UaePhoneValidator.toNationalInput(_controller.text);
     if (national == _controller.text) return;
-    _controller.value = TextEditingValue(
-      text: national,
-      selection: TextSelection.collapsed(offset: national.length),
-    );
+    // Deferred: mutating an externally-owned controller synchronously here
+    // (initState/didUpdateWidget) can re-enter a still-in-progress ancestor
+    // build if that ancestor listens on the same controller and calls
+    // setState from the listener — trips the framework's `!_dirty`
+    // assertion. A post-frame callback breaks the re-entrancy; the one-frame
+    // delay before the dial code is stripped is imperceptible.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final current = _controller.text;
+      final resolved = UaePhoneValidator.toNationalInput(current);
+      if (resolved == current) return;
+      _controller.value = TextEditingValue(
+        text: resolved,
+        selection: TextSelection.collapsed(offset: resolved.length),
+      );
+    });
   }
 
   @override

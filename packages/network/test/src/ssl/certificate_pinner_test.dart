@@ -58,29 +58,31 @@ void main() {
       expect(p.check(_FakeCert(_derA), 'api.example.com'), isFalse);
     });
 
-    test('hasAnyPin reflects whether the map has at least one non-empty entry',
-        () {
-      expect(
-        const CertificatePinner(pinsByHost: {}, enforce: true).hasAnyPin,
-        isFalse,
-      );
-      expect(
-        const CertificatePinner(
-          pinsByHost: {'a.example.com': <String>{}},
-          enforce: true,
-        ).hasAnyPin,
-        isFalse,
-      );
-      expect(
-        CertificatePinner(
-          pinsByHost: {
-            'a.example.com': {_fp(_derA)},
-          },
-          enforce: true,
-        ).hasAnyPin,
-        isTrue,
-      );
-    });
+    test(
+      'hasAnyPin reflects whether the map has at least one non-empty entry',
+      () {
+        expect(
+          const CertificatePinner(pinsByHost: {}, enforce: true).hasAnyPin,
+          isFalse,
+        );
+        expect(
+          const CertificatePinner(
+            pinsByHost: {'a.example.com': <String>{}},
+            enforce: true,
+          ).hasAnyPin,
+          isFalse,
+        );
+        expect(
+          CertificatePinner(
+            pinsByHost: {
+              'a.example.com': {_fp(_derA)},
+            },
+            enforce: true,
+          ).hasAnyPin,
+          isTrue,
+        );
+      },
+    );
   });
 
   group('parsePinnerSpec', () {

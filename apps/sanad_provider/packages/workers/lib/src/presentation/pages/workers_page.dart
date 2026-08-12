@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
 import 'package:shared_ui/shared_ui.dart';
+import 'package:workers/src/domain/entities/worker_entity.dart';
 import 'package:workers/src/presentation/bloc/invitation_action/invitation_action_cubit.dart';
 import 'package:workers/src/presentation/bloc/invitations_list/invitations_list_bloc.dart';
 import 'package:workers/src/presentation/bloc/worker_action/worker_action_cubit.dart';
@@ -323,56 +324,37 @@ class _WorkersContent extends StatelessWidget {
                     const WorkersListRefreshEvent(),
                   );
                 },
-                child: state.hasError && state.workers.isEmpty
-                    ? AppFillRemainingScrollable(
-                        child: WorkerErrorState(
-                          failure: state.failure,
-                          onRetry: () => context.read<WorkersListBloc>().add(
-                            const WorkersListRefreshEvent(),
-                          ),
-                        ),
-                      )
-                    : state.filteredWorkers.isEmpty
-                    ? AppFillRemainingScrollable(child: _EmptyState())
-                    : NotificationListener<ScrollNotification>(
-                        onNotification: (notification) {
-                          if (notification.metrics.pixels >=
-                                  notification.metrics.maxScrollExtent - 200 &&
-                              state.hasMore &&
-                              !state.loadingMore) {
-                            context.read<WorkersListBloc>().add(
-                              const WorkersListLoadMoreEvent(),
-                            );
-                          }
-                          return false;
-                        },
-                        child: ListView.separated(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: EdgeInsetsDirectional.only(
-                            start: AppSpacing.lg,
-                            end: AppSpacing.lg,
-                            bottom: AppSpacing.lg,
-                          ),
-                          itemCount:
-                              state.filteredWorkers.length +
-                              (state.loadingMore ? 1 : 0),
-                          separatorBuilder: (_, _) =>
-                              SizedBox(height: AppSpacing.sm),
-                          itemBuilder: (context, index) {
-                            if (index >= state.filteredWorkers.length) {
-                              return const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 16),
-                                child: Center(child: AppLoadingIndicator()),
-                              );
-                            }
-                            return RepaintBoundary(
-                              child: WorkerListItem(
-                                worker: state.filteredWorkers[index],
-                              ),
-                            );
-                          },
+                child: AppSwipeActionsGroup(
+                  child: SanadPagedList<WorkerEntity>(
+                    state: toPagingState(state.pagination),
+                    fetchNextPage: () => context.read<WorkersListBloc>().add(
+                      const WorkersListLoadMoreEvent(),
+                    ),
+                    padding: EdgeInsetsDirectional.only(
+                      start: AppSpacing.lg,
+                      end: AppSpacing.lg,
+                      bottom: AppSpacing.lg,
+                    ),
+                    separatorBuilder: (_, _) => SizedBox(height: AppSpacing.sm),
+                    itemBuilder: (context, worker, index) =>
+                        RepaintBoundary(child: WorkerListItem(worker: worker)),
+                    firstPageErrorIndicatorBuilder: (_) => Center(
+                      child: WorkerErrorState(
+                        failure: state.failure,
+                        onRetry: () => context.read<WorkersListBloc>().add(
+                          const WorkersListRefreshEvent(),
                         ),
                       ),
+                    ),
+                    newPageErrorIndicatorBuilder: (_) => _NextPageErrorRetry(
+                      onRetry: () => context.read<WorkersListBloc>().add(
+                        const WorkersListLoadMoreEvent(),
+                      ),
+                    ),
+                    noItemsFoundIndicatorBuilder: (_) =>
+                        Center(child: _EmptyState()),
+                  ),
+                ),
               ),
             ),
           ],
@@ -436,6 +418,34 @@ class _EmptyState extends StatelessWidget {
         onAction: () => _openAddWorker(context),
         actionIcon: const Icon(Icons.add, size: 20),
         actionIconPosition: AppButtonIconPosition.center,
+      ),
+    );
+  }
+}
+
+/// Compact "load more failed" footer shown by [SanadPagedList] in place of the
+/// next-page loading indicator — keeps already-loaded rows visible instead of
+/// replacing the whole list, unlike [WorkerErrorState].
+class _NextPageErrorRetry extends StatelessWidget {
+  const _NextPageErrorRetry({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+      child: Center(
+        child: GestureDetector(
+          onTap: onRetry,
+          behavior: HitTestBehavior.opaque,
+          child: Text(
+            failureRetryLabel(),
+            style: context.appTypography.regularNormal.copyWith(
+              color: context.appColors.link,
+            ),
+          ),
+        ),
       ),
     );
   }
