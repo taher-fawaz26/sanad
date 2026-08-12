@@ -6,6 +6,7 @@ import 'package:provider_rbac/src/domain/entities/role_entity.dart';
 import 'package:provider_rbac/src/presentation/bloc/role_action/role_action_bloc.dart';
 import 'package:provider_rbac/src/presentation/bloc/role_form/role_form_bloc.dart';
 import 'package:provider_rbac/src/presentation/bloc/roles_list/roles_list_bloc.dart';
+import 'package:provider_rbac/src/presentation/pages/role_details_page.dart';
 import 'package:provider_rbac/src/presentation/pages/role_form_page.dart';
 import 'package:provider_rbac/src/presentation/pages/roles_list_page.dart';
 import 'package:provider_rbac/src/routes/provider_rbac_routes.dart';
@@ -48,6 +49,11 @@ class ProviderRbacModule extends FeatureModule {
             create: (_) => sl<RoleFormBloc>(),
             child: RoleFormPage(existingRole: state.extra as RoleEntity?),
           ),
+        ),
+        GoRoute(
+          path: ':id',
+          builder: (context, state) =>
+              RoleDetailsPage(role: state.extra as RoleEntity),
         ),
       ],
     ),

@@ -7,12 +7,29 @@ sealed class RolesListEvent extends Equatable {
   List<Object?> get props => [];
 }
 
+/// Loads the first page (initial load / first-page-error retry).
 class LoadRolesEvent extends RolesListEvent {
   const LoadRolesEvent();
 }
 
+/// Pull-to-refresh: reloads page 1, preserving the active search query.
 class RefreshRolesEvent extends RolesListEvent {
   const RefreshRolesEvent();
+}
+
+/// Loads the next page and appends it.
+class LoadMoreRolesEvent extends RolesListEvent {
+  const LoadMoreRolesEvent();
+}
+
+/// Server-side search: debounced, resets to page 1.
+class SearchRolesChangedEvent extends RolesListEvent {
+  const SearchRolesChangedEvent(this.query);
+
+  final String query;
+
+  @override
+  List<Object?> get props => [query];
 }
 
 /// Folded-update event: patches the list locally after a role was deleted

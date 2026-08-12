@@ -5,14 +5,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
+import 'package:provider_rbac/src/domain/entities/permission_entity.dart';
 import 'package:provider_rbac/src/domain/entities/role_entity.dart';
 import 'package:provider_rbac/src/presentation/bloc/role_form/role_form_bloc.dart';
-import 'package:provider_rbac/src/presentation/widgets/permission_multi_select_list.dart';
+import 'package:provider_rbac/src/presentation/widgets/permission_group_card.dart';
 import 'package:shared_ui/shared_ui.dart';
 
-/// Create-role and edit-role form. Edit mode is signalled by a non-null
-/// [existingRole]; the API's `UpdateRoleDto` has every field optional, but
-/// this form always resubmits the full current permission selection.
+/// Create-role and edit-role form — Figma `Create New Role` (`5492:24051`).
+///
+/// Edit mode is signalled by a non-null [existingRole]; the first field
+/// swaps to "Modification Title" (`5492:24880`) but everything else is
+/// shared between the two modes.
 class RoleFormPage extends StatefulWidget {
   const RoleFormPage({this.existingRole, super.key});
 
@@ -26,12 +29,9 @@ class RoleFormPage extends StatefulWidget {
 
 class _RoleFormPageState extends State<RoleFormPage> {
   final _formKey = GlobalKey<FormState>();
-  late final _nameController = TextEditingController(
-    text: widget.existingRole?.name,
-  );
-  late final _displayNameController = TextEditingController(
-    text: widget.existingRole?.displayName,
-  );
+  // Create: the role name. Edit: the "Modification Title" (UI-only) — both
+  // start empty, so the controller is never seeded from the existing role.
+  final _nameController = TextEditingController();
   late final _descriptionController = TextEditingController(
     text: widget.existingRole?.description,
   );
@@ -47,38 +47,62 @@ class _RoleFormPageState extends State<RoleFormPage> {
   @override
   void dispose() {
     _nameController.dispose();
-    _displayNameController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  /// Derives the backend `name` slug (`^[a-z0-9-]$`, ≤50 chars) from the
+  /// human display name — matches the backend's stored slugs
+  /// (e.g. "Senior Branch Manager" → "senior-branch-manager").
+  String _slugify(String input) {
+    final slug = input
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp('[^a-z0-9]+'), '-')
+        .replaceAll(RegExp('^-+|-+\$'), '');
+    return slug.length > 50 ? slug.substring(0, 50) : slug;
   }
 
   void _onSubmit() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    final name = _nameController.text.trim();
-    final displayName = _displayNameController.text.trim();
+    final input = _nameController.text.trim();
     final description = _descriptionController.text.trim();
 
     final bloc = context.read<RoleFormBloc>();
     final existing = widget.existingRole;
     if (existing == null) {
+      // Create: `displayName` is what the user typed; `name` is its slug.
       bloc.add(
         SubmitCreateRoleEvent(
-          name: name,
-          displayName: displayName,
+          name: _slugify(input),
+          displayName: input,
           description: description.isEmpty ? null : description,
         ),
       );
     } else {
+      // Edit preserves the role identity (name/displayName). Only the
+      // description and permission set are editable here; the "Modification
+      // Title" field is a UI-only audit label with no `UpdateRoleDto` field.
       bloc.add(
         SubmitUpdateRoleEvent(
           roleId: existing.id,
-          name: name,
-          displayName: displayName,
+          name: existing.name,
+          displayName: existing.displayName,
           description: description.isEmpty ? null : description,
         ),
       );
     }
+  }
+
+  Map<String, List<PermissionEntity>> _groupByResource(
+    List<PermissionEntity> permissions,
+  ) {
+    final grouped = <String, List<PermissionEntity>>{};
+    for (final permission in permissions) {
+      grouped.putIfAbsent(permission.resource, () => []).add(permission);
+    }
+    return grouped;
   }
 
   @override
@@ -111,6 +135,32 @@ class _RoleFormPageState extends State<RoleFormPage> {
                     : 'provider_rbac.add_role_title'.tr(),
                 showBackButton: true,
                 onLeadingTap: () => context.pop(),
+                trailing: AppNotificationIcon(onTap: () {}),
+                trailingAction: AppNavBarTrailingAction.icon,
+              ),
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.sm,
+                ),
+                child: AppSegmentedControl<int>(
+                  items: [
+                    AppSegmentedControlItem(
+                      value: 0,
+                      label: 'provider_rbac.tab_team'.tr(),
+                    ),
+                    AppSegmentedControlItem(
+                      value: 1,
+                      label: 'provider_rbac.tab_invitations'.tr(),
+                    ),
+                    AppSegmentedControlItem(
+                      value: 2,
+                      label: 'provider_rbac.tab_roles'.tr(),
+                    ),
+                  ],
+                  selectedValue: 2,
+                  onChanged: (_) {},
+                ),
               ),
               Expanded(
                 child: SingleChildScrollView(
@@ -125,38 +175,41 @@ class _RoleFormPageState extends State<RoleFormPage> {
                       children: [
                         AppTextField(
                           controller: _nameController,
-                          label: 'provider_rbac.name_label'.tr(),
-                          hint: 'provider_rbac.name_hint'.tr(),
+                          label: widget.isEdit
+                              ? 'provider_rbac.modification_title_label'.tr()
+                              : 'provider_rbac.name_label'.tr(),
+                          hint: widget.isEdit
+                              ? 'provider_rbac.modification_title_hint'.tr()
+                              : 'provider_rbac.name_hint'.tr(),
                           isRequired: true,
                           validator: (value) => (value?.trim().isEmpty ?? true)
                               ? 'provider_rbac.validation_required'.tr()
                               : null,
                         ),
-                        SizedBox(height: AppSpacing.md),
-                        AppTextField(
-                          controller: _displayNameController,
-                          label: 'provider_rbac.display_name_label'.tr(),
-                          hint: 'provider_rbac.display_name_hint'.tr(),
-                          isRequired: true,
-                          validator: (value) => (value?.trim().isEmpty ?? true)
-                              ? 'provider_rbac.validation_required'.tr()
-                              : null,
+                        SizedBox(height: AppSpacing.lg),
+                        Stack(
+                          children: [
+                            AppTextField(
+                              controller: _descriptionController,
+                              label: 'provider_rbac.description_label'.tr(),
+                              hint: 'provider_rbac.description_hint'.tr(),
+                              isRequired: true,
+                              maxLines: 5,
+                              validator: (value) =>
+                                  (value?.trim().isEmpty ?? true)
+                                  ? 'provider_rbac.validation_required'.tr()
+                                  : null,
+                            ),
+                            Positioned(
+                              right: AppSpacing.sm,
+                              bottom: AppSpacing.sm,
+                              child: AppEnhanceWithAiButton(
+                                label: 'provider_rbac.enhance_with_ai'.tr(),
+                              ),
+                            ),
+                          ],
                         ),
-                        SizedBox(height: AppSpacing.md),
-                        AppTextField(
-                          controller: _descriptionController,
-                          label: 'provider_rbac.description_label'.tr(),
-                          hint: 'provider_rbac.description_hint'.tr(),
-                        ),
-                        SizedBox(height: AppSpacing.xl),
-                        Text(
-                          'provider_rbac.permissions_label'.tr(),
-                          style: context.appTypography.regularNormal.copyWith(
-                            color: colors.textPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        SizedBox(height: AppSpacing.md),
+                        SizedBox(height: AppSpacing.lg),
                         BlocBuilder<RoleFormBloc, RoleFormState>(
                           builder: (context, state) {
                             if (state.isCatalogLoading) {
@@ -172,12 +225,25 @@ class _RoleFormPageState extends State<RoleFormPage> {
                                     state.failure?.localizedMessage() ?? '',
                               );
                             }
-                            return PermissionMultiSelectList(
-                              permissions: state.permissions,
-                              selectedIds: state.selectedPermissionIds,
-                              onToggle: (id) => context
-                                  .read<RoleFormBloc>()
-                                  .add(TogglePermissionEvent(id)),
+                            final grouped = _groupByResource(
+                              state.permissions,
+                            );
+                            final resources = grouped.keys.toList()..sort();
+                            final bloc = context.read<RoleFormBloc>();
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                for (var i = 0; i < resources.length; i++) ...[
+                                  if (i > 0) SizedBox(height: AppSpacing.md),
+                                  PermissionGroupCard(
+                                    resource: resources[i],
+                                    permissions: grouped[resources[i]]!,
+                                    selectedIds: state.selectedPermissionIds,
+                                    onToggle: (id) =>
+                                        bloc.add(TogglePermissionEvent(id)),
+                                  ),
+                                ],
+                              ],
                             );
                           },
                         ),
@@ -194,8 +260,10 @@ class _RoleFormPageState extends State<RoleFormPage> {
                 child: BlocBuilder<RoleFormBloc, RoleFormState>(
                   builder: (context, state) => AppButton(
                     label: widget.isEdit
-                        ? 'provider_rbac.save_button'.tr()
-                        : 'provider_rbac.create_button'.tr(),
+                        ? 'provider_rbac.save_changes_button'.tr()
+                        : 'provider_rbac.create_new_role_button'.tr(),
+                    icon: const Icon(Icons.add_circle_outline_rounded),
+                    iconPosition: AppButtonIconPosition.center,
                     isLoading: state.isSubmitting,
                     onPressed: state.canSubmit ? _onSubmit : null,
                   ),

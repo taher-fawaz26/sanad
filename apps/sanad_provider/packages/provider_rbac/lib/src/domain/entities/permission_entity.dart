@@ -10,11 +10,12 @@ class PermissionEntity extends Equatable {
     required this.resource,
     this.displayNameAr,
     this.description,
+    this.isAdmin = false,
   });
 
   final String id;
 
-  /// e.g. `branch:create`.
+  /// e.g. `provider:branch:create`.
   final String action;
   final String displayName;
   final String? displayNameAr;
@@ -22,6 +23,11 @@ class PermissionEntity extends Equatable {
 
   /// e.g. `branch`.
   final String resource;
+
+  /// Whether this is an admin-scoped permission. The provider permission
+  /// catalog only returns worker-assignable permissions (`isAdmin: false`),
+  /// but the field is carried through faithfully from the backend contract.
+  final bool isAdmin;
 
   @override
   List<Object?> get props => [
@@ -31,5 +37,6 @@ class PermissionEntity extends Equatable {
     displayNameAr,
     description,
     resource,
+    isAdmin,
   ];
 }

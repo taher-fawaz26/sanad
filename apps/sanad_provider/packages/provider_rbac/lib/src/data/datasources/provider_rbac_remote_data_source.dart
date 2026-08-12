@@ -7,17 +7,27 @@ import 'package:provider_rbac/src/data/models/create_role_dto.dart';
 import 'package:provider_rbac/src/data/models/permission_dto.dart';
 import 'package:provider_rbac/src/data/models/role_dto.dart';
 import 'package:provider_rbac/src/data/models/update_role_dto.dart';
+import 'package:provider_rbac/src/domain/usecases/roles_query.dart';
 
-/// Parses a plain-array response (roles/permissions endpoints are NOT
-/// paginated, unlike most other SANAD list endpoints).
+/// Parses a plain-array response. The provider permission catalog and the
+/// worker-roles endpoints return bare JSON arrays (verified against the live
+/// Swagger); only `GET /provider/roles` is paginated (see [getRoles]).
 List<T> _parseList<T>(dynamic data, T Function(Map<String, dynamic>) parse) =>
     (data as List<dynamic>)
         .whereType<Map<String, dynamic>>()
         .map(parse)
         .toList();
 
+/// Single-role responses (`RoleResponseDto`) are returned bare, but tolerate
+/// a `{data: {...}}` envelope defensively — mirrors `workers` conventions.
+RoleDto _parseRole(dynamic data) {
+  final map = data as Map<String, dynamic>;
+  final payload = map['data'] as Map<String, dynamic>? ?? map;
+  return RoleDto.fromJson(payload);
+}
+
 abstract interface class ProviderRbacRemoteDataSource {
-  TaskEither<Failure, List<RoleDto>> getRoles();
+  TaskEither<Failure, Page<RoleDto>> getRoles(RolesQuery query);
   TaskEither<Failure, RoleDto> createRole(CreateRoleDto dto);
   TaskEither<Failure, RoleDto> getRole(String id);
   TaskEither<Failure, RoleDto> updateRole(String id, UpdateRoleDto dto);
@@ -37,11 +47,12 @@ class ProviderRbacRemoteDataSourceImpl implements ProviderRbacRemoteDataSource {
   final BaseApiClient _apiClient;
 
   @override
-  TaskEither<Failure, List<RoleDto>> getRoles() =>
-      _apiClient.request<List<RoleDto>>(
+  TaskEither<Failure, Page<RoleDto>> getRoles(RolesQuery query) =>
+      _apiClient.request<Page<RoleDto>>(
         path: ProviderRbacApiPaths.roles,
         method: RequestMethod.get,
-        parser: (data) => _parseList(data, RoleDto.fromJson),
+        query: query.toQueryMap(),
+        parser: (data) => parsePage(data, RoleDto.fromJson),
       );
 
   @override
@@ -50,7 +61,7 @@ class ProviderRbacRemoteDataSourceImpl implements ProviderRbacRemoteDataSource {
         path: ProviderRbacApiPaths.roles,
         method: RequestMethod.post,
         body: dto.toJson(),
-        parser: (data) => RoleDto.fromJson(data as Map<String, dynamic>),
+        parser: _parseRole,
       );
 
   @override
@@ -58,7 +69,7 @@ class ProviderRbacRemoteDataSourceImpl implements ProviderRbacRemoteDataSource {
       _apiClient.request<RoleDto>(
         path: ProviderRbacApiPaths.role(id),
         method: RequestMethod.get,
-        parser: (data) => RoleDto.fromJson(data as Map<String, dynamic>),
+        parser: _parseRole,
       );
 
   @override
@@ -67,7 +78,7 @@ class ProviderRbacRemoteDataSourceImpl implements ProviderRbacRemoteDataSource {
         path: ProviderRbacApiPaths.role(id),
         method: RequestMethod.patch,
         body: dto.toJson(),
-        parser: (data) => RoleDto.fromJson(data as Map<String, dynamic>),
+        parser: _parseRole,
       );
 
   @override

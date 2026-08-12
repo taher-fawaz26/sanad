@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, development]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: "3.41.9"
+
+jobs:
+  quality:
+    if: github.event_name == 'pull_request'
+    name: ${{ matrix.task.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        task:
+          - { name: format, cmd: "melos run format" }
+          - { name: analyze, cmd: "melos run analyze" }
+          - { name: test, cmd: "melos run test" }
+          - { name: arch, cmd: "melos run validate:arch" }
+          - { name: l10n, cmd: "melos run validate:l10n" }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Install Melos
+        run: dart pub global activate melos 7.0.0
+      - name: Bootstrap
+        run: melos bootstrap
+      - name: ${{ matrix.task.name }}
+        run: ${{ matrix.task.cmd }}
+
+  coverage:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    name: Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Install lcov
+        run: sudo apt-get install -y lcov
+      - name: Install Melos
+        run: dart pub global activate melos 7.0.0
+      - name: Bootstrap
+        run: melos bootstrap
+      - name: Run tests with coverage
+        run: melos run test
+      - name: Merge coverage reports
+        run: |
+          find . -name "lcov.info" -not -path "*/node_modules/*" | \
+            xargs lcov --ignore-errors unused --add-tracefile --output-file combined_lcov.info
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: combined_lcov.info
+          fail_ci_if_error: true
+          # Coverage thresholds are enforced via codecov.yml at the repo root.
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

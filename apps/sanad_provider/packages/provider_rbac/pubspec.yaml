@@ -12,6 +12,9 @@ environment:
   flutter: ">=3.19.0"
 
 dependencies:
+  app_assets:
+    path: ../../../../packages/app_assets
+  bloc_concurrency: ^0.3.0
   core:
     path: ../../../../packages/core
   design_system:

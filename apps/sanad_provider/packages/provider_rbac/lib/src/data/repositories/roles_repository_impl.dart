@@ -6,6 +6,7 @@ import 'package:provider_rbac/src/data/models/create_role_dto.dart';
 import 'package:provider_rbac/src/data/models/update_role_dto.dart';
 import 'package:provider_rbac/src/domain/entities/role_entity.dart';
 import 'package:provider_rbac/src/domain/repositories/roles_repository.dart';
+import 'package:provider_rbac/src/domain/usecases/roles_query.dart';
 
 class RolesRepositoryImpl implements RolesRepository {
   const RolesRepositoryImpl(this._remoteDataSource);
@@ -13,9 +14,10 @@ class RolesRepositoryImpl implements RolesRepository {
   final ProviderRbacRemoteDataSource _remoteDataSource;
 
   @override
-  TaskEither<Failure, List<RoleEntity>> getRoles() => _remoteDataSource
-      .getRoles()
-      .map((dtos) => dtos.map((dto) => dto.toEntity()).toList());
+  TaskEither<Failure, Page<RoleEntity>> getRoles(RolesQuery query) =>
+      _remoteDataSource
+          .getRoles(query)
+          .map((page) => page.mapItems((dto) => dto.toEntity()));
 
   @override
   TaskEither<Failure, RoleEntity> createRole({

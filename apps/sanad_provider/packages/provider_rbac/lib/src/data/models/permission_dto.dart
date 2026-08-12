@@ -8,6 +8,7 @@ class PermissionDto {
     required this.resource,
     this.displayNameAr,
     this.description,
+    this.isAdmin = false,
   });
 
   factory PermissionDto.fromJson(Map<String, dynamic> json) => PermissionDto(
@@ -17,6 +18,8 @@ class PermissionDto {
     displayNameAr: json['displayNameAr'] as String?,
     description: json['description'] as String?,
     resource: json['resource'] as String,
+    // Required in the live contract, but tolerate absence defensively.
+    isAdmin: json['isAdmin'] as bool? ?? false,
   );
 
   final String id;
@@ -25,6 +28,7 @@ class PermissionDto {
   final String? displayNameAr;
   final String? description;
   final String resource;
+  final bool isAdmin;
 
   PermissionEntity toEntity() => PermissionEntity(
     id: id,
@@ -33,5 +37,6 @@ class PermissionDto {
     displayNameAr: displayNameAr,
     description: description,
     resource: resource,
+    isAdmin: isAdmin,
   );
 }

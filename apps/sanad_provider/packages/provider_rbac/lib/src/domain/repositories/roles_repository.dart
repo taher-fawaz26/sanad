@@ -1,9 +1,10 @@
 import 'package:core/core.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:provider_rbac/src/domain/entities/role_entity.dart';
+import 'package:provider_rbac/src/domain/usecases/roles_query.dart';
 
 abstract interface class RolesRepository {
-  TaskEither<Failure, List<RoleEntity>> getRoles();
+  TaskEither<Failure, Page<RoleEntity>> getRoles(RolesQuery query);
 
   TaskEither<Failure, RoleEntity> createRole({
     required String name,

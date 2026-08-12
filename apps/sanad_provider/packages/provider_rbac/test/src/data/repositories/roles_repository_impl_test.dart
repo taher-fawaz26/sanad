@@ -9,6 +9,7 @@ import 'package:provider_rbac/src/data/models/role_dto.dart';
 import 'package:provider_rbac/src/data/models/update_role_dto.dart';
 import 'package:provider_rbac/src/data/repositories/roles_repository_impl.dart';
 import 'package:provider_rbac/src/domain/entities/role_persona_type.dart';
+import 'package:provider_rbac/src/domain/usecases/roles_query.dart';
 
 class _MockRemoteDataSource extends Mock
     implements ProviderRbacRemoteDataSource {}
@@ -27,6 +28,7 @@ void main() {
     );
     registerFallbackValue(const UpdateRoleDto());
     registerFallbackValue(const AssignWorkerRolesDto(roleIds: []));
+    registerFallbackValue(const RolesQuery());
   });
 
   setUp(() {
@@ -43,26 +45,56 @@ void main() {
     permissions: const [],
   );
 
-  test('getRoles maps every DTO to an entity', () async {
-    when(remote.getRoles).thenAnswer(
-      (_) => TaskEither.of([roleDto(id: 'a'), roleDto(id: 'b')]),
+  Page<RoleDto> rolePage(List<RoleDto> items) => Page<RoleDto>(
+    items: items,
+    meta: PageMeta(
+      totalItems: items.length,
+      itemCount: items.length,
+      itemsPerPage: 10,
+      totalPages: 1,
+      currentPage: 1,
+    ),
+  );
+
+  test('getRoles maps every DTO to an entity, preserving page meta', () async {
+    when(() => remote.getRoles(any())).thenAnswer(
+      (_) => TaskEither.of(rolePage([roleDto(id: 'a'), roleDto(id: 'b')])),
     );
 
-    final result = await repository.getRoles().run();
+    final result = await repository.getRoles(const RolesQuery()).run();
 
     expect(result.isRight(), isTrue);
     result.match(
       (_) => fail('expected right'),
-      (roles) => expect(roles.map((r) => r.id), ['a', 'b']),
+      (page) {
+        expect(page.items.map((r) => r.id), ['a', 'b']);
+        expect(page.meta.totalItems, 2);
+      },
     );
   });
 
+  test('getRoles forwards the query to the data source', () async {
+    when(() => remote.getRoles(any())).thenAnswer(
+      (_) => TaskEither.of(rolePage(const [])),
+    );
+
+    await repository
+        .getRoles(const RolesQuery(page: 3, limit: 50, search: 'mgr'))
+        .run();
+
+    final captured = verify(() => remote.getRoles(captureAny())).captured;
+    final query = captured.single as RolesQuery;
+    expect(query.page, 3);
+    expect(query.limit, 50);
+    expect(query.search, 'mgr');
+  });
+
   test('getRoles propagates a Failure from the data source', () async {
-    when(remote.getRoles).thenAnswer(
+    when(() => remote.getRoles(any())).thenAnswer(
       (_) => TaskEither.left(const ServerFailure(message: 'boom')),
     );
 
-    final result = await repository.getRoles().run();
+    final result = await repository.getRoles(const RolesQuery()).run();
 
     expect(result.isLeft(), isTrue);
   });

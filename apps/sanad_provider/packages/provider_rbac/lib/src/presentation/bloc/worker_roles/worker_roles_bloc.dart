@@ -6,6 +6,7 @@ import 'package:provider_rbac/src/domain/usecases/assign_worker_roles_usecase.da
 import 'package:provider_rbac/src/domain/usecases/get_roles_usecase.dart';
 import 'package:provider_rbac/src/domain/usecases/get_worker_roles_usecase.dart';
 import 'package:provider_rbac/src/domain/usecases/remove_worker_role_usecase.dart';
+import 'package:provider_rbac/src/domain/usecases/roles_query.dart';
 
 part 'worker_roles_event.dart';
 part 'worker_roles_state.dart';
@@ -60,14 +61,22 @@ class WorkerRolesBloc extends Bloc<WorkerRolesEvent, WorkerRolesState> {
   ) async {
     emit(state.copyWith(catalogStatus: RequestStatus.loading));
 
-    final result = await _getRolesUseCase.call(const NoParams()).run();
+    // The assignable-roles catalog is a picker, not an infinite list — pull a
+    // single large page rather than paginating. Realistic providers have only
+    // a handful of roles (system + custom).
+    final result = await _getRolesUseCase
+        .call(const RolesQuery(limit: 100))
+        .run();
 
     result.match(
       (failure) => emit(
         state.copyWith(catalogStatus: RequestStatus.failure, failure: failure),
       ),
-      (roles) => emit(
-        state.copyWith(catalogStatus: RequestStatus.success, catalog: roles),
+      (page) => emit(
+        state.copyWith(
+          catalogStatus: RequestStatus.success,
+          catalog: page.items,
+        ),
       ),
     );
   }
