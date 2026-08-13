@@ -1,3 +1,4 @@
+import 'package:app_assets/app_assets.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/provider_completion_entity.dart';
 
 /// Stable id for one of the four Figma setup-card stages — never the
@@ -11,6 +12,7 @@ class OrganizationSetupStage {
     required this.id,
     required this.titleKey,
     required this.subtitleKey,
+    required this.iconAsset,
     required this.completed,
   });
 
@@ -20,6 +22,9 @@ class OrganizationSetupStage {
   /// `label` — the four visual stages don't map 1:1 to backend items).
   final String titleKey;
   final String subtitleKey;
+
+  /// `AppSvgs` path for this stage's icon glyph (Figma `4349:5171`).
+  final String iconAsset;
   final bool completed;
 }
 
@@ -40,6 +45,7 @@ List<OrganizationSetupStage> mapCompletionToStages(
       id: OrganizationSetupStageId.businessProfile,
       titleKey: 'settings.setup_stage_business_profile',
       subtitleKey: 'settings.setup_stage_business_profile_subtitle',
+      iconAsset: AppSvgs.call,
       completed: completedFor(const {
         ProviderCompletionItemId.category,
         ProviderCompletionItemId.phone,
@@ -51,18 +57,21 @@ List<OrganizationSetupStage> mapCompletionToStages(
       id: OrganizationSetupStageId.firstBranch,
       titleKey: 'settings.setup_stage_first_branch',
       subtitleKey: 'settings.setup_stage_first_branch_subtitle',
+      iconAsset: AppSvgs.officeBuilding,
       completed: completedFor(const {ProviderCompletionItemId.branches}),
     ),
     OrganizationSetupStage(
       id: OrganizationSetupStageId.firstTeam,
       titleKey: 'settings.setup_stage_first_team',
       subtitleKey: 'settings.setup_stage_first_team_subtitle',
+      iconAsset: AppSvgs.userOutline,
       completed: completedFor(const {ProviderCompletionItemId.team}),
     ),
     OrganizationSetupStage(
       id: OrganizationSetupStageId.grow,
       titleKey: 'settings.setup_stage_grow',
       subtitleKey: 'settings.setup_stage_grow_subtitle',
+      iconAsset: AppSvgs.trendingUp,
       completed: completedFor(const {ProviderCompletionItemId.services}),
     ),
   ];

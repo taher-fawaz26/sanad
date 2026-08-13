@@ -37,10 +37,15 @@ abstract final class SwipeActionsTokens {
 
   static double actionWidth() => responsiveDimension(76);
 
+  /// Gap around each action button — splits into the pane's outer inset and
+  /// the space between adjacent buttons, so each renders as a separate
+  /// floating pill rather than a contiguous strip.
+  static double actionSpacing() => responsiveDimension(6);
+
   static double iconSize() => AppDimension.iconMenu;
 
   static BorderRadius borderRadius() =>
-      BorderRadius.circular(AppDimension.radiusSm);
+      BorderRadius.circular(AppDimension.radiusMd);
 
   static SwipeActionSurfaceColors resolve({
     required AppSwipeActionVariant variant,

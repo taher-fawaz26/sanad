@@ -14,6 +14,7 @@ import 'package:workers/src/presentation/bloc/invitation_action/invitation_actio
 import 'package:workers/src/presentation/bloc/invitations_list/invitations_list_bloc.dart';
 import 'package:workers/src/presentation/bloc/worker_action/worker_action_cubit.dart';
 import 'package:workers/src/presentation/bloc/workers_list/workers_list_bloc.dart';
+import 'package:workers/src/presentation/services/worker_roles_tab.dart';
 import 'package:workers/src/presentation/widgets/invitations_content.dart';
 import 'package:workers/src/presentation/widgets/worker_empty_states.dart';
 import 'package:workers/src/presentation/widgets/worker_error_state.dart';
@@ -244,41 +245,43 @@ class _WorkersPageState extends State<WorkersPage> {
                   ),
                   AppSegmentedControlItem(
                     value: 2,
-                    label: 'workers.tab_permissions'.tr(),
+                    label: 'workers.tab_roles'.tr(),
                   ),
                 ],
                 selectedValue: _selectedTab,
                 onChanged: _onTabChanged,
               ),
             ),
-            Expanded(
-              child: _selectedTab == 0
-                  ? const _WorkersContent()
-                  : const InvitationsContent(),
-            ),
-            _FooterButton(
-              onAdd: () => _openAddWorker(context),
-            ),
+            Expanded(child: _buildTabBody()),
+            // The Roles pane owns its own floating "add" action, so the
+            // shared "Add team" footer is hidden there.
+            if (_selectedTab != 2)
+              _FooterButton(onAdd: () => _openAddWorker(context)),
           ],
         ),
       ),
     );
   }
 
-  /// The "Permissions" segment has no in-page pane — it opens the existing
-  /// standalone Roles & Permissions screen (`provider_rbac` package). The
-  /// raw path is duplicated here rather than importing
-  /// `ProviderRbacRoutes.list`: `provider_rbac` already depends on
-  /// `workers` (for its worker-roles integration), so a dependency in the
-  /// other direction would create a package cycle. Keep this in sync with
-  /// `ProviderRbacRoutes.list`.
-  static const _rolesPermissionsRoute = '/roles-permissions';
+  Widget _buildTabBody() {
+    switch (_selectedTab) {
+      case 0:
+        return const _WorkersContent();
+      case 1:
+        return const InvitationsContent();
+      case 2:
+        // Roles pane is contributed by `provider_rbac` through the
+        // `WorkerRolesTabView` port (DI), keeping `workers` free of a
+        // dependency back on `provider_rbac`.
+        return sl.isRegistered<WorkerRolesTabView>()
+            ? sl<WorkerRolesTabView>().build()
+            : const SizedBox.shrink();
+      default:
+        return const SizedBox.shrink();
+    }
+  }
 
   void _onTabChanged(int index) {
-    if (index == 2) {
-      context.push(_rolesPermissionsRoute);
-      return;
-    }
     setState(() => _selectedTab = index);
     if (index == 1 &&
         context.read<InvitationsListBloc>().state.status ==

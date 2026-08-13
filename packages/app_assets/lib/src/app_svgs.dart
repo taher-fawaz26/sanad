@@ -244,4 +244,18 @@ abstract final class AppSvgs {
 
   /// X (Twitter) — organization social profiles.
   static const String socialTwitter = '$_base/social_twitter.svg';
+
+  // ── Organization setup stepper (`4349:5171`) ───────────────────────────────
+
+  /// Phone handset — "Business Profile" stage icon.
+  static const String call = '$_base/call.svg';
+
+  /// Two-tier building with window dots — "First Branch" stage icon.
+  static const String officeBuilding = '$_base/office_building.svg';
+
+  /// Head-and-shoulders outline — "First Team Member" stage icon.
+  static const String userOutline = '$_base/user_outline.svg';
+
+  /// Upward trend line — "Grow Your Business" stage icon.
+  static const String trendingUp = '$_base/trending_up.svg';
 }

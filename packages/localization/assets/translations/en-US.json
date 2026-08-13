@@ -569,7 +569,7 @@
     "coming_soon": "Coming soon",
     "tab_team": "Team",
     "tab_invitations": "Invitations",
-    "tab_permissions": "Permissions",
+    "tab_roles": "Roles",
     "invitations_empty_title": "No invitations yet",
     "invitations_empty_description": "Invite team members to get started.",
     "invitation_status_pending": "Pending",

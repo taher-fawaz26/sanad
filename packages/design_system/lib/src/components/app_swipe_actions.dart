@@ -107,7 +107,7 @@ class AppSwipeActions extends StatelessWidget {
       key: key,
       groupTag: groupTag,
       endActionPane: ActionPane(
-        motion: const DrawerMotion(),
+        motion: const ScrollMotion(),
         extentRatio: resolvedRatio,
         children: [
           for (final action in actions)
@@ -133,6 +133,8 @@ class _SwipeActionButton extends StatelessWidget {
       enabled: action.enabled,
     );
     final iconSize = SwipeActionsTokens.iconSize();
+    final radius = SwipeActionsTokens.borderRadius();
+    final spacing = SwipeActionsTokens.actionSpacing();
 
     final content =
         action.child ??
@@ -170,15 +172,23 @@ class _SwipeActionButton extends StatelessWidget {
               action.onPressed();
             }
           : (_) {},
-      backgroundColor: surface.background,
+      backgroundColor: Colors.transparent,
       foregroundColor: surface.foreground,
-      borderRadius: SwipeActionsTokens.borderRadius(),
+      borderRadius: radius,
       padding: EdgeInsets.zero,
-      child: Semantics(
-        label: action.semanticLabel,
-        button: true,
-        enabled: action.enabled,
-        child: content,
+      child: Container(
+        margin: EdgeInsets.symmetric(horizontal: spacing / 2),
+        decoration: BoxDecoration(
+          color: surface.background,
+          borderRadius: radius,
+        ),
+        alignment: Alignment.center,
+        child: Semantics(
+          label: action.semanticLabel,
+          button: true,
+          enabled: action.enabled,
+          child: content,
+        ),
       ),
     );
   }
