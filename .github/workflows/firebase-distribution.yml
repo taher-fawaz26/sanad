@@ -43,9 +43,26 @@ jobs:
         with:
           gradle-version: wrapper
 
+      # sanad_provider needs the Maps REST key at build time (dart-define) for
+      # serving-area discovery — see docs/CONFIGURATION.md. Without this the
+      # APK silently discovers zero serving areas (falls back to
+      # NoopNearbyAreasRepository). sanad_client doesn't use Maps and needs no
+      # dart-define.
+      - name: Write Maps dart-define (provider only)
+        if: matrix.app == 'provider'
+        working-directory: apps/sanad_provider
+        run: |
+          mkdir -p dart_defines
+          echo '{"MAPS_API_KEY":"${{ secrets.MAPS_API_KEY_ANDROID }}"}' > dart_defines/android.json
+
       - name: Build APK
         working-directory: apps/sanad_${{ matrix.app }}
-        run: flutter build apk --release --build-number=${{ github.run_number }}
+        run: |
+          if [ "${{ matrix.app }}" = "provider" ]; then
+            flutter build apk --release --build-number=${{ github.run_number }} --dart-define-from-file=dart_defines/android.json
+          else
+            flutter build apk --release --build-number=${{ github.run_number }}
+          fi
 
       - name: Upload to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1

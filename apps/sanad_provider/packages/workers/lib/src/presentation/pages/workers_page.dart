@@ -37,9 +37,6 @@ class _WorkersPageState extends State<WorkersPage> {
   StreamSubscription<WorkerActionEffect>? _workerEffectsSub;
   StreamSubscription<InvitationActionEffect>? _invitationEffectsSub;
 
-  bool _workerProgressVisible = false;
-  bool _invitationProgressVisible = false;
-
   @override
   void initState() {
     super.initState();
@@ -66,13 +63,13 @@ class _WorkersPageState extends State<WorkersPage> {
     if (!mounted) return;
     switch (effect) {
       case WorkerActionStarted(:final type):
-        _showWorkerProgress(type);
+        AppProgress.show(context, title: _workerProgressTitle(type));
       case WorkerActionSucceeded(
         :final type,
         :final workerId,
         :final updatedWorker,
       ):
-        _dismissWorkerProgress();
+        AppProgress.dismiss();
         if (type == WorkerActionType.delete) {
           context.read<WorkersListBloc>().add(
             WorkerRemovedFromListEvent(workerId),
@@ -84,7 +81,7 @@ class _WorkersPageState extends State<WorkersPage> {
         }
         showAppSnackbar(context: context, title: _workerSuccessMessage(type));
       case WorkerActionFailed(:final type, :final failure):
-        _dismissWorkerProgress();
+        AppProgress.dismiss();
         showAppErrorSnackbar(
           context: context,
           title: _workerFailureMessage(type, failure),
@@ -96,9 +93,9 @@ class _WorkersPageState extends State<WorkersPage> {
     if (!mounted) return;
     switch (effect) {
       case InvitationActionStarted(:final type):
-        _showInvitationProgress(type);
+        AppProgress.show(context, title: _invitationProgressTitle(type));
       case InvitationActionSucceeded(:final type, :final invitationId):
-        _dismissInvitationProgress();
+        AppProgress.dismiss();
         final invitations = context.read<InvitationsListBloc>();
         switch (type) {
           case InvitationActionType.cancel:
@@ -113,48 +110,12 @@ class _WorkersPageState extends State<WorkersPage> {
           title: _invitationSuccessMessage(type),
         );
       case InvitationActionFailed(:final type, :final failure):
-        _dismissInvitationProgress();
+        AppProgress.dismiss();
         showAppErrorSnackbar(
           context: context,
           title: _invitationFailureMessage(type, failure),
         );
     }
-  }
-
-  // ── Progress dialog control ──────────────────────────────────────────────
-
-  void _showWorkerProgress(WorkerActionType type) {
-    if (_workerProgressVisible) return;
-    _workerProgressVisible = true;
-    unawaited(
-      showAppProgressDialog(
-        context: context,
-        title: _workerProgressTitle(type),
-      ).whenComplete(() => _workerProgressVisible = false),
-    );
-  }
-
-  void _dismissWorkerProgress() {
-    if (!_workerProgressVisible) return;
-    _workerProgressVisible = false;
-    dismissAppProgressDialog(context);
-  }
-
-  void _showInvitationProgress(InvitationActionType type) {
-    if (_invitationProgressVisible) return;
-    _invitationProgressVisible = true;
-    unawaited(
-      showAppProgressDialog(
-        context: context,
-        title: _invitationProgressTitle(type),
-      ).whenComplete(() => _invitationProgressVisible = false),
-    );
-  }
-
-  void _dismissInvitationProgress() {
-    if (!_invitationProgressVisible) return;
-    _invitationProgressVisible = false;
-    dismissAppProgressDialog(context);
   }
 
   // ── Copy helpers ─────────────────────────────────────────────────────────
@@ -300,7 +261,20 @@ class _WorkersContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<WorkersListBloc, WorkersListState>(
       builder: (context, state) {
-        if (state.isLoading) return const ShimmerListSkeleton();
+        // First-page load: skeletonize the *real* row widget with mock data
+        // (no bespoke skeleton layout) via the shared AppSkeletonizer gateway.
+        if (state.isLoading) {
+          return AppSkeletonList(
+            itemBuilder: (context, index) => WorkerListItem(
+              worker: WorkerEntity(
+                id: 'skeleton-$index',
+                fullName: BoneMock.fullName,
+                role: BoneMock.name,
+                initials: 'SN',
+              ),
+            ),
+          );
+        }
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

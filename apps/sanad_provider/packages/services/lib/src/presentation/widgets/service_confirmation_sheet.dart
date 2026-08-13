@@ -22,21 +22,22 @@ Future<bool?> showServiceConfirmationSheet({
 }) {
   return SheetNavigator.push<bool>(
     context,
-    AppConfirmationContent(
-      title: title,
-      description: description,
-      actionLabel: actionLabel,
-      cancelLabel: cancelLabel,
-      actionType: actionType,
-      destructive: destructive,
-      badge: serviceName == null
-          ? null
-          : AppChip(label: serviceName, tone: AppChipTone.softNeutral),
-      onConfirm: () => Navigator.of(context).pop(true),
-      onCancel: () => Navigator.of(context).pop(false),
+    Builder(
+      builder: (sheetContext) => AppConfirmationContent(
+        title: title,
+        description: description,
+        actionLabel: actionLabel,
+        cancelLabel: cancelLabel,
+        actionType: actionType,
+        destructive: destructive,
+        badge: serviceName == null
+            ? null
+            : AppChip(label: serviceName, tone: AppChipTone.softNeutral),
+        onConfirm: () => Navigator.of(sheetContext).pop(true),
+        onCancel: () => Navigator.of(sheetContext).pop(false),
+      ),
     ),
     settings: const SheetRouteSettings(
-      sheetSize: SheetSize.expanded,
       padChild: false,
     ),
   );

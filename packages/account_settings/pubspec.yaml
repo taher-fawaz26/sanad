@@ -15,6 +15,7 @@ dependencies:
     path: ../app_assets
   auth:
     path: ../auth
+  bloc_concurrency: ^0.3.0
   contact_verification:
     path: ../contact_verification
   core:
@@ -41,6 +42,7 @@ dependencies:
 
 dev_dependencies:
   bloc_test: ^10.0.0
+  flutter_screenutil: ^5.9.3
   flutter_test:
     sdk: flutter
   mocktail: ^1.0.4

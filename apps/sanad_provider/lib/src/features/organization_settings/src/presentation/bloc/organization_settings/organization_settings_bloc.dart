@@ -1,11 +1,18 @@
+import 'dart:async';
+
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/category_entity.dart';
+import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/me_media_entity.dart';
+import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/organization_media_slot.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/organization_profile_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/provider_completion_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/social_profiles_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/working_hours_day_entity.dart';
+import 'package:sanad_provider/src/features/organization_settings/src/domain/repositories/organization_settings_repository.dart';
+import 'package:sanad_provider/src/features/organization_settings/src/domain/repositories/working_hours_repository.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/usecases/get_organization_settings_usecase.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/usecases/get_provider_completion_usecase.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/usecases/get_working_hours_usecase.dart';
@@ -43,19 +50,37 @@ class OrganizationSettingsBloc
     required GetWorkingHoursUseCase getWorkingHours,
     required UpdateWorkingHoursUseCase updateWorkingHours,
     required GetCategoriesUseCase getCategories,
+    required OrganizationSettingsRepository organizationSettingsRepository,
+    required WorkingHoursRepository workingHoursRepository,
   }) : _getOrganizationSettings = getOrganizationSettings,
        _updateServiceProviderSettings = updateServiceProviderSettings,
        _getCompletion = getCompletion,
        _getWorkingHours = getWorkingHours,
        _updateWorkingHours = updateWorkingHours,
        _getCategories = getCategories,
+       _organizationSettingsRepository = organizationSettingsRepository,
+       _workingHoursRepository = workingHoursRepository,
        super(const OrganizationSettingsState()) {
     on<OrganizationSettingsLoaded>(_onLoaded);
     on<OrganizationSettingsRefreshed>(_onLoaded);
-    on<OrganizationSettingsDescriptionSaved>(_onDescriptionSaved);
-    on<OrganizationSettingsCategoriesSaved>(_onCategoriesSaved);
-    on<OrganizationSettingsSocialProfilesSaved>(_onSocialProfilesSaved);
-    on<OrganizationSettingsWorkingHoursSaved>(_onWorkingHoursSaved);
+    // Drop duplicate submits while one is in flight (double-tap guard).
+    on<OrganizationSettingsDescriptionSaved>(
+      _onDescriptionSaved,
+      transformer: droppable(),
+    );
+    on<OrganizationSettingsCategoriesSaved>(
+      _onCategoriesSaved,
+      transformer: droppable(),
+    );
+    on<OrganizationSettingsSocialProfilesSaved>(
+      _onSocialProfilesSaved,
+      transformer: droppable(),
+    );
+    on<OrganizationSettingsWorkingHoursSaved>(
+      _onWorkingHoursSaved,
+      transformer: droppable(),
+    );
+    on<OrganizationSettingsMediaUpdated>(_onMediaUpdated);
   }
 
   final GetOrganizationSettingsUseCase _getOrganizationSettings;
@@ -64,6 +89,8 @@ class OrganizationSettingsBloc
   final GetWorkingHoursUseCase _getWorkingHours;
   final UpdateWorkingHoursUseCase _updateWorkingHours;
   final GetCategoriesUseCase _getCategories;
+  final OrganizationSettingsRepository _organizationSettingsRepository;
+  final WorkingHoursRepository _workingHoursRepository;
 
   /// A generously large page size stands in for "the full catalog" — there
   /// is no dedicated "fetch all categories" endpoint, and the category
@@ -74,7 +101,33 @@ class OrganizationSettingsBloc
     OrganizationSettingsEvent event,
     Emitter<OrganizationSettingsState> emit,
   ) async {
-    emit(state.copyWith(status: RequestStatus.loading, clearFailure: true));
+    // Cache-first, stale-while-revalidate — only for the initial open, not
+    // an explicit pull-to-refresh: seed instantly from whatever's cached,
+    // then always continue to the network fetch below in the background.
+    // Provider-completion and the category catalog are deliberately not
+    // cached (see OrganizationSettingsCacheDataSource doc) — they stay null
+    // until the network responds, same as before.
+    var seededFromCache = false;
+    if (event is OrganizationSettingsLoaded) {
+      final cachedOrganization = await _organizationSettingsRepository
+          .getCachedOrganizationSettings();
+      if (cachedOrganization != null) {
+        final cachedWorkingHours = await _workingHoursRepository
+            .getCachedWorkingHours();
+        seededFromCache = true;
+        emit(
+          state.copyWith(
+            status: RequestStatus.success,
+            organization: cachedOrganization,
+            workingHours: cachedWorkingHours ?? const [],
+          ),
+        );
+      }
+    }
+
+    if (!seededFromCache) {
+      emit(state.copyWith(status: RequestStatus.loading, clearFailure: true));
+    }
 
     final organizationFuture = _getOrganizationSettings(const NoParams()).run();
     final workingHoursFuture = _getWorkingHours(const NoParams()).run();
@@ -89,9 +142,15 @@ class OrganizationSettingsBloc
     final categoriesResult = await categoriesFuture;
 
     organizationResult.fold(
-      (failure) => emit(
-        state.copyWith(status: RequestStatus.failure, failure: failure),
-      ),
+      (failure) {
+        // Cached content is already on screen and still valid — a
+        // background-refresh failure shouldn't interrupt the user with an
+        // error over data that's perfectly fine to keep looking at.
+        if (seededFromCache) return;
+        emit(
+          state.copyWith(status: RequestStatus.failure, failure: failure),
+        );
+      },
       (organization) => emit(
         state.copyWith(
           status: RequestStatus.success,
@@ -169,11 +228,19 @@ class OrganizationSettingsBloc
       ),
       (_) {
         final organization = state.organization;
+        if (organization == null) {
+          emit(state.copyWith(saveStatus: RequestStatus.success));
+          return;
+        }
+        final merged = merge(organization);
         emit(
           state.copyWith(
             saveStatus: RequestStatus.success,
-            organization: organization == null ? null : merge(organization),
+            organization: merged,
           ),
+        );
+        unawaited(
+          _organizationSettingsRepository.cacheOrganizationSettings(merged),
         );
       },
     );
@@ -193,12 +260,51 @@ class OrganizationSettingsBloc
       (failure) => emit(
         state.copyWith(saveStatus: RequestStatus.failure, saveFailure: failure),
       ),
-      (availability) => emit(
-        state.copyWith(
-          saveStatus: RequestStatus.success,
-          workingHours: availability ?? const [],
-        ),
-      ),
+      (availability) {
+        // WorkingHoursRepositoryImpl.updateWorkingHours already
+        // write-throughs the PUT response to the cache, so no separate
+        // cache call is needed here.
+        emit(
+          state.copyWith(
+            saveStatus: RequestStatus.success,
+            workingHours: availability ?? const [],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Merges a successfully-uploaded cover/logo URL into [state.organization]
+  /// so it doesn't go stale (or get silently overwritten by a stale cached
+  /// value) until the next full network refresh. The upload/its own
+  /// loading-progress state is already owned and shown by
+  /// [IdentityHeaderBloc] — this is a pure local-state sync, not a mutation
+  /// of its own, so it doesn't touch `saveStatus`.
+  void _onMediaUpdated(
+    OrganizationSettingsMediaUpdated event,
+    Emitter<OrganizationSettingsState> emit,
+  ) {
+    final organization = state.organization;
+    if (organization == null) return;
+
+    final media = MeMediaEntity(
+      id:
+          switch (event.slot) {
+            OrganizationMediaSlot.cover => organization.coverImage?.id,
+            OrganizationMediaSlot.logo => organization.profileImage?.id,
+          } ??
+          event.url,
+      url: event.url,
+    );
+
+    final merged = switch (event.slot) {
+      OrganizationMediaSlot.cover => organization.copyWith(coverImage: media),
+      OrganizationMediaSlot.logo => organization.copyWith(profileImage: media),
+    };
+
+    emit(state.copyWith(organization: merged));
+    unawaited(
+      _organizationSettingsRepository.cacheOrganizationSettings(merged),
     );
   }
 }

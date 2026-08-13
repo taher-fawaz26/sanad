@@ -11,10 +11,9 @@ abstract final class ServiceRoutes {
   /// Request New Service form, nested under [list].
   static const String requestNew = '/services/request-new';
 
-  /// Per-service detail screen, nested under [list]. Reached with the full
-  /// `ProviderServiceEntity` via the route `extra` (the list already holds
-  /// it) — the `:id` segment is for deep-linkability only, not used to
-  /// re-fetch.
+  /// Per-service detail screen, nested under [list]. The page fetches the
+  /// full service itself via `GET /provider-services/:id` — no `extra` is
+  /// passed or required.
   static const String details = '/services/:id';
 
   static String detailsFor(String id) => '/services/$id';

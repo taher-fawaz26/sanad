@@ -20,8 +20,19 @@ class InvitationsContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<InvitationsListBloc, InvitationsListState>(
       builder: (context, state) {
+        // First-page load: skeletonize the *real* row widget with mock data
+        // (no bespoke skeleton layout) via the shared AppSkeletonizer gateway.
         if (state.status == RequestStatus.loading) {
-          return const ShimmerListSkeleton();
+          return AppSkeletonList(
+            itemBuilder: (context, index) => InvitationListItem(
+              invitation: InvitationEntity(
+                id: 'skeleton-$index',
+                fullName: BoneMock.fullName,
+                role: BoneMock.name,
+                initials: 'SN',
+              ),
+            ),
+          );
         }
 
         return Column(
@@ -49,34 +60,37 @@ class InvitationsContent extends StatelessWidget {
                     const InvitationsListRefreshEvent(),
                   );
                 },
-                child: SanadPagedList<InvitationEntity>(
-                  state: toPagingState(state.pagination),
-                  fetchNextPage: () => context.read<InvitationsListBloc>().add(
-                    const InvitationsListLoadMoreEvent(),
-                  ),
-                  padding: EdgeInsets.only(
-                    left: AppSpacing.lg,
-                    right: AppSpacing.lg,
-                    bottom: AppSpacing.lg,
-                  ),
-                  separatorBuilder: (_, _) => SizedBox(height: AppSpacing.sm),
-                  itemBuilder: (context, invitation, index) =>
-                      InvitationListItem(invitation: invitation),
-                  firstPageErrorIndicatorBuilder: (_) => Center(
-                    child: WorkerErrorState(
-                      failure: state.failure,
-                      onRetry: () => context.read<InvitationsListBloc>().add(
-                        const InvitationsListRefreshEvent(),
+                child: AppSwipeActionsGroup(
+                  child: SanadPagedList<InvitationEntity>(
+                    state: toPagingState(state.pagination),
+                    fetchNextPage: () =>
+                        context.read<InvitationsListBloc>().add(
+                          const InvitationsListLoadMoreEvent(),
+                        ),
+                    padding: EdgeInsets.only(
+                      left: AppSpacing.lg,
+                      right: AppSpacing.lg,
+                      bottom: AppSpacing.lg,
+                    ),
+                    separatorBuilder: (_, _) => SizedBox(height: AppSpacing.sm),
+                    itemBuilder: (context, invitation, index) =>
+                        InvitationListItem(invitation: invitation),
+                    firstPageErrorIndicatorBuilder: (_) => Center(
+                      child: WorkerErrorState(
+                        failure: state.failure,
+                        onRetry: () => context.read<InvitationsListBloc>().add(
+                          const InvitationsListRefreshEvent(),
+                        ),
                       ),
                     ),
-                  ),
-                  newPageErrorIndicatorBuilder: (_) => _NextPageErrorRetry(
-                    onRetry: () => context.read<InvitationsListBloc>().add(
-                      const InvitationsListLoadMoreEvent(),
+                    newPageErrorIndicatorBuilder: (_) => _NextPageErrorRetry(
+                      onRetry: () => context.read<InvitationsListBloc>().add(
+                        const InvitationsListLoadMoreEvent(),
+                      ),
                     ),
+                    noItemsFoundIndicatorBuilder: (_) =>
+                        const Center(child: _EmptyState()),
                   ),
-                  noItemsFoundIndicatorBuilder: (_) =>
-                      const Center(child: _EmptyState()),
                 ),
               ),
             ),

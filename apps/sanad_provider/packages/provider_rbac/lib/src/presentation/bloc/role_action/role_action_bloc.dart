@@ -1,3 +1,4 @@
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -14,7 +15,8 @@ class RoleActionBloc extends Bloc<RoleActionEvent, RoleActionState> {
   RoleActionBloc({required DeleteRoleUseCase deleteRoleUseCase})
     : _deleteRoleUseCase = deleteRoleUseCase,
       super(const RoleActionState()) {
-    on<DeleteRoleRequestedEvent>(_onDeleteRequested);
+    // Drop duplicate delete taps while one is in flight (double-tap guard).
+    on<DeleteRoleRequestedEvent>(_onDeleteRequested, transformer: droppable());
   }
 
   final DeleteRoleUseCase _deleteRoleUseCase;

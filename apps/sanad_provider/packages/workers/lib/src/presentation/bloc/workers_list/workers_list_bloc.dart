@@ -95,4 +95,7 @@ class WorkersListBloc extends Bloc<WorkersListEvent, WorkersListState>
   @override
   TaskEither<Failure, Page<WorkerEntity>> fetchPage(WorkersQuery query) =>
       _getWorkersUseCase(query);
+
+  @override
+  Object dedupKey(WorkerEntity item) => item.id;
 }

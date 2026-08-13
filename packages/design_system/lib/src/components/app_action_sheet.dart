@@ -62,62 +62,61 @@ class AppActionSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            decoration: BoxDecoration(
-              color: spec.surfaceColor,
-              borderRadius: spec.topRadius,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (title != null) ...[
-                  SizedBox(height: AppSpacing.lg),
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: spec.horizontalPadding,
+          Flexible(
+            child: Container(
+              decoration: BoxDecoration(
+                color: spec.surfaceColor,
+                borderRadius: spec.topRadius,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (title != null) ...[
+                    SizedBox(height: AppSpacing.lg),
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: spec.horizontalPadding,
+                      ),
+                      child: Text(title!, style: spec.titleStyle),
                     ),
-                    child: Text(title!, style: spec.titleStyle),
-                  ),
-                  SizedBox(height: AppSpacing.sm),
-                ],
-                if (child != null) child!,
-                if (items.isNotEmpty)
-                  ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxHeight: MediaQuery.sizeOf(context).height * 0.6,
-                    ),
-                    child: SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          for (var i = 0; i < items.length; i++) ...[
-                            if (i > 0 || child != null)
-                              Divider(height: 1, color: spec.dividerColor),
-                            _ActionSheetRow(
-                              item: items[i],
-                              spec: spec,
-                              colors: colors,
-                            ),
+                    SizedBox(height: AppSpacing.sm),
+                  ],
+                  if (child != null) child!,
+                  if (items.isNotEmpty)
+                    Flexible(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (var i = 0; i < items.length; i++) ...[
+                              if (i > 0 || child != null)
+                                Divider(height: 1, color: spec.dividerColor),
+                              _ActionSheetRow(
+                                item: items[i],
+                                spec: spec,
+                                colors: colors,
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                if (footer != null) ...[
-                  Divider(height: 1, color: spec.dividerColor),
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      spec.horizontalPadding,
-                      AppSpacing.sm,
-                      spec.horizontalPadding,
-                      AppSpacing.sm,
+                  if (footer != null) ...[
+                    Divider(height: 1, color: spec.dividerColor),
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        spec.horizontalPadding,
+                        AppSpacing.sm,
+                        spec.horizontalPadding,
+                        AppSpacing.sm,
+                      ),
+                      child: footer!,
                     ),
-                    child: footer!,
-                  ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
           if (showCancel) ...[
@@ -210,7 +209,7 @@ Future<T?> showAppActionSheet<T>({
   String cancelLabel = 'Cancel',
   VoidCallback? onCancel,
   bool showCancel = true,
-  bool isScrollControlled = false,
+  bool isScrollControlled = true,
   bool useRootNavigator = false,
 }) {
   final colors = context.appColors;

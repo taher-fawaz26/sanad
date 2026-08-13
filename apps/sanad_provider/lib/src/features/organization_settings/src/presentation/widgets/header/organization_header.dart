@@ -16,7 +16,7 @@ import 'package:shared_ui/shared_ui.dart';
 /// `media` package via [MediaCoordinator]; uploading is owned by
 /// [IdentityHeaderBloc]. This widget only provides the bloc and maps its
 /// state onto the pure [EditableImageHeader].
-class OrganizationHeader extends StatelessWidget {
+class OrganizationHeader extends StatefulWidget {
   const OrganizationHeader({
     super.key,
     this.coverUrl,
@@ -24,6 +24,7 @@ class OrganizationHeader extends StatelessWidget {
     this.name,
     this.summary,
     this.status = OrganizationProfileStatus.incomplete,
+    this.onMediaUpdated,
   });
 
   final String? coverUrl;
@@ -32,17 +33,68 @@ class OrganizationHeader extends StatelessWidget {
   final String? summary;
   final OrganizationProfileStatus status;
 
+  /// Fired once a cover/logo upload succeeds, with the new image URL — lets
+  /// the parent (`OrganizationSettingsBloc`) sync its own copy of the
+  /// profile so the change survives a subsequent reload instead of only
+  /// living in this header's own [IdentityHeaderBloc].
+  final void Function(OrganizationMediaSlot slot, String url)? onMediaUpdated;
+
+  @override
+  State<OrganizationHeader> createState() => _OrganizationHeaderState();
+}
+
+class _OrganizationHeaderState extends State<OrganizationHeader> {
+  late final IdentityHeaderBloc _bloc;
+
+  @override
+  void initState() {
+    super.initState();
+    _bloc = sl<IdentityHeaderBloc>()
+      ..add(
+        IdentityHeaderInitialized(
+          coverUrl: widget.coverUrl,
+          logoUrl: widget.logoUrl,
+        ),
+      );
+  }
+
+  @override
+  void didUpdateWidget(OrganizationHeader oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // `BlocProvider(create: ...)` only runs once per element — without this,
+    // a cold-open's first frame (built with no image yet, e.g. the loading
+    // skeleton profile or a still-in-flight cache/network read) seeds
+    // IdentityHeaderBloc with null urls, and the real urls that arrive on a
+    // later rebuild are silently dropped since the bloc is never re-seeded.
+    // Re-seeding is skipped while a slot is mid-upload so it doesn't clobber
+    // the optimistic/progress state the user is currently watching.
+    final coverChanged = oldWidget.coverUrl != widget.coverUrl;
+    final logoChanged = oldWidget.logoUrl != widget.logoUrl;
+    if (!coverChanged && !logoChanged) return;
+    if (_bloc.state.cover.isBusy || _bloc.state.logo.isBusy) return;
+    _bloc.add(
+      IdentityHeaderInitialized(
+        coverUrl: widget.coverUrl,
+        logoUrl: widget.logoUrl,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _bloc.close();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<IdentityHeaderBloc>(
-      create: (_) => sl<IdentityHeaderBloc>()
-        ..add(
-          IdentityHeaderInitialized(coverUrl: coverUrl, logoUrl: logoUrl),
-        ),
+    return BlocProvider<IdentityHeaderBloc>.value(
+      value: _bloc,
       child: _OrganizationHeaderView(
-        name: name,
-        summary: summary,
-        status: status,
+        name: widget.name,
+        summary: widget.summary,
+        status: widget.status,
+        onMediaUpdated: widget.onMediaUpdated,
       ),
     );
   }
@@ -53,11 +105,13 @@ class _OrganizationHeaderView extends StatelessWidget {
     this.name,
     this.summary,
     this.status = OrganizationProfileStatus.incomplete,
+    this.onMediaUpdated,
   });
 
   final String? name;
   final String? summary;
   final OrganizationProfileStatus status;
+  final void Function(OrganizationMediaSlot slot, String url)? onMediaUpdated;
 
   Future<void> _edit(
     BuildContext context,
@@ -90,7 +144,22 @@ class _OrganizationHeaderView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<IdentityHeaderBloc, IdentityHeaderState>(
+    return BlocConsumer<IdentityHeaderBloc, IdentityHeaderState>(
+      listenWhen: (previous, current) =>
+          (previous.cover.status != RequestStatus.success &&
+              current.cover.status == RequestStatus.success) ||
+          (previous.logo.status != RequestStatus.success &&
+              current.logo.status == RequestStatus.success),
+      listener: (context, state) {
+        final coverUrl = state.cover.imageUrl;
+        if (state.cover.status == RequestStatus.success && coverUrl != null) {
+          onMediaUpdated?.call(OrganizationMediaSlot.cover, coverUrl);
+        }
+        final logoUrl = state.logo.imageUrl;
+        if (state.logo.status == RequestStatus.success && logoUrl != null) {
+          onMediaUpdated?.call(OrganizationMediaSlot.logo, logoUrl);
+        }
+      },
       builder: (context, state) {
         return AppSectionCard(
           child: EditableImageHeader(

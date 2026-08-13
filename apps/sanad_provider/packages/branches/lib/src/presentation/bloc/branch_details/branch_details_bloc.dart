@@ -1,3 +1,4 @@
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/domain/usecases/branch_usecase_params.dart';
 import 'package:branches/src/domain/usecases/get_branch_usecase.dart';
@@ -21,8 +22,9 @@ class BranchDetailsBloc extends Bloc<BranchDetailsEvent, BranchDetailsState> {
        super(const BranchDetailsState()) {
     on<BranchDetailsFetchEvent>(_onFetch);
     on<BranchDetailsRefreshEvent>(_onRefresh);
-    on<BranchStatusToggleEvent>(_onStatusToggle);
-    on<BranchSectionUpdated>(_onSectionUpdated);
+    // Drop duplicate submits while one is in flight (double-tap guard).
+    on<BranchStatusToggleEvent>(_onStatusToggle, transformer: droppable());
+    on<BranchSectionUpdated>(_onSectionUpdated, transformer: droppable());
   }
 
   final GetBranchUseCase _getBranchUseCase;

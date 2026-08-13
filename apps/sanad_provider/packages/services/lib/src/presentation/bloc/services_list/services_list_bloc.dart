@@ -1,8 +1,8 @@
-import 'dart:async';
-
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fpdart/fpdart.dart';
 import 'package:services/src/domain/entities/provider_service_entity.dart';
 import 'package:services/src/domain/entities/provider_service_status.dart';
 import 'package:services/src/domain/usecases/list_provider_services_usecase.dart';
@@ -13,6 +13,31 @@ part 'services_list_state.dart';
 /// Debounce applied to search keystrokes before hitting the server.
 const _searchDebounce = Duration(milliseconds: 350);
 
+/// Query for [ListProviderServicesUseCase], adapted to [PageQuery] so
+/// [ServicesListBloc] can use the shared [PaginationMixin] instead of
+/// hand-rolling fetch/append/error reducers.
+class _ServicesQuery extends PageQuery {
+  const _ServicesQuery({
+    super.page,
+    super.limit = 10,
+    super.search,
+    this.status,
+  });
+
+  final ProviderServiceStatus? status;
+
+  @override
+  _ServicesQuery copyWithPage(int page) => _ServicesQuery(
+    page: page,
+    limit: limit,
+    search: search,
+    status: status,
+  );
+
+  @override
+  List<Object?> get props => [...super.props, status];
+}
+
 /// Owns the provider's own services list on the dashboard (`GET
 /// /provider-services`): fetch, refresh, load-more, search, and status
 /// filter.
@@ -20,81 +45,56 @@ const _searchDebounce = Duration(milliseconds: 350);
 /// Does not own single-service mutations (delete / status toggle) — those
 /// live in [ServiceActionBloc]; success is folded back in here via
 /// [ServiceReplacedInListEvent] / [ServiceRemovedFromListEvent].
-class ServicesListBloc extends Bloc<ServicesListEvent, ServicesListState> {
+class ServicesListBloc extends Bloc<ServicesListEvent, ServicesListState>
+    with
+        PaginationMixin<
+          ServicesListEvent,
+          ServicesListState,
+          ProviderServiceEntity,
+          _ServicesQuery
+        > {
   ServicesListBloc({
     required ListProviderServicesUseCase listProviderServicesUseCase,
   }) : _listProviderServicesUseCase = listProviderServicesUseCase,
        super(const ServicesListState()) {
-    on<ServicesListFetchEvent>(_onFetch);
-    on<ServicesListRefreshEvent>(_onRefresh);
-    on<ServicesListLoadMoreEvent>(_onLoadMore);
-    on<ServicesListSearchChangedEvent>(_onSearchChanged);
-    on<ServicesListStatusChangedEvent>(_onStatusChanged);
+    on<ServicesListFetchEvent>((event, emit) => loadFirstPage(emit));
+    on<ServicesListRefreshEvent>(
+      (event, emit) => refresh(emit),
+      transformer: droppable(),
+    );
+    on<ServicesListLoadMoreEvent>(
+      (event, emit) => loadNextPage(emit),
+      transformer: droppable(),
+    );
+    on<ServicesListSearchChangedEvent>(
+      _onSearchChanged,
+      transformer: restartable(),
+    );
+    on<ServicesListStatusChangedEvent>(
+      _onStatusChanged,
+      transformer: restartable(),
+    );
     on<ServiceReplacedInListEvent>(_onReplaced);
     on<ServiceRemovedFromListEvent>(_onRemoved);
   }
 
   final ListProviderServicesUseCase _listProviderServicesUseCase;
-  Timer? _searchTimer;
 
-  String? get _search =>
-      state.searchQuery.trim().isEmpty ? null : state.searchQuery.trim();
-
-  @override
-  Future<void> close() {
-    _searchTimer?.cancel();
-    return super.close();
-  }
-
-  Future<void> _onFetch(
-    ServicesListFetchEvent event,
-    Emitter<ServicesListState> emit,
-  ) async {
-    emit(state.copyWith(status: RequestStatus.loading, clearFailure: true));
-    await _fetch(emit, page: 1, append: false);
-  }
-
-  Future<void> _onRefresh(
-    ServicesListRefreshEvent event,
-    Emitter<ServicesListState> emit,
-  ) async {
-    emit(state.copyWith(status: RequestStatus.loading, clearFailure: true));
-    await _fetch(emit, page: 1, append: false);
-  }
-
-  Future<void> _onLoadMore(
-    ServicesListLoadMoreEvent event,
-    Emitter<ServicesListState> emit,
-  ) async {
-    if (state.loadingMore || !state.hasMore) return;
-    emit(state.copyWith(loadingMore: true));
-    await _fetch(emit, page: state.page + 1, append: true);
-  }
-
-  void _onSearchChanged(
+  Future<void> _onSearchChanged(
     ServicesListSearchChangedEvent event,
     Emitter<ServicesListState> emit,
-  ) {
+  ) async {
     emit(state.copyWith(searchQuery: event.query));
-    _searchTimer?.cancel();
-    _searchTimer = Timer(_searchDebounce, () {
-      if (isClosed) return;
-      add(const ServicesListFetchEvent());
-    });
+    await Future<void>.delayed(_searchDebounce);
+    await onQueryChanged(emit);
   }
 
   Future<void> _onStatusChanged(
     ServicesListStatusChangedEvent event,
     Emitter<ServicesListState> emit,
   ) async {
-    emit(
-      state.copyWith(
-        statusFilter: event.status,
-        status: RequestStatus.loading,
-        clearFailure: true,
-      ),
-    );
-    await _fetch(emit, page: 1, append: false);
+    emit(state.copyWith(statusFilter: event.status));
+    await onQueryChanged(emit);
   }
 
   void _onReplaced(
@@ -104,7 +104,7 @@ class ServicesListBloc extends Bloc<ServicesListEvent, ServicesListState> {
     final updated = state.services
         .map((s) => s.id == event.service.id ? event.service : s)
         .toList();
-    emit(state.copyWith(services: updated));
+    emit(state.copyWith(pagination: state.pagination.copyWith(items: updated)));
   }
 
   void _onRemoved(
@@ -114,39 +114,51 @@ class ServicesListBloc extends Bloc<ServicesListEvent, ServicesListState> {
     final updated = state.services
         .where((s) => s.id != event.serviceId)
         .toList();
-    emit(state.copyWith(services: updated));
+    emit(state.copyWith(pagination: state.pagination.copyWith(items: updated)));
   }
 
-  Future<void> _fetch(
-    Emitter<ServicesListState> emit, {
-    required int page,
-    required bool append,
-  }) async {
-    final result = await _listProviderServicesUseCase(
-      ListProviderServicesParams(
-        page: page,
-        search: _search,
-        status: state.statusFilter == ProviderServiceStatus.all
-            ? null
-            : state.statusFilter,
-      ),
-    ).run();
+  @override
+  PaginationData<ProviderServiceEntity> readPage(ServicesListState state) =>
+      state.pagination;
 
-    result.fold(
-      (failure) => emit(
-        append
-            ? state.copyWith(loadingMore: false)
-            : state.copyWith(status: RequestStatus.failure, failure: failure),
+  @override
+  ServicesListState writePage(
+    ServicesListState state,
+    PaginationData<ProviderServiceEntity> data,
+  ) => state.copyWith(pagination: data);
+
+  @override
+  _ServicesQuery buildQuery({required int page}) => _ServicesQuery(
+    page: page,
+    search: state.searchQuery.trim().isEmpty ? null : state.searchQuery.trim(),
+    status: state.statusFilter == ProviderServiceStatus.all
+        ? null
+        : state.statusFilter,
+  );
+
+  @override
+  TaskEither<Failure, Page<ProviderServiceEntity>> fetchPage(
+    _ServicesQuery query,
+  ) => _listProviderServicesUseCase(
+    ListProviderServicesParams(
+      page: query.page,
+      limit: query.limit,
+      search: query.search,
+      status: query.status,
+    ),
+  ).map(
+    (result) => Page(
+      items: result.items,
+      meta: PageMeta(
+        totalItems: result.meta.totalItems,
+        itemCount: result.meta.itemCount,
+        itemsPerPage: result.meta.itemsPerPage,
+        totalPages: result.meta.totalPages,
+        currentPage: result.meta.currentPage,
       ),
-      (paged) => emit(
-        state.copyWith(
-          status: RequestStatus.success,
-          services: append ? [...state.services, ...paged.items] : paged.items,
-          page: paged.meta.currentPage,
-          totalPages: paged.meta.totalPages,
-          loadingMore: false,
-        ),
-      ),
-    );
-  }
+    ),
+  );
+
+  @override
+  Object dedupKey(ProviderServiceEntity item) => item.id;
 }

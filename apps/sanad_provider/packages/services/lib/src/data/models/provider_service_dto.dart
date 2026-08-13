@@ -18,6 +18,8 @@ class ProviderServiceDto extends ProviderServiceEntity
     required super.images,
     required super.createdAt,
     required super.updatedAt,
+    super.requests,
+    super.revenue,
   });
 
   factory ProviderServiceDto.fromJson(Map<String, dynamic> json) {
@@ -53,6 +55,10 @@ class ProviderServiceDto extends ProviderServiceEntity
       images: images,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
+      // Only present on the by-id detail response — absent (list rows,
+      // create/update responses) defaults to 0 via the entity constructor.
+      requests: (json['requests'] as num?)?.toInt() ?? 0,
+      revenue: (json['revenue'] as num?) ?? 0,
     );
   }
 
@@ -80,5 +86,7 @@ class ProviderServiceDto extends ProviderServiceEntity
         .toList(),
     createdAt: createdAt,
     updatedAt: updatedAt,
+    requests: requests,
+    revenue: revenue,
   );
 }

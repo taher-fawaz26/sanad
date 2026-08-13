@@ -1,3 +1,4 @@
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -16,7 +17,8 @@ class EditServiceBloc extends Bloc<EditServiceEvent, EditServiceState> {
   }) : _updateProviderServiceDescriptionUseCase =
            updateProviderServiceDescriptionUseCase,
        super(const EditServiceState()) {
-    on<EditServiceSubmittedEvent>(_onSubmitted);
+    // Drop duplicate submits while one is in flight (double-tap guard).
+    on<EditServiceSubmittedEvent>(_onSubmitted, transformer: droppable());
   }
 
   final UpdateProviderServiceDescriptionUseCase

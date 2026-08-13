@@ -78,11 +78,17 @@ class GoogleNearbyAreasRepositoryImpl implements NearbyAreasRepository {
     return TaskEither(() async {
       final samples = _boundedSamplePoints(center: center, radiusKm: radiusKm);
       final language = localeSubtag(languageCode);
+      appLogger.d(
+        '[NearbyAreas] center=(${center.latitude}, ${center.longitude}) '
+        'radiusKm=$radiusKm gridSamples=${samples.length}',
+      );
 
       final areasByPlaceId = <String, ServingArea>{};
+      final placeIdsSeen = <String>{};
       Failure? firstFailure;
       var anySuccess = false;
       var anyFailure = false;
+      var totalRawResults = 0;
 
       for (var i = 0; i < samples.length; i += _concurrency) {
         final chunk = samples.sublist(
@@ -103,7 +109,9 @@ class GoogleNearbyAreasRepositoryImpl implements NearbyAreasRepository {
             },
             (areas) {
               anySuccess = true;
+              totalRawResults += areas.length;
               for (final area in areas) {
+                placeIdsSeen.add(area.placeId);
                 final within =
                     GeoMath.distanceKm(center, area.latLng) <= radiusKm;
                 if (within) {
@@ -119,12 +127,28 @@ class GoogleNearbyAreasRepositoryImpl implements NearbyAreasRepository {
       // of successes is still useful, and a single flaky sample must not
       // blank the coverage list — the caller is told via hadPartialFailure.
       if (!anySuccess && firstFailure != null) {
+        appLogger.w(
+          '[NearbyAreas] every sample failed — terminal=failure '
+          'firstFailure=${firstFailure.runtimeType}',
+        );
         return Either.left(firstFailure!);
       }
 
+      final finalAreas = areasByPlaceId.values.toList(growable: false);
+      appLogger.d(
+        '[NearbyAreas] rawResults=$totalRawResults '
+        'uniquePlaceIdsFromGoogle=${placeIdsSeen.length} '
+        'afterHaversineFilter=${finalAreas.length} '
+        'terminal=${finalAreas.isEmpty
+            ? 'empty'
+            : anyFailure
+            ? 'partialFailure'
+            : 'success'}',
+      );
+
       return Either.right(
         NearbyAreasResult(
-          areas: areasByPlaceId.values.toList(growable: false),
+          areas: finalAreas,
           hadPartialFailure: anySuccess && anyFailure,
         ),
       );
@@ -204,6 +228,16 @@ class GoogleNearbyAreasRepositoryImpl implements NearbyAreasRepository {
       );
       final json = response.data!;
       final status = json['status'] as String;
+      // Never log the API key — only the HTTP status and Google's own
+      // `status` field, which is what actually distinguishes a REQUEST_DENIED
+      // (key/restriction problem) from ZERO_RESULTS (nothing there) from a
+      // genuine network failure — all of which otherwise look identical
+      // (empty area list) to the end user.
+      appLogger.d(
+        '[NearbyAreas] geocode httpStatus=${response.statusCode} '
+        'googleStatus=$status resultCount='
+        '${(json['results'] as List<dynamic>?)?.length ?? 0}',
+      );
       if (status == 'ZERO_RESULTS') return const Right([]);
       final statusFailure = _statusFailure(status, json);
       if (statusFailure != null) return Left(statusFailure);
@@ -217,8 +251,13 @@ class GoogleNearbyAreasRepositoryImpl implements NearbyAreasRepository {
       }
       return Right(areas);
     } on DioException catch (error) {
+      appLogger.w(
+        '[NearbyAreas] geocode request failed: ${error.type} '
+        '${error.response?.statusCode}',
+      );
       return Left(_dioFailure(error));
     } on Object catch (error) {
+      appLogger.w('[NearbyAreas] geocode request threw: $error');
       return Left(
         PlacesUnknownFailure(message: 'Area lookup failed: $error'),
       );
@@ -319,5 +358,13 @@ class NoopNearbyAreasRepository implements NearbyAreasRepository {
     required LatLng center,
     required double radiusKm,
     String? languageCode,
-  }) => TaskEither.right(const NearbyAreasResult(areas: []));
+  }) {
+    // Logged per-call (not just once at DI init) so this is never mistaken
+    // for a genuine "no neighborhoods here" result while triaging a report.
+    appLogger.e(
+      '[NearbyAreas] NoopNearbyAreasRepository in use — returning zero areas '
+      'because the Maps REST key is not configured for this build.',
+    );
+    return TaskEither.right(const NearbyAreasResult(areas: []));
+  }
 }

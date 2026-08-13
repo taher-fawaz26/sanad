@@ -14,8 +14,6 @@ import 'package:network/src/interceptors/logging_interceptor.dart';
 import 'package:network/src/interceptors/retry_on_timeout_interceptor.dart';
 import 'package:network/src/interceptors/timeout_error_interceptor.dart';
 import 'package:network/src/network_config.dart';
-import 'package:network/src/ssl/certificate_pinner.dart';
-import 'package:network/src/ssl/pinned_http_client_adapter.dart';
 import 'package:network/src/token/token_manager.dart';
 import 'package:network/src/token/token_manager_impl.dart';
 
@@ -33,15 +31,12 @@ import 'package:network/src/token/token_manager_impl.dart';
 /// * [onUnauthorized] — invoked when refresh fails; the app forces logout
 ///   through its own `AuthStatusNotifier` (kept behind a callback so
 ///   `network` never depends on `auth`).
-/// * [certificatePinner] — optional override; defaults to
-///   [pinnerFromEnvironment] which reads `--dart-define=TLS_PINS`.
 ///
 /// Preconditions: `TokenStorage` must already be registered — apps own the
 /// concrete storage (secure vs test double) so `network` doesn't reach into
 /// `storage`.
 ///
 /// Registers under `sl`:
-/// * `CertificatePinner`
 /// * `Dio` named `'rawDio'` (no auth interceptor)
 /// * `TokenManager` (initialized before the future completes)
 /// * `ConnectivityService` / `ConnectivityController` / `NetworkGuard`
@@ -59,20 +54,15 @@ abstract final class NetworkDI {
     required Logger logger,
     required String Function() resolveLanguageCode,
     required void Function() onUnauthorized,
-    CertificatePinner? certificatePinner,
   }) async {
     sl
       ..registerLazySingleton<NetworkConfig>(() => networkConfig)
-      ..registerLazySingleton<CertificatePinner>(
-        () => certificatePinner ?? pinnerFromEnvironment(),
-      )
       // Raw Dio — no AuthInterceptor. Used by TokenManagerImpl to refresh
       // without triggering itself.
       ..registerLazySingleton<Dio>(
         () {
           final config = sl<NetworkConfig>();
           final dio = Dio(config.dioBaseOptions);
-          installPinnedAdapter(dio, sl<CertificatePinner>());
           dio.interceptors.add(LoggingInterceptor(logger: logger));
           return dio;
         },
@@ -99,7 +89,6 @@ abstract final class NetworkDI {
         () {
           final config = sl<NetworkConfig>();
           final dio = Dio(config.dioBaseOptions);
-          installPinnedAdapter(dio, sl<CertificatePinner>());
           dio.interceptors.addAll([
             AcceptLanguageInterceptor(
               resolveLanguageCode: resolveLanguageCode,

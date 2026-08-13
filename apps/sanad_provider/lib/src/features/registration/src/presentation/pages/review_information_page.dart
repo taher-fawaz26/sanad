@@ -1,6 +1,5 @@
-import 'dart:async';
-
 import 'package:asset_picker/asset_picker.dart';
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:document_flow/document_flow.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -32,39 +31,35 @@ class ReviewInformationPage extends StatefulWidget {
 }
 
 class _ReviewInformationPageState extends State<ReviewInformationPage> {
-  Future<void> _handleContinueToDashboard(BuildContext context) async {
-    final bloc = context.read<DocumentFlowBloc>();
+  /// Maps the flow's submit-related phases onto [RequestStatus] for
+  /// [MutationListener]. Extraction failures use the same [PhaseFailure]
+  /// type with a different [FailedStage] — those are not a submit mutation
+  /// and must not surface the submit dialog/retry sheet, so they map to
+  /// [RequestStatus.initial] (handled elsewhere on this page).
+  RequestStatus _submitStatus(DocumentFlowState state) => switch (state
+      .phase) {
+    PhaseSubmitting() => RequestStatus.loading,
+    PhaseSuccess() => RequestStatus.success,
+    PhaseFailure(stage: FailedStage.submit) => RequestStatus.failure,
+    _ => RequestStatus.initial,
+  };
 
-    unawaited(
-      showAppProgressDialog(
-        context: context,
-        title: 'registration.completing_profile'.tr(),
-      ),
-    );
+  void _onSubmitSuccess(BuildContext context) => context.go(widget.homeRoute);
 
-    bloc.add(const SubmitRequested());
-    await bloc.stream.firstWhere(
-      (state) => state.phase is PhaseSuccess || state.phase is PhaseFailure,
-    );
-
-    if (!context.mounted) return;
-    dismissAppProgressDialog(context);
-
-    if (bloc.state.phase is PhaseSuccess) {
-      context.go(widget.homeRoute);
-      return;
-    }
-
-    final failure = bloc.state.failure;
+  Future<void> _onSubmitFailure(
+    BuildContext context,
+    DocumentFlowState state,
+  ) async {
+    final failure = state.failure;
     final errorMessage = failure is SubmitFailure ? failure.messageKey : null;
-    if (!context.mounted) return;
+
     final retry = await showProfileCompletionErrorDialog(
       context: context,
       errorMessage: errorMessage,
     );
 
     if ((retry ?? false) && context.mounted) {
-      await _handleContinueToDashboard(context);
+      context.read<DocumentFlowBloc>().add(const SubmitRequested());
     }
   }
 
@@ -111,6 +106,22 @@ class _ReviewInformationPageState extends State<ReviewInformationPage> {
     final emiratesId = extracted.sectionOf(DocumentType.emiratesIdFront);
     final tradeLicence = extracted.sectionOf(DocumentType.tradeLicense);
 
+    return MutationListener<DocumentFlowBloc, DocumentFlowState>(
+      status: _submitStatus,
+      title: (context) => 'registration.completing_profile'.tr(),
+      onSuccess: (context, state) => _onSubmitSuccess(context),
+      onFailure: _onSubmitFailure,
+      child: _buildReview(context, state, extracted, emiratesId, tradeLicence),
+    );
+  }
+
+  Widget _buildReview(
+    BuildContext context,
+    DocumentFlowState state,
+    ExtractedDocuments extracted,
+    ExtractedDocument? emiratesId,
+    ExtractedDocument? tradeLicence,
+  ) {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -146,7 +157,9 @@ class _ReviewInformationPageState extends State<ReviewInformationPage> {
           AppButtonPresets.primary(
             label: 'registration.continue_to_dashboard'.tr(),
             onPressed: extracted.allOk
-                ? () => _handleContinueToDashboard(context)
+                ? () => context.read<DocumentFlowBloc>().add(
+                    const SubmitRequested(),
+                  )
                 : null,
           ),
         ],

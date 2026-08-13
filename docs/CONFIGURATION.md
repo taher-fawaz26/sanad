@@ -74,6 +74,13 @@ already pass `--dart-define-from-file=dart_defines/<platform>.json`. **CI inject
 the real values** by writing these files (or overriding the define) at build
 time. Real keys are never committed — only the `*.example.json` templates are.
 
+The Firebase Distribution workflow (`.github/workflows/firebase-distribution.yml`)
+writes `dart_defines/android.json` for the `sanad_provider` Android build from
+the **`MAPS_API_KEY_ANDROID`** repository/environment secret before building —
+without it, the APK's serving-area discovery silently returns zero areas
+(`NoopNearbyAreasRepository`). `sanad_client` doesn't use Maps and needs no
+dart-define.
+
 ## Feature Flags
 
 Defined in `FeatureFlags` class in `packages/config`:

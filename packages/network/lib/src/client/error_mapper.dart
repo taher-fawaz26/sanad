@@ -5,7 +5,6 @@ import 'package:core/core.dart';
 import 'package:dio/dio.dart';
 import 'package:network/src/exceptions/api_timeout_exception.dart';
 import 'package:network/src/messages/error_messages.dart';
-import 'package:network/src/ssl/secure_transport_exceptions.dart';
 
 /// Maps third-party exceptions (Dio, SocketException) to domain [Failure]s.
 /// No Dio types ever leak past this class.
@@ -55,9 +54,9 @@ abstract final class ErrorMapper {
     final inner = e.error;
 
     if (inner is ApiTimeoutException) return _fromApiTimeout(inner);
-    if (inner is TlsPinningRejectedException ||
-        inner is CertificateValidationFailedException ||
-        inner is UnexpectedTransportSecurityException) {
+    // Platform TLS handshake failure (invalid/expired/untrusted cert) — thrown
+    // by dart:io before Dio's own exception typing kicks in.
+    if (inner is HandshakeException) {
       return const SecureConnectionFailure(
         message: ErrorMessages.secureConnectionFailed,
         code: 'secure_connection',
@@ -188,13 +187,6 @@ abstract final class ErrorMapper {
         return const NoInternetFailure(message: ErrorMessages.noInternet);
 
       case DioExceptionType.badCertificate:
-        if (inner is TlsPinningRejectedException ||
-            inner is CertificateValidationFailedException) {
-          return const SecureConnectionFailure(
-            message: ErrorMessages.secureConnectionFailed,
-            code: 'secure_connection',
-          );
-        }
         if (inner is SocketException) {
           return const NoInternetFailure(message: ErrorMessages.noInternet);
         }

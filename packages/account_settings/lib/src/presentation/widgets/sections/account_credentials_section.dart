@@ -16,6 +16,7 @@ class AccountCredentialsSection extends StatefulWidget {
     this.onChangePhone,
     this.onAddEmail,
     this.onChangeEmail,
+    this.onEditName,
   });
 
   final String? name;
@@ -26,6 +27,7 @@ class AccountCredentialsSection extends StatefulWidget {
   final VoidCallback? onChangePhone;
   final VoidCallback? onAddEmail;
   final VoidCallback? onChangeEmail;
+  final VoidCallback? onEditName;
 
   @override
   State<AccountCredentialsSection> createState() =>
@@ -86,6 +88,10 @@ class _AccountCredentialsSectionState extends State<AccountCredentialsSection> {
             label: 'settings.name'.tr(),
             controller: _nameController,
             readOnly: true,
+            trailing: AppFieldTextLinkTrailing(
+              label: 'settings.change'.tr(),
+              onTap: widget.onEditName,
+            ),
           ),
           SizedBox(height: AppSpacing.lg),
           AppPhoneField(

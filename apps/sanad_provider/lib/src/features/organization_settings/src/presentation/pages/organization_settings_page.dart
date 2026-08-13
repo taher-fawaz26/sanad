@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
+import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/provider_completion_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/bloc/provider_completion/provider_completion_bloc.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/bloc/provider_overview/provider_overview_bloc.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/sections/organization_setup_card.dart';
@@ -37,14 +38,33 @@ class OrganizationSettingsPage extends StatelessWidget {
               sl<ProviderOverviewBloc>()..add(const ProviderOverviewLoaded()),
         ),
         BlocProvider<ProviderCompletionBloc>(
-          create: (_) => sl<ProviderCompletionBloc>()
-            ..add(const ProviderCompletionLoaded()),
+          create: (_) =>
+              sl<ProviderCompletionBloc>()
+                ..add(const ProviderCompletionLoaded()),
         ),
       ],
       child: const _OrganizationSettingsView(),
     );
   }
 }
+
+/// Realistic mock used only to skeletonize the real setup card via
+/// [AppSkeletonizer] — no bespoke skeleton layout.
+final _skeletonCompletion = ProviderCompletionEntity(
+  percentage: 40,
+  requiredCompleted: 2,
+  requiredTotal: 5,
+  visibleToCustomers: false,
+  items: [
+    for (final id in ProviderCompletionItemId.values)
+      ProviderCompletionItemEntity(
+        id: id,
+        label: BoneMock.words(2),
+        completed: false,
+        required: true,
+      ),
+  ],
+);
 
 /// Re-fetches both KPI-hub sections — dispatched after returning from any
 /// action that could change setup completion or the overview counts (add
@@ -58,16 +78,6 @@ void _refreshHub(BuildContext context) {
 
 class _OrganizationSettingsView extends StatelessWidget {
   const _OrganizationSettingsView();
-
-  /// First letter of up to the first two words of [name], uppercased —
-  /// [AppAvatar]'s placeholder content. `null` falls back to the avatar's
-  /// own default rendering.
-  String? _initialsOf(String? name) {
-    final trimmed = name?.trim();
-    if (trimmed == null || trimmed.isEmpty) return null;
-    final words = trimmed.split(RegExp(r'\s+')).take(2);
-    return words.map((w) => w[0].toUpperCase()).join();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,137 +94,132 @@ class _OrganizationSettingsView extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: colors.surface,
+      appBar: AppNavBar(
+        title: businessName ?? 'branches.company_name'.tr(),
+        trailingAction: AppNavBarTrailingAction.icon,
+        trailing: AppNotificationIcon(
+          hasUnread: true,
+          onTap: () {},
+        ),
+      ),
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: ListView(
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.xl,
+            vertical: AppSpacing.md,
+          ),
           children: [
-            AppTableRow(
-              title: businessName ?? 'branches.company_name'.tr(),
-              leading: AppTableLeading.avatar,
-              leadingAvatar: AppAvatar(initials: _initialsOf(businessName)),
-              trailing: AppTableTrailing.icon,
-              trailingIcon: AppNotificationIcon(
-                hasUnread: true,
-                onTap: () {},
-              ),
+            BlocBuilder<ProviderCompletionBloc, ProviderCompletionState>(
+              builder: (context, state) {
+                final completion = state.completion;
+                if (completion != null) {
+                  return OrganizationSetupCard(
+                    completion: completion,
+                    onStageAction: (id) => _onSetupStageAction(context, id),
+                  );
+                }
+                if (state.hasError) {
+                  return _SetupError(
+                    failure: state.failure,
+                    onRetry: () => context.read<ProviderCompletionBloc>().add(
+                      const ProviderCompletionLoaded(),
+                    ),
+                  );
+                }
+                // Skeletonize the *real* setup card with mock data instead
+                // of a bespoke skeleton layout.
+                return AppSkeletonizer(
+                  enabled: true,
+                  child: OrganizationSetupCard(
+                    completion: _skeletonCompletion,
+                    onStageAction: (_) {},
+                  ),
+                );
+              },
             ),
-            Expanded(
-              child: ListView(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xl,
-                  vertical: AppSpacing.md,
-                ),
-                children: [
-                  BlocBuilder<ProviderCompletionBloc, ProviderCompletionState>(
-                    builder: (context, state) {
-                      final completion = state.completion;
-                      if (completion != null) {
-                        return OrganizationSetupCard(
-                          completion: completion,
-                          onStageAction: (id) =>
-                              _onSetupStageAction(context, id),
-                        );
-                      }
-                      if (state.hasError) {
-                        return _SetupError(
-                          failure: state.failure,
-                          onRetry: () => context
-                              .read<ProviderCompletionBloc>()
-                              .add(const ProviderCompletionLoaded()),
-                        );
-                      }
-                      return const _SetupLoading();
-                    },
-                  ),
-                  SizedBox(height: AppSpacing.lg),
-                  BlocBuilder<ProviderOverviewBloc, ProviderOverviewState>(
-                    builder: (context, state) {
-                      final overview = state.overview;
+            SizedBox(height: AppSpacing.lg),
+            BlocBuilder<ProviderOverviewBloc, ProviderOverviewState>(
+              builder: (context, state) {
+                final overview = state.overview;
 
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          AppStatCard(
-                            icon: AppSvgPicture.asset(
-                              AppSvgs.tools,
-                              width: 24,
-                              height: 24,
-                              colorFilter: ColorFilter.mode(
-                                colors.palettes.yellow.shade500,
-                                BlendMode.srcIn,
-                              ),
-                            ),
-                            iconBackgroundColor:
-                                colors.palettes.yellow.shade50,
-                            label: 'settings.general_settings'.tr(),
-                            actionLabel: 'settings.stat_general_action'.tr(),
-                            onActionTap: () => _pushAndRefresh(
-                              context,
-                              OrganizationSettingsRoutes.general,
-                            ),
-                          ),
-                          SizedBox(height: AppSpacing.lg),
-                          AppStatCard(
-                            icon: AppSvgPicture.asset(
-                              AppSvgs.users2,
-                              width: 24,
-                              height: 24,
-                              colorFilter: ColorFilter.mode(
-                                colors.palettes.sky.shade900,
-                                BlendMode.srcIn,
-                              ),
-                            ),
-                            iconBackgroundColor:
-                                colors.palettes.accent.shade50,
-                            count: overview?.teamCount.toString(),
-                            label: 'settings.stat_team_label'.tr(),
-                            actionLabel: 'settings.stat_team_action'.tr(),
-                            onActionTap: () =>
-                                _pushAndRefresh(context, WorkerRoutes.list),
-                          ),
-                          SizedBox(height: AppSpacing.lg),
-                          AppStatCard(
-                            icon: AppSvgPicture.asset(
-                              AppSvgs.pin,
-                              width: 24,
-                              height: 24,
-                              colorFilter: ColorFilter.mode(
-                                colors.palettes.dark.shade900,
-                                BlendMode.srcIn,
-                              ),
-                            ),
-                            iconBackgroundColor: colors.palettes.main.shade50,
-                            count: overview?.branchesCount.toString(),
-                            label: 'settings.stat_branches_label'.tr(),
-                            actionLabel: 'settings.stat_branches_action'.tr(),
-                            onActionTap: () =>
-                                _pushAndRefresh(context, BranchRoutes.list),
-                          ),
-                          SizedBox(height: AppSpacing.lg),
-                          AppStatCard(
-                            icon: AppSvgPicture.asset(
-                              AppSvgs.mailOut,
-                              width: 24,
-                              height: 24,
-                              colorFilter: ColorFilter.mode(
-                                colors.palettes.sky.shade700,
-                                BlendMode.srcIn,
-                              ),
-                            ),
-                            iconBackgroundColor: colors.palettes.sky.shade50,
-                            count: overview?.invitationsCount.toString(),
-                            label: 'settings.stat_invitations_label'.tr(),
-                            actionLabel:
-                                'settings.stat_invitations_action'.tr(),
-                            onActionTap: () =>
-                                _pushAndRefresh(context, WorkerRoutes.list),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ],
-              ),
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    AppStatCard(
+                      icon: AppSvgPicture.asset(
+                        AppSvgs.tools,
+                        width: 24,
+                        height: 24,
+                        colorFilter: ColorFilter.mode(
+                          colors.palettes.yellow.shade500,
+                          BlendMode.srcIn,
+                        ),
+                      ),
+                      iconBackgroundColor: colors.palettes.yellow.shade50,
+                      label: 'settings.general_settings'.tr(),
+                      actionLabel: 'settings.stat_general_action'.tr(),
+                      onActionTap: () => _pushAndRefresh(
+                        context,
+                        OrganizationSettingsRoutes.general,
+                      ),
+                    ),
+                    SizedBox(height: AppSpacing.lg),
+                    AppStatCard(
+                      icon: AppSvgPicture.asset(
+                        AppSvgs.users2,
+                        width: 24,
+                        height: 24,
+                        colorFilter: ColorFilter.mode(
+                          colors.palettes.sky.shade900,
+                          BlendMode.srcIn,
+                        ),
+                      ),
+                      iconBackgroundColor: colors.palettes.accent.shade50,
+                      count: overview?.teamCount.toString(),
+                      label: 'settings.stat_team_label'.tr(),
+                      actionLabel: 'settings.stat_team_action'.tr(),
+                      onActionTap: () =>
+                          _pushAndRefresh(context, WorkerRoutes.list),
+                    ),
+                    SizedBox(height: AppSpacing.lg),
+                    AppStatCard(
+                      icon: AppSvgPicture.asset(
+                        AppSvgs.pin,
+                        width: 24,
+                        height: 24,
+                        colorFilter: ColorFilter.mode(
+                          colors.palettes.dark.shade900,
+                          BlendMode.srcIn,
+                        ),
+                      ),
+                      iconBackgroundColor: colors.palettes.main.shade50,
+                      count: overview?.branchesCount.toString(),
+                      label: 'settings.stat_branches_label'.tr(),
+                      actionLabel: 'settings.stat_branches_action'.tr(),
+                      onActionTap: () =>
+                          _pushAndRefresh(context, BranchRoutes.list),
+                    ),
+                    SizedBox(height: AppSpacing.lg),
+                    AppStatCard(
+                      icon: AppSvgPicture.asset(
+                        AppSvgs.mailOut,
+                        width: 24,
+                        height: 24,
+                        colorFilter: ColorFilter.mode(
+                          colors.palettes.sky.shade700,
+                          BlendMode.srcIn,
+                        ),
+                      ),
+                      iconBackgroundColor: colors.palettes.sky.shade50,
+                      count: overview?.invitationsCount.toString(),
+                      label: 'settings.stat_invitations_label'.tr(),
+                      actionLabel: 'settings.stat_invitations_action'.tr(),
+                      onActionTap: () =>
+                          _pushAndRefresh(context, WorkerRoutes.list),
+                    ),
+                  ],
+                );
+              },
             ),
           ],
         ),
@@ -242,25 +247,6 @@ void _onSetupStageAction(BuildContext context, OrganizationSetupStageId id) {
     OrganizationSetupStageId.grow => ServiceRoutes.list,
   };
   unawaited(_pushAndRefresh(context, route));
-}
-
-class _SetupLoading extends StatelessWidget {
-  const _SetupLoading();
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: context.appColors.surface,
-        border: Border.all(color: context.appColors.border),
-        borderRadius: BorderRadius.circular(AppDimension.radiusLg),
-      ),
-      child: const Padding(
-        padding: EdgeInsets.all(48),
-        child: Center(child: AppLoadingIndicator()),
-      ),
-    );
-  }
 }
 
 class _SetupError extends StatelessWidget {

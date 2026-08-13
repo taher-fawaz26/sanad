@@ -19,5 +19,7 @@ class MeMediaResponse {
   final String id;
   final String url;
 
+  Map<String, dynamic> toJson() => {'id': id, 'url': url};
+
   MeMediaEntity toEntity() => MeMediaEntity(id: id, url: url);
 }

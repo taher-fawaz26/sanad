@@ -97,13 +97,12 @@ class _BranchActionsSheetBodyState extends State<_BranchActionsSheetBody> {
               leadingIcon: _actionIcon(AppSvgs.branchMaintenance, iconColor),
               trailing: AppTableTrailing.switchControl,
               switchValue: underMaintenance,
-              onSwitchChanged: isUpdatingStatus
-                  ? null
-                  : (value) => _onMaintenanceToggled(
-                      context: context,
-                      branch: branch,
-                      setUnderMaintenance: value,
-                    ),
+              switchLoading: isUpdatingStatus,
+              onSwitchChanged: (value) => _onMaintenanceToggled(
+                context: context,
+                branch: branch,
+                setUnderMaintenance: value,
+              ),
             ),
             const AppDivider(),
             _DeleteBranchRow(

@@ -5,17 +5,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
+import 'package:services/src/domain/entities/category_ref_entity.dart';
 import 'package:services/src/domain/entities/provider_service_entity.dart';
+import 'package:services/src/domain/entities/provider_service_status.dart';
 import 'package:services/src/domain/entities/service_request_entity.dart';
 import 'package:services/src/domain/entities/service_request_status.dart';
 import 'package:services/src/presentation/bloc/service_action/service_action_bloc.dart';
 import 'package:services/src/presentation/bloc/service_analytics/service_analytics_bloc.dart';
 import 'package:services/src/presentation/bloc/service_requests_list/service_requests_list_bloc.dart';
 import 'package:services/src/presentation/bloc/services_list/services_list_bloc.dart';
-import 'package:services/src/presentation/models/provider_service_card_data.dart';
-import 'package:services/src/presentation/widgets/service_actions_bottom_sheet.dart';
+import 'package:services/src/presentation/widgets/service_list_item.dart';
 import 'package:services/src/presentation/widgets/service_metrics_section.dart';
-import 'package:services/src/presentation/widgets/service_provider_card.dart';
 import 'package:services/src/presentation/widgets/service_request_list_item.dart';
 import 'package:services/src/presentation/widgets/services_empty_state.dart';
 import 'package:services/src/presentation/widgets/services_filter_bar.dart';
@@ -219,94 +219,121 @@ class _MyServicesContentState extends State<_MyServicesContent> {
   }
 
   void _onServiceTap(BuildContext context, ProviderServiceEntity service) {
-    context.push(ServiceRoutes.detailsFor(service.id), extra: service).then((
-      _,
-    ) {
+    // Details page fetches the full service by id itself (GET
+    // /provider-services/:id) rather than trusting this list row, which
+    // carries only a subset of the fields (e.g. no requests/revenue).
+    context.push(ServiceRoutes.detailsFor(service.id)).then((_) {
       if (!context.mounted) return;
       context.read<ServicesListBloc>().add(const ServicesListRefreshEvent());
     });
   }
+
+  /// Realistic mock used only to skeletonize the real row via
+  /// [AppSkeletonizer] — no bespoke skeleton widget.
+  static final _skeletonService = ProviderServiceEntity(
+    id: 'skeleton',
+    serviceId: 'skeleton',
+    serviceName: BoneMock.words(3),
+    category: CategoryRefEntity(
+      id: 'skeleton',
+      name: BoneMock.name,
+      description: null,
+    ),
+    description: null,
+    status: ProviderServiceStatus.active,
+    images: const [],
+    createdAt: DateTime(2024),
+    updatedAt: DateTime(2024),
+  );
 
   @override
   Widget build(BuildContext context) {
     final state = widget.state;
     final onAddService = widget.onAddService;
 
-    if (state.isLoading && state.services.isEmpty) {
-      return const ShimmerListSkeleton();
-    }
-
-    if (state.hasError && state.services.isEmpty) {
-      return AppFillRemainingScrollable(
-        child: _ServicesErrorState(
-          failure: state.failure,
-          onRetry: () => context.read<ServicesListBloc>().add(
-            const ServicesListFetchEvent(),
-          ),
-        ),
+    // First-page load: skeletonize the *real* row widget with mock data (no
+    // bespoke skeleton layout), matching the workers/invitations convention.
+    if (state.isLoading) {
+      return AppSkeletonList(
+        itemBuilder: (_, _) => ServiceListItem(service: _skeletonService),
       );
     }
 
-    if (state.services.isEmpty) {
-      return ServicesEmptyState(onAddService: onAddService);
-    }
-
-    return AppRefreshIndicator(
-      onRefresh: () async => context.read<ServicesListBloc>().add(
-        const ServicesListRefreshEvent(),
-      ),
-      child: NotificationListener<ScrollNotification>(
-        onNotification: (notification) {
-          if (notification.metrics.pixels >=
-                  notification.metrics.maxScrollExtent - 200 &&
-              state.hasMore &&
-              !state.loadingMore) {
-            context.read<ServicesListBloc>().add(
-              const ServicesListLoadMoreEvent(),
-            );
-          }
-          return false;
-        },
-        child: ListView(
-          controller: MainNavScrollController.maybeOf(context),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
           padding: EdgeInsets.fromLTRB(
             AppSpacing.xl,
             AppSpacing.md,
             AppSpacing.xl,
-            AppSpacing.xl,
+            0,
           ),
-          children: [
-            const ServiceMetricsSection(),
-            SizedBox(height: AppSpacing.lg),
-            ServicesFilterBar(
-              searchController: _searchController,
-              onSearchChanged: (query) => context.read<ServicesListBloc>().add(
-                ServicesListSearchChangedEvent(query),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const ServiceMetricsSection(),
+              SizedBox(height: AppSpacing.lg),
+              ServicesFilterBar(
+                searchController: _searchController,
+                onSearchChanged: (query) =>
+                    context.read<ServicesListBloc>().add(
+                      ServicesListSearchChangedEvent(query),
+                    ),
               ),
+              SizedBox(height: AppSpacing.xl),
+            ],
+          ),
+        ),
+        Expanded(
+          child: AppRefreshIndicator(
+            onRefresh: () async => context.read<ServicesListBloc>().add(
+              const ServicesListRefreshEvent(),
             ),
-            SizedBox(height: AppSpacing.xl),
-            ...state.services.map(
-              (service) => Padding(
-                key: ValueKey(service.id),
-                padding: EdgeInsets.only(bottom: AppSpacing.xl),
-                child: ServiceProviderCard(
-                  data: ProviderServiceCardData.fromEntity(service),
+            child: AppSwipeActionsGroup(
+              child: SanadPagedList<ProviderServiceEntity>(
+                state: toPagingState(state.pagination),
+                controller: MainNavScrollController.maybeOf(context),
+                // AppRefreshIndicator needs the child to always accept an
+                // overscroll drag — without this, a short list (few items)
+                // fights the refresh gesture with clamping physics.
+                physics: const AlwaysScrollableScrollPhysics(),
+                fetchNextPage: () => context.read<ServicesListBloc>().add(
+                  const ServicesListLoadMoreEvent(),
+                ),
+                padding: EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  0,
+                  AppSpacing.xl,
+                  AppSpacing.xl,
+                ),
+                separatorBuilder: (_, _) => SizedBox(height: AppSpacing.md),
+                itemBuilder: (context, service, index) => ServiceListItem(
+                  key: ValueKey(service.id),
+                  service: service,
                   onTap: () => _onServiceTap(context, service),
-                  onMoreTap: () => showServiceActionsBottomSheet(
-                    context: context,
-                    service: service,
+                ),
+                firstPageErrorIndicatorBuilder: (_) => Center(
+                  child: _ServicesErrorState(
+                    failure: state.failure,
+                    onRetry: () => context.read<ServicesListBloc>().add(
+                      const ServicesListFetchEvent(),
+                    ),
                   ),
+                ),
+                newPageErrorIndicatorBuilder: (_) => _NextPageErrorRetry(
+                  onRetry: () => context.read<ServicesListBloc>().add(
+                    const ServicesListLoadMoreEvent(),
+                  ),
+                ),
+                noItemsFoundIndicatorBuilder: (_) => Center(
+                  child: ServicesEmptyState(onAddService: onAddService),
                 ),
               ),
             ),
-            if (state.loadingMore)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Center(child: AppLoadingIndicator()),
-              ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -349,6 +376,22 @@ class _ServiceRequestsContentState extends State<_ServiceRequestsContent> {
     text: context.read<ServiceRequestsListBloc>().state.searchQuery,
   );
 
+  /// Realistic mock used only to skeletonize the real row via
+  /// [AppSkeletonizer] — no bespoke skeleton widget.
+  static final _skeletonRequest = ServiceRequestEntity(
+    id: 'skeleton',
+    name: BoneMock.words(3),
+    unifiedRequestId: BoneMock.chars(8),
+    category: CategoryRefEntity(
+      id: 'skeleton',
+      name: BoneMock.name,
+      description: null,
+    ),
+    status: ServiceRequestStatus.underReview,
+    createdAt: DateTime(2024),
+    updatedAt: DateTime(2024),
+  );
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -359,18 +402,12 @@ class _ServiceRequestsContentState extends State<_ServiceRequestsContent> {
   Widget build(BuildContext context) {
     return BlocBuilder<ServiceRequestsListBloc, ServiceRequestsListState>(
       builder: (context, state) {
-        if (state.isLoading && state.requests.isEmpty) {
-          return const ShimmerListSkeleton();
-        }
-
-        if (state.hasError && state.requests.isEmpty) {
-          return AppFillRemainingScrollable(
-            child: _ServicesErrorState(
-              failure: state.failure,
-              onRetry: () => context.read<ServiceRequestsListBloc>().add(
-                const ServiceRequestsListFetchEvent(),
-              ),
-            ),
+        // First-page load: skeletonize the *real* row widget with mock data
+        // (no bespoke skeleton layout), matching the My Services tab.
+        if (state.isLoading) {
+          return AppSkeletonList(
+            itemBuilder: (_, _) =>
+                ServiceRequestListItem(request: _skeletonRequest),
           );
         }
 
@@ -421,55 +458,50 @@ class _ServiceRequestsContentState extends State<_ServiceRequestsContent> {
               ),
             ),
             Expanded(
-              child: state.requests.isEmpty
-                  ? const ServiceRequestsEmptyState()
-                  : AppRefreshIndicator(
-                      onRefresh: () async =>
-                          context.read<ServiceRequestsListBloc>().add(
-                            const ServiceRequestsListRefreshEvent(),
-                          ),
-                      child: NotificationListener<ScrollNotification>(
-                        onNotification: (notification) {
-                          if (notification.metrics.pixels >=
-                                  notification.metrics.maxScrollExtent - 200 &&
-                              state.hasMore &&
-                              !state.loadingMore) {
-                            context.read<ServiceRequestsListBloc>().add(
-                              const ServiceRequestsListLoadMoreEvent(),
-                            );
-                          }
-                          return false;
-                        },
-                        child: ListView.separated(
-                          controller: MainNavScrollController.maybeOf(
-                            context,
-                          ),
-                          padding: EdgeInsets.all(AppSpacing.xl),
-                          itemCount:
-                              state.requests.length +
-                              (state.loadingMore ? 1 : 0),
-                          separatorBuilder: (_, _) =>
-                              SizedBox(height: AppSpacing.md),
-                          itemBuilder: (context, index) {
-                            if (index >= state.requests.length) {
-                              return const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 16),
-                                child: Center(child: AppLoadingIndicator()),
-                              );
-                            }
-                            final request = state.requests[index];
-                            return ServiceRequestListItem(
-                              key: ValueKey(request.id),
-                              request: request,
-                              onTap: () => context.push(
-                                ServiceRoutes.requestDetailsFor(request.id),
-                                extra: request,
-                              ),
-                            );
-                          },
+              child: AppRefreshIndicator(
+                onRefresh: () async =>
+                    context.read<ServiceRequestsListBloc>().add(
+                      const ServiceRequestsListRefreshEvent(),
+                    ),
+                child: SanadPagedList<ServiceRequestEntity>(
+                  state: toPagingState(state.pagination),
+                  controller: MainNavScrollController.maybeOf(context),
+                  // See the My Services list above — AlwaysScrollable keeps
+                  // pull-to-refresh working on short lists.
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  fetchNextPage: () =>
+                      context.read<ServiceRequestsListBloc>().add(
+                        const ServiceRequestsListLoadMoreEvent(),
+                      ),
+                  padding: EdgeInsets.all(AppSpacing.xl),
+                  separatorBuilder: (_, _) => SizedBox(height: AppSpacing.md),
+                  itemBuilder: (context, request, index) =>
+                      ServiceRequestListItem(
+                        key: ValueKey(request.id),
+                        request: request,
+                        onTap: () => context.push(
+                          ServiceRoutes.requestDetailsFor(request.id),
+                          extra: request,
                         ),
                       ),
+                  firstPageErrorIndicatorBuilder: (_) => Center(
+                    child: _ServicesErrorState(
+                      failure: state.failure,
+                      onRetry: () =>
+                          context.read<ServiceRequestsListBloc>().add(
+                            const ServiceRequestsListFetchEvent(),
+                          ),
                     ),
+                  ),
+                  newPageErrorIndicatorBuilder: (_) => _NextPageErrorRetry(
+                    onRetry: () => context.read<ServiceRequestsListBloc>().add(
+                      const ServiceRequestsListLoadMoreEvent(),
+                    ),
+                  ),
+                  noItemsFoundIndicatorBuilder: (_) =>
+                      const Center(child: ServiceRequestsEmptyState()),
+                ),
+              ),
             ),
           ],
         );
@@ -483,4 +515,32 @@ class _ServiceRequestsContentState extends State<_ServiceRequestsContent> {
     ServiceRequestStatus.approved => 'services.requests_filter_approved'.tr(),
     ServiceRequestStatus.rejected => 'services.requests_filter_rejected'.tr(),
   };
+}
+
+/// Compact "load more failed" footer shown by [SanadPagedList] in place of
+/// the next-page loading indicator — keeps already-loaded rows visible
+/// instead of replacing the whole list.
+class _NextPageErrorRetry extends StatelessWidget {
+  const _NextPageErrorRetry({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+      child: Center(
+        child: GestureDetector(
+          onTap: onRetry,
+          behavior: HitTestBehavior.opaque,
+          child: Text(
+            failureRetryLabel(),
+            style: context.appTypography.regularNormal.copyWith(
+              color: context.appColors.link,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

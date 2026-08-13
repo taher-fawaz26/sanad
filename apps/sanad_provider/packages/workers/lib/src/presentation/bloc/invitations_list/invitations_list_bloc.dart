@@ -103,4 +103,7 @@ class InvitationsListBloc
   TaskEither<Failure, Page<InvitationEntity>> fetchPage(
     InvitationsQuery query,
   ) => _getInvitationsUseCase(query);
+
+  @override
+  Object dedupKey(InvitationEntity item) => item.id;
 }

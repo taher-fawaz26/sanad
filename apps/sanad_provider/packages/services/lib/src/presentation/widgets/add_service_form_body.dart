@@ -51,8 +51,7 @@ class AddServiceFormBodyState extends State<AddServiceFormBody> {
   /// Read by `AddServicePage` to decide whether to show the discard-changes
   /// confirmation on back navigation.
   bool get hasUnsavedInput =>
-      _selectedService != null ||
-      _descriptionController.text.trim().isNotEmpty;
+      _selectedService != null || _descriptionController.text.trim().isNotEmpty;
 
   @override
   void dispose() {
@@ -100,9 +99,9 @@ class AddServiceFormBodyState extends State<AddServiceFormBody> {
                 onChanged: (_) => _reportCompleteness(),
               ),
               PositionedDirectional(
-                end: AppSpacing.md,
-                bottom: AppSpacing.md,
-                child: AddServiceAiEnhanceButton(),
+                end: AppSpacing.xs,
+                bottom: AppSpacing.lg,
+                child: const AddServiceAiEnhanceButton(),
               ),
             ],
           ),
@@ -144,11 +143,9 @@ class AddServiceFormBodyState extends State<AddServiceFormBody> {
   }
 
   void _reportCompleteness() {
-    final hasImage = context
-        .read<MediaUploadBloc>()
-        .state
-        .items
-        .any((item) => item.isSuccess);
+    final hasImage = context.read<MediaUploadBloc>().state.items.any(
+      (item) => item.isSuccess,
+    );
     final isComplete =
         _selectedService != null && description.isNotEmpty && hasImage;
 

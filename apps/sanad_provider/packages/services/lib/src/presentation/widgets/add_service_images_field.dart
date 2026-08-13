@@ -20,9 +20,10 @@ import 'package:sheet_navigation/sheet_navigation.dart';
 /// The first successfully-uploaded image is shown with the "Main" badge —
 /// this mirrors the real backend rule (`POST /provider-services`: the
 /// first entry in `imageIds` becomes primary), so there is no separate
-/// "set main" action here; upload order is the only control. Once a
-/// service exists, primary is managed live via
-/// `ManageServiceImagesSection` on Service Details instead.
+/// "set main" action here; upload order is the only control. Service
+/// Details only previews images read-only (`ServiceImagesPreview`) —
+/// there is currently no UI to add/delete/re-order images once a service
+/// exists.
 class AddServiceImagesField extends StatefulWidget {
   /// Creates the Images field. Expects a `MediaUploadBloc` above it in the
   /// widget tree (see `AddServicePage`'s `BlocProvider`).

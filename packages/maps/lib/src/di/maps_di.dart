@@ -1,3 +1,4 @@
+import 'package:app_logger/app_logger.dart';
 import 'package:core/core.dart';
 import 'package:dio/dio.dart';
 import 'package:maps/src/config/maps_config.dart';
@@ -62,16 +63,27 @@ abstract final class MapsDI {
         () => ForwardGeocodeUseCase(sl<GeocodingRepository>()),
       )
       ..registerLazySingleton<NearbyAreasRepository>(
-        () => config.placesEnabled
-            ? GoogleNearbyAreasRepositoryImpl(
-                apiKey: config.placesApiKey!,
-                dio: _createPlacesDio(),
-                countryCode: config.countryCode,
-                gridSpacingKm: config.servingAreaDiscovery.gridSpacingKm,
-                maxSamples: config.servingAreaDiscovery.maxSamples,
-                concurrency: config.servingAreaDiscovery.concurrency,
-              )
-            : const NoopNearbyAreasRepository(),
+        () {
+          if (!config.placesEnabled) {
+            // A missing/empty Maps REST key must never fail silently — this
+            // build will discover zero serving areas for every location.
+            appLogger.e(
+              '[MapsDI] placesApiKey is not configured — serving-area '
+              'discovery is disabled and will return empty results for '
+              'every location. Pass --dart-define=MAPS_API_KEY=... (or the '
+              'equivalent --dart-define-from-file) at build time.',
+            );
+            return const NoopNearbyAreasRepository();
+          }
+          return GoogleNearbyAreasRepositoryImpl(
+            apiKey: config.placesApiKey!,
+            dio: _createPlacesDio(),
+            countryCode: config.countryCode,
+            gridSpacingKm: config.servingAreaDiscovery.gridSpacingKm,
+            maxSamples: config.servingAreaDiscovery.maxSamples,
+            concurrency: config.servingAreaDiscovery.concurrency,
+          );
+        },
       )
       ..registerLazySingleton(
         () => ResolveNearbyAreasUseCase(sl<NearbyAreasRepository>()),

@@ -10,8 +10,9 @@ import 'package:services/src/presentation/widgets/add_service_ai_enhance_button.
 ///
 /// The new backend contract only allows editing the description
 /// (`PATCH /provider-services/{id} {description}`). Catalog service name
-/// and category are shown read-only; images are managed separately from
-/// Service Details, not resubmitted here.
+/// and category are shown read-only. Images aren't resubmitted here either
+/// — there is currently no UI to edit a service's images post-creation
+/// (Service Details only previews them read-only).
 class EditServiceFormBody extends StatefulWidget {
   const EditServiceFormBody({
     required this.service,
@@ -84,8 +85,8 @@ class EditServiceFormBodyState extends State<EditServiceFormBody> {
               onChanged: (_) => _reportCompleteness(),
             ),
             PositionedDirectional(
-              end: AppSpacing.md,
-              bottom: AppSpacing.md,
+             end: AppSpacing.xs,
+                bottom: AppSpacing.lg,
               child: AddServiceAiEnhanceButton(),
             ),
           ],

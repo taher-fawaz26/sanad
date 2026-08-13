@@ -58,7 +58,12 @@ final token = await storage.getAccessToken();
 
 ## SSL Pinning
 
-Configured in `packages/network`. Do not disable without explicit instruction.
+Not implemented. `packages/network` relies on the platform's standard HTTPS
+certificate validation (Dio's default `IOHttpClientAdapter`, no custom
+`validateCertificate`/pin store). Pinning was deliberately removed —
+deferred until production security requirements call for it. If reintroduced,
+prefer SPKI (public-key) pinning over whole-certificate pinning so it survives
+cert rotation.
 Never use `badCertificateCallback` that returns `true`.
 
 ## Secret Management
@@ -76,7 +81,7 @@ Never use `badCertificateCallback` that returns `true`.
 | M2: Inadequate supply chain | `dependencies` package, `melos bootstrap` |
 | M3: Insecure auth/authorization | Bearer + refresh flow, 401 handling |
 | M9: Insecure data storage | `flutter_secure_storage`, no SharedPreferences for tokens |
-| M10: Insufficient cryptography | SSL pinning, certificate validation |
+| M10: Insufficient cryptography | Standard platform HTTPS certificate validation (no pinning) |
 
 ## Security Review
 

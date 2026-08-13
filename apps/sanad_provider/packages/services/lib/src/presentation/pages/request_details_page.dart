@@ -7,6 +7,7 @@ import 'package:localization/localization.dart';
 import 'package:services/src/domain/entities/service_request_entity.dart';
 import 'package:services/src/domain/entities/service_request_status.dart';
 import 'package:services/src/domain/usecases/get_service_request_usecase.dart';
+import 'package:services/src/presentation/utils/service_date_format.dart';
 import 'package:shared_ui/shared_ui.dart';
 
 /// Service Request detail screen — Figma `4715:24988` (under review),
@@ -82,9 +83,7 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                   SizedBox(height: AppSpacing.lg),
                   _RequestDetailsCard(request: _request),
                   SizedBox(height: AppSpacing.lg),
-                  if (_isLoadingDetail)
-                    const Center(child: AppLoadingIndicator())
-                  else if (_detailFailure != null)
+                  if (_detailFailure != null)
                     _DetailErrorState(
                       failure: _detailFailure,
                       onRetry: () {
@@ -93,7 +92,13 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                       },
                     )
                   else
-                    _InfoSection(request: _request),
+                    // Skeletonize the *real* info section, seeded with the
+                    // partial data already known from the list row, while
+                    // the full detail (description/rejection/images) loads.
+                    AppSkeletonizer(
+                      enabled: _isLoadingDetail,
+                      child: _InfoSection(request: _request),
+                    ),
                 ],
               ),
             ),
@@ -124,27 +129,6 @@ class _DetailErrorState extends StatelessWidget {
     );
   }
 }
-
-const _monthNames = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-];
-
-/// Kept locale-independent (English month names) rather than pulling in
-/// `intl` for a single date field — `services` doesn't otherwise depend on
-/// it.
-String _formatDate(DateTime date) =>
-    '${_monthNames[date.month - 1]} ${date.day}, ${date.year}';
 
 class _RequestDetailsCard extends StatelessWidget {
   const _RequestDetailsCard({required this.request});
@@ -187,7 +171,7 @@ class _RequestDetailsCard extends StatelessWidget {
           _MetaRow(
             icon: Icons.calendar_today_outlined,
             label: 'services.request_details.submitted_date'.tr(),
-            value: _formatDate(request.createdAt),
+            value: formatShortDate(request.createdAt),
           ),
           SizedBox(height: AppSpacing.lg),
           _MetaRow(

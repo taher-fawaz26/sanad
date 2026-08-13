@@ -21,6 +21,7 @@ import 'package:auth/src/domain/usecases/social_signup_usecase.dart';
 import 'package:auth/src/domain/usecases/usecase_params.dart';
 import 'package:auth/src/session/complete_active_login.dart';
 import 'package:auth/src/session/session_manager.dart';
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -55,13 +56,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
        _socialLoginUseCase = socialLoginUseCase,
        _getCurrentUserUseCase = getCurrentUserUseCase,
        super(const AuthInitialState()) {
-    on<AuthRequestOtpEvent>(_requestOtp);
-    on<AuthResendOtpEvent>(_resendOtp);
+    // Drop duplicate submits while one is in flight (double-tap guard).
+    on<AuthRequestOtpEvent>(_requestOtp, transformer: droppable());
+    on<AuthResendOtpEvent>(_resendOtp, transformer: droppable());
     on<AuthResendInfoRequestedEvent>(_resendInfo);
-    on<AuthLogoutEvent>(_logout);
-    on<AuthDeleteAccountEvent>(_deleteAccount);
+    on<AuthLogoutEvent>(_logout, transformer: droppable());
+    on<AuthDeleteAccountEvent>(_deleteAccount, transformer: droppable());
     on<AuthCheckSignInStatusEvent>(_checkSignInStatus);
-    on<AuthGoogleSignInEvent>(_signInWithGoogle);
+    on<AuthGoogleSignInEvent>(_signInWithGoogle, transformer: droppable());
   }
 
   final RequestSignupOtpUseCase _requestSignupOtpUseCase;

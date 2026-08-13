@@ -1,8 +1,8 @@
-import 'dart:async';
-
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fpdart/fpdart.dart';
 import 'package:services/src/domain/entities/service_request_entity.dart';
 import 'package:services/src/domain/entities/service_request_status.dart';
 import 'package:services/src/domain/usecases/get_my_service_requests_usecase.dart';
@@ -13,115 +13,131 @@ part 'service_requests_list_state.dart';
 /// Debounce applied to search keystrokes before hitting the server.
 const _searchDebounce = Duration(milliseconds: 350);
 
+/// Query for [GetMyServiceRequestsUseCase], adapted to [PageQuery] so
+/// [ServiceRequestsListBloc] can use the shared [PaginationMixin] instead of
+/// hand-rolling fetch/append/error reducers.
+class _ServiceRequestsQuery extends PageQuery {
+  const _ServiceRequestsQuery({
+    super.page,
+    super.limit = 10,
+    super.search,
+    this.status,
+  });
+
+  final ServiceRequestStatus? status;
+
+  @override
+  _ServiceRequestsQuery copyWithPage(int page) => _ServiceRequestsQuery(
+    page: page,
+    limit: limit,
+    search: search,
+    status: status,
+  );
+
+  @override
+  List<Object?> get props => [...super.props, status];
+}
+
 /// Owns the "Service request" tab: the provider's own submitted requests
 /// (`GET /service-requests`), including server-side search and status
 /// filter (underreview/approved/rejected/all).
 class ServiceRequestsListBloc
-    extends Bloc<ServiceRequestsListEvent, ServiceRequestsListState> {
+    extends Bloc<ServiceRequestsListEvent, ServiceRequestsListState>
+    with
+        PaginationMixin<
+          ServiceRequestsListEvent,
+          ServiceRequestsListState,
+          ServiceRequestEntity,
+          _ServiceRequestsQuery
+        > {
   ServiceRequestsListBloc({
     required GetMyServiceRequestsUseCase getMyServiceRequestsUseCase,
   }) : _getMyServiceRequestsUseCase = getMyServiceRequestsUseCase,
        super(const ServiceRequestsListState()) {
-    on<ServiceRequestsListFetchEvent>(_onFetch);
-    on<ServiceRequestsListRefreshEvent>(_onRefresh);
-    on<ServiceRequestsListLoadMoreEvent>(_onLoadMore);
-    on<ServiceRequestsListSearchChangedEvent>(_onSearchChanged);
-    on<ServiceRequestsListStatusChangedEvent>(_onStatusChanged);
+    on<ServiceRequestsListFetchEvent>((event, emit) => loadFirstPage(emit));
+    on<ServiceRequestsListRefreshEvent>(
+      (event, emit) => refresh(emit),
+      transformer: droppable(),
+    );
+    on<ServiceRequestsListLoadMoreEvent>(
+      (event, emit) => loadNextPage(emit),
+      transformer: droppable(),
+    );
+    on<ServiceRequestsListSearchChangedEvent>(
+      _onSearchChanged,
+      transformer: restartable(),
+    );
+    on<ServiceRequestsListStatusChangedEvent>(
+      _onStatusChanged,
+      transformer: restartable(),
+    );
   }
 
   final GetMyServiceRequestsUseCase _getMyServiceRequestsUseCase;
-  Timer? _searchTimer;
 
-  String? get _search =>
-      state.searchQuery.trim().isEmpty ? null : state.searchQuery.trim();
-
-  @override
-  Future<void> close() {
-    _searchTimer?.cancel();
-    return super.close();
-  }
-
-  Future<void> _onFetch(
-    ServiceRequestsListFetchEvent event,
-    Emitter<ServiceRequestsListState> emit,
-  ) async {
-    emit(state.copyWith(status: RequestStatus.loading, clearFailure: true));
-    await _fetch(emit, page: 1, append: false);
-  }
-
-  Future<void> _onRefresh(
-    ServiceRequestsListRefreshEvent event,
-    Emitter<ServiceRequestsListState> emit,
-  ) async {
-    emit(state.copyWith(status: RequestStatus.loading, clearFailure: true));
-    await _fetch(emit, page: 1, append: false);
-  }
-
-  Future<void> _onLoadMore(
-    ServiceRequestsListLoadMoreEvent event,
-    Emitter<ServiceRequestsListState> emit,
-  ) async {
-    if (state.loadingMore || !state.hasMore) return;
-    emit(state.copyWith(loadingMore: true));
-    await _fetch(emit, page: state.page + 1, append: true);
-  }
-
-  void _onSearchChanged(
+  Future<void> _onSearchChanged(
     ServiceRequestsListSearchChangedEvent event,
     Emitter<ServiceRequestsListState> emit,
-  ) {
+  ) async {
     emit(state.copyWith(searchQuery: event.query));
-    _searchTimer?.cancel();
-    _searchTimer = Timer(_searchDebounce, () {
-      if (isClosed) return;
-      add(const ServiceRequestsListFetchEvent());
-    });
+    await Future<void>.delayed(_searchDebounce);
+    await onQueryChanged(emit);
   }
 
   Future<void> _onStatusChanged(
     ServiceRequestsListStatusChangedEvent event,
     Emitter<ServiceRequestsListState> emit,
   ) async {
-    emit(
-      state.copyWith(
-        statusFilter: event.status,
-        status: RequestStatus.loading,
-        clearFailure: true,
-      ),
-    );
-    await _fetch(emit, page: 1, append: false);
+    emit(state.copyWith(statusFilter: event.status));
+    await onQueryChanged(emit);
   }
 
-  Future<void> _fetch(
-    Emitter<ServiceRequestsListState> emit, {
-    required int page,
-    required bool append,
-  }) async {
-    final result = await _getMyServiceRequestsUseCase(
-      GetMyServiceRequestsParams(
+  @override
+  PaginationData<ServiceRequestEntity> readPage(
+    ServiceRequestsListState state,
+  ) => state.pagination;
+
+  @override
+  ServiceRequestsListState writePage(
+    ServiceRequestsListState state,
+    PaginationData<ServiceRequestEntity> data,
+  ) => state.copyWith(pagination: data);
+
+  @override
+  _ServiceRequestsQuery buildQuery({required int page}) =>
+      _ServiceRequestsQuery(
         page: page,
-        search: _search,
+        search: state.searchQuery.trim().isEmpty
+            ? null
+            : state.searchQuery.trim(),
         status: state.statusFilter == ServiceRequestStatus.all
             ? null
             : state.statusFilter,
-      ),
-    ).run();
+      );
 
-    result.fold(
-      (failure) => emit(
-        append
-            ? state.copyWith(loadingMore: false)
-            : state.copyWith(status: RequestStatus.failure, failure: failure),
+  @override
+  TaskEither<Failure, Page<ServiceRequestEntity>> fetchPage(
+    _ServiceRequestsQuery query,
+  ) => _getMyServiceRequestsUseCase(
+    GetMyServiceRequestsParams(
+      page: query.page,
+      limit: query.limit,
+      search: query.search,
+      status: query.status,
+    ),
+  ).map(
+    (result) => Page(
+      items: result.items,
+      meta: PageMeta(
+        totalItems: result.meta.totalItems,
+        itemCount: result.meta.itemCount,
+        itemsPerPage: result.meta.itemsPerPage,
+        totalPages: result.meta.totalPages,
+        currentPage: result.meta.currentPage,
       ),
-      (paged) => emit(
-        state.copyWith(
-          status: RequestStatus.success,
-          requests: append ? [...state.requests, ...paged.items] : paged.items,
-          page: paged.meta.currentPage,
-          totalPages: paged.meta.totalPages,
-          loadingMore: false,
-        ),
-      ),
-    );
-  }
+    ),
+  );
+
+  @override
+  Object dedupKey(ServiceRequestEntity item) => item.id;
 }

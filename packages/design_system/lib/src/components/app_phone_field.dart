@@ -222,6 +222,11 @@ class _AppPhoneFieldState extends State<AppPhoneField> {
                         end: responsiveDimension(FieldTokens.trailingPadding),
                       ),
                       child: Align(
+                        // See app_text_field.dart's identical fix: without
+                        // widthFactor, Align tries to fill all available
+                        // (unbounded) width and starves the editable digits
+                        // of space, rendering them invisible.
+                        widthFactor: 1,
                         alignment: AlignmentDirectional.centerEnd,
                         child: AppFieldTrailingView(
                           trailing: widget.trailing!,

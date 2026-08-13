@@ -17,6 +17,18 @@ String branchTypeLabel(BranchType type) => switch (type) {
   BranchType.warehouse => 'branches.add_branch.branch_type_warehouse'.tr(),
 };
 
+/// Editable sections of [BranchSummaryView]. Used to target a specific
+/// section for scroll-into-view + highlight (e.g. after a backend validation
+/// failure is matched to a section on the add-branch review screen).
+enum BranchSummarySection {
+  branchInfo,
+  contact,
+  workingHours,
+  coverage,
+  services,
+  team,
+}
+
 /// Normalized data for [BranchSummaryView], shared by the add-branch review
 /// screen (draft source) and the branch details screen (saved-branch source).
 class BranchSummaryData {
@@ -70,7 +82,10 @@ class BranchSummaryView extends StatelessWidget {
     this.onEditContact,
     this.onEditWorkingHours,
     this.onEditCoverage,
+    this.onEditServices,
     this.onEditTeam,
+    this.sectionKeys,
+    this.highlightedSection,
     super.key,
   });
 
@@ -89,7 +104,29 @@ class BranchSummaryView extends StatelessWidget {
   final VoidCallback? onEditContact;
   final VoidCallback? onEditWorkingHours;
   final VoidCallback? onEditCoverage;
+  final VoidCallback? onEditServices;
   final VoidCallback? onEditTeam;
+
+  /// Optional keys, one per section, so a caller can scroll a specific
+  /// section into view (e.g. `Scrollable.ensureVisible`) after matching a
+  /// backend validation failure to it.
+  final Map<BranchSummarySection, GlobalKey>? sectionKeys;
+
+  /// When set, the matching section renders a temporary highlight — used to
+  /// draw attention to the section a backend validation error was matched to.
+  final BranchSummarySection? highlightedSection;
+
+  Widget _section(BranchSummarySection section, Widget child) {
+    Widget result = child;
+    if (highlightedSection == section) {
+      result = _HighlightedSection(child: result);
+    }
+    final key = sectionKeys?[section];
+    if (key != null) {
+      result = KeyedSubtree(key: key, child: result);
+    }
+    return result;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -107,30 +144,71 @@ class BranchSummaryView extends StatelessWidget {
               onOpenMaps: onOpenMaps,
             ),
           ],
-          // Only rendered on Branch Details (where an edit callback is
-          // supplied) — the add-branch review screen never showed a
-          // dedicated Branch Info section and must keep its layout intact.
+          // Only rendered when an edit callback is supplied — the add-branch
+          // review screen now wires this too (see BranchReviewBody), so the
+          // section appears there as well as on Branch Details.
           if (onEditBranchInfo != null)
-            _BranchInfoSection(data: data, onEdit: onEditBranchInfo),
-          _ContactSection(data: data, onEdit: onEditContact),
-          _WorkingHoursSection(data: data, onEdit: onEditWorkingHours),
-          _CoverageSection(
-            areaNames: data.areaNames,
-            onEdit: onEditCoverage,
+            _section(
+              BranchSummarySection.branchInfo,
+              _BranchInfoSection(data: data, onEdit: onEditBranchInfo),
+            ),
+          _section(
+            BranchSummarySection.contact,
+            _ContactSection(data: data, onEdit: onEditContact),
           ),
-          _ServicesSection(
-            serviceNames: data.serviceNames,
-            visibleCount: _visibleServiceCount,
-            onViewAll: onViewAllServices,
+          _section(
+            BranchSummarySection.workingHours,
+            _WorkingHoursSection(data: data, onEdit: onEditWorkingHours),
           ),
-          _TeamSection(
-            initials: data.workerInitials,
-            visibleCount: _visibleTeamCount,
-            onViewAll: onViewAllWorkers,
-            onEdit: onEditTeam,
+          _section(
+            BranchSummarySection.coverage,
+            _CoverageSection(
+              areaNames: data.areaNames,
+              onEdit: onEditCoverage,
+            ),
+          ),
+          _section(
+            BranchSummarySection.services,
+            _ServicesSection(
+              serviceNames: data.serviceNames,
+              visibleCount: _visibleServiceCount,
+              onViewAll: onViewAllServices,
+              onEdit: onEditServices,
+            ),
+          ),
+          _section(
+            BranchSummarySection.team,
+            _TeamSection(
+              initials: data.workerInitials,
+              visibleCount: _visibleTeamCount,
+              onViewAll: onViewAllWorkers,
+              onEdit: onEditTeam,
+            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Transient tinted/bordered wrapper drawing attention to a section that a
+/// backend validation failure was matched to.
+class _HighlightedSection extends StatelessWidget {
+  const _HighlightedSection({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      decoration: BoxDecoration(
+        color: colors.warningContainer,
+        border: Border.all(color: colors.warning),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: child,
     );
   }
 }
@@ -499,17 +577,28 @@ class _ServicesSection extends StatelessWidget {
     required this.serviceNames,
     required this.visibleCount,
     this.onViewAll,
+    this.onEdit,
   });
 
   final List<String> serviceNames;
   final int visibleCount;
   final VoidCallback? onViewAll;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final visible = serviceNames.take(visibleCount).toList();
     final hidden = serviceNames.length - visible.length;
+    final viewAll = serviceNames.isEmpty
+        ? null
+        : _ViewAllLink(
+            label: 'branches.review.view_all'.tr(
+              namedArgs: {'count': '${serviceNames.length}'},
+            ),
+            onTap: onViewAll,
+          );
+    final hasTrailing = viewAll != null || onEdit != null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -517,17 +606,24 @@ class _ServicesSection extends StatelessWidget {
         AppSection(
           title: 'branches.details.section_services'.tr(),
           size: AppSectionSize.compact,
-          trailing: serviceNames.isEmpty
-              ? AppSectionTrailing.none
-              : AppSectionTrailing.custom,
-          trailingWidget: serviceNames.isEmpty
-              ? null
-              : _ViewAllLink(
-                  label: 'branches.review.view_all'.tr(
-                    namedArgs: {'count': '${serviceNames.length}'},
-                  ),
-                  onTap: onViewAll,
-                ),
+          trailing: hasTrailing
+              ? AppSectionTrailing.custom
+              : AppSectionTrailing.none,
+          trailingWidget: hasTrailing
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: AppSpacing.sm,
+                  children: [
+                    if (viewAll != null) viewAll,
+                    if (onEdit != null)
+                      InkWell(
+                        onTap: onEdit,
+                        borderRadius: BorderRadius.circular(8),
+                        child: _sectionEditIcon(context),
+                      ),
+                  ],
+                )
+              : null,
         ),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),

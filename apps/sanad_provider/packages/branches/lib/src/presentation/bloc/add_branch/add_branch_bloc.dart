@@ -1,3 +1,4 @@
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/domain/usecases/branch_usecase_params.dart';
@@ -24,8 +25,9 @@ class AddBranchBloc extends Bloc<AddBranchEvent, AddBranchState> {
        _getBranchUseCase = getBranchUseCase,
        super(const AddBranchState()) {
     on<AddBranchStarted>(_onStarted);
-    on<AddBranchSubmitEvent>(_onSubmit);
-    on<UpdateBranchSubmitEvent>(_onUpdateSubmit);
+    // Drop duplicate submits while one is in flight (double-tap guard).
+    on<AddBranchSubmitEvent>(_onSubmit, transformer: droppable());
+    on<UpdateBranchSubmitEvent>(_onUpdateSubmit, transformer: droppable());
     on<AddBranchLoadForEditEvent>(_onLoadForEdit);
   }
 

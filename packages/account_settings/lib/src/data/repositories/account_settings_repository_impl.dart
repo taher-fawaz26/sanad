@@ -3,6 +3,7 @@ import 'package:account_settings/src/data/models/requests/update_account_setting
 import 'package:account_settings/src/domain/entities/account_settings_entity.dart';
 import 'package:account_settings/src/domain/repositories/account_settings_repository.dart';
 import 'package:account_settings/src/domain/usecases/account_settings_params.dart';
+import 'package:auth/auth.dart' show UserType;
 import 'package:core/core.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:network/network.dart';
@@ -24,6 +25,15 @@ class AccountSettingsRepositoryImpl implements AccountSettingsRepository {
             preferredLanguage: params.preferredLanguage,
           ),
         )
+        .map((response) => response.toEntity()),
+  );
+
+  @override
+  TaskEither<Failure, AccountSettingsEntity> getAccountProfile(
+    UserType userType,
+  ) => _networkGuard.execute(
+    action: _remote
+        .getAccountProfile(userType)
         .map((response) => response.toEntity()),
   );
 }

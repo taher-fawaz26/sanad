@@ -1,3 +1,5 @@
+import 'package:branches/src/domain/entities/branch_availability_mode.dart';
+import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/presentation/bloc/branches/branches_bloc.dart';
 import 'package:branches/src/presentation/widgets/branch_empty_states.dart';
 import 'package:branches/src/presentation/widgets/branch_list_item.dart';
@@ -11,6 +13,18 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
 import 'package:shared_ui/shared_ui.dart';
+
+/// Realistic mock used only to skeletonize the real row via
+/// [AppSkeletonizer] — no bespoke skeleton widget.
+final _skeletonBranch = BranchEntity(
+  id: 'skeleton',
+  branchName: BoneMock.words(2),
+  branchAddress: BoneMock.address,
+  city: BoneMock.city,
+  branchPhone: BoneMock.phone,
+  isAvailable: true,
+  availabilityMode: BranchAvailabilityMode.coreHours,
+);
 
 /// Figma Branches screen (`73:2902`), collapsing header.
 ///
@@ -77,7 +91,11 @@ class _BranchesTab extends StatelessWidget {
       child: BlocBuilder<BranchesBloc, BranchesState>(
         builder: (context, state) {
           if (state.isLoading) {
-            return const ShimmerListSkeleton();
+            // First-page load: skeletonize the *real* row widget with mock
+            // data (no bespoke skeleton layout).
+            return AppSkeletonList(
+              itemBuilder: (_, _) => BranchListItem(branch: _skeletonBranch),
+            );
           }
 
           final branches = state.filteredBranches;

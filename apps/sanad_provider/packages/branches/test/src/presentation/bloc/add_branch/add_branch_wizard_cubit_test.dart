@@ -17,7 +17,6 @@ void main() {
       expect(cubit.state.isSeeded, isTrue);
       expect(cubit.state.showStepOneErrors, isFalse);
       expect(cubit.state.coverageAccessDenied, isFalse);
-      expect(cubit.state.submittingDialogVisible, isFalse);
     });
 
     test('advanceTo extends furthestStep monotonically', () {
@@ -63,12 +62,6 @@ void main() {
       });
     });
 
-    test('submitting-dialog flags toggle without a race', () {
-      cubit.markSubmittingDialogShown();
-      expect(cubit.state.submittingDialogVisible, isTrue);
-      cubit.markSubmittingDialogDismissed();
-      expect(cubit.state.submittingDialogVisible, isFalse);
-    });
   });
 
   group('AddBranchWizardCubit — edit mode', () {

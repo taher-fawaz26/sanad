@@ -11,6 +11,13 @@ enum OrganizationProfileStatus {
 
   /// Reviewed and live to customers.
   published,
+
+  /// Was active; has lapsed and needs renewal —
+  /// `BusinessProfileStatus.expired`.
+  expired,
+
+  /// Suspended by the backend/admin — `BusinessProfileStatus.suspended`.
+  suspended,
 }
 
 /// Dot + label status pill for the organization identity header — Figma
@@ -42,6 +49,16 @@ class OrganizationStatusBadge extends StatelessWidget {
         const Color(0x1F179E59),
         const Color(0xFF0D8547),
         'Published',
+      ),
+      OrganizationProfileStatus.expired => (
+        const Color(0x1FF23838),
+        const Color(0xFFD12424),
+        'Expired',
+      ),
+      OrganizationProfileStatus.suspended => (
+        const Color(0x1FF23838),
+        const Color(0xFFD12424),
+        'Suspended',
       ),
     };
 

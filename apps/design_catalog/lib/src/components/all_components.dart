@@ -200,6 +200,14 @@ List<WidgetbookNode> buildCatalogDirectories() => [
               onChanged: (_) {},
             ),
           ),
+          WidgetbookUseCase(
+            name: 'Loading',
+            builder: (context) => AppSwitch(
+              value: true,
+              onChanged: (_) {},
+              loading: true,
+            ),
+          ),
         ],
       ),
       WidgetbookComponent(

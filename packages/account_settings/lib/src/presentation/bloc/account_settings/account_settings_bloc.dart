@@ -2,8 +2,10 @@ import 'package:account_settings/src/data/mappers/auth_account_settings_mapper.d
 import 'package:account_settings/src/domain/entities/account_settings_entity.dart';
 import 'package:account_settings/src/domain/enums/preferred_language.dart';
 import 'package:account_settings/src/domain/usecases/account_settings_params.dart';
+import 'package:account_settings/src/domain/usecases/refresh_account_profile_usecase.dart';
 import 'package:account_settings/src/domain/usecases/update_account_settings_usecase.dart';
 import 'package:auth/auth.dart' show SessionManager;
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -14,12 +16,18 @@ part 'account_settings_state.dart';
 /// Owns signed-in account settings.
 ///
 /// Reads seed data from the auth session ([SessionManager]) — the same
-/// snapshot that came back in the login/verify response — instead of firing
-/// a network call on every open. There is no `GET /account-settings` on the
-/// live backend (only `PATCH /account-settings` exists), so both the initial
-/// [AccountSettingsLoaded] and the explicit [AccountSettingsRefreshed] (e.g.
-/// pull-to-refresh, or after a phone/email change) reseed from the session
-/// snapshot rather than hitting the server.
+/// snapshot that came back in the login/verify response — so the screen
+/// renders instantly, then silently refreshes from the authoritative
+/// persona-aware contract in the background (`GET /me` → `GET
+/// /{persona}/profile`, via [RefreshAccountProfileUseCase]; see that class
+/// for why — there is no `GET /account-settings` on the live backend). A
+/// successful refresh is written straight back into the session via
+/// [SessionManager.update], so every other consumer observes the fresh
+/// value too, and the bloc re-seeds its state from that same session.
+///
+/// The background refresh fails silently (cached/session data stays on
+/// screen) — a transient network hiccup on a passive refresh should never
+/// surface an error banner over data that's still perfectly valid.
 ///
 /// After a successful PATCH the updated entity is written back into the
 /// session via [SessionManager.update] so every other consumer of the
@@ -31,28 +39,34 @@ class AccountSettingsBloc
     extends Bloc<AccountSettingsEvent, AccountSettingsState> {
   AccountSettingsBloc({
     required UpdateAccountSettingsUseCase updateAccountSettings,
+    required RefreshAccountProfileUseCase refreshAccountProfile,
     required SessionManager sessionManager,
   }) : _updateAccountSettings = updateAccountSettings,
+       _refreshAccountProfile = refreshAccountProfile,
        _sessionManager = sessionManager,
        super(const AccountSettingsState()) {
     on<AccountSettingsLoaded>(_onLoaded);
-    on<AccountSettingsRefreshed>(_onRefreshed);
-    on<AccountSettingsUpdated>(_onUpdated);
+    on<AccountSettingsRefreshed>(_onLoaded);
+    on<AccountSettingsUpdated>(_onUpdated, transformer: droppable());
   }
 
   final UpdateAccountSettingsUseCase _updateAccountSettings;
+  final RefreshAccountProfileUseCase _refreshAccountProfile;
   final SessionManager _sessionManager;
 
-  /// Initial hub open — seeds from the session snapshot. No network call.
-  ///
-  /// If the session somehow lacks embedded accountSettings (should not
-  /// happen for provider-owner accounts, but the wire is nullable) the state
-  /// stays in `RequestStatus.success` with `settings: null`; the UI already
-  /// tolerates that via the nullable getters on the state.
-  void _onLoaded(
-    AccountSettingsLoaded event,
+  /// Seeds from the session snapshot (instant, no network), then kicks off
+  /// a background persona-profile refresh. Shared by the initial open and
+  /// explicit refresh (pull-to-refresh, post phone/email change) — both want
+  /// the same "show cached, then reconcile" behavior.
+  Future<void> _onLoaded(
+    AccountSettingsEvent event,
     Emitter<AccountSettingsState> emit,
-  ) {
+  ) async {
+    _seedFromSession(emit);
+    await _refreshFromServer(emit);
+  }
+
+  void _seedFromSession(Emitter<AccountSettingsState> emit) {
     final seeded = _sessionManager.accountSettings?.toAccountSettingsEntity();
     emit(
       state.copyWith(
@@ -63,21 +77,18 @@ class AccountSettingsBloc
     );
   }
 
-  /// Explicit refresh (pull-to-refresh, and after a phone/email change) —
-  /// there is no `GET /account-settings` on the live backend, so this
-  /// reseeds from the (already up to date) session snapshot, same as
-  /// [_onLoaded].
-  void _onRefreshed(
-    AccountSettingsRefreshed event,
-    Emitter<AccountSettingsState> emit,
-  ) {
-    final seeded = _sessionManager.accountSettings?.toAccountSettingsEntity();
-    emit(
-      state.copyWith(
-        loadStatus: RequestStatus.success,
-        settings: seeded,
-        clearFailure: true,
-      ),
+  /// Fetches the authoritative account settings and reconciles the session.
+  /// Failures are swallowed — the screen already shows the cached session
+  /// value, and a background-refresh error is not worth interrupting the
+  /// user over.
+  Future<void> _refreshFromServer(Emitter<AccountSettingsState> emit) async {
+    final result = await _refreshAccountProfile(const NoParams()).run();
+    await result.fold(
+      (failure) async {},
+      (settings) async {
+        await _syncSession(settings);
+        _seedFromSession(emit);
+      },
     );
   }
 

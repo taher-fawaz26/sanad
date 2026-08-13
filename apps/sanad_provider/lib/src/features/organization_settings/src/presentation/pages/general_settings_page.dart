@@ -6,6 +6,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/business_profile_status.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/category_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/legal_data_status.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/organization_profile_entity.dart';
@@ -28,6 +29,25 @@ import 'package:sanad_provider/src/features/organization_settings/src/presentati
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/sections/working_hours_section.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/routes/organization_settings_routes.dart';
 import 'package:shared_ui/shared_ui.dart';
+
+/// Realistic mocks used only to skeletonize the real sliver content via
+/// [AppSkeletonizer.sliver] while the profile loads — no bespoke skeleton
+/// layout.
+final _skeletonProfile = OrganizationProfileEntity(
+  id: 'skeleton',
+  categories: const [],
+  status: BusinessProfileStatus.inReview,
+  createdAt: DateTime(2024),
+  updatedAt: DateTime(2024),
+);
+
+final _skeletonCompletion = ProviderCompletionEntity(
+  percentage: 40,
+  requiredCompleted: 2,
+  requiredTotal: 5,
+  visibleToCustomers: false,
+  items: const [],
+);
 
 /// General organization settings view-mode page.
 ///
@@ -78,6 +98,15 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
     OrganizationProfileEntity profile,
     ProviderCompletionEntity? completion,
   ) {
+    // expired/suspended are backend-driven and take precedence over the
+    // completion-checklist-derived states below — a provider whose profile
+    // lapsed or was suspended needs to see that, not "in review".
+    if (profile.status == BusinessProfileStatus.expired) {
+      return OrganizationProfileStatus.expired;
+    }
+    if (profile.status == BusinessProfileStatus.suspended) {
+      return OrganizationProfileStatus.suspended;
+    }
     if (profile.isReviewed) return OrganizationProfileStatus.published;
     if (completion != null && !completion.visibleToCustomers) {
       return OrganizationProfileStatus.incomplete;
@@ -280,137 +309,180 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
     final colors = context.appColors;
     const sectionSpacing = 16.0;
 
-    return BlocBuilder<OrganizationSettingsBloc, OrganizationSettingsState>(
-      builder: (context, state) {
-        final profile = state.organization;
-        final completion = state.completion;
+    return MutationListener<
+      OrganizationSettingsBloc,
+      OrganizationSettingsState
+    >(
+      status: (state) => state.saveStatus,
+      title: (context) => 'settings.saving_title'.tr(),
+      onFailure: (context, state) {
+        if (state.saveFailure != null) {
+          showAppErrorSnackbar(
+            context: context,
+            title: state.saveFailure!.message,
+          );
+        }
+      },
+      child: BlocBuilder<OrganizationSettingsBloc, OrganizationSettingsState>(
+        builder: (context, state) {
+          final isInitialLoad =
+              state.organization == null &&
+              state.status == RequestStatus.loading;
+          // Skeletonize the *real* sliver content, seeded with mock data while
+          // loading — never a bespoke skeleton widget.
+          final profile = state.organization ?? _skeletonProfile;
+          final completion =
+              state.completion ?? (isInitialLoad ? _skeletonCompletion : null);
 
-        return AppScrollPage(
-          backgroundColor: colors.surface,
-          slivers: [
-            AppSliverAppBar(
-              navBar: AppNavBar(
-                title: 'settings.general_settings'.tr(),
-                showBackButton: true,
-                onLeadingTap: () => context.pop(),
-                trailingAction: AppNavBarTrailingAction.icon,
-                trailing: const Icon(Icons.notifications_outlined),
-                onTrailingTap: () => _showComingSoon(context),
+          return AppScrollPage(
+            backgroundColor: colors.surface,
+            slivers: [
+              AppSliverAppBar(
+                navBar: AppNavBar(
+                  title: 'settings.general_settings'.tr(),
+                  showBackButton: true,
+                  onLeadingTap: () => context.pop(),
+                  trailingAction: AppNavBarTrailingAction.icon,
+                  trailing: const Icon(Icons.notifications_outlined),
+                  onTrailingTap: () => _showComingSoon(context),
+                ),
               ),
-            ),
-            if (profile == null && state.status == RequestStatus.loading)
-              const AppSliverLoading()
-            else if (profile == null && state.status == RequestStatus.failure)
-              AppSliverError(
-                title: 'Something went wrong',
-                description:
-                    state.failure?.message ??
-                    'Failed to load your organization settings.',
-                retryLabel: 'Retry',
-                onRetry: () => context.read<OrganizationSettingsBloc>().add(
-                  const OrganizationSettingsRefreshed(),
-                ),
-              )
-            else if (profile != null)
-              AppSliverPadding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xl,
-                  vertical: AppSpacing.md,
-                ),
-                sliver: SliverMainAxisGroup(
-                  slivers: [
-                    AppSliverBox(
-                      child: OrganizationHeader(
-                        name: profile.businessName,
-                        coverUrl: profile.coverImage?.url,
-                        logoUrl: profile.profileImage?.url,
-                        status: _headerStatus(profile, completion),
-                      ),
-                    ),
-                    const AppSliverGap(sectionSpacing),
-                    if (completion != null)
-                      AppSliverBox(
-                        child: BusinessProgressSection(
-                          completionPercent: completion.percentage.round(),
-                          items: _progressChecklist(completion),
-                          visibleToCustomers: completion.visibleToCustomers,
-                          requiredCompleted: completion.requiredCompleted,
-                          requiredTotal: completion.requiredTotal,
+              if (state.organization == null &&
+                  state.status == RequestStatus.failure)
+                AppSliverError(
+                  title: 'Something went wrong',
+                  description:
+                      state.failure?.message ??
+                      'Failed to load your organization settings.',
+                  retryLabel: 'Retry',
+                  onRetry: () => context.read<OrganizationSettingsBloc>().add(
+                    const OrganizationSettingsRefreshed(),
+                  ),
+                )
+              else
+                AppSliverPadding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                    vertical: AppSpacing.md,
+                  ),
+                  sliver: AppSkeletonizer.sliver(
+                    enabled: isInitialLoad,
+                    child: SliverMainAxisGroup(
+                      slivers: [
+                        AppSliverBox(
+                          child: OrganizationHeader(
+                            name: profile.businessName,
+                            coverUrl: profile.coverImage?.url,
+                            logoUrl: profile.profileImage?.url,
+                            status: _headerStatus(profile, completion),
+                            onMediaUpdated: (slot, url) =>
+                                context.read<OrganizationSettingsBloc>().add(
+                                  OrganizationSettingsMediaUpdated(
+                                    slot: slot,
+                                    url: url,
+                                  ),
+                                ),
+                          ),
                         ),
-                      ),
-                    if (completion != null) const AppSliverGap(sectionSpacing),
-                    AppSliverBox(
-                      child: IdentitySection(
-                        onEdit: () => _editDescription(profile.description),
-                        businessDescription: profile.description,
-                      ),
-                    ),
-                    const AppSliverGap(sectionSpacing),
-                    AppSliverBox(
-                      child: CategorySection(
-                        selectedCategories: profile.categories
-                            .map((category) => category.name)
-                            .toList(),
-                        onEdit: () => _editCategories(
-                          state.categoryCatalog,
-                          profile.categories,
-                        ),
-                      ),
-                    ),
-                    const AppSliverGap(sectionSpacing),
-                    AppSliverBox(
-                      child: ContactInformationSection(
-                        phone: profile.businessPhone,
-                        email: profile.businessEmail,
-                        onRefresh: () =>
-                            context.read<OrganizationSettingsBloc>().add(
-                              const OrganizationSettingsRefreshed(),
+                        if (profile.status == BusinessProfileStatus.inReview &&
+                            profile.rejectionReason != null) ...[
+                          const AppSliverGap(sectionSpacing),
+                          AppSliverBox(
+                            child: AppAlert(
+                              type: AppAlertType.rejected,
+                              message: profile.rejectionReason!,
                             ),
-                      ),
-                    ),
-                    const AppSliverGap(sectionSpacing),
-                    AppSliverBox(
-                      child: Builder(
-                        builder: (context) {
-                          final social = profile.socialProfiles;
-                          return SocialProfilesSection(
-                            onEdit: () => _editSocialProfiles(
-                              SocialProfilesData(
+                          ),
+                        ],
+                        const AppSliverGap(sectionSpacing),
+                        if (completion != null)
+                          AppSliverBox(
+                            child: BusinessProgressSection(
+                              completionPercent: completion.percentage.round(),
+                              items: _progressChecklist(completion),
+                              visibleToCustomers: completion.visibleToCustomers,
+                              requiredCompleted: completion.requiredCompleted,
+                              requiredTotal: completion.requiredTotal,
+                            ),
+                          ),
+                        if (completion != null)
+                          const AppSliverGap(sectionSpacing),
+                        AppSliverBox(
+                          child: IdentitySection(
+                            onEdit: () => _editDescription(profile.description),
+                            businessDescription: profile.description,
+                          ),
+                        ),
+                        const AppSliverGap(sectionSpacing),
+                        AppSliverBox(
+                          child: CategorySection(
+                            selectedCategories: profile.categories
+                                .map((category) => category.name)
+                                .toList(),
+                            onEdit: () => _editCategories(
+                              state.categoryCatalog,
+                              profile.categories,
+                            ),
+                          ),
+                        ),
+                        const AppSliverGap(sectionSpacing),
+                        AppSliverBox(
+                          child: ContactInformationSection(
+                            phone: profile.businessPhone,
+                            email: profile.businessEmail,
+                            onRefresh: () =>
+                                context.read<OrganizationSettingsBloc>().add(
+                                  const OrganizationSettingsRefreshed(),
+                                ),
+                          ),
+                        ),
+                        const AppSliverGap(sectionSpacing),
+                        AppSliverBox(
+                          child: Builder(
+                            builder: (context) {
+                              final social = profile.socialProfiles;
+                              return SocialProfilesSection(
+                                onEdit: () => _editSocialProfiles(
+                                  SocialProfilesData(
+                                    facebook: social?.facebook,
+                                    tiktok: social?.tiktok,
+                                    instagram: social?.instagram,
+                                    x: social?.x,
+                                    websiteUrl: social?.websiteUrl,
+                                  ),
+                                ),
                                 facebook: social?.facebook,
                                 tiktok: social?.tiktok,
                                 instagram: social?.instagram,
                                 x: social?.x,
                                 websiteUrl: social?.websiteUrl,
-                              ),
+                              );
+                            },
+                          ),
+                        ),
+                        const AppSliverGap(sectionSpacing),
+                        AppSliverBox(
+                          child: ComplianceDocumentsSection(
+                            documents: _complianceDocuments(profile),
+                          ),
+                        ),
+                        const AppSliverGap(sectionSpacing),
+                        AppSliverBox(
+                          child: WorkingHoursSection(
+                            entries: _workingHoursViewEntries(
+                              state.workingHours,
                             ),
-                            facebook: social?.facebook,
-                            tiktok: social?.tiktok,
-                            instagram: social?.instagram,
-                            x: social?.x,
-                            websiteUrl: social?.websiteUrl,
-                          );
-                        },
-                      ),
+                            onEdit: () => _editWorkingHours(state.workingHours),
+                          ),
+                        ),
+                      ],
                     ),
-                    const AppSliverGap(sectionSpacing),
-                    AppSliverBox(
-                      child: ComplianceDocumentsSection(
-                        documents: _complianceDocuments(profile),
-                      ),
-                    ),
-                    const AppSliverGap(sectionSpacing),
-                    AppSliverBox(
-                      child: WorkingHoursSection(
-                        entries: _workingHoursViewEntries(state.workingHours),
-                        onEdit: () => _editWorkingHours(state.workingHours),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-          ],
-        );
-      },
+            ],
+          );
+        },
+      ),
     );
   }
 }

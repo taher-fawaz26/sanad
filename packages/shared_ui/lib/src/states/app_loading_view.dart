@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 
 /// Centered loading indicator with an optional message.
 ///
-/// Use for full-page or full-sliver loading states. For list skeletons,
-/// prefer [ShimmerListSkeleton] directly.
+/// Use for full-page or full-sliver loading states with no structural
+/// content to skeletonize. For list/detail skeletons, prefer
+/// `AppSkeletonizer`/`AppSkeletonList` (`shared_ui/src/loading/`) instead.
 class AppLoadingView extends StatelessWidget {
   const AppLoadingView({super.key, this.message});
 

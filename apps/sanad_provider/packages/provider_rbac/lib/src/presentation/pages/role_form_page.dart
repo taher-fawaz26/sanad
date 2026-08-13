@@ -11,6 +11,20 @@ import 'package:provider_rbac/src/presentation/bloc/role_form/role_form_bloc.dar
 import 'package:provider_rbac/src/presentation/widgets/permission_group_card.dart';
 import 'package:shared_ui/shared_ui.dart';
 
+/// Realistic mock used only to skeletonize the real permission-group cards
+/// via [AppSkeletonizer] while the catalog loads — no bespoke skeleton
+/// layout.
+final _skeletonPermissions = [
+  for (var g = 0; g < 2; g++)
+    for (var i = 0; i < 3; i++)
+      PermissionEntity(
+        id: 'skeleton-$g-$i',
+        action: 'skeleton',
+        displayName: BoneMock.words(2),
+        resource: 'skeleton-resource-$g',
+      ),
+];
+
 /// Create-role and edit-role form — Figma `Create New Role` (`5492:24051`).
 ///
 /// Edit mode is signalled by a non-null [existingRole]; the first field
@@ -212,17 +226,43 @@ class _RoleFormPageState extends State<RoleFormPage> {
                         SizedBox(height: AppSpacing.lg),
                         BlocBuilder<RoleFormBloc, RoleFormState>(
                           builder: (context, state) {
-                            if (state.isCatalogLoading) {
-                              return const Center(
-                                child: AppLoadingIndicator(),
-                              );
-                            }
                             if (state.catalogStatus == RequestStatus.failure &&
                                 state.permissions.isEmpty) {
                               return AppGenericEmptyState(
                                 title: 'provider_rbac.load_failed'.tr(),
                                 description:
                                     state.failure?.localizedMessage() ?? '',
+                              );
+                            }
+                            if (state.isCatalogLoading) {
+                              // Skeletonize the *real* permission-group cards
+                              // with mock data instead of a bespoke skeleton.
+                              final grouped = _groupByResource(
+                                _skeletonPermissions,
+                              );
+                              final resources = grouped.keys.toList()..sort();
+                              return AppSkeletonizer(
+                                enabled: true,
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    for (
+                                      var i = 0;
+                                      i < resources.length;
+                                      i++
+                                    ) ...[
+                                      if (i > 0)
+                                        SizedBox(height: AppSpacing.md),
+                                      PermissionGroupCard(
+                                        resource: resources[i],
+                                        permissions: grouped[resources[i]]!,
+                                        selectedIds: const {},
+                                        onToggle: (_) {},
+                                      ),
+                                    ],
+                                  ],
+                                ),
                               );
                             }
                             final grouped = _groupByResource(

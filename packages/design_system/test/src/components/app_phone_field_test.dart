@@ -90,4 +90,28 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  group('AppPhoneField trailing action', () {
+    testWidgets(
+      'does not starve the digits of width at a realistic phone width '
+      '(regression: Align with no widthFactor tried to fill all available '
+      'width, leaving 0px for the value — reported as "empty" fields even '
+      'though the correct value was present in the tree)',
+      (tester) async {
+        await _pump(
+          tester,
+          AppPhoneField(
+            label: 'Phone',
+            controller: TextEditingController(text: '501234567'),
+            readOnly: true,
+            trailing: const AppFieldTextLinkTrailing(label: 'Change'),
+          ),
+        );
+
+        final finder = find.text('501234567');
+        expect(finder, findsOneWidget);
+        expect(tester.getSize(finder).width, greaterThan(0));
+      },
+    );
+  });
 }

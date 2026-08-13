@@ -1,5 +1,5 @@
 /// Sand Network — Dio HTTP client, interceptors, token management,
-/// connectivity guard, and SSL transport abstractions.
+/// and connectivity guard.
 library;
 
 export 'src/client/api_client_impl.dart';
@@ -25,9 +25,6 @@ export 'src/messages/error_messages.dart';
 export 'src/models/api_error_response.dart';
 export 'src/network_config.dart';
 export 'src/pagination/page_parser.dart';
-export 'src/ssl/certificate_pinner.dart';
-export 'src/ssl/pinned_http_client_adapter.dart';
-export 'src/ssl/secure_transport_exceptions.dart';
 export 'src/token/token_manager.dart';
 export 'src/token/token_manager_impl.dart';
 export 'src/token/token_refresh_model.dart';

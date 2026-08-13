@@ -64,6 +64,58 @@ class BusinessProfileMeResponse {
     );
   }
 
+  /// Reverse of [toEntity] — builds the cache-serializable DTO from an
+  /// entity that came from a local merge (image upload, description/
+  /// category/social-profile PATCH) rather than a fresh `GET /settings`
+  /// response, so that merge can still be written through to the cache.
+  factory BusinessProfileMeResponse.fromEntity(
+    OrganizationProfileEntity entity,
+  ) {
+    final social = entity.socialProfiles;
+    return BusinessProfileMeResponse(
+      id: entity.id,
+      businessName: entity.businessName,
+      businessEmail: entity.businessEmail,
+      businessPhone: entity.businessPhone,
+      ownerEmiratesId: entity.ownerEmiratesId,
+      tradeLicenseNumber: entity.tradeLicenseNumber,
+      coverImage: entity.coverImage == null
+          ? null
+          : MeMediaResponse(
+              id: entity.coverImage!.id,
+              url: entity.coverImage!.url,
+            ),
+      profileImage: entity.profileImage == null
+          ? null
+          : MeMediaResponse(
+              id: entity.profileImage!.id,
+              url: entity.profileImage!.url,
+            ),
+      description: entity.description,
+      categories: entity.categories
+          .map(
+            (category) => ServiceProviderCategoryResponse(
+              id: category.id,
+              name: category.name,
+            ),
+          )
+          .toList(),
+      socialProfiles: social == null
+          ? null
+          : {
+              if (social.facebook != null) 'facebook': social.facebook,
+              if (social.tiktok != null) 'tiktok': social.tiktok,
+              if (social.instagram != null) 'instagram': social.instagram,
+              if (social.x != null) 'x': social.x,
+              if (social.websiteUrl != null) 'website': social.websiteUrl,
+            },
+      status: entity.status,
+      rejectionReason: entity.rejectionReason,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
+    );
+  }
+
   final String id;
   final String? businessName;
   final String? businessEmail;
@@ -82,6 +134,27 @@ class BusinessProfileMeResponse {
   final String? rejectionReason;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  /// Cache-only serialization — round-trips through [fromJson]. Legal data
+  /// is deliberately not part of this shape (see class doc), so it never
+  /// enters the cache via this path.
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'businessName': businessName,
+    'businessEmail': businessEmail,
+    'businessPhone': businessPhone,
+    'ownerEmiratesId': ownerEmiratesId,
+    'tradeLicenseNumber': tradeLicenseNumber,
+    'coverImage': coverImage?.toJson(),
+    'profileImage': profileImage?.toJson(),
+    'description': description,
+    'categories': categories.map((category) => category.toJson()).toList(),
+    'socialProfiles': socialProfiles,
+    'status': status.name.toUpperCase(),
+    'rejectionReason': rejectionReason,
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+  };
 
   OrganizationProfileEntity toEntity() => OrganizationProfileEntity(
     id: id,

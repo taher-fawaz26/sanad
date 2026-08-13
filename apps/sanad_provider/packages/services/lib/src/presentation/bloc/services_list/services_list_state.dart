@@ -2,59 +2,36 @@ part of 'services_list_bloc.dart';
 
 class ServicesListState extends Equatable {
   const ServicesListState({
-    this.status = RequestStatus.initial,
-    this.services = const <ProviderServiceEntity>[],
+    this.pagination = const PaginationData<ProviderServiceEntity>(),
     this.searchQuery = '',
     this.statusFilter = ProviderServiceStatus.all,
-    this.failure,
-    this.page = 1,
-    this.totalPages = 1,
-    this.loadingMore = false,
   });
 
-  final RequestStatus status;
-  final List<ProviderServiceEntity> services;
+  final PaginationData<ProviderServiceEntity> pagination;
   final String searchQuery;
   final ProviderServiceStatus statusFilter;
-  final Failure? failure;
-  final int page;
-  final int totalPages;
-  final bool loadingMore;
 
-  bool get isLoading => status == RequestStatus.loading;
-  bool get hasError => status == RequestStatus.failure;
-  bool get hasMore => page < totalPages;
+  List<ProviderServiceEntity> get services => pagination.items;
+
+  RequestStatus get status => pagination.status;
+  Failure? get failure => pagination.firstPageError;
+  int get page => pagination.meta.currentPage;
+  int get totalPages => pagination.meta.totalPages;
+  bool get loadingMore => pagination.loadingMore;
+  bool get isLoading => pagination.isLoadingFirstPage;
+  bool get hasError => pagination.hasFirstPageError;
+  bool get hasMore => pagination.hasMore;
 
   ServicesListState copyWith({
-    RequestStatus? status,
-    List<ProviderServiceEntity>? services,
+    PaginationData<ProviderServiceEntity>? pagination,
     String? searchQuery,
     ProviderServiceStatus? statusFilter,
-    Failure? failure,
-    int? page,
-    int? totalPages,
-    bool? loadingMore,
-    bool clearFailure = false,
   }) => ServicesListState(
-    status: status ?? this.status,
-    services: services ?? this.services,
+    pagination: pagination ?? this.pagination,
     searchQuery: searchQuery ?? this.searchQuery,
     statusFilter: statusFilter ?? this.statusFilter,
-    failure: clearFailure ? null : (failure ?? this.failure),
-    page: page ?? this.page,
-    totalPages: totalPages ?? this.totalPages,
-    loadingMore: loadingMore ?? this.loadingMore,
   );
 
   @override
-  List<Object?> get props => [
-    status,
-    services,
-    searchQuery,
-    statusFilter,
-    failure,
-    page,
-    totalPages,
-    loadingMore,
-  ];
+  List<Object?> get props => [pagination, searchQuery, statusFilter];
 }

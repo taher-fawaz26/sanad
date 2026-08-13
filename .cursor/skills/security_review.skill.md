@@ -32,7 +32,7 @@ rg "Hive\.box" --glob "*.dart"
 
 ## 3. Network Security
 
-- [ ] SSL pinning not disabled in `packages/network`
+- [ ] No SSL/certificate pinning reintroduced without explicit instruction (deferred by design — see `docs/SECURITY.md`)
 - [ ] No `badCertificateCallback` returning `true`
 - [ ] All feature calls use `authDio` (not `rawDio`)
 - [ ] 15s timeouts enforced

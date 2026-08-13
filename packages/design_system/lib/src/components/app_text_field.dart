@@ -318,6 +318,13 @@ class _AppTextFieldState extends State<AppTextField> {
           end: responsiveDimension(FieldTokens.trailingPadding),
         ),
         child: Align(
+          // Shrink-wrap to the trailing content's own width. Without this,
+          // Align (no widthFactor) tries to be "as big as possible" — with
+          // suffixIconConstraints leaving maxWidth unbounded, that starves
+          // the editable text region of essentially all its width at
+          // realistic (narrow) field widths, rendering the value invisible
+          // even though it's present and correct in the widget tree.
+          widthFactor: 1,
           alignment: widget.maxLines > 1
               ? AlignmentDirectional.topEnd
               : AlignmentDirectional.centerEnd,

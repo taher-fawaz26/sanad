@@ -229,7 +229,10 @@ class _AddBranchPageState extends State<AddBranchPage> {
 
   // ── Bloc side effects ──
 
-  void _onBlocStateChanged(BuildContext context, AddBranchState state) {
+  /// Handles load-related side effects: seeding the edit draft once the
+  /// branch has been fetched, and surfacing load/setup errors. Kept separate
+  /// from the submit mutation (below), which `MutationListener` owns.
+  void _onLoadOrSetupStatusChanged(BuildContext context, AddBranchState state) {
     final wizard = context.read<AddBranchWizardCubit>();
 
     // Edit-by-id: seed the draft once the branch has been fetched.
@@ -248,48 +251,12 @@ class _AddBranchPageState extends State<AddBranchPage> {
       }
     }
 
-    if (state.isLoading) {
-      _showSubmittingDialog();
-      return;
-    }
-    _dismissSubmittingDialog();
-
-    if (state.isSuccess) {
-      _showSuccessPopover();
-    } else if (state.hasError && state.failure != null) {
-      showAddBranchErrorSnackbar(context: context, failure: state.failure!);
-    } else if (state.hasSetupError && state.setupFailure != null) {
+    if (state.hasSetupError && state.setupFailure != null) {
       showAddBranchErrorSnackbar(
         context: context,
         failure: state.setupFailure!,
       );
     }
-  }
-
-  /// Figma loading-state dialog (`1546:8536`) while the submit is in flight.
-  void _showSubmittingDialog() {
-    final wizard = context.read<AddBranchWizardCubit>();
-    if (wizard.state.submittingDialogVisible) return;
-    wizard.markSubmittingDialogShown();
-
-    showAppProgressDialog(
-      context: context,
-      title: 'branches.add_branch.submitting_title'.tr(),
-      description: 'branches.add_branch.submitting_description'.tr(),
-    ).whenComplete(
-      () {
-        if (mounted) {
-          context.read<AddBranchWizardCubit>().markSubmittingDialogDismissed();
-        }
-      },
-    );
-  }
-
-  void _dismissSubmittingDialog() {
-    final wizard = context.read<AddBranchWizardCubit>();
-    if (!wizard.state.submittingDialogVisible) return;
-    wizard.markSubmittingDialogDismissed();
-    dismissAppProgressDialog(context);
   }
 
   void _showSuccessPopover() {
@@ -352,24 +319,41 @@ class _AddBranchPageState extends State<AddBranchPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AddBranchBloc, AddBranchState>(
-      listener: _onBlocStateChanged,
-      child: PopScope(
-        canPop: false,
-        onPopInvokedWithResult: (didPop, _) {
-          if (!didPop) _handleClose();
-        },
-        child: Scaffold(
-          backgroundColor: context.appColors.surface,
-          body: SafeArea(
-            child: BlocBuilder<AddBranchWizardCubit, AddBranchWizardState>(
-              builder: (context, wizard) {
-                if (_isEdit && !wizard.isSeeded) return _buildSeedingScreen();
-                if (wizard.currentStep == _reviewStep) {
-                  return _buildReviewScreen();
-                }
-                return _buildWizardScreen(wizard);
-              },
+    return MutationListener<AddBranchBloc, AddBranchState>(
+      status: (state) => state.status,
+      title: (context) => 'branches.add_branch.submitting_title'.tr(),
+      description: (context) =>
+          'branches.add_branch.submitting_description'.tr(),
+      onSuccess: (context, state) => _showSuccessPopover(),
+      onFailure: (context, state) {
+        if (state.failure != null) {
+          showAddBranchErrorSnackbar(context: context, failure: state.failure!);
+        }
+      },
+      child: BlocListener<AddBranchBloc, AddBranchState>(
+        listenWhen: (previous, current) =>
+            previous.loadStatus != current.loadStatus ||
+            previous.setupStatus != current.setupStatus,
+        listener: _onLoadOrSetupStatusChanged,
+        child: PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) _handleClose();
+          },
+          child: Scaffold(
+            backgroundColor: context.appColors.surface,
+            body: SafeArea(
+              child: BlocBuilder<AddBranchWizardCubit, AddBranchWizardState>(
+                builder: (context, wizard) {
+                  if (_isEdit && !wizard.isSeeded) {
+                    return _buildSeedingScreen();
+                  }
+                  if (wizard.currentStep == _reviewStep) {
+                    return _buildReviewScreen();
+                  }
+                  return _buildWizardScreen(wizard);
+                },
+              ),
             ),
           ),
         ),
@@ -441,7 +425,13 @@ class _AddBranchPageState extends State<AddBranchPage> {
           title: _navTitle,
           leading: AppCloseIcon(onTap: _handleClose),
         ),
-        const Expanded(child: BranchReviewBody()),
+        Expanded(
+          child: BranchReviewBody(
+            onEditCoverage: _openCoverageArea,
+            onEditServices: _openSelectServices,
+            onEditTeam: _openSelectWorkers,
+          ),
+        ),
         Padding(
           padding: EdgeInsets.fromLTRB(
             AppSpacing.xl,

@@ -88,13 +88,13 @@ class ServicesModule extends FeatureModule {
       GoRoute(
         path: ':id',
         builder: (context, state) {
-          final extra = state.extra;
-          if (extra is! ProviderServiceEntity) {
+          final id = state.pathParameters['id'];
+          if (id == null || id.isEmpty) {
             return const _MissingRouteArgs();
           }
           return BlocProvider(
             create: (_) => sl<ServiceActionBloc>(),
-            child: ServiceDetailsPage(service: extra),
+            child: ServiceDetailsPage(serviceId: id),
           );
         },
         routes: [

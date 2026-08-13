@@ -113,6 +113,7 @@ export 'tokens/search_bar_tokens.dart'
         AppSearchBarThemeX,
         SearchBarStyleSpec,
         SearchBarTokens;
+export 'tokens/skeleton_tokens.dart' show SkeletonTokens;
 export 'tokens/segmented_control_tokens.dart'
     show
         AppSegmentedControlTheme,

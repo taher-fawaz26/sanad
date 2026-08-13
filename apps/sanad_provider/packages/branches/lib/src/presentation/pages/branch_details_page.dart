@@ -24,6 +24,19 @@ import 'package:maps/maps.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'package:workers/workers.dart';
 
+/// Realistic mock used only to skeletonize the real details layout via
+/// [AppSkeletonizer]. `lat`/`lng` are left null so [BranchSummaryView] skips
+/// the map preview instead of rendering one against a fake position.
+final _skeletonBranch = BranchEntity(
+  id: 'skeleton',
+  branchName: BoneMock.words(2),
+  branchAddress: BoneMock.address,
+  city: BoneMock.city,
+  branchPhone: BoneMock.phone,
+  isAvailable: true,
+  availabilityMode: BranchAvailabilityMode.coreHours,
+);
+
 /// Figma Branch Details screen (`365:14892`).
 ///
 /// Read-only by default; each editable section (Branch Info, Contact,
@@ -54,8 +67,13 @@ class BranchDetailsPage extends StatelessWidget {
       },
       builder: (context, state) {
         if (state.isLoading && state.branch == null) {
-          return const Scaffold(
-            body: Center(child: AppLoadingIndicator()),
+          // Skeletonize the *real* details layout with mock data instead of
+          // a bespoke skeleton widget.
+          return Scaffold(
+            body: AppSkeletonizer(
+              enabled: true,
+              child: _BranchDetailsContent(branch: _skeletonBranch),
+            ),
           );
         }
 

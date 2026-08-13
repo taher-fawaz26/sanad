@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:core/core.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -157,6 +159,58 @@ void main() {
           description: null,
           descriptionAr: null,
           permissionIds: ['perm_1'],
+        ),
+      ).called(1);
+    },
+  );
+
+  test(
+    'droppable(): a second SubmitCreateRoleEvent while one is in flight '
+    'does not fire a duplicate API call',
+    () async {
+      final gate = Completer<RoleEntity>();
+      when(
+        () => rolesRepository.createRole(
+          name: any(named: 'name'),
+          displayName: any(named: 'displayName'),
+          displayNameAr: any(named: 'displayNameAr'),
+          description: any(named: 'description'),
+          descriptionAr: any(named: 'descriptionAr'),
+          permissionIds: any(named: 'permissionIds'),
+        ),
+      ).thenAnswer((_) => TaskEither(() => gate.future.then(Right.new)));
+
+      final bloc = _buildBloc(
+        permissionsRepository: permissionsRepository,
+        rolesRepository: rolesRepository,
+      );
+      addTearDown(bloc.close);
+
+      bloc
+        ..add(const SubmitCreateRoleEvent(name: 'x', displayName: 'X'))
+        ..add(const SubmitCreateRoleEvent(name: 'x', displayName: 'X'));
+      await Future<void>.delayed(Duration.zero);
+
+      gate.complete(
+        const RoleEntity(
+          id: 'role_1',
+          name: 'x',
+          displayName: 'X',
+          userType: RolePersonaType.companyProvider,
+          isSystem: false,
+          permissions: [_perm1],
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      verify(
+        () => rolesRepository.createRole(
+          name: 'x',
+          displayName: 'X',
+          displayNameAr: null,
+          description: null,
+          descriptionAr: null,
+          permissionIds: any(named: 'permissionIds'),
         ),
       ).called(1);
     },

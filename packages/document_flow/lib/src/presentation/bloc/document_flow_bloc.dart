@@ -1,4 +1,5 @@
 import 'package:asset_picker/asset_picker.dart';
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:core/core.dart';
 import 'package:document_flow/src/domain/entities/document_flow_config.dart';
 import 'package:document_flow/src/domain/entities/document_flow_context.dart';
@@ -41,12 +42,18 @@ class DocumentFlowBloc extends Bloc<DocumentFlowEvent, DocumentFlowState> {
        super(DocumentFlowState(config: config)) {
     on<DocumentFlowStarted>(_onStarted);
     on<DocumentPicked>(_onPicked);
+    // Intentionally NOT droppable: uploads are keyed per DocumentType and
+    // legitimately run concurrently (Emirates ID + trade license at once) —
+    // droppable() operates per event type, so it would drop a second
+    // document's upload while the first is still in flight.
     on<DocumentUploadRequested>(_onUploadRequested);
     on<DocumentUploadCancelled>(_onUploadCancelled);
     on<DocumentRemoved>(_onRemoved);
-    on<ExtractionRequested>(_onExtractionRequested);
+    // Single flow-wide operation (not per-type) — safe to drop duplicates.
+    on<ExtractionRequested>(_onExtractionRequested, transformer: droppable());
     on<EditingStarted>(_onEditingStarted);
-    on<SubmitRequested>(_onSubmitRequested);
+    // Drop duplicate submits while one is in flight (double-tap guard).
+    on<SubmitRequested>(_onSubmitRequested, transformer: droppable());
     on<FlowReset>(_onReset);
     on<RetryRequested>(_onRetry);
   }

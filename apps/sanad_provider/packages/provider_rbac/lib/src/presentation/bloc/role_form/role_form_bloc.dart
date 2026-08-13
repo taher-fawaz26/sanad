@@ -1,3 +1,4 @@
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -25,8 +26,9 @@ class RoleFormBloc extends Bloc<RoleFormEvent, RoleFormState> {
        super(const RoleFormState()) {
     on<LoadPermissionCatalogEvent>(_onLoadCatalog);
     on<TogglePermissionEvent>(_onTogglePermission);
-    on<SubmitCreateRoleEvent>(_onSubmitCreate);
-    on<SubmitUpdateRoleEvent>(_onSubmitUpdate);
+    // Drop duplicate submits while one is in flight (double-tap guard).
+    on<SubmitCreateRoleEvent>(_onSubmitCreate, transformer: droppable());
+    on<SubmitUpdateRoleEvent>(_onSubmitUpdate, transformer: droppable());
   }
 
   final GetPermissionsUseCase _getPermissionsUseCase;

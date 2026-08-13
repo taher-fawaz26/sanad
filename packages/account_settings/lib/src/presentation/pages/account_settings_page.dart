@@ -3,6 +3,7 @@ import 'package:account_settings/src/domain/usecases/account_settings_params.dar
 import 'package:account_settings/src/presentation/bloc/account_settings/account_settings_bloc.dart';
 import 'package:account_settings/src/presentation/widgets/bottom_sheets/add_or_change_owner_email_sheet.dart';
 import 'package:account_settings/src/presentation/widgets/bottom_sheets/add_or_change_owner_phone_sheet.dart';
+import 'package:account_settings/src/presentation/widgets/bottom_sheets/edit_name_sheet.dart';
 import 'package:account_settings/src/presentation/widgets/bottom_sheets/language_preferences_bottom_sheet.dart';
 import 'package:account_settings/src/presentation/widgets/sections/account_credentials_section.dart';
 import 'package:account_settings/src/presentation/widgets/sections/help_support_section.dart';
@@ -39,10 +40,25 @@ class AccountSettingsPage extends StatelessWidget {
       valueListenable: sessionManager.watch(),
       builder: (context, session, _) {
         return BlocConsumer<AuthBloc, AuthState>(
-          listenWhen: (previous, current) =>
-              current is AuthLogoutSuccessState ||
-              current is AuthDeleteAccountFailureState,
+          // AppProgress.show/dismiss are idempotent, so it's safe to
+          // evaluate on every AuthBloc emission rather than narrowing
+          // listenWhen to specific states.
           listener: (context, state) {
+            if (state is AuthLogoutLoadingState) {
+              AppProgress.show(
+                context,
+                title: 'settings.logging_out_title'.tr(),
+              );
+              return;
+            }
+            if (state is AuthDeleteAccountLoadingState) {
+              AppProgress.show(
+                context,
+                title: 'settings.deleting_account_title'.tr(),
+              );
+              return;
+            }
+            AppProgress.dismiss();
             if (state is AuthLogoutSuccessState) {
               context.go(AuthRoutes.login);
               return;
@@ -55,68 +71,54 @@ class AccountSettingsPage extends StatelessWidget {
             }
           },
           builder: (context, authState) {
-            return BlocConsumer<AccountSettingsBloc, AccountSettingsState>(
-              listenWhen: (previous, current) =>
-                  (current.loadStatus == RequestStatus.failure &&
-                      current.failure != null) ||
-                  (current.saveStatus == RequestStatus.failure &&
-                      current.saveFailure != null) ||
-                  (current.saveStatus == RequestStatus.success &&
-                      previous.saveStatus == RequestStatus.loading &&
-                      current.preferredLanguage != null),
-              listener: (context, state) async {
-                if (state.loadStatus == RequestStatus.failure &&
-                    state.failure != null) {
-                  showAppErrorSnackbar(
-                    context: context,
-                    title: state.failure!.message,
-                  );
-                  return;
-                }
-                if (state.saveStatus == RequestStatus.failure &&
-                    state.saveFailure != null) {
-                  showAppErrorSnackbar(
-                    context: context,
-                    title: state.saveFailure!.message,
-                  );
-                  return;
-                }
-                if (state.saveStatus == RequestStatus.success &&
-                    state.preferredLanguage != null) {
-                  await _applyPreferredLanguage(
-                    context,
-                    state.preferredLanguage!,
-                  );
-                }
-              },
+            return BlocBuilder<AccountSettingsBloc, AccountSettingsState>(
               builder: (context, accountState) {
-                final isDeleting = authState is AuthDeleteAccountLoadingState;
-                final isLoggingOut = authState is AuthLogoutLoadingState;
-                final isLoading =
-                    accountState.loadStatus == RequestStatus.loading &&
-                    accountState.settings == null;
-                final isSaving =
-                    accountState.saveStatus == RequestStatus.loading;
+                // Only true on a first-ever open before the session has any
+                // account-settings snapshot (e.g. a persona whose session
+                // predates the persona-profile refresh) — never a blanket
+                // loading flag, so the background refresh never wipes
+                // already-visible content.
+                final isInitialLoad = accountState.settings == null;
 
                 final email = accountState.email ?? session?.user.email;
 
-                return Stack(
-                  children: [
-                    AppScrollPage(
-                      slivers: [
-                        AppSliverAppBar(
-                          navBar: AppNavBar(
-                            title: 'settings.account_settings'.tr(),
-                            showBackButton: true,
-                            onLeadingTap: () => context.pop(),
-                          ),
+                return MutationListener<AccountSettingsBloc,
+                    AccountSettingsState>(
+                  status: (state) => state.saveStatus,
+                  title: (context) => 'settings.saving_title'.tr(),
+                  onFailure: (context, state) {
+                    if (state.saveFailure != null) {
+                      showAppErrorSnackbar(
+                        context: context,
+                        title: state.saveFailure!.message,
+                      );
+                    }
+                  },
+                  onSuccess: (context, state) async {
+                    if (state.preferredLanguage != null) {
+                      await _applyPreferredLanguage(
+                        context,
+                        state.preferredLanguage!,
+                      );
+                    }
+                  },
+                  child: AppScrollPage(
+                    slivers: [
+                      AppSliverAppBar(
+                        navBar: AppNavBar(
+                          title: 'settings.account_settings'.tr(),
+                          showBackButton: true,
+                          onLeadingTap: () => context.pop(),
                         ),
-                        AppSliverPadding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: AppSpacing.xl,
-                            vertical: AppSpacing.md,
-                          ),
-                          sliver: SliverMainAxisGroup(
+                      ),
+                      AppSliverPadding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppSpacing.xl,
+                          vertical: AppSpacing.md,
+                        ),
+                        sliver: AppSkeletonizer.sliver(
+                          enabled: isInitialLoad,
+                          child: SliverMainAxisGroup(
                             slivers: [
                               AppSliverBox(
                                 child: AccountCredentialsSection(
@@ -135,6 +137,10 @@ class AccountSettingsPage extends StatelessWidget {
                                       _addOrChangeEmail(context, null),
                                   onChangeEmail: () =>
                                       _addOrChangeEmail(context, email),
+                                  onEditName: () => _editName(
+                                    context,
+                                    accountState.name,
+                                  ),
                                 ),
                               ),
                               AppSliverGap(AppSpacing.lg),
@@ -181,16 +187,9 @@ class AccountSettingsPage extends StatelessWidget {
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                    if (isDeleting || isLoggingOut || isLoading || isSaving)
-                      const Positioned.fill(
-                        child: ColoredBox(
-                          color: Color(0x33000000),
-                          child: AppLoadingView(),
-                        ),
                       ),
-                  ],
+                    ],
+                  ),
                 );
               },
             );
@@ -269,6 +268,18 @@ class AccountSettingsPage extends StatelessWidget {
       if (!context.mounted) return;
       context.read<AuthBloc>().add(AuthDeleteAccountEvent(user.id));
     }
+  }
+
+  Future<void> _editName(BuildContext context, String? currentName) async {
+    final result = await showEditNameSheet(
+      context: context,
+      initialName: currentName,
+    );
+    if (result == null || !context.mounted || result == currentName) return;
+
+    context.read<AccountSettingsBloc>().add(
+      AccountSettingsUpdated(UpdateAccountSettingsParams(name: result)),
+    );
   }
 
   Future<void> _addOrChangePhone(

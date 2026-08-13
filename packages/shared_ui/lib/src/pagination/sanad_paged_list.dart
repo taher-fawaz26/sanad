@@ -1,7 +1,8 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/widgets.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
-import 'package:shared_ui/src/states/app_loading_view.dart';
+import 'package:shared_ui/src/loading/app_skeleton_list.dart';
+import 'package:shared_ui/src/loading/app_skeletonizer.dart';
 
 /// Thin, purely-presentational wrapper around `infinite_scroll_pagination`'s
 /// [PagedListView] — the *only* place in the application that imports the
@@ -50,8 +51,9 @@ class SanadPagedList<T> extends StatelessWidget {
   final ScrollPhysics? physics;
   final bool shrinkWrap;
 
-  /// Defaults to [AppLoadingView] — first-page loading has no
-  /// feature-specific copy, so a default is safe here.
+  /// Defaults to a generic skeleton list ([AppSkeletonList] of bone rows) —
+  /// first-page loading has no feature-specific copy, so a default is safe.
+  /// Pass a builder that skeletonizes the *real* row for higher fidelity.
   final WidgetBuilder? firstPageProgressIndicatorBuilder;
 
   /// Defaults to a compact bottom loader.
@@ -65,7 +67,10 @@ class SanadPagedList<T> extends StatelessWidget {
       newPageErrorIndicatorBuilder: newPageErrorIndicatorBuilder,
       noItemsFoundIndicatorBuilder: noItemsFoundIndicatorBuilder,
       firstPageProgressIndicatorBuilder:
-          firstPageProgressIndicatorBuilder ?? (_) => const AppLoadingView(),
+          firstPageProgressIndicatorBuilder ??
+          (_) => AppSkeletonList(
+            itemBuilder: (_, _) => const _PagedListSkeletonRow(),
+          ),
       newPageProgressIndicatorBuilder:
           newPageProgressIndicatorBuilder ??
           (_) => const Padding(
@@ -95,6 +100,42 @@ class SanadPagedList<T> extends StatelessWidget {
       scrollController: controller,
       physics: physics,
       shrinkWrap: shrinkWrap,
+    );
+  }
+}
+
+/// Generic list-item skeleton (avatar + two text bars) used as the default
+/// first-page placeholder when a caller doesn't skeletonize its own row.
+class _PagedListSkeletonRow extends StatelessWidget {
+  const _PagedListSkeletonRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.border),
+      ),
+      padding: const EdgeInsets.all(12),
+      child: const Row(
+        spacing: 12,
+        children: [
+          Bone.circle(size: 40),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 6,
+              children: [
+                Bone.text(words: 2),
+                Bone.text(words: 1, fontSize: 12),
+              ],
+            ),
+          ),
+          Bone(width: 50, height: 20),
+        ],
+      ),
     );
   }
 }

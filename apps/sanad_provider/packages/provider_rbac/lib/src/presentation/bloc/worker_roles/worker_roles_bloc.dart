@@ -1,3 +1,4 @@
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -27,8 +28,9 @@ class WorkerRolesBloc extends Bloc<WorkerRolesEvent, WorkerRolesState> {
        super(const WorkerRolesState()) {
     on<LoadWorkerRolesEvent>(_onLoadWorkerRoles);
     on<LoadAssignableRolesEvent>(_onLoadCatalog);
-    on<AssignRolesRequestedEvent>(_onAssignRoles);
-    on<RemoveRoleRequestedEvent>(_onRemoveRole);
+    // Drop duplicate submits while one is in flight (double-tap guard).
+    on<AssignRolesRequestedEvent>(_onAssignRoles, transformer: droppable());
+    on<RemoveRoleRequestedEvent>(_onRemoveRole, transformer: droppable());
   }
 
   final GetWorkerRolesUseCase _getWorkerRolesUseCase;

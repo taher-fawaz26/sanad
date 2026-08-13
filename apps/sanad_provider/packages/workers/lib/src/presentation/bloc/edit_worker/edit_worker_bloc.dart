@@ -1,3 +1,4 @@
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -14,7 +15,8 @@ class EditWorkerBloc extends Bloc<EditWorkerEvent, EditWorkerState> {
   EditWorkerBloc({required UpdateWorkerUseCase updateWorkerUseCase})
     : _updateWorkerUseCase = updateWorkerUseCase,
       super(const EditWorkerState()) {
-    on<EditWorkerSubmitEvent>(_onSubmit);
+    // Drop duplicate submits while one is in flight (double-tap guard).
+    on<EditWorkerSubmitEvent>(_onSubmit, transformer: droppable());
   }
 
   final UpdateWorkerUseCase _updateWorkerUseCase;

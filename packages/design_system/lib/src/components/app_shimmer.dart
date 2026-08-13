@@ -1,4 +1,3 @@
-import 'package:design_system/src/spacing/responsive_spacing.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
 import 'package:design_system/src/utils/constants/app_durations.dart';
 import 'package:flutter/material.dart';
@@ -106,91 +105,6 @@ class ShimmerCircle extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.appColors.onBackground,
         shape: BoxShape.circle,
-      ),
-    );
-  }
-}
-
-/// Skeleton row matching Figma `1528:9960` — circle avatar + two text bars +
-/// trailing badge pill inside a bordered card.
-class ShimmerListItem extends StatelessWidget {
-  const ShimmerListItem({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.background,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.border),
-      ),
-      padding: const EdgeInsets.all(12),
-      child: const Row(
-        spacing: 12,
-        children: [
-          ShimmerCircle(size: 40),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: 6,
-              children: [
-                ShimmerBox(height: 16, width: 120),
-                ShimmerBox(height: 12, width: 80),
-              ],
-            ),
-          ),
-          ShimmerBox(width: 50, height: 20, borderRadius: 8),
-        ],
-      ),
-    );
-  }
-}
-
-/// Preset skeleton for list pages: search bar placeholder + [itemCount] list
-/// item rows, all wrapped in [AppShimmer] for the animated gradient sweep.
-class ShimmerListSkeleton extends StatelessWidget {
-  const ShimmerListSkeleton({
-    super.key,
-    this.itemCount = 6,
-    this.showSearchBar = true,
-  });
-
-  final int itemCount;
-  final bool showSearchBar;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return AppShimmer(
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SizedBox(height: AppSpacing.sm),
-            if (showSearchBar) ...[
-              Container(
-                height: 48,
-                decoration: BoxDecoration(
-                  color: colors.background,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: colors.border),
-                ),
-              ),
-              SizedBox(height: AppSpacing.md),
-            ],
-            ...List.generate(
-              itemCount,
-              (_) => Padding(
-                padding: EdgeInsets.only(bottom: AppSpacing.sm),
-                child: const ShimmerListItem(),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

@@ -3,12 +3,10 @@ import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:services/src/domain/entities/provider_service_entity.dart';
 import 'package:services/src/domain/entities/provider_service_status.dart';
 import 'package:services/src/presentation/bloc/service_action/service_action_bloc.dart';
-import 'package:services/src/presentation/widgets/service_confirmation_sheet.dart';
-import 'package:services/src/routes/service_routes.dart';
+import 'package:services/src/presentation/widgets/service_action_invokers.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Per-service "more actions" sheet — Figma `5261:44521` (active) /
@@ -38,7 +36,6 @@ Future<void> showServiceActionsBottomSheet({
       ),
     ),
     settings: const SheetRouteSettings(
-      sheetSize: SheetSize.expanded,
       padChild: false,
     ),
   );
@@ -95,82 +92,19 @@ class _ServiceActionsSheetBody extends StatelessWidget {
   Future<void> _onEditPressed(BuildContext context) async {
     Navigator.of(context).pop();
     if (!pageContext.mounted) return;
-
-    final confirmed = await showServiceConfirmationSheet(
-      context: pageContext,
-      title: 'services.edit_confirm_title'.tr(),
-      description: 'services.edit_confirm_description'.tr(),
-      serviceName: service.serviceName,
-      actionLabel: 'services.edit_confirm_action'.tr(),
-      cancelLabel: 'services.edit_confirm_cancel'.tr(),
-    );
-    if (!(confirmed ?? false) || !pageContext.mounted) return;
-
-    final updated = await pageContext.push<ProviderServiceEntity>(
-      ServiceRoutes.editFor(service.id),
-      extra: service,
-    );
-    if (updated != null && pageContext.mounted) {
-      pageContext.read<ServiceActionBloc>().add(
-        ServiceExternallyUpdatedEvent(updated),
-      );
-    }
+    await confirmAndEditService(context: pageContext, service: service);
   }
 
   Future<void> _onStatusTogglePressed(BuildContext context) async {
     Navigator.of(context).pop();
     if (!pageContext.mounted) return;
-
-    final isActive = _isActive;
-    final confirmed = await showServiceConfirmationSheet(
-      context: pageContext,
-      title: isActive
-          ? 'services.pause_confirm_title'.tr()
-          : 'services.resume_confirm_title'.tr(),
-      description: isActive
-          ? 'services.pause_confirm_description'.tr()
-          : 'services.resume_confirm_description'.tr(),
-      serviceName: service.serviceName,
-      actionLabel: isActive
-          ? 'services.pause_confirm'.tr()
-          : 'services.resume_confirm_action'.tr(),
-      cancelLabel: isActive
-          ? 'services.cancel'.tr()
-          : 'services.resume_confirm_cancel'.tr(),
-      actionType: isActive ? AppButtonType.warning : AppButtonType.primary,
-    );
-
-    if ((confirmed ?? false) && pageContext.mounted) {
-      pageContext.read<ServiceActionBloc>().add(
-        ServiceStatusToggleRequestedEvent(
-          serviceId: service.id,
-          status: isActive
-              ? ProviderServiceStatus.inactive
-              : ProviderServiceStatus.active,
-        ),
-      );
-    }
+    await confirmAndToggleServiceStatus(context: pageContext, service: service);
   }
 
   Future<void> _onDeletePressed(BuildContext context) async {
     Navigator.of(context).pop();
     if (!pageContext.mounted) return;
-
-    final confirmed = await showServiceConfirmationSheet(
-      context: pageContext,
-      title: 'services.delete_confirm_title'.tr(),
-      description: 'services.delete_confirm_description'.tr(),
-      serviceName: service.serviceName,
-      actionLabel: 'services.delete_confirm'.tr(),
-      cancelLabel: 'services.cancel'.tr(),
-      destructive: true,
-    );
-
-    if ((confirmed ?? false) && pageContext.mounted) {
-      pageContext.read<ServiceActionBloc>().add(
-        ServiceDeleteRequestedEvent(service.id),
-      );
-    }
+    await confirmAndDeleteService(context: pageContext, service: service);
   }
 }
 

@@ -1,7 +1,6 @@
 import 'package:bottom_nav_bar/bottom_nav_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hidable/hidable.dart';
 import 'package:sanad_provider/src/features/organization_settings/organization_settings.dart';
 import 'package:sanad_provider/src/routing/shell/provider_bottom_nav.dart';
 import 'package:sanad_provider/src/routing/shell/provider_bottom_nav_items.dart';
@@ -26,11 +25,23 @@ class _MainShellState extends State<MainShell> {
   // of which tab's scroll view is currently attached to it.
   final _scrollController = ScrollController();
 
+  // Decides show/hide from the shared scroll controller — never hides
+  // short/non-scrollable content, ignores pull-to-refresh overscroll, and
+  // always shows at the top (see NavVisibilityController for the full rules).
+  final _navVisibility = NavVisibilityController();
+
   // Anchors the settings popover to the actual rendered Settings tab tile.
   final GlobalKey _settingsTileKey = GlobalKey();
 
   @override
+  void initState() {
+    super.initState();
+    _navVisibility.attach(_scrollController);
+  }
+
+  @override
   void dispose() {
+    _navVisibility.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -66,7 +77,7 @@ class _MainShellState extends State<MainShell> {
         : ProviderBottomNavDestination.home;
 
     final navTheme = providerBottomNavTheme(context);
-    // Hidable sizes its child with a fixed SizedBox (defaulting to the
+    // NavVisibility sizes its child with a fixed SizedBox (defaulting to the
     // 56dp AppBar height) rather than measuring it — passing our actual
     // total height (bar + bottom inset + safe area) keeps it from clamping
     // BottomNavBar down and overflowing its destination tiles.
@@ -80,9 +91,9 @@ class _MainShellState extends State<MainShell> {
         controller: _scrollController,
         child: widget.navigationShell,
       ),
-      bottomNavigationBar: Hidable(
-        controller: _scrollController,
-        preferredWidgetSize: Size.fromHeight(barTotalHeight),
+      bottomNavigationBar: NavVisibility(
+        controller: _navVisibility,
+        preferredHeight: barTotalHeight,
         child: BottomNavBar(
           destinations: ProviderBottomNavItems.destinations(context),
           selectedItem: selectedItem,

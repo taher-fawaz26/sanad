@@ -1,3 +1,4 @@
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -15,7 +16,8 @@ class AddWorkerBloc extends Bloc<AddWorkerEvent, AddWorkerState> {
   AddWorkerBloc({required InviteWorkerUseCase inviteWorkerUseCase})
     : _inviteWorkerUseCase = inviteWorkerUseCase,
       super(const AddWorkerState()) {
-    on<AddWorkerSubmitEvent>(_onSubmit);
+    // Drop duplicate submits while one is in flight (double-tap guard).
+    on<AddWorkerSubmitEvent>(_onSubmit, transformer: droppable());
     on<AddWorkerResetEvent>(_onReset);
   }
 

@@ -18,7 +18,6 @@ class AddBranchWizardState extends Equatable {
     this.showStepOneErrors = false,
     this.isSeeded = true,
     this.coverageAccessDenied = false,
-    this.submittingDialogVisible = false,
   });
 
   final bool isEdit;
@@ -38,18 +37,12 @@ class AddBranchWizardState extends Equatable {
   /// step — swaps in the "Location access needed" body.
   final bool coverageAccessDenied;
 
-  /// True while an app-progress dialog is on the stack for a submit / save.
-  /// Owned here (not by the page) so a bloc listener can safely toggle it
-  /// without racing a mutable field on the page's State.
-  final bool submittingDialogVisible;
-
   AddBranchWizardState copyWith({
     int? currentStep,
     int? furthestStep,
     bool? showStepOneErrors,
     bool? isSeeded,
     bool? coverageAccessDenied,
-    bool? submittingDialogVisible,
   }) => AddBranchWizardState(
     isEdit: isEdit,
     currentStep: currentStep ?? this.currentStep,
@@ -57,8 +50,6 @@ class AddBranchWizardState extends Equatable {
     showStepOneErrors: showStepOneErrors ?? this.showStepOneErrors,
     isSeeded: isSeeded ?? this.isSeeded,
     coverageAccessDenied: coverageAccessDenied ?? this.coverageAccessDenied,
-    submittingDialogVisible:
-        submittingDialogVisible ?? this.submittingDialogVisible,
   );
 
   @override
@@ -69,7 +60,6 @@ class AddBranchWizardState extends Equatable {
     showStepOneErrors,
     isSeeded,
     coverageAccessDenied,
-    submittingDialogVisible,
   ];
 }
 
@@ -116,12 +106,6 @@ class AddBranchWizardCubit extends Cubit<AddBranchWizardState> {
     if (state.coverageAccessDenied == denied) return;
     emit(state.copyWith(coverageAccessDenied: denied));
   }
-
-  void markSubmittingDialogShown() =>
-      emit(state.copyWith(submittingDialogVisible: true));
-
-  void markSubmittingDialogDismissed() =>
-      emit(state.copyWith(submittingDialogVisible: false));
 
   /// Highest step index (inclusive of the review step). Exposed so the page
   /// can pass identical constants for both stepper UI and step routing.

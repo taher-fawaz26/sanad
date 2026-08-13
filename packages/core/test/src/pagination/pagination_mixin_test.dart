@@ -85,6 +85,74 @@ class _TestBloc extends Bloc<_Event, _TestState>
       TaskEither(() => _fetcher(query));
 }
 
+// ── Fixture: an item whose structural equality is NOT a safe dedup key ──────
+// (two fetches of "the same record" can differ on a non-identity field, e.g.
+// a freshness timestamp or a denormalized display value).
+
+class _TaggedItem extends Equatable {
+  const _TaggedItem(this.id, this.tag);
+  final int id;
+  final String tag;
+  @override
+  List<Object?> get props => [id, tag];
+}
+
+class _TaggedState extends Equatable {
+  const _TaggedState({this.page = const PaginationData<_TaggedItem>()});
+  final PaginationData<_TaggedItem> page;
+  _TaggedState copyWith({PaginationData<_TaggedItem>? page}) =>
+      _TaggedState(page: page ?? this.page);
+  @override
+  List<Object?> get props => [page];
+}
+
+class _TaggedBloc extends Bloc<_Event, _TaggedState>
+    with PaginationMixin<_Event, _TaggedState, _TaggedItem, _TestQuery> {
+  _TaggedBloc(this._fetcher, {required this.useIdDedup})
+    : super(const _TaggedState()) {
+    on<_Fetch>((event, emit) => loadFirstPage(emit));
+    on<_LoadMore>((event, emit) => loadNextPage(emit));
+  }
+
+  final Future<Either<Failure, Page<_TaggedItem>>> Function(_TestQuery query)
+  _fetcher;
+  final bool useIdDedup;
+
+  @override
+  PaginationData<_TaggedItem> readPage(_TaggedState state) => state.page;
+
+  @override
+  _TaggedState writePage(
+    _TaggedState state,
+    PaginationData<_TaggedItem> data,
+  ) => state.copyWith(page: data);
+
+  @override
+  _TestQuery buildQuery({required int page}) => _TestQuery(page: page);
+
+  @override
+  TaskEither<Failure, Page<_TaggedItem>> fetchPage(_TestQuery query) =>
+      TaskEither(() => _fetcher(query));
+
+  @override
+  Object? dedupKey(_TaggedItem item) => useIdDedup ? item.id : item;
+}
+
+Page<_TaggedItem> _taggedPageOf(
+  List<_TaggedItem> items, {
+  required int currentPage,
+  required int totalPages,
+}) => Page(
+  items: items,
+  meta: PageMeta(
+    totalItems: items.length,
+    itemCount: items.length,
+    itemsPerPage: 2,
+    totalPages: totalPages,
+    currentPage: currentPage,
+  ),
+);
+
 Page<_Item> _pageOf(
   List<int> ids, {
   required int currentPage,
@@ -301,6 +369,85 @@ void main() {
       verify: (bloc) {
         expect(bloc.state.page.items, [_Item(9)]);
         expect(bloc.state.page.meta.currentPage, 1);
+      },
+    );
+  });
+
+  group('PaginationMixin.dedupKey', () {
+    blocTest<_TaggedBloc, _TaggedState>(
+      'default dedupKey (structural equality) does NOT dedupe items that '
+      'share an id but differ on another field',
+      build: () => _TaggedBloc((q) async {
+        if (q.page == 1) {
+          return right(
+            _taggedPageOf(
+              [
+                const _TaggedItem(1, 'v1'),
+              ],
+              currentPage: 1,
+              totalPages: 2,
+            ),
+          );
+        }
+        // Same id (1) as page 1, but a different `tag` — e.g. the backing
+        // record shifted between requests. Structural equality treats this
+        // as a distinct item.
+        return right(
+          _taggedPageOf(
+            [
+              const _TaggedItem(1, 'v2'),
+            ],
+            currentPage: 2,
+            totalPages: 2,
+          ),
+        );
+      }, useIdDedup: false),
+      act: (bloc) async {
+        bloc.add(_Fetch());
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(_LoadMore());
+      },
+      wait: const Duration(milliseconds: 10),
+      verify: (bloc) {
+        expect(bloc.state.page.items, hasLength(2));
+        expect(bloc.state.page.items.map((i) => i.id), [1, 1]);
+      },
+    );
+
+    blocTest<_TaggedBloc, _TaggedState>(
+      'overriding dedupKey with a stable id correctly dedupes across pages',
+      build: () => _TaggedBloc((q) async {
+        if (q.page == 1) {
+          return right(
+            _taggedPageOf(
+              [
+                const _TaggedItem(1, 'v1'),
+              ],
+              currentPage: 1,
+              totalPages: 2,
+            ),
+          );
+        }
+        return right(
+          _taggedPageOf(
+            [
+              const _TaggedItem(1, 'v2'),
+            ],
+            currentPage: 2,
+            totalPages: 2,
+          ),
+        );
+      }, useIdDedup: true),
+      act: (bloc) async {
+        bloc.add(_Fetch());
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(_LoadMore());
+      },
+      wait: const Duration(milliseconds: 10),
+      verify: (bloc) {
+        expect(bloc.state.page.items, hasLength(1));
+        // First-seen occurrence wins — matches typical pagination semantics.
+        expect(bloc.state.page.items.single.tag, 'v1');
       },
     );
   });

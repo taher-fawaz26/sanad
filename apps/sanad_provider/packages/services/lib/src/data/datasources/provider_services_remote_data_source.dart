@@ -44,8 +44,6 @@ abstract interface class ProviderServicesRemoteDataSource {
 
   TaskEither<Failure, ProviderServiceOverviewDto> getOverview();
 
-  TaskEither<Failure, ProviderServiceOverviewDto> getOverviewFor(String id);
-
   TaskEither<Failure, ProviderServiceImageDto> addImage(
     String id,
     String mediaId,
@@ -100,8 +98,7 @@ class ProviderServicesRemoteDataSourceImpl
     path: ServicesApiPaths.providerServices,
     method: RequestMethod.post,
     body: dto.toJson(),
-    parser: (data) =>
-        ProviderServiceDto.fromJson(data as Map<String, dynamic>),
+    parser: (data) => ProviderServiceDto.fromJson(data as Map<String, dynamic>),
   );
 
   @override
@@ -112,8 +109,7 @@ class ProviderServicesRemoteDataSourceImpl
     path: ServicesApiPaths.providerService(id),
     method: RequestMethod.patch,
     body: dto.toJson(),
-    parser: (data) =>
-        ProviderServiceDto.fromJson(data as Map<String, dynamic>),
+    parser: (data) => ProviderServiceDto.fromJson(data as Map<String, dynamic>),
   );
 
   @override
@@ -132,8 +128,7 @@ class ProviderServicesRemoteDataSourceImpl
     path: ServicesApiPaths.providerServiceStatus(id),
     method: RequestMethod.patch,
     body: UpdateProviderServiceStatusDto(status: status).toJson(),
-    parser: (data) =>
-        ProviderServiceDto.fromJson(data as Map<String, dynamic>),
+    parser: (data) => ProviderServiceDto.fromJson(data as Map<String, dynamic>),
   );
 
   @override
@@ -144,16 +139,6 @@ class ProviderServicesRemoteDataSourceImpl
         parser: (data) =>
             ProviderServiceOverviewDto.fromJson(data as Map<String, dynamic>),
       );
-
-  @override
-  TaskEither<Failure, ProviderServiceOverviewDto> getOverviewFor(
-    String id,
-  ) => _apiClient.request<ProviderServiceOverviewDto>(
-    path: ServicesApiPaths.providerServiceOverview(id),
-    method: RequestMethod.get,
-    parser: (data) =>
-        ProviderServiceOverviewDto.fromJson(data as Map<String, dynamic>),
-  );
 
   @override
   TaskEither<Failure, ProviderServiceImageDto> addImage(
@@ -182,7 +167,6 @@ class ProviderServicesRemoteDataSourceImpl
   ) => _apiClient.request<ProviderServiceDto>(
     path: ServicesApiPaths.providerServiceImagePrimary(id, imageId),
     method: RequestMethod.patch,
-    parser: (data) =>
-        ProviderServiceDto.fromJson(data as Map<String, dynamic>),
+    parser: (data) => ProviderServiceDto.fromJson(data as Map<String, dynamic>),
   );
 }

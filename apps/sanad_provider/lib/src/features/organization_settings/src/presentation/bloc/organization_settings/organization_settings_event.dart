@@ -69,3 +69,21 @@ final class OrganizationSettingsWorkingHoursSaved
   @override
   List<Object?> get props => [availability];
 }
+
+/// A cover/logo upload succeeded in [IdentityHeaderBloc] — merges the new
+/// URL into [OrganizationSettingsState.organization] so the change survives
+/// a subsequent full reload (and, once cached, doesn't get overwritten by a
+/// stale cached value). The upload itself already happened; this only syncs
+/// local state, so it carries no request status of its own.
+final class OrganizationSettingsMediaUpdated extends OrganizationSettingsEvent {
+  const OrganizationSettingsMediaUpdated({
+    required this.slot,
+    required this.url,
+  });
+
+  final OrganizationMediaSlot slot;
+  final String url;
+
+  @override
+  List<Object?> get props => [slot, url];
+}

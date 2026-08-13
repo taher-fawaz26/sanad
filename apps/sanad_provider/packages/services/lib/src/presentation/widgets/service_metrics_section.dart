@@ -3,6 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:services/src/presentation/bloc/service_analytics/service_analytics_bloc.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 /// Dashboard KPI cards — Figma `4715:26122`.
 ///
@@ -18,7 +19,16 @@ class ServiceMetricsSection extends StatelessWidget {
     return BlocBuilder<ServiceAnalyticsBloc, ServiceAnalyticsState>(
       builder: (context, state) {
         if (state.isLoading) {
-          return const ShimmerListSkeleton();
+          // Skeletonize the *real* metrics grid with placeholder values
+          // instead of a bespoke skeleton layout.
+          return AppSkeletonizer(
+            enabled: true,
+            child: _MetricsGrid(
+              orders: BoneMock.chars(3),
+              completionRate: '${BoneMock.chars(2)}%',
+              cancelledPercent: BoneMock.chars(2),
+            ),
+          );
         }
         if (!state.hasAvailableData) {
           return _AnalyticsUnavailableCard();

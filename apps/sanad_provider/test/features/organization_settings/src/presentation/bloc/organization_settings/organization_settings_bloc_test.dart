@@ -8,10 +8,13 @@ import 'package:mocktail/mocktail.dart';
 import 'package:sanad_provider/src/features/organization_settings/organization_settings.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/business_profile_status.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/category_entity.dart';
+import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/me_media_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/organization_profile_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/provider_completion_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/social_profiles_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/working_hours_day_entity.dart';
+import 'package:sanad_provider/src/features/organization_settings/src/domain/repositories/organization_settings_repository.dart';
+import 'package:sanad_provider/src/features/organization_settings/src/domain/repositories/working_hours_repository.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/usecases/get_organization_settings_usecase.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/usecases/get_provider_completion_usecase.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/usecases/get_working_hours_usecase.dart';
@@ -35,6 +38,12 @@ class _MockUpdateWorkingHours extends Mock
 
 class _MockGetCategories extends Mock implements GetCategoriesUseCase {}
 
+class _MockOrganizationSettingsRepository extends Mock
+    implements OrganizationSettingsRepository {}
+
+class _MockWorkingHoursRepository extends Mock
+    implements WorkingHoursRepository {}
+
 void main() {
   late _MockGetOrganizationSettings getOrganizationSettings;
   late _MockUpdateServiceProviderSettings updateServiceProviderSettings;
@@ -42,6 +51,8 @@ void main() {
   late _MockGetWorkingHours getWorkingHours;
   late _MockUpdateWorkingHours updateWorkingHours;
   late _MockGetCategories getCategories;
+  late _MockOrganizationSettingsRepository organizationSettingsRepository;
+  late _MockWorkingHoursRepository workingHoursRepository;
 
   final organization = OrganizationProfileEntity(
     id: 'org-1',
@@ -74,6 +85,7 @@ void main() {
     );
     registerFallbackValue(const GetCategoriesParams());
     registerFallbackValue(<WorkingHoursDayEntity>[]);
+    registerFallbackValue(organization);
   });
 
   setUp(() {
@@ -83,6 +95,8 @@ void main() {
     getWorkingHours = _MockGetWorkingHours();
     updateWorkingHours = _MockUpdateWorkingHours();
     getCategories = _MockGetCategories();
+    organizationSettingsRepository = _MockOrganizationSettingsRepository();
+    workingHoursRepository = _MockWorkingHoursRepository();
 
     when(() => getOrganizationSettings(any())).thenAnswer(
       (_) => TaskEither.right(organization),
@@ -96,6 +110,18 @@ void main() {
     when(() => getCategories(any())).thenAnswer(
       (_) => TaskEither.right(ServicesPagedResult.empty()),
     );
+    // Cache miss by default — most tests below aren't exercising the
+    // cache-first path, so this keeps their expectations to the pre-cache
+    // "loading then success" shape.
+    when(
+      () => organizationSettingsRepository.getCachedOrganizationSettings(),
+    ).thenAnswer((_) async => null);
+    when(
+      () => workingHoursRepository.getCachedWorkingHours(),
+    ).thenAnswer((_) async => null);
+    when(
+      () => organizationSettingsRepository.cacheOrganizationSettings(any()),
+    ).thenAnswer((_) async {});
   });
 
   OrganizationSettingsBloc build() => OrganizationSettingsBloc(
@@ -105,6 +131,8 @@ void main() {
     getWorkingHours: getWorkingHours,
     updateWorkingHours: updateWorkingHours,
     getCategories: getCategories,
+    organizationSettingsRepository: organizationSettingsRepository,
+    workingHoursRepository: workingHoursRepository,
   );
 
   blocTest<OrganizationSettingsBloc, OrganizationSettingsState>(
@@ -124,6 +152,89 @@ void main() {
           .having((state) => state.workingHours, 'workingHours', const [])
           .having((state) => state.completion, 'completion', completion),
     ],
+  );
+
+  blocTest<OrganizationSettingsBloc, OrganizationSettingsState>(
+    'a cache hit seeds instantly (no loading state) then the background '
+    'network refresh overwrites it once it resolves',
+    build: () {
+      when(
+        () => organizationSettingsRepository.getCachedOrganizationSettings(),
+      ).thenAnswer((_) async => organization);
+      when(
+        () => workingHoursRepository.getCachedWorkingHours(),
+      ).thenAnswer((_) async => const []);
+      return build();
+    },
+    act: (bloc) => bloc.add(const OrganizationSettingsLoaded()),
+    expect: () => [
+      // No RequestStatus.loading emission — the cache hit renders instantly.
+      isA<OrganizationSettingsState>()
+          .having((state) => state.status, 'status', RequestStatus.success)
+          .having((state) => state.organization, 'organization', organization)
+          .having((state) => state.workingHours, 'workingHours', const []),
+      isA<OrganizationSettingsState>()
+          .having((state) => state.status, 'status', RequestStatus.success)
+          .having((state) => state.organization, 'organization', organization)
+          .having((state) => state.completion, 'completion', completion),
+    ],
+  );
+
+  blocTest<OrganizationSettingsBloc, OrganizationSettingsState>(
+    'a cache hit carries coverImage/profileImage through to the emitted '
+    'state — regression for the reported "images show as placeholders" bug',
+    build: () {
+      final withImages = organization.copyWith(
+        coverImage: const MeMediaEntity(id: 'cover-1', url: 'cover-url'),
+        profileImage: const MeMediaEntity(id: 'logo-1', url: 'logo-url'),
+      );
+      when(
+        () => organizationSettingsRepository.getCachedOrganizationSettings(),
+      ).thenAnswer((_) async => withImages);
+      when(
+        () => workingHoursRepository.getCachedWorkingHours(),
+      ).thenAnswer((_) async => const []);
+      when(() => getOrganizationSettings(any())).thenAnswer(
+        (_) => TaskEither.right(withImages),
+      );
+      return build();
+    },
+    act: (bloc) => bloc.add(const OrganizationSettingsLoaded()),
+    verify: (bloc) {
+      expect(bloc.state.organization?.coverImage?.url, 'cover-url');
+      expect(bloc.state.organization?.profileImage?.url, 'logo-url');
+    },
+  );
+
+  blocTest<OrganizationSettingsBloc, OrganizationSettingsState>(
+    'a cache hit followed by a network failure keeps the cached content '
+    'on screen instead of surfacing an error',
+    build: () {
+      when(
+        () => organizationSettingsRepository.getCachedOrganizationSettings(),
+      ).thenAnswer((_) async => organization);
+      when(
+        () => workingHoursRepository.getCachedWorkingHours(),
+      ).thenAnswer((_) async => const []);
+      when(() => getOrganizationSettings(any())).thenAnswer(
+        (_) => TaskEither.left(const ServerFailure(message: 'boom')),
+      );
+      return build();
+    },
+    act: (bloc) => bloc.add(const OrganizationSettingsLoaded()),
+    expect: () => [
+      isA<OrganizationSettingsState>()
+          .having((state) => state.status, 'status', RequestStatus.success)
+          .having(
+            (state) => state.organization,
+            'organization',
+            organization,
+          ),
+    ],
+    verify: (bloc) {
+      expect(bloc.state.status, RequestStatus.success);
+      expect(bloc.state.organization, organization);
+    },
   );
 
   blocTest<OrganizationSettingsBloc, OrganizationSettingsState>(

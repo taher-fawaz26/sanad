@@ -9,6 +9,20 @@ import 'package:sanad_provider/src/features/organization_settings/src/domain/use
 abstract interface class OrganizationSettingsRepository {
   TaskEither<Failure, OrganizationProfileEntity> getOrganizationSettings();
 
+  /// The cached business profile for the signed-in user, or `null` if
+  /// nothing is cached yet (or no session is active). Pure local read — no
+  /// network, no [Failure], resolves near-instantly.
+  Future<OrganizationProfileEntity?> getCachedOrganizationSettings();
+
+  /// Write-through for a LOCAL merge that didn't itself hit `GET /settings`
+  /// (e.g. a cover/logo upload, or a description/category/social-profile
+  /// PATCH whose `204` response gets merged in-memory) — without this, the
+  /// cache would keep serving the pre-edit value until the next full
+  /// network refresh happens to occur.
+  Future<void> cacheOrganizationSettings(
+    OrganizationProfileEntity organization,
+  );
+
   /// `PATCH service-provider/settings` — description/categories/social
   /// profiles. Returns `204 No Content` on the wire; callers must locally
   /// merge the fields they sent (or re-fetch [getOrganizationSettings]) to

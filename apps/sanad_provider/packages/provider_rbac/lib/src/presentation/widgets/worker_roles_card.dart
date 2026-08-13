@@ -91,7 +91,30 @@ class _WorkerRolesCardBody extends StatelessWidget {
           BlocBuilder<WorkerRolesBloc, WorkerRolesState>(
             builder: (context, state) {
               if (state.isLoading && state.roles.isEmpty) {
-                return const Center(child: AppLoadingIndicator());
+                // Hand-tuned bone skeleton — matches the row shape below
+                // without depending on a mock RoleEntity.
+                return AppSkeletonizer(
+                  enabled: true,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (var i = 0; i < 2; i++) ...[
+                        if (i > 0) SizedBox(height: AppSpacing.sm),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.shield_outlined,
+                              size: 20,
+                              color: colors.textSecondary,
+                            ),
+                            SizedBox(width: AppSpacing.sm),
+                            const Expanded(child: Bone.text(words: 2)),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                );
               }
               if (state.roles.isEmpty) {
                 return Text(
@@ -200,7 +223,29 @@ class _ManageRolesSheetBodyState extends State<_ManageRolesSheetBody> {
             SizedBox(height: AppSpacing.md),
             if (state.catalogStatus == RequestStatus.loading &&
                 state.catalog.isEmpty)
-              const Center(child: AppLoadingIndicator())
+              // Hand-tuned bone skeleton — matches the checkbox row shape
+              // below without depending on a mock RoleEntity.
+              AppSkeletonizer(
+                enabled: true,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var i = 0; i < 4; i++)
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                          vertical: AppSpacing.xs,
+                        ),
+                        child: Row(
+                          children: [
+                            const Bone(width: 20, height: 20),
+                            SizedBox(width: AppSpacing.sm),
+                            const Expanded(child: Bone.text(words: 2)),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              )
             else if (state.catalogStatus == RequestStatus.failure &&
                 state.catalog.isEmpty)
               AppGenericEmptyState(

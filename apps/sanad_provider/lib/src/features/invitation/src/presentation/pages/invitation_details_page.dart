@@ -11,7 +11,18 @@ import 'package:sanad_provider/src/features/invitation/src/presentation/widgets/
 import 'package:sanad_provider/src/features/invitation/src/routes/invitation_routes.dart';
 import 'package:sanad_provider/src/features/invitation/src/routing/invitation_route_args.dart';
 import 'package:localization/localization.dart';
+import 'package:shared_ui/shared_ui.dart';
 import 'package:workers/workers.dart' show WorkerType;
+
+/// Realistic mock used only to skeletonize the real details content via
+/// [AppSkeletonizer] while the token is being verified — no bespoke skeleton
+/// layout.
+final _skeletonPreview = InvitationPreview(
+  valid: true,
+  email: BoneMock.email,
+  providerName: BoneMock.words(2),
+  workerType: WorkerType.worker,
+);
 
 const _detailsCardRadius = 16.0;
 const _detailsCardPadding = 20.0;
@@ -45,7 +56,13 @@ class InvitationDetailsView extends StatelessWidget {
         builder: (context, state) {
           switch (state) {
             case InvitationDetailsLoading():
-              return const Center(child: AppLoadingIndicator());
+              return AppSkeletonizer(
+                enabled: true,
+                child: _InvitationDetailsContent(
+                  token: token,
+                  preview: _skeletonPreview,
+                ),
+              );
             case InvitationDetailsFailure(:final failure):
               return _InvitationErrorView(
                 message: failure.localizedMessage(),

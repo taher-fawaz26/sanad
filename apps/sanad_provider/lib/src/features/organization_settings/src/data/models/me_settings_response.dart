@@ -21,5 +21,9 @@ class MeSettingsResponse {
 
   final BusinessProfileMeResponse businessProfile;
 
+  Map<String, dynamic> toJson() => {
+    'businessProfile': businessProfile.toJson(),
+  };
+
   OrganizationProfileEntity toEntity() => businessProfile.toEntity();
 }

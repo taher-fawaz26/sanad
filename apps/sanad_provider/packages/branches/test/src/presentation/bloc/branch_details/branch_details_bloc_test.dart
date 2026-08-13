@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:branches/src/domain/entities/branch_availability_mode.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
@@ -138,6 +140,37 @@ void main() {
     verify: (_) {
       verify(() => repository.updateBranch(updateParams)).called(1);
       verifyNever(() => repository.getBranch(any()));
+    },
+  );
+
+  blocTest<BranchDetailsBloc, BranchDetailsState>(
+    'droppable(): a second BranchStatusToggleEvent while one is in flight '
+    'does not fire a duplicate API call',
+    build: () {
+      final gate = Completer<BranchEntity>();
+      when(
+        () => repository.updateBranchStatus(
+          const UpdateBranchStatusParams(id: 'branch-1', isAvailable: false),
+        ),
+      ).thenAnswer((_) => TaskEither(() => gate.future.then(Right.new)));
+      addTearDown(() => gate.complete(refreshedBranch));
+      return buildBloc();
+    },
+    seed: () => const BranchDetailsState(
+      branchId: 'branch-1',
+      status: RequestStatus.success,
+      branch: branch,
+    ),
+    act: (bloc) => bloc
+      ..add(const BranchStatusToggleEvent(isAvailable: false))
+      ..add(const BranchStatusToggleEvent(isAvailable: false)),
+    wait: const Duration(milliseconds: 10),
+    verify: (_) {
+      verify(
+        () => repository.updateBranchStatus(
+          const UpdateBranchStatusParams(id: 'branch-1', isAvailable: false),
+        ),
+      ).called(1);
     },
   );
 }

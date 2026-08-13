@@ -198,6 +198,40 @@ void main() {
     );
 
     blocTest<WorkersListBloc, WorkersListState>(
+      'refresh preserves the currently active search query',
+      setUp: () {
+        when(
+          () => repo.getWorkers(const WorkersQuery(search: 'foo')),
+        ).thenAnswer(
+          (_) => TaskEither.of(_page(['1'], currentPage: 1, totalPages: 1)),
+        );
+      },
+      build: buildBloc,
+      seed: () => WorkersListState(
+        searchQuery: 'foo',
+        pagination: PaginationData(
+          status: RequestStatus.success,
+          items: [_worker('stale')],
+          meta: const PageMeta(
+            totalItems: 1,
+            itemCount: 1,
+            itemsPerPage: 20,
+            totalPages: 1,
+            currentPage: 1,
+          ),
+        ),
+      ),
+      act: (bloc) => bloc.add(const WorkersListRefreshEvent()),
+      verify: (bloc) {
+        verify(
+          () => repo.getWorkers(const WorkersQuery(search: 'foo')),
+        ).called(1);
+        expect(bloc.state.workers.map((w) => w.id), ['1']);
+        expect(bloc.state.searchQuery, 'foo');
+      },
+    );
+
+    blocTest<WorkersListBloc, WorkersListState>(
       'search resets to page 1 and replaces previously loaded workers',
       setUp: () {
         when(() => repo.getWorkers(const WorkersQuery())).thenAnswer(
@@ -253,6 +287,35 @@ void main() {
       act: (bloc) => bloc.add(const WorkerRemovedFromListEvent('1')),
       verify: (bloc) {
         expect(bloc.state.workers.map((w) => w.id), ['2']);
+      },
+    );
+
+    blocTest<WorkersListBloc, WorkersListState>(
+      'stale search protection: the latest keystroke wins even if an '
+      'earlier search resolves later',
+      setUp: () {
+        when(() => repo.getWorkers(const WorkersQuery(search: 'a'))).thenAnswer(
+          (_) => TaskEither(() async {
+            // Simulates a slow response for the first (superseded) search.
+            await Future<void>.delayed(const Duration(milliseconds: 500));
+            return right(_page(['stale'], currentPage: 1, totalPages: 1));
+          }),
+        );
+        when(
+          () => repo.getWorkers(const WorkersQuery(search: 'ab')),
+        ).thenAnswer(
+          (_) => TaskEither.of(_page(['fresh'], currentPage: 1, totalPages: 1)),
+        );
+      },
+      build: buildBloc,
+      act: (bloc) {
+        bloc
+          ..add(const WorkersListSearchChangedEvent('a'))
+          ..add(const WorkersListSearchChangedEvent('ab'));
+      },
+      wait: const Duration(milliseconds: 900),
+      verify: (bloc) {
+        expect(bloc.state.workers.map((w) => w.id), ['fresh']);
       },
     );
   });

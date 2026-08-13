@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
 import 'package:provider_rbac/src/domain/entities/role_entity.dart';
+import 'package:provider_rbac/src/domain/entities/role_persona_type.dart';
 import 'package:provider_rbac/src/presentation/bloc/role_action/role_action_bloc.dart';
 import 'package:provider_rbac/src/presentation/bloc/roles_list/roles_list_bloc.dart';
 import 'package:provider_rbac/src/presentation/widgets/role_actions_bottom_sheet.dart';
@@ -21,6 +22,17 @@ import 'package:sheet_navigation/sheet_navigation.dart';
 /// it can be dropped into the Workers screen's segmented control (as the third
 /// tab, alongside Team / Invitations) or wrapped by the standalone
 /// `RolesListPage` route — without the host having to supply the BLoCs.
+/// Realistic mock used only to skeletonize the real row via
+/// [AppSkeletonizer] — no bespoke skeleton widget.
+final _skeletonRole = RoleEntity(
+  id: 'skeleton',
+  name: 'skeleton',
+  displayName: BoneMock.words(2),
+  userType: RolePersonaType.worker,
+  isSystem: false,
+  permissions: const [],
+);
+
 class RolesContent extends StatelessWidget {
   const RolesContent({super.key});
 
@@ -182,7 +194,11 @@ class _RolesViewState extends State<_RolesView> {
   /// once items exist, so it renders only rows + inline load-more indicators.
   Widget _buildBody(BuildContext context, RolesListState state) {
     if (state.isLoading && state.roles.isEmpty) {
-      return const ShimmerListSkeleton();
+      // First-page load: skeletonize the *real* row widget with mock data
+      // (no bespoke skeleton layout).
+      return AppSkeletonList(
+        itemBuilder: (_, _) => RoleCard(role: _skeletonRole),
+      );
     }
     if (state.hasError && state.roles.isEmpty) {
       return _fillRefresh(

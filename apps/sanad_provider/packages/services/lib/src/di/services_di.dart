@@ -19,7 +19,6 @@ import 'package:services/src/domain/usecases/delete_provider_service_image_useca
 import 'package:services/src/domain/usecases/delete_provider_service_usecase.dart';
 import 'package:services/src/domain/usecases/get_categories_usecase.dart';
 import 'package:services/src/domain/usecases/get_my_service_requests_usecase.dart';
-import 'package:services/src/domain/usecases/get_provider_service_overview_usecase.dart';
 import 'package:services/src/domain/usecases/get_provider_service_usecase.dart';
 import 'package:services/src/domain/usecases/get_provider_services_overview_usecase.dart';
 import 'package:services/src/domain/usecases/get_service_request_usecase.dart';
@@ -115,11 +114,6 @@ abstract final class ServicesDI {
       )
       ..registerLazySingleton(
         () => GetProviderServicesOverviewUseCase(
-          sl<ProviderServicesRepository>(),
-        ),
-      )
-      ..registerLazySingleton(
-        () => GetProviderServiceOverviewUseCase(
           sl<ProviderServicesRepository>(),
         ),
       )

@@ -14,6 +14,7 @@ dependencies:
     path: ../../../../packages/app_assets
   asset_picker:
     path: ../../../../packages/asset_picker
+  bloc_concurrency: ^0.3.0
   core:
     path: ../../../../packages/core
   design_system:

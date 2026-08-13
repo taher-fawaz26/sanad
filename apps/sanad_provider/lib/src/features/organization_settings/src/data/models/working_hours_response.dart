@@ -71,6 +71,10 @@ class WorkingHoursResponse {
 
   final List<WorkingHoursDayResponse>? availability;
 
+  Map<String, dynamic> toJson() => {
+    'availability': availability?.map((day) => day.toJson()).toList(),
+  };
+
   List<WorkingHoursDayEntity>? toEntity() =>
       availability?.map((day) => day.toEntity()).toList();
 }

@@ -85,9 +85,9 @@ class RequestNewServiceFormBodyState extends State<RequestNewServiceFormBody> {
                 onChanged: (_) => _reportCompleteness(),
               ),
               PositionedDirectional(
-                end: AppSpacing.md,
-                bottom: AppSpacing.md,
-                child: AddServiceAiEnhanceButton(),
+                end: AppSpacing.xs,
+                bottom: AppSpacing.lg,
+                child: const AddServiceAiEnhanceButton(),
               ),
             ],
           ),

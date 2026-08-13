@@ -4,6 +4,7 @@ import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_ui/shared_ui.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
 import 'package:workers/src/domain/entities/worker_status.dart';
 import 'package:workers/src/domain/entities/worker_type.dart';
@@ -12,6 +13,20 @@ import 'package:workers/src/presentation/services/worker_branch_assigner.dart';
 import 'package:workers/src/presentation/services/worker_role_assigner.dart';
 import 'package:workers/src/presentation/widgets/worker_error_state.dart';
 import 'package:workers/src/routes/worker_routes.dart';
+
+/// Realistic mock used only to skeletonize the profile header + contact +
+/// branches cards while the worker loads. The roles card
+/// ([WorkerRoleAssigner]) fetches independently by real worker id, so it is
+/// intentionally excluded from the skeleton rather than fed a fake id.
+final _skeletonWorker = WorkerEntity(
+  id: 'skeleton',
+  fullName: BoneMock.fullName,
+  role: BoneMock.name,
+  initials: 'SN',
+  jobTitle: BoneMock.words(2),
+  phone: BoneMock.phone,
+  email: BoneMock.email,
+);
 
 const _avatarSize = 96.0;
 const _statusDotSize = 24.0;
@@ -110,7 +125,10 @@ class _WorkerDetailsPageState extends State<WorkerDetailsPage> {
                     worker: w,
                     onWorkerUpdated: _applyUpdatedWorker,
                   ),
-                  (_, true, _) => const Center(child: AppLoadingIndicator()),
+                  (_, true, _) => AppSkeletonizer(
+                    enabled: true,
+                    child: _DetailsSkeletonBody(worker: _skeletonWorker),
+                  ),
                   (_, _, final Failure failure) => WorkerErrorState(
                     failure: failure,
                     onRetry: _fetch,
@@ -181,6 +199,35 @@ class _DetailsBody extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// First-load placeholder for [_DetailsBody] — skeletonizes the profile,
+/// contact, and branches cards with mock [worker] data. Omits the roles
+/// card ([WorkerRoleAssigner]), which fetches independently by real worker
+/// id and would otherwise be fed a fake one.
+class _DetailsSkeletonBody extends StatelessWidget {
+  const _DetailsSkeletonBody({required this.worker});
+
+  final WorkerEntity worker;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.xxl,
+        vertical: AppSpacing.lg,
+      ),
+      child: Column(
+        children: [
+          _ProfileHeader(worker: worker),
+          SizedBox(height: AppSpacing.xxl),
+          _ContactDetailsCard(worker: worker),
+          SizedBox(height: AppSpacing.lg),
+          _AssignedBranchesCard(worker: worker, onWorkerUpdated: (_) {}),
+        ],
+      ),
     );
   }
 }

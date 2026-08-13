@@ -1,43 +1,88 @@
+import 'package:app_assets/app_assets.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:localization/localization.dart';
+import 'package:services/src/domain/entities/category_ref_entity.dart';
 import 'package:services/src/domain/entities/provider_service_entity.dart';
-import 'package:services/src/domain/entities/provider_service_overview_entity.dart';
 import 'package:services/src/domain/entities/provider_service_status.dart';
-import 'package:services/src/domain/usecases/get_provider_service_overview_usecase.dart';
+import 'package:services/src/domain/usecases/get_provider_service_usecase.dart';
 import 'package:services/src/presentation/bloc/service_action/service_action_bloc.dart';
-import 'package:services/src/presentation/widgets/manage_service_images_section.dart';
 import 'package:services/src/presentation/widgets/service_actions_bottom_sheet.dart';
+import 'package:services/src/presentation/widgets/service_images_preview.dart';
 import 'package:shared_ui/shared_ui.dart';
 
 /// Per-service detail screen — Figma `4715:26284` (active) / `5119:42089`
 /// (paused).
 ///
-/// Receives the already-loaded [ProviderServiceEntity] via the route
-/// `extra` (`GET /provider-services`'s row already carries everything this
-/// screen needs). Per-service metrics are wired separately via
-/// `GET /provider-services/overview/:id`, gated on `dataAvailable` — see
-/// `ServiceMetricsSection`.
+/// Fetches the full, up-to-date service via `GET /provider-services/:id`
+/// (`GetProviderServiceUseCase`) rather than trusting the row `extra` from
+/// the services list — the list endpoint's rows carry only a subset of what
+/// this screen needs (e.g. only `primaryImage`, not the full `images` array,
+/// and no `requests`/`revenue`).
 class ServiceDetailsPage extends StatefulWidget {
-  const ServiceDetailsPage({required this.service, super.key});
+  const ServiceDetailsPage({required this.serviceId, super.key});
 
-  final ProviderServiceEntity service;
+  final String serviceId;
 
   @override
   State<ServiceDetailsPage> createState() => _ServiceDetailsPageState();
 }
 
 class _ServiceDetailsPageState extends State<ServiceDetailsPage> {
-  late ProviderServiceEntity _service;
+  ProviderServiceEntity? _service;
+  Failure? _loadFailure;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _service = widget.service;
+    _load();
   }
+
+  Future<void> _load() async {
+    setState(() {
+      _isLoading = true;
+      _loadFailure = null;
+    });
+
+    final result = await sl<GetProviderServiceUseCase>()(
+      widget.serviceId,
+    ).run();
+    if (!mounted) return;
+
+    result.fold(
+      (failure) => setState(() {
+        _isLoading = false;
+        _loadFailure = failure;
+      }),
+      (service) => setState(() {
+        _isLoading = false;
+        _service = service;
+      }),
+    );
+  }
+
+  /// Realistic mock used only to skeletonize the real layout via
+  /// [AppSkeletonizer] — no bespoke skeleton widget.
+  static final _skeletonService = ProviderServiceEntity(
+    id: 'skeleton',
+    serviceId: 'skeleton',
+    serviceName: BoneMock.words(3),
+    category: CategoryRefEntity(
+      id: 'skeleton',
+      name: BoneMock.name,
+      description: null,
+    ),
+    description: BoneMock.words(8),
+    status: ProviderServiceStatus.active,
+    images: const [],
+    createdAt: DateTime(2024),
+    updatedAt: DateTime(2024),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -57,31 +102,10 @@ class _ServiceDetailsPageState extends State<ServiceDetailsPage> {
                 onLeadingTap: () {
                   if (context.canPop()) context.pop();
                 },
+                trailingAction: AppNavBarTrailingAction.icon,
                 trailing: AppNotificationIcon(hasUnread: true, onTap: () {}),
               ),
-              Expanded(
-                child: ListView(
-                  padding: EdgeInsets.all(AppSpacing.xl),
-                  children: [
-                    _Header(service: _service, onMoreTap: _onMoreTap),
-                    if (_service.status != ProviderServiceStatus.active) ...[
-                      SizedBox(height: AppSpacing.lg),
-                      AppAlert(
-                        type: AppAlertType.warning,
-                        message: 'services.details.paused_banner'.tr(),
-                      ),
-                    ],
-                    SizedBox(height: AppSpacing.lg),
-                    _ServiceOverviewCard(serviceId: _service.id),
-                    SizedBox(height: AppSpacing.lg),
-                    _InfoSection(
-                      service: _service,
-                      onServiceUpdated: (updated) =>
-                          setState(() => _service = updated),
-                    ),
-                  ],
-                ),
-              ),
+              Expanded(child: _buildBody(context)),
             ],
           ),
         ),
@@ -89,22 +113,94 @@ class _ServiceDetailsPageState extends State<ServiceDetailsPage> {
     );
   }
 
-  void _onMoreTap() {
-    showServiceActionsBottomSheet(context: context, service: _service);
+  Widget _buildBody(BuildContext context) {
+    if (_isLoading) {
+      return AppSkeletonizer(
+        enabled: true,
+        child: _buildContent(_skeletonService),
+      );
+    }
+
+    final service = _service;
+    if (service == null) {
+      final display = failureErrorDisplay(_loadFailure);
+      return Center(
+        child: AppErrorState(
+          style: display.isConnectivity
+              ? AppErrorStateStyle.network
+              : AppErrorStateStyle.generic,
+          title: display.title,
+          description: display.description,
+          retryLabel: failureRetryLabel(),
+          onRetry: display.isRetryable ? _load : null,
+        ),
+      );
+    }
+
+    return _buildContent(service);
+  }
+
+  Widget _buildContent(ProviderServiceEntity service) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
+          child: _Header(
+            service: service,
+            onMoreTap: () => _onMoreTap(service),
+          ),
+        ),
+        if (service.status != ProviderServiceStatus.active)
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.lg,
+              AppSpacing.xl,
+              0,
+            ),
+            child: AppAlert(
+              type: AppAlertType.warning,
+              message: 'services.details.paused_banner'.tr(),
+            ),
+          ),
+        Expanded(
+          child: ListView(
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.xl,
+              vertical: AppSpacing.md,
+            ),
+            children: [
+              _ServiceMetricsCard(service: service),
+              SizedBox(height: AppSpacing.md),
+              _InfoSection(service: service),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _onMoreTap(ProviderServiceEntity service) {
+    showServiceActionsBottomSheet(context: context, service: service);
   }
 
   void _handleActionState(BuildContext context, ServiceActionState state) {
     if (state.status != RequestStatus.success) return;
+    final current = _service;
+    if (current == null) return;
+
     if (state.updatedService != null &&
-        state.updatedService!.id == _service.id) {
-      setState(() => _service = state.updatedService!);
+        state.updatedService!.id == current.id) {
+      setState(() => _service = state.updatedService);
     }
-    if (state.deletedServiceId == _service.id) {
+    if (state.deletedServiceId == current.id) {
       if (context.canPop()) context.pop();
     }
   }
 }
 
+/// Figma `5261:44570` — service name, status pill, and more-options button.
 class _Header extends StatelessWidget {
   const _Header({required this.service, required this.onMoreTap});
 
@@ -113,141 +209,59 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final typography = context.appTypography;
     final colors = context.appColors;
+    final typography = context.appTypography;
     final isActive = service.status == ProviderServiceStatus.active;
 
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            service.serviceName,
-            style: typography
-                .bold(typography.title2)
-                .copyWith(
-                  color: colors.textPrimary,
-                ),
-          ),
-        ),
-        SizedBox(width: AppSpacing.sm),
-        AppStatusBadge(
-          label: isActive
-              ? 'services.status_active'.tr()
-              : 'services.status_inactive'.tr(),
-          type: isActive
-              ? AppStatusBadgeType.success
-              : AppStatusBadgeType.warning,
-        ),
-        SizedBox(width: AppSpacing.sm),
-        InkWell(
-          onTap: onMoreTap,
-          borderRadius: BorderRadius.circular(AppDimension.radiusMd),
-          child: Padding(
-            padding: EdgeInsets.all(AppSpacing.xs),
-            child: Icon(Icons.more_vert, color: colors.textPrimary),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Live per-service overview — `GET /provider-services/overview/:id`,
-/// gated on `dataAvailable` (currently always `false` server-side, so this
-/// renders the same "coming soon" placeholder as the dashboard's
-/// `ServiceMetricsSection` until the backend has real data).
-class _ServiceOverviewCard extends StatefulWidget {
-  const _ServiceOverviewCard({required this.serviceId});
-
-  final String serviceId;
-
-  @override
-  State<_ServiceOverviewCard> createState() => _ServiceOverviewCardState();
-}
-
-class _ServiceOverviewCardState extends State<_ServiceOverviewCard> {
-  ProviderServiceOverviewEntity? _overview;
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final result = await sl<GetProviderServiceOverviewUseCase>()(
-      widget.serviceId,
-    ).run();
-    if (!mounted) return;
-    setState(() {
-      _isLoading = false;
-      _overview = result.fold((_) => null, (overview) => overview);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_isLoading) return const ShimmerListSkeleton();
-
-    final colors = context.appColors;
-    final typography = context.appTypography;
-    final overview = _overview;
-
-    if (overview == null || !overview.dataAvailable) {
-      return Container(
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(
-          horizontal: AppSpacing.xl,
-          vertical: AppSpacing.lg,
-        ),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(AppDimension.radiusMd),
-          border: Border.all(color: colors.palettes.sky.shade200),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'services.metrics_unavailable_title'.tr(),
-              style: typography
-                  .semiBold(typography.regularNormal)
-                  .copyWith(color: colors.textPrimary),
-            ),
-            SizedBox(height: AppSpacing.xs),
-            Text(
-              'services.metrics_unavailable_description'.tr(),
-              style: typography.smallNormal.copyWith(color: colors.textMuted),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(
-        horizontal: AppSpacing.xl,
-        vertical: AppSpacing.lg,
-      ),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppDimension.radiusMd),
-        border: Border.all(color: colors.palettes.sky.shade200),
-      ),
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: responsiveSpacing(14)),
       child: Row(
         children: [
           Expanded(
-            child: _OverviewStat(
-              label: 'services.metric_orders'.tr(),
-              value: overview.totalRequests.toString(),
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    service.serviceName,
+                    style: typography
+                        .semiBold(typography.title3)
+                        .copyWith(
+                          color: OverlayTokens.ink900,
+                          height: 1.50,
+                        ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                SizedBox(width: AppSpacing.md),
+                AppStatusBadge(
+                  label: isActive
+                      ? 'services.status_active'.tr()
+                      : 'services.status_inactive'.tr(),
+                  type: isActive
+                      ? AppStatusBadgeType.success
+                      : AppStatusBadgeType.warning,
+                  outlined: true,
+                ),
+              ],
             ),
           ),
-          Expanded(
-            child: _OverviewStat(
-              label: 'services.metric_completion_rate'.tr(),
-              value: '${overview.completionRate}%',
+          SizedBox(width: AppSpacing.md),
+          Material(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(responsiveDimension(9)),
+            child: InkWell(
+              onTap: onMoreTap,
+              borderRadius: BorderRadius.circular(responsiveDimension(9)),
+              child: SizedBox(
+                width: responsiveDimension(34),
+                height: responsiveDimension(34),
+                child: Icon(
+                  Icons.more_vert,
+                  size: responsiveDimension(20),
+                  color: colors.textPrimary,
+                ),
+              ),
             ),
           ),
         ],
@@ -256,52 +270,138 @@ class _ServiceOverviewCardState extends State<_ServiceOverviewCard> {
   }
 }
 
-class _OverviewStat extends StatelessWidget {
-  const _OverviewStat({required this.label, required this.value});
+/// Requests + revenue, straight from the by-id detail response — the fleet
+/// "overview" endpoint is not used here (it never had per-service numbers;
+/// `requests`/`revenue` live directly on `GET /provider-services/:id`).
+class _ServiceMetricsCard extends StatelessWidget {
+  const _ServiceMetricsCard({required this.service});
 
-  final String label;
-  final String value;
+  final ProviderServiceEntity service;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final typography = context.appTypography;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
-        Text(
-          label,
-          style: typography.smallNormal.copyWith(color: colors.textSecondary),
+        Expanded(
+          child: _MetricTile(
+            label: 'services.card_requests'.tr(),
+            value: NumberFormat('#,###').format(service.requests),
+          ),
         ),
-        SizedBox(height: AppSpacing.xs),
-        Text(
-          value,
-          style: typography
-              .medium(typography.title3)
-              .copyWith(color: colors.textPrimary, letterSpacing: -0.48),
+        SizedBox(width: responsiveSpacing(14)),
+        Expanded(
+          child: _MetricTile(
+            label: 'services.card_revenue'.tr(),
+            value: NumberFormat('#,###').format(service.revenue),
+            valueTrailing: Image.asset(
+              AppImages.dirham,
+              package: AppAssets.package,
+              width: responsiveDimension(18),
+              height: responsiveDimension(16),
+              fit: BoxFit.contain,
+            ),
+          ),
         ),
       ],
     );
   }
 }
 
+/// A single bordered KPI card — Figma `5643:27527`/`5643:27541`.
+class _MetricTile extends StatelessWidget {
+  const _MetricTile({
+    required this.label,
+    required this.value,
+    this.valueTrailing,
+  });
+
+  final String label;
+  final String value;
+  final Widget? valueTrailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final typography = context.appTypography;
+
+    final valueTextStyle = typography
+        .medium(typography.regularNormal)
+        .copyWith(
+          fontSize: 20.rfs,
+          color: colors.textPrimary,
+          letterSpacing: -0.4,
+        );
+
+    final valueWidget = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: valueTextStyle,
+          ),
+        ),
+        if (valueTrailing != null) ...[
+          SizedBox(width: AppSpacing.xs),
+          valueTrailing!,
+        ],
+      ],
+    );
+
+    final labelStyle = typography
+        .medium(typography.smallNormal)
+        .copyWith(color: colors.palettes.sky.shade700);
+
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: labelStyle,
+        ),
+        SizedBox(height: responsiveSpacing(6)),
+        valueWidget,
+      ],
+    );
+
+    return Container(
+      width: double.infinity,
+      constraints: BoxConstraints(minHeight: responsiveDimension(80)),
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.xxl,
+        vertical: AppSpacing.lg,
+      ),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppDimension.radiusMd),
+        border: Border.all(color: colors.palettes.sky.shade200),
+      ),
+      child: content,
+    );
+  }
+}
+
 class _InfoSection extends StatelessWidget {
-  const _InfoSection({required this.service, required this.onServiceUpdated});
+  const _InfoSection({required this.service});
 
   final ProviderServiceEntity service;
-  final ValueChanged<ProviderServiceEntity> onServiceUpdated;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
 
+    final hasDescription =
+        service.description != null && service.description!.isNotEmpty;
+
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(
-        horizontal: AppSpacing.xl,
-        vertical: AppSpacing.lg,
-      ),
+      padding: EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(AppDimension.radiusMd),
@@ -314,24 +414,26 @@ class _InfoSection extends StatelessWidget {
             label: 'services.details.service_name'.tr(),
             value: service.serviceName,
           ),
-          _InfoDivider(),
+          SizedBox(height: AppSpacing.xl),
+          const _InfoDivider(),
+          SizedBox(height: AppSpacing.xl),
           _InfoRow(
             label: 'services.details.category'.tr(),
             value: service.category.name,
           ),
-          if (service.description != null &&
-              service.description!.isNotEmpty) ...[
-            _InfoDivider(),
-            _InfoRow(
+          if (hasDescription) ...[
+            SizedBox(height: AppSpacing.xl),
+            const _InfoDivider(),
+            SizedBox(height: AppSpacing.xl),
+            _InfoDescriptionRow(
               label: 'services.details.description'.tr(),
               value: service.description!,
             ),
           ],
-          _InfoDivider(),
-          ManageServiceImagesSection(
-            service: service,
-            onServiceUpdated: onServiceUpdated,
-          ),
+          SizedBox(height: AppSpacing.xl),
+          const _InfoDivider(),
+          SizedBox(height: AppSpacing.xl),
+          ServiceImagesPreview(images: service.images),
         ],
       ),
     );
@@ -349,24 +451,57 @@ class _InfoRow extends StatelessWidget {
     final colors = context.appColors;
     final typography = context.appTypography;
 
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: typography.smallNormal.copyWith(color: colors.textSecondary),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: typography
+              .medium(typography.smallNormal)
+              .copyWith(color: colors.textSecondary),
+        ),
+        SizedBox(height: AppSpacing.sm),
+        Text(
+          value,
+          style: typography
+              .semiBold(typography.regularNormal)
+              .copyWith(color: colors.textPrimary),
+        ),
+      ],
+    );
+  }
+}
+
+class _InfoDescriptionRow extends StatelessWidget {
+  const _InfoDescriptionRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final typography = context.appTypography;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: typography
+              .medium(typography.smallNormal)
+              .copyWith(color: colors.textSecondary),
+        ),
+        SizedBox(height: AppSpacing.sm),
+        Text(
+          value,
+          style: typography.regularNormal.copyWith(
+            fontSize: 15.rfs,
+            height: 22 / 15,
+            color: colors.palettes.dark.shade700,
           ),
-          SizedBox(height: AppSpacing.xs),
-          Text(
-            value,
-            style: typography
-                .semiBold(typography.regularNormal)
-                .copyWith(color: colors.textPrimary),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

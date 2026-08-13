@@ -27,7 +27,6 @@ class _EditWorkerPageState extends State<EditWorkerPage> {
   final _formBodyKey = GlobalKey<WorkerFormBodyState>();
 
   bool _showValidationErrors = false;
-  var _submittingDialogVisible = false;
 
   bool get _isTypeReadOnly {
     final workerType = WorkerType.fromApiString(widget.worker.role);
@@ -37,8 +36,15 @@ class _EditWorkerPageState extends State<EditWorkerPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<EditWorkerBloc, EditWorkerState>(
-      listener: _onBlocStateChanged,
+    return MutationListener<EditWorkerBloc, EditWorkerState>(
+      status: (state) => state.status,
+      title: (context) => 'workers.edit_worker.submitting_title'.tr(),
+      description: (context) =>
+          'workers.edit_worker.submitting_description'.tr(),
+      onSuccess: (context, state) => _showSuccessPopover(state.updatedWorker),
+      onFailure: (context, state) {
+        if (state.failure != null) _showErrorSnackbar(state.failure!);
+      },
       child: Scaffold(
         backgroundColor: context.appColors.surface,
         body: SafeArea(
@@ -109,37 +115,6 @@ class _EditWorkerPageState extends State<EditWorkerPage> {
         ),
       ),
     );
-  }
-
-  void _onBlocStateChanged(BuildContext context, EditWorkerState state) {
-    if (state.isLoading) {
-      _showSubmittingDialog();
-      return;
-    }
-    _dismissSubmittingDialog();
-
-    if (state.isSuccess) {
-      _showSuccessPopover(state.updatedWorker);
-    } else if (state.hasError && state.failure != null) {
-      _showErrorSnackbar(state.failure!);
-    }
-  }
-
-  void _showSubmittingDialog() {
-    if (_submittingDialogVisible) return;
-    _submittingDialogVisible = true;
-
-    showAppProgressDialog(
-      context: context,
-      title: 'workers.edit_worker.submitting_title'.tr(),
-      description: 'workers.edit_worker.submitting_description'.tr(),
-    ).then((_) => _submittingDialogVisible = false);
-  }
-
-  void _dismissSubmittingDialog() {
-    if (!_submittingDialogVisible) return;
-    _submittingDialogVisible = false;
-    dismissAppProgressDialog(context);
   }
 
   void _showSuccessPopover(WorkerEntity? updatedWorker) {

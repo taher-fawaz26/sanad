@@ -1,3 +1,4 @@
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -22,8 +23,12 @@ class ServiceActionBloc extends Bloc<ServiceActionEvent, ServiceActionState> {
   }) : _deleteProviderServiceUseCase = deleteProviderServiceUseCase,
        _setProviderServiceStatusUseCase = setProviderServiceStatusUseCase,
        super(const ServiceActionState()) {
-    on<ServiceDeleteRequestedEvent>(_onDelete);
-    on<ServiceStatusToggleRequestedEvent>(_onStatusToggle);
+    // Drop duplicate submits while one is in flight (double-tap guard).
+    on<ServiceDeleteRequestedEvent>(_onDelete, transformer: droppable());
+    on<ServiceStatusToggleRequestedEvent>(
+      _onStatusToggle,
+      transformer: droppable(),
+    );
     on<ServiceExternallyUpdatedEvent>(_onExternallyUpdated);
   }
 

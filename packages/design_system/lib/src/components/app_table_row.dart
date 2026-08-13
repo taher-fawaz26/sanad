@@ -30,6 +30,7 @@ class AppTableRow extends StatelessWidget {
     this.onTrailingButton,
     this.switchValue,
     this.onSwitchChanged,
+    this.switchLoading = false,
     this.onTap,
   });
 
@@ -70,6 +71,10 @@ class AppTableRow extends StatelessWidget {
   final bool? switchValue;
 
   final ValueChanged<bool>? onSwitchChanged;
+
+  /// Shows a spinner in the switch knob when [trailing] is
+  /// [AppTableTrailing.switchControl] and a change is in flight.
+  final bool switchLoading;
 
   /// Optional row tap (does not fire for trailing interactive controls).
   final VoidCallback? onTap;
@@ -170,6 +175,7 @@ class AppTableRow extends StatelessWidget {
       AppTableTrailing.switchControl => AppSwitch(
         value: switchValue ?? false,
         onChanged: onSwitchChanged,
+        loading: switchLoading,
       ),
       AppTableTrailing.none => const SizedBox.shrink(),
     };

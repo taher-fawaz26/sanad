@@ -82,11 +82,6 @@ class ProviderServicesRepositoryImpl implements ProviderServicesRepository {
       _remoteDataSource.getOverview();
 
   @override
-  TaskEither<Failure, ProviderServiceOverviewEntity> getOverviewFor(
-    String id,
-  ) => _remoteDataSource.getOverviewFor(id);
-
-  @override
   TaskEither<Failure, ProviderServiceEntity> addImage({
     required String id,
     required String mediaId,

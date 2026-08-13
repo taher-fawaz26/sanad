@@ -1,9 +1,11 @@
+import 'package:auth/auth.dart' show SessionManager;
 import 'package:core/core.dart';
 import 'package:document_flow/document_flow.dart';
 import 'package:network/network.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/data/datasources/legal_data_remote_datasource.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/data/datasources/media_upload_remote_datasource.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/data/datasources/organization_media_remote_datasource.dart';
+import 'package:sanad_provider/src/features/organization_settings/src/data/datasources/organization_settings_cache_datasource.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/data/datasources/organization_settings_remote_datasource.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/data/datasources/provider_overview_remote_datasource.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/data/datasources/working_hours_remote_datasource.dart';
@@ -29,6 +31,7 @@ import 'package:sanad_provider/src/features/organization_settings/src/presentati
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/bloc/provider_completion/provider_completion_bloc.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/bloc/provider_overview/provider_overview_bloc.dart';
 import 'package:services/services.dart';
+import 'package:storage/storage.dart';
 
 /// GetIt instance name organization_settings uses for every `document_flow`
 /// type it registers — `DocumentFlowRepository` and its use cases are
@@ -82,11 +85,16 @@ abstract final class OrganizationSettingsDI {
           sl<MediaUploadRemoteDataSource>(),
         ),
       )
+      ..registerLazySingleton<OrganizationSettingsCacheDataSource>(
+        () => OrganizationSettingsCacheDataSourceImpl(sl<HiveLocalStorage>()),
+      )
       ..registerLazySingleton<OrganizationSettingsRepository>(
         () => OrganizationSettingsRepositoryImpl(
           sl<OrganizationSettingsRemoteDataSource>(),
           sl<LegalDataRemoteDataSource>(),
           sl<NetworkGuard>(),
+          sl<OrganizationSettingsCacheDataSource>(),
+          sl<SessionManager>(),
         ),
       )
       ..registerLazySingleton(
@@ -110,6 +118,8 @@ abstract final class OrganizationSettingsDI {
         () => WorkingHoursRepositoryImpl(
           sl<WorkingHoursRemoteDataSource>(),
           sl<NetworkGuard>(),
+          sl<OrganizationSettingsCacheDataSource>(),
+          sl<SessionManager>(),
         ),
       )
       ..registerLazySingleton(
@@ -139,6 +149,8 @@ abstract final class OrganizationSettingsDI {
           getWorkingHours: sl<GetWorkingHoursUseCase>(),
           updateWorkingHours: sl<UpdateWorkingHoursUseCase>(),
           getCategories: sl<GetCategoriesUseCase>(),
+          organizationSettingsRepository: sl<OrganizationSettingsRepository>(),
+          workingHoursRepository: sl<WorkingHoursRepository>(),
         ),
       )
       ..registerFactory(

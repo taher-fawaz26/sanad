@@ -33,6 +33,12 @@ export 'src/headers/app_image_header.dart';
 export 'src/headers/app_profile_header.dart';
 export 'src/headers/app_search_header.dart';
 
+// Loading — app-wide skeleton (reads) + blocking progress (mutations)
+export 'src/loading/app_progress.dart';
+export 'src/loading/app_skeleton_list.dart';
+export 'src/loading/app_skeletonizer.dart';
+export 'src/loading/mutation_listener.dart';
+
 // Pagination
 export 'src/pagination/paging_state_adapter.dart';
 export 'src/pagination/sanad_paged_list.dart';
@@ -93,3 +99,5 @@ export 'src/widgets/media_upload/media_upload_drop_zone.dart';
 export 'src/widgets/media_upload/media_upload_grid.dart';
 export 'src/widgets/media_upload/media_upload_tile.dart';
 export 'src/widgets/media_upload/media_upload_tile_data.dart';
+export 'src/widgets/nav_visibility.dart';
+export 'src/widgets/nav_visibility_controller.dart';

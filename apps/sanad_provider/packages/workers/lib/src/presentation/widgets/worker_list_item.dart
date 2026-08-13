@@ -9,7 +9,6 @@ import 'package:workers/src/domain/entities/worker_entity.dart';
 import 'package:workers/src/domain/entities/worker_status.dart';
 import 'package:workers/src/presentation/bloc/workers_list/workers_list_bloc.dart';
 import 'package:workers/src/presentation/widgets/worker_action_invokers.dart';
-import 'package:workers/src/presentation/widgets/worker_actions_bottom_sheet.dart';
 import 'package:workers/src/routes/worker_routes.dart';
 
 /// Swipe-group tag shared by every [WorkerListItem] so only one row's swipe
@@ -18,11 +17,10 @@ const workerSwipeGroupTag = 'workers';
 
 /// Worker row — Figma team card (`1526:12324`).
 ///
-/// Contextual actions (Edit / Suspend-Unsuspend / Delete) are reachable two
-/// ways: swipe-to-reveal (`AppSwipeActions`) and the `more_vert` action
-/// sheet — the sheet stays as the accessible fallback for users who can't
-/// perform a horizontal swipe gesture. Both surfaces call the exact same
-/// `WorkerActionCubit` methods via `worker_action_invokers.dart`.
+/// Contextual actions (Edit / Suspend-Unsuspend / Delete) are exposed only
+/// via swipe-to-reveal (`AppSwipeActions`) — there is no secondary "more"
+/// menu. All actions call the exact same `WorkerActionCubit` methods via
+/// `worker_action_invokers.dart`.
 class WorkerListItem extends StatelessWidget {
   const WorkerListItem({required this.worker, super.key, this.onTap});
 
@@ -78,17 +76,6 @@ class WorkerListItem extends StatelessWidget {
           showStatusDot: worker.status == WorkerStatus.active,
         ),
         badge: _statusBadge(worker.status),
-        trailing: Semantics(
-          label: 'workers.more_actions'.tr(),
-          child: AppIconButton(
-            icon: Icons.more_vert,
-            iconColor: colors.textPrimary,
-            onTap: () => showWorkerActionsBottomSheet(
-              context: context,
-              worker: worker,
-            ),
-          ),
-        ),
         onTap: onTap ?? () => _openDetails(context),
       ),
     );

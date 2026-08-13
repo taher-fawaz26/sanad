@@ -34,6 +34,17 @@ mixin PaginationMixin<Event, State, Item, Q extends PageQuery>
   /// usecase.
   TaskEither<Failure, Page<Item>> fetchPage(Q query);
 
+  /// Stable identity used to dedupe appended items across pages (e.g. when
+  /// the same record shows up on two consecutive page fetches because the
+  /// backing list shifted between requests).
+  ///
+  /// Defaults to the item itself, which only dedupes correctly for
+  /// `Equatable` items whose fields are stable across fetches — not a safe
+  /// assumption for every entity shape. Override with a real identity, e.g.
+  /// `Object dedupKey(WorkerEntity item) => item.id;`, whenever the entity
+  /// has a stable id field.
+  Object? dedupKey(Item item) => item;
+
   /// Loads page 1, replacing any existing items. Use for initial load and
   /// for retrying after a first-page error.
   Future<void> loadFirstPage(Emitter<State> emit) async {
@@ -116,13 +127,11 @@ mixin PaginationMixin<Event, State, Item, Q extends PageQuery>
     );
   }
 
-  /// Appends [incoming] to [existing], skipping any item already present.
-  /// Relies on entity `Equatable` equality (id + fields) rather than a
-  /// caller-supplied id extractor, matching every existing entity in the
-  /// codebase.
+  /// Appends [incoming] to [existing], skipping any item whose [dedupKey]
+  /// is already present.
   List<Item> _mergeDedup(List<Item> existing, List<Item> incoming) {
-    final seen = existing.toSet();
-    final appended = incoming.where(seen.add);
+    final seen = existing.map(dedupKey).toSet();
+    final appended = incoming.where((item) => seen.add(dedupKey(item)));
     return [...existing, ...appended];
   }
 }

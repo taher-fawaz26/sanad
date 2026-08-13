@@ -8,6 +8,17 @@ const int kDefaultPageLimit = 20;
 /// every SANAD paginated endpoint (`page`, `limit`, `search`); feature
 /// packages extend this with their own filters (status, categoryId, ...)
 /// and merge them into [toQueryMap].
+///
+/// [kDefaultPageLimit] is only the fallback when a subclass doesn't specify
+/// its own default. A feature whose endpoint uses a different page size
+/// overrides it on the super-parameter itself, e.g.:
+/// ```dart
+/// class ProviderServicesQuery extends PageQuery {
+///   const ProviderServicesQuery({super.page, super.limit = 10, super.search});
+///   ...
+/// }
+/// ```
+/// Either way, an explicit `limit:` argument at any call site always wins.
 abstract class PageQuery extends Equatable {
   const PageQuery({this.page = 1, this.limit = kDefaultPageLimit, this.search});
 

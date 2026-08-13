@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 /// Figma loading-state dialog (`1546:8536`).
 ///
 /// Centered card with [AppLoadingIndicator], title, and optional description.
-/// Prefer [showAppProgressDialog] for the full modal experience.
+/// Prefer driving this through `AppProgress`/`MutationListener`
+/// (`shared_ui/src/loading/`) rather than showing it directly.
 class AppProgressDialog extends StatelessWidget {
   const AppProgressDialog({
     required this.title,
@@ -70,40 +71,5 @@ class AppProgressDialog extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-/// Shows a non-dismissible progress dialog (Figma `1546:8536`).
-///
-/// Use for long-running create/edit flows (invite worker, add branch, etc.).
-/// Dismiss with [dismissAppProgressDialog] when the request finishes.
-Future<void> showAppProgressDialog({
-  required BuildContext context,
-  required String title,
-  String? description,
-}) {
-  final barrierColor = context.appDialogTheme.spec.barrierColor;
-
-  return showDialog<void>(
-    context: context,
-    barrierDismissible: false,
-    barrierColor: barrierColor,
-    builder: (dialogContext) {
-      return PopScope(
-        canPop: false,
-        child: AppProgressDialog(
-          title: title,
-          description: description,
-        ),
-      );
-    },
-  );
-}
-
-/// Pops the top-most [showAppProgressDialog] via the root navigator.
-void dismissAppProgressDialog(BuildContext context) {
-  final navigator = Navigator.of(context, rootNavigator: true);
-  if (navigator.canPop()) {
-    navigator.pop();
   }
 }

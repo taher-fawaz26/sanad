@@ -18,6 +18,8 @@ class ProviderServiceEntity extends Equatable {
     required this.images,
     required this.createdAt,
     required this.updatedAt,
+    this.requests = 0,
+    this.revenue = 0,
   });
 
   final String id;
@@ -29,6 +31,14 @@ class ProviderServiceEntity extends Equatable {
   final List<ProviderServiceImageEntity> images;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  /// Total service requests received — only populated by the by-id detail
+  /// endpoint (`GET /provider-services/{id}`); defaults to `0` elsewhere
+  /// (list rows, skeletons) where the backend doesn't return it.
+  final int requests;
+
+  /// Total revenue generated — same by-id-only availability as [requests].
+  final num revenue;
 
   ProviderServiceImageEntity? get primaryImage {
     for (final image in images) {
@@ -64,5 +74,7 @@ class ProviderServiceEntity extends Equatable {
     images,
     createdAt,
     updatedAt,
+    requests,
+    revenue,
   ];
 }

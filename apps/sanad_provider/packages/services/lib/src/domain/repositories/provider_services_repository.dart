@@ -36,10 +36,6 @@ abstract interface class ProviderServicesRepository {
 
   TaskEither<Failure, ProviderServiceOverviewEntity> getOverview();
 
-  TaskEither<Failure, ProviderServiceOverviewEntity> getOverviewFor(
-    String id,
-  );
-
   TaskEither<Failure, ProviderServiceEntity> addImage({
     required String id,
     required String mediaId,

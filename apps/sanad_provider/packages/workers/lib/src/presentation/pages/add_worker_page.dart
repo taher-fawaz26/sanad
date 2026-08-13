@@ -24,12 +24,18 @@ class _AddWorkerPageState extends State<AddWorkerPage> {
 
   bool _showValidationErrors = false;
   bool _isFormComplete = false;
-  var _submittingDialogVisible = false;
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AddWorkerBloc, AddWorkerState>(
-      listener: _onBlocStateChanged,
+    return MutationListener<AddWorkerBloc, AddWorkerState>(
+      status: (state) => state.status,
+      title: (context) => 'workers.add_worker.submitting_title'.tr(),
+      description: (context) =>
+          'workers.add_worker.submitting_description'.tr(),
+      onSuccess: (context, state) => _showSuccessPopover(),
+      onFailure: (context, state) {
+        if (state.failure != null) _showErrorSnackbar(state.failure!);
+      },
       child: Scaffold(
         backgroundColor: context.appColors.surface,
         body: SafeArea(
@@ -98,37 +104,6 @@ class _AddWorkerPageState extends State<AddWorkerPage> {
         ),
       ),
     );
-  }
-
-  void _onBlocStateChanged(BuildContext context, AddWorkerState state) {
-    if (state.isLoading) {
-      _showSubmittingDialog();
-      return;
-    }
-    _dismissSubmittingDialog();
-
-    if (state.isSuccess) {
-      _showSuccessPopover();
-    } else if (state.hasError && state.failure != null) {
-      _showErrorSnackbar(state.failure!);
-    }
-  }
-
-  void _showSubmittingDialog() {
-    if (_submittingDialogVisible) return;
-    _submittingDialogVisible = true;
-
-    showAppProgressDialog(
-      context: context,
-      title: 'workers.add_worker.submitting_title'.tr(),
-      description: 'workers.add_worker.submitting_description'.tr(),
-    ).then((_) => _submittingDialogVisible = false);
-  }
-
-  void _dismissSubmittingDialog() {
-    if (!_submittingDialogVisible) return;
-    _submittingDialogVisible = false;
-    dismissAppProgressDialog(context);
   }
 
   void _showSuccessPopover() {

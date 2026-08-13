@@ -23,9 +23,6 @@ abstract final class ServicesApiPaths {
 
   static const String providerServicesOverview = 'provider-services/overview';
 
-  static String providerServiceOverview(String id) =>
-      'provider-services/overview/$id';
-
   static String providerServiceImages(String id) =>
       'provider-services/$id/images';
 

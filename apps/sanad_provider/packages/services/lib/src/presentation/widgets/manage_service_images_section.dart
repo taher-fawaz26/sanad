@@ -1,21 +1,14 @@
-import 'package:asset_picker/asset_picker.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:localization/localization.dart';
-import 'package:media_upload/media_upload.dart';
 import 'package:services/src/domain/entities/provider_service_entity.dart';
 import 'package:services/src/domain/entities/provider_service_image_entity.dart';
-import 'package:services/src/domain/usecases/add_provider_service_image_usecase.dart';
 import 'package:services/src/domain/usecases/delete_provider_service_image_usecase.dart';
 import 'package:services/src/domain/usecases/set_primary_provider_service_image_usecase.dart';
 import 'package:services/src/presentation/widgets/service_confirmation_sheet.dart';
-import 'package:services/src/presentation/widgets/service_image_card.dart';
-import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
-
-const _maxImages = 6;
 
 /// Live image lifecycle for an existing provider service — Service
 /// Details' "Images" section.
@@ -45,51 +38,42 @@ class ManageServiceImagesSection extends StatefulWidget {
 
 class _ManageServiceImagesSectionState
     extends State<ManageServiceImagesSection> {
-  bool _isAdding = false;
   String? _busyImageId;
 
   @override
   Widget build(BuildContext context) {
     final images = widget.service.images;
-    final canAddMore = images.length < _maxImages && !_isAdding;
+    final colors = context.appColors;
+    final typography = context.appTypography;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppFieldLabel(
-          label: 'services.images_count_label'.tr(
-            namedArgs: {
-              'count': images.length.toString(),
-              'max': _maxImages.toString(),
-            },
-          ),
+        Text(
+          'services.details.images'.tr(),
+          style: typography
+              .medium(typography.smallNormal)
+              .copyWith(color: colors.textSecondary),
         ),
         SizedBox(height: AppSpacing.md),
-        Wrap(
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.sm,
-          children: [
-            for (final image in images)
-              ServiceImageCard(
-                key: ValueKey(image.id),
-                data: MediaUploadTileData(
-                  id: image.id,
-                  previewUrl: image.url,
-                  fileName: image.id,
-                  progress: 1,
-                  status: _busyImageId == image.id
-                      ? MediaUploadTileStatus.uploading
-                      : MediaUploadTileStatus.success,
+        if (images.isNotEmpty)
+          Row(
+            children: [
+              for (var i = 0; i < images.length; i++) ...[
+                if (i > 0) SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: _ServiceImageThumbnail(
+                    key: ValueKey(images[i].id),
+                    imageUrl: images[i].url,
+                    isBusy: _busyImageId == images[i].id,
+                    onTap: _busyImageId != null
+                        ? null
+                        : () => _onImageMenu(images[i]),
+                  ),
                 ),
-                isMain: image.isPrimary,
-                onMenuTap: _busyImageId != null
-                    ? () {}
-                    : () => _onImageMenu(image),
-                onRetry: () {},
-              ),
-            if (canAddMore) ServiceImageAddCard(onTap: _pickAndAddImages),
-          ],
-        ),
+              ],
+            ],
+          ),
       ],
     );
   }
@@ -138,7 +122,10 @@ class _ManageServiceImagesSectionState
 
     setState(() => _busyImageId = image.id);
     final result = await sl<DeleteProviderServiceImageUseCase>()(
-      DeleteProviderServiceImageParams(id: widget.service.id, imageId: image.id),
+      DeleteProviderServiceImageParams(
+        id: widget.service.id,
+        imageId: image.id,
+      ),
     ).run();
     if (!mounted) return;
     setState(() => _busyImageId = null);
@@ -151,44 +138,6 @@ class _ManageServiceImagesSectionState
     });
   }
 
-  Future<void> _pickAndAddImages() async {
-    final remaining = _maxImages - widget.service.images.length;
-    if (remaining <= 0) return;
-
-    final result = await AssetPicker.pick(
-      context,
-      options: AssetPickerOptions(allowFiles: false, allowMultiple: remaining > 1),
-    );
-    if (!result.hasAssets || !mounted) return;
-
-    setState(() => _isAdding = true);
-    var current = widget.service;
-    for (final asset in result.assets.take(remaining)) {
-      final uploaded = await sl<MediaUploadRepository>()
-          .upload(uploadKey: generateUuidV4(), asset: asset)
-          .run();
-      final failure = uploaded.fold((f) => f, (_) => null);
-      if (failure != null) {
-        if (mounted) _showFailure(failure);
-        continue;
-      }
-      final mediaId = uploaded.fold((_) => null, (media) => media.mediaId)!;
-
-      final added = await sl<AddProviderServiceImageUseCase>()(
-        AddProviderServiceImageParams(id: current.id, mediaId: mediaId),
-      ).run();
-      added.fold(
-        (f) {
-          if (mounted) _showFailure(f);
-        },
-        (service) => current = service,
-      );
-    }
-    if (!mounted) return;
-    setState(() => _isAdding = false);
-    widget.onServiceUpdated(current);
-  }
-
   void _showFailure(Failure failure) {
     final display = failureErrorDisplay(failure);
     showAppSnackbar(
@@ -197,6 +146,57 @@ class _ManageServiceImagesSectionState
       caption: display.description,
       color: AppSnackbarColor.error,
       layout: AppSnackbarLayout.fullWidth,
+    );
+  }
+}
+
+/// Figma `4715:26510` — equal `flex-1` thumbnails, `80px` tall, `6px`
+/// radius. Tapping opens [_ImageMenuSheet] (set main / delete).
+class _ServiceImageThumbnail extends StatelessWidget {
+  const _ServiceImageThumbnail({
+    required this.imageUrl,
+    required this.isBusy,
+    required this.onTap,
+    super.key,
+  });
+
+  final String imageUrl;
+  final bool isBusy;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(AppDimension.radiusSm);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: radius,
+      child: SizedBox(
+        height: responsiveDimension(80),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            AppNetworkImage(imageUrl, borderRadius: radius),
+            if (isBusy)
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.35),
+                  borderRadius: radius,
+                ),
+                child: const Center(
+                  child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
