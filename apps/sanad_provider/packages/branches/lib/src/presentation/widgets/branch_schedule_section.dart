@@ -118,7 +118,7 @@ class BranchScheduleSection extends StatelessWidget {
         fromLabel: 'branches.add_branch.from_label'.tr(),
         toLabel: 'branches.add_branch.to_label'.tr(),
         confirmLabel: 'branches.add_branch.add_day_button'.tr(),
-        cancelLabel: 'branches.add_branch.cancel'.tr(),
+        cancelLabel: 'common.cancel'.tr(),
       ),
       settings: SheetRouteSettings(
         title: 'branches.add_branch.add_custom_day_title'.tr(),

@@ -48,7 +48,7 @@ class ExtractingDocumentsPage extends HookWidget {
             body: AppNetworkFailureState(
               title: 'registration.extraction_failed_title'.tr(),
               description: 'registration.extraction_failed_retry'.tr(),
-              retryLabel: 'empty_states.retry'.tr(),
+              retryLabel: 'common.retry'.tr(),
               onRetry: () =>
                   context.read<DocumentFlowBloc>().add(const RetryRequested()),
             ),

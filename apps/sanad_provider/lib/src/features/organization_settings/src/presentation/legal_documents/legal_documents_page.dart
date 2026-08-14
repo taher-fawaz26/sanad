@@ -15,7 +15,7 @@ DocumentUploadCardLabels _labels() => DocumentUploadCardLabels(
   replaceDocument: 'settings.legal_documents.replace_document'.tr(),
   removeDocument: 'settings.legal_documents.remove_document'.tr(),
   upload: 'settings.legal_documents.upload'.tr(),
-  retryUpload: 'settings.legal_documents.retry_upload'.tr(),
+  retryUpload: 'common.retry'.tr(),
 );
 
 const _kCaptureOptions = AssetPickerOptions(
@@ -173,7 +173,7 @@ class _LegalDocumentsPageState extends State<LegalDocumentsPage> {
                   AppSliverGap(AppSpacing.xxl),
                   AppSliverBox(
                     child: AppButton(
-                      label: 'settings.legal_documents.save'.tr(),
+                      label: 'common.save'.tr(),
                       onPressed: (isBusy || !state.isComplete)
                           ? null
                           : () => extracted == null

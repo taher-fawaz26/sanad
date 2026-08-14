@@ -120,9 +120,9 @@ void main() {
       // Business Profile is incomplete (phone missing) -> has "Add".
       // First Branch and First Team are complete -> no "Add" for them.
       // Grow (services) is incomplete -> has "Add".
-      expect(find.text('settings.add'), findsNWidgets(2));
+      expect(find.text('common.add'), findsNWidgets(2));
 
-      final addButton = find.text('settings.add').first;
+      final addButton = find.text('common.add').first;
       await tester.ensureVisible(addButton);
       await tester.pumpAndSettle();
       await tester.tap(addButton);

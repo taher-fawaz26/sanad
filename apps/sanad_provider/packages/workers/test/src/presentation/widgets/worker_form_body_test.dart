@@ -8,7 +8,7 @@ import 'package:workers/src/presentation/widgets/worker_form_body.dart';
 // This file intentionally does NOT bootstrap EasyLocalization — see
 // worker_list_item_test.dart for the full explanation. `.tr()` falls back
 // to the raw key, so assertions below match on raw i18n keys (e.g.
-// 'workers.add_worker.validation_required'), not translated text.
+// 'validation.required'), not translated text.
 
 Future<void> _pump(
   WidgetTester tester, {
@@ -60,7 +60,7 @@ void main() {
       await validate(tester);
 
       expect(
-        find.text('workers.add_worker.validation_required'),
+        find.text('validation.required'),
         findsWidgets,
       );
     });
@@ -72,7 +72,7 @@ void main() {
       await validate(tester);
 
       expect(
-        find.text('workers.add_worker.validation_length_error'),
+        find.text('validation.length_range'),
         findsOneWidget,
       );
     });
@@ -84,7 +84,7 @@ void main() {
       await validate(tester);
 
       expect(
-        find.text('workers.add_worker.validation_length_error'),
+        find.text('validation.length_range'),
         findsOneWidget,
       );
     });
@@ -112,7 +112,7 @@ void main() {
         findsNothing,
       );
       expect(
-        find.text('workers.add_worker.validation_length_error'),
+        find.text('validation.length_range'),
         findsNothing,
       );
     });
@@ -128,7 +128,7 @@ void main() {
         findsNothing,
       );
       expect(
-        find.text('workers.add_worker.validation_length_error'),
+        find.text('validation.length_range'),
         findsNothing,
       );
     });
@@ -140,7 +140,7 @@ void main() {
       await validate(tester);
 
       expect(
-        find.text('workers.add_worker.validation_required'),
+        find.text('validation.required'),
         findsWidgets,
       );
     });
@@ -194,7 +194,7 @@ void main() {
       await validate(tester);
 
       expect(
-        find.text('workers.add_worker.validation_required'),
+        find.text('validation.required'),
         findsWidgets,
       );
     });
@@ -231,7 +231,7 @@ void main() {
       await validate(tester);
 
       expect(
-        find.text('workers.add_worker.validation_max_length_error'),
+        find.text('validation.length_max'),
         findsNothing,
       );
     });
@@ -243,7 +243,7 @@ void main() {
       await validate(tester);
 
       expect(
-        find.text('workers.add_worker.validation_max_length_error'),
+        find.text('validation.length_max'),
         findsOneWidget,
       );
     });
@@ -255,7 +255,7 @@ void main() {
       await validate(tester);
 
       expect(
-        find.text('workers.add_worker.validation_max_length_error'),
+        find.text('validation.length_max'),
         findsNothing,
       );
     });
@@ -269,7 +269,7 @@ void main() {
       await validate(tester);
 
       expect(
-        find.text('workers.add_worker.validation_required'),
+        find.text('validation.required'),
         findsWidgets,
       );
     });

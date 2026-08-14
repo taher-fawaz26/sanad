@@ -107,7 +107,7 @@ void main() {
       await tester.tap(find.byType(AppButton));
       await tester.pumpAndSettle();
 
-      expect(find.text('provider_rbac.validation_required'), findsOneWidget);
+      expect(find.text('validation.required'), findsOneWidget);
     });
 
     testWidgets('101 characters shows the length error', (tester) async {
@@ -118,7 +118,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('provider_rbac.validation_length_error'),
+        find.text('validation.length_range'),
         findsOneWidget,
       );
     });
@@ -130,9 +130,9 @@ void main() {
       await tester.tap(find.byType(AppButton));
       await tester.pumpAndSettle();
 
-      expect(find.text('provider_rbac.validation_required'), findsNothing);
+      expect(find.text('validation.required'), findsNothing);
       expect(
-        find.text('provider_rbac.validation_length_error'),
+        find.text('validation.length_range'),
         findsNothing,
       );
     });
@@ -148,10 +148,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('provider_rbac.validation_max_length_error'),
+        find.text('validation.length_max'),
         findsNothing,
       );
-      expect(find.text('provider_rbac.validation_required'), findsNothing);
+      expect(find.text('validation.required'), findsNothing);
     });
 
     testWidgets('256 characters shows the max-length error', (tester) async {
@@ -166,7 +166,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('provider_rbac.validation_max_length_error'),
+        find.text('validation.length_max'),
         findsOneWidget,
       );
     });
@@ -185,7 +185,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('provider_rbac.validation_max_length_error'),
+        find.text('validation.length_max'),
         findsNothing,
       );
     });
@@ -202,7 +202,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('provider_rbac.validation_max_length_error'),
+        find.text('validation.length_max'),
         findsNothing,
       );
     });

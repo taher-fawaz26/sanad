@@ -162,7 +162,7 @@ class _AssignBranchSheetBodyState extends State<_AssignBranchSheetBody> {
             ),
             SizedBox(height: AppSpacing.md),
             AppButton(
-              label: 'workers.select_worker.retry'.tr(),
+              label: 'common.retry'.tr(),
               onPressed: _loadBranches,
             ),
           ],
@@ -184,7 +184,7 @@ class _AssignBranchSheetBodyState extends State<_AssignBranchSheetBody> {
         ),
         SizedBox(height: AppSpacing.xl),
         AppButton(
-          label: 'workers.edit_worker.save_button'.tr(),
+          label: 'common.save'.tr(),
           onPressed: _selectedBranch == null || _saving ? null : _onSave,
           isLoading: _saving,
         ),
@@ -196,7 +196,7 @@ class _AssignBranchSheetBodyState extends State<_AssignBranchSheetBody> {
     await showAppActionSheet<void>(
       context: context,
       title: 'workers.assign_branch_label'.tr(),
-      cancelLabel: 'workers.cancel'.tr(),
+      cancelLabel: 'common.cancel'.tr(),
       items: branches
           .map(
             (branch) => AppActionSheetItem(

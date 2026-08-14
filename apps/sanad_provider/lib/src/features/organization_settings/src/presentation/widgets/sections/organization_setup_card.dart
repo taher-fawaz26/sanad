@@ -189,7 +189,7 @@ class _StageRow extends StatelessWidget {
           GestureDetector(
             onTap: onAdd,
             child: Text(
-              'settings.add'.tr(),
+              'common.add'.tr(),
               style: typography.smallNormal.copyWith(
                 color: colors.primary,
                 fontWeight: FontWeight.w500,

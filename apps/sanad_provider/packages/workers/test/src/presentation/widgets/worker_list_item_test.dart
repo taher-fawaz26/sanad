@@ -224,7 +224,7 @@ void main() {
         await _openSwipePane(tester);
 
         await tester.tap(find.bySemanticsLabel('workers.action_delete'));
-        await _confirm(tester, 'workers.delete_action');
+        await _confirm(tester, 'common.delete');
 
         verify(() => repo.deleteWorker('w1')).called(1);
       },
@@ -239,7 +239,7 @@ void main() {
 
         await tester.tap(find.bySemanticsLabel('workers.action_delete'));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('workers.cancel'));
+        await tester.tap(find.text('common.cancel'));
         await tester.pumpAndSettle();
 
         verifyNever(() => repo.deleteWorker(any()));

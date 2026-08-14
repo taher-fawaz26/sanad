@@ -169,7 +169,7 @@ class _EditSocialProfilesSheetBodyState
             ),
             SizedBox(height: AppSpacing.xl),
             AppButton(
-              label: 'settings.save_button'.tr(),
+              label: 'common.save'.tr(),
               onPressed: _save,
             ),
           ],

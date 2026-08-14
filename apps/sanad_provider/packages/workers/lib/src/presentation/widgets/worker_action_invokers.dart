@@ -45,7 +45,7 @@ Future<void> confirmAndChangeWorkerStatus({
         : 'workers.unsuspend_action'.tr(),
     actionType: btnConfig.type,
     destructive: btnConfig.destructive,
-    cancelLabel: 'workers.cancel'.tr(),
+    cancelLabel: 'common.cancel'.tr(),
   );
 
   if ((confirmed ?? false) && context.mounted) {
@@ -67,10 +67,10 @@ Future<void> confirmAndDeleteWorker({
     description: 'workers.delete_description'.tr(
       namedArgs: {'name': worker.fullName},
     ),
-    actionLabel: 'workers.delete_action'.tr(),
+    actionLabel: 'common.delete'.tr(),
     actionType: _deleteButton.type,
     destructive: _deleteButton.destructive,
-    cancelLabel: 'workers.cancel'.tr(),
+    cancelLabel: 'common.cancel'.tr(),
   );
 
   if ((confirmed ?? false) && context.mounted) {

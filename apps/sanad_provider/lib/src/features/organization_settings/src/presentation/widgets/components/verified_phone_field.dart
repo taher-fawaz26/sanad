@@ -67,11 +67,11 @@ class _VerifiedPhoneFieldState extends State<VerifiedPhoneField> {
       showVerifiedBadge: _isAdded && widget.verified,
       trailing: _isAdded
           ? AppFieldTextLinkTrailing(
-              label: 'settings.change'.tr(),
+              label: 'common.change'.tr(),
               onTap: widget.onChange,
             )
           : AppFieldOutlinePillTrailing(
-              label: 'settings.add'.tr(),
+              label: 'common.add'.tr(),
               onTap: widget.onAdd,
             ),
     );

@@ -220,7 +220,7 @@ class ServiceImageCard extends StatelessWidget {
             GestureDetector(
               onTap: onRetry,
               child: Text(
-                'services.images_retry'.tr(),
+                'common.retry'.tr(),
                 style: typography.tinyNormal.copyWith(
                   color: colors.primary,
                   fontWeight: FontWeight.bold,

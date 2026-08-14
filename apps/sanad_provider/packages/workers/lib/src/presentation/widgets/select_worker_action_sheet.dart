@@ -25,8 +25,8 @@ Future<SelectWorkerResult?> showSelectWorkerActionSheet({
   final selected = await showAppSelectSheet<WorkerEntity>(
     context: context,
     title: 'workers.select_worker.title'.tr(),
-    confirmLabel: 'workers.select_worker.confirm'.tr(),
-    searchHint: 'workers.select_worker.search_hint'.tr(),
+    confirmLabel: 'common.confirm'.tr(),
+    searchHint: 'common.search_hint'.tr(),
     getId: (w) => w.id,
     searchFilter: (w, q) =>
         w.fullName.toLowerCase().contains(q) ||
@@ -39,7 +39,7 @@ Future<SelectWorkerResult?> showSelectWorkerActionSheet({
       return result.fold((f) => throw f, (paged) => paged.items);
     },
     errorTextBuilder: (e) => e is Failure ? e.message : e.toString(),
-    retryLabel: 'workers.select_worker.retry'.tr(),
+    retryLabel: 'common.retry'.tr(),
     emptyBuilder: (context) => _WorkerEmptyState(),
     itemBuilder: (context, worker, isSelected, onTap) => AppTableRow(
       title: worker.fullName,

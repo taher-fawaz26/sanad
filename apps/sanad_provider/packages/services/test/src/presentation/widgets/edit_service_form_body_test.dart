@@ -105,7 +105,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('services.add_service.description_length_error'),
+        find.text('validation.length_max'),
         findsNothing,
       );
     });
@@ -117,7 +117,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('services.add_service.description_length_error'),
+        find.text('validation.length_max'),
         findsNothing,
       );
     });
@@ -131,7 +131,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('services.add_service.description_length_error'),
+        find.text('validation.length_max'),
         findsOneWidget,
       );
     });

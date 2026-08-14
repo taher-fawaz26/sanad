@@ -48,10 +48,10 @@ Future<void> confirmAndResendInvitation({
     description: 'workers.invitation_resend_description'.tr(
       namedArgs: {'name': invitation.fullName},
     ),
-    actionLabel: 'workers.invitation_resend_action'.tr(),
+    actionLabel: 'common.resend'.tr(),
     actionType: _resendButton.type,
     destructive: _resendButton.destructive,
-    cancelLabel: 'workers.cancel'.tr(),
+    cancelLabel: 'common.cancel'.tr(),
   );
 
   if ((confirmed ?? false) && context.mounted) {
@@ -73,7 +73,7 @@ Future<void> confirmAndCancelInvitation({
     actionLabel: 'workers.invitation_cancel_action'.tr(),
     actionType: _cancelButton.type,
     destructive: _cancelButton.destructive,
-    cancelLabel: 'workers.cancel'.tr(),
+    cancelLabel: 'common.cancel'.tr(),
   );
 
   if ((confirmed ?? false) && context.mounted) {
@@ -92,10 +92,10 @@ Future<void> confirmAndDeleteInvitation({
     description: 'workers.invitation_delete_description'.tr(
       namedArgs: {'name': invitation.fullName},
     ),
-    actionLabel: 'workers.invitation_delete_action'.tr(),
+    actionLabel: 'common.delete'.tr(),
     actionType: _deleteButton.type,
     destructive: _deleteButton.destructive,
-    cancelLabel: 'workers.cancel'.tr(),
+    cancelLabel: 'common.cancel'.tr(),
   );
 
   if ((confirmed ?? false) && context.mounted) {

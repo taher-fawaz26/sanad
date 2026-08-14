@@ -89,7 +89,7 @@ class _AccountCredentialsSectionState extends State<AccountCredentialsSection> {
             controller: _nameController,
             readOnly: true,
             trailing: AppFieldTextLinkTrailing(
-              label: 'settings.change'.tr(),
+              label: 'common.change'.tr(),
               onTap: widget.onEditName,
             ),
           ),
@@ -103,11 +103,11 @@ class _AccountCredentialsSectionState extends State<AccountCredentialsSection> {
             showVerifiedBadge: _phoneAdded,
             trailing: _phoneAdded
                 ? AppFieldTextLinkTrailing(
-                    label: 'settings.change'.tr(),
+                    label: 'common.change'.tr(),
                     onTap: widget.onChangePhone,
                   )
                 : AppFieldOutlinePillTrailing(
-                    label: 'settings.add'.tr(),
+                    label: 'common.add'.tr(),
                     onTap: widget.onAddPhone,
                   ),
           ),
@@ -120,11 +120,11 @@ class _AccountCredentialsSectionState extends State<AccountCredentialsSection> {
             showVerifiedBadge: _emailAdded && widget.emailVerified,
             trailing: _emailAdded
                 ? AppFieldTextLinkTrailing(
-                    label: 'settings.change'.tr(),
+                    label: 'common.change'.tr(),
                     onTap: widget.onChangeEmail,
                   )
                 : AppFieldOutlinePillTrailing(
-                    label: 'settings.add'.tr(),
+                    label: 'common.add'.tr(),
                     onTap: widget.onAddEmail,
                   ),
           ),

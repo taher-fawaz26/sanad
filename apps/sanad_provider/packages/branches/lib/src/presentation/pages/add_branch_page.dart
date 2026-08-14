@@ -137,7 +137,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
         title: 'branches.location_picker.title'.tr(),
         subtitle: 'branches.location_picker.subtitle'.tr(),
         searchHint: 'branches.location_picker.search_hint'.tr(),
-        confirm: 'branches.location_picker.confirm'.tr(),
+        confirm: 'common.confirm'.tr(),
         specifiedLocation: 'branches.location_picker.specified_location'.tr(),
         addressHint: 'branches.location_picker.address_hint'.tr(),
         permissionDenied: 'branches.location_picker.permission_denied'.tr(),
@@ -149,7 +149,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
         genericError: 'branches.location_picker.generic_error'.tr(),
         openSettings: 'branches.location_picker.open_settings'.tr(),
         searchEmpty: 'branches.location_picker.no_results'.tr(),
-        searchRetry: 'empty_states.retry'.tr(),
+        searchRetry: 'common.retry'.tr(),
         outsideCountry: 'branches.location_picker.outside_uae'.tr(),
       ),
       existingLocation: draft.pickedPosition,
@@ -300,13 +300,13 @@ class _AddBranchPageState extends State<AddBranchPage> {
 
     final discard = await showAppPopover<bool>(
       context: context,
-      title: 'branches.add_branch.discard_title'.tr(),
+      title: 'common.discard_title'.tr(),
       description: 'branches.add_branch.discard_description'.tr(),
       imageLayout: AppDialogImageLayout.iconSmall,
       featureIconColor: AppFeatureIconColor.warning,
-      primaryLabel: 'branches.add_branch.discard_confirm'.tr(),
+      primaryLabel: 'common.discard'.tr(),
       primaryDestructive: true,
-      secondaryLabel: 'branches.add_branch.discard_cancel'.tr(),
+      secondaryLabel: 'common.keep_editing'.tr(),
       onPrimary: () => Navigator.of(context, rootNavigator: true).pop(true),
       onSecondary: () => Navigator.of(context, rootNavigator: true).pop(false),
     );
@@ -377,7 +377,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
               if (hasError) {
                 return Center(
                   child: AppButton(
-                    label: 'empty_states.retry'.tr(),
+                    label: 'common.retry'.tr(),
                     onPressed: () => context.read<AddBranchBloc>().add(
                       AddBranchLoadForEditEvent(branchId: widget.branchId!),
                     ),

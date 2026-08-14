@@ -148,8 +148,8 @@ class _BranchActionsSheetBodyState extends State<_BranchActionsSheetBody> {
       featureIconSize: AppFeatureIconSize.xl,
       featureIconAsset: AppSvgs.branchMaintenance,
       actions: AppPopoverActions.dual,
-      primaryLabel: 'branches.actions.maintenance_confirm'.tr(),
-      secondaryLabel: 'branches.actions.cancel'.tr(),
+      primaryLabel: 'common.confirm'.tr(),
+      secondaryLabel: 'common.cancel'.tr(),
       onPrimary: () =>
           Navigator.of(widget.pageContext, rootNavigator: true).pop(true),
       onSecondary: () =>
@@ -183,9 +183,9 @@ class _BranchActionsSheetBodyState extends State<_BranchActionsSheetBody> {
       featureIconSize: AppFeatureIconSize.lg,
       featureIconTheme: AppFeatureIconTheme.lightCircleOutline,
       actions: AppPopoverActions.dual,
-      primaryLabel: 'branches.actions.delete_confirm'.tr(),
+      primaryLabel: 'common.delete'.tr(),
       primaryDestructive: true,
-      secondaryLabel: 'branches.actions.cancel'.tr(),
+      secondaryLabel: 'common.cancel'.tr(),
       onPrimary: () =>
           Navigator.of(widget.pageContext, rootNavigator: true).pop(true),
       onSecondary: () =>

@@ -115,7 +115,7 @@ class _ManageServiceImagesSectionState
       title: 'services.delete_image_confirm_title'.tr(),
       description: 'services.delete_image_confirm_description'.tr(),
       actionLabel: 'services.delete_image_confirm_action'.tr(),
-      cancelLabel: 'services.cancel'.tr(),
+      cancelLabel: 'common.cancel'.tr(),
       destructive: true,
     );
     if (!(confirmed ?? false) || !mounted) return;
@@ -223,7 +223,7 @@ class _ImageMenuSheet extends StatelessWidget {
         if (!isMain) const AppDivider(),
         _MenuRow(
           icon: Icons.delete_outline,
-          label: 'services.image_menu_delete'.tr(),
+          label: 'common.delete'.tr(),
           color: colors.error,
           onTap: () => Navigator.of(context).pop(_ImageMenuAction.delete),
         ),

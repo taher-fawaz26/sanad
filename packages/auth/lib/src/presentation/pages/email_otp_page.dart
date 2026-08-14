@@ -213,7 +213,7 @@ class EmailOtpPage extends HookWidget {
                     ),
                     const TextSpan(text: ' '),
                     TextSpan(
-                      text: 'auth.change'.tr(),
+                      text: 'common.change'.tr(),
                       style: TextStyle(
                         color: colors.primary,
                         fontWeight: FontWeight.w600,
@@ -258,7 +258,7 @@ class EmailOtpPage extends HookWidget {
                     children: [
                       TextSpan(text: 'auth.otp_not_received'.tr()),
                       TextSpan(
-                        text: 'auth.resend'.tr(),
+                        text: 'common.resend'.tr(),
                         style: TextStyle(
                           color: canResend.value
                               ? colors.primary

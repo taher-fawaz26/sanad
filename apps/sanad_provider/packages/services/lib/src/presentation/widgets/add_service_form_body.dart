@@ -136,7 +136,7 @@ class AddServiceFormBodyState extends State<AddServiceFormBody> {
     final selected = await showAppSelectSheet<CatalogServiceEntity>(
       context: context,
       title: 'services.add_service.service_name_label'.tr(),
-      searchHint: 'services.select_service.search_hint'.tr(),
+      searchHint: 'common.search_hint'.tr(),
       singleSelect: true,
       getId: (service) => service.id,
       searchFilter: (service, query) =>
@@ -148,7 +148,7 @@ class AddServiceFormBodyState extends State<AddServiceFormBody> {
         return result.fold((f) => throw f, (paged) => paged.items);
       },
       errorTextBuilder: (e) => e is Failure ? e.message : e.toString(),
-      retryLabel: 'services.select_service.retry'.tr(),
+      retryLabel: 'common.retry'.tr(),
       itemBuilder: (context, service, isSelected, onTap) =>
           AppTableRow(title: service.name, onTap: onTap),
     );
@@ -163,7 +163,7 @@ class AddServiceFormBodyState extends State<AddServiceFormBody> {
 
   String? _validateDescription(String? value) {
     if (!LengthValidator.isValid(value, maxLength: 500)) {
-      return 'services.add_service.description_length_error'.tr(
+      return 'validation.length_max'.tr(
         namedArgs: {'max': '500'},
       );
     }

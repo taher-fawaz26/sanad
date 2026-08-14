@@ -67,7 +67,7 @@ void main() {
 
     await enterFullName(tester, 'ab');
 
-    expect(find.text('registration.name_length_error'), findsOneWidget);
+    expect(find.text('validation.length_range'), findsOneWidget);
   });
 
   testWidgets('256-char full name shows the length error key', (
@@ -77,7 +77,7 @@ void main() {
 
     await enterFullName(tester, 'a' * 256);
 
-    expect(find.text('registration.name_length_error'), findsOneWidget);
+    expect(find.text('validation.length_range'), findsOneWidget);
   });
 
   testWidgets('valid 3-255 char full name passes with no error', (
@@ -88,6 +88,6 @@ void main() {
     await enterFullName(tester, 'John Doe');
 
     expect(find.text('registration.field_required'), findsNothing);
-    expect(find.text('registration.name_length_error'), findsNothing);
+    expect(find.text('validation.length_range'), findsNothing);
   });
 }

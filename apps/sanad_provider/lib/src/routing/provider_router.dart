@@ -149,7 +149,7 @@ GoRouter buildProviderRouter() {
             navTitle: navTitle,
             title: 'empty_states.network_title'.tr(),
             description: 'empty_states.network_description'.tr(),
-            retryLabel: 'empty_states.retry'.tr(),
+            retryLabel: 'common.retry'.tr(),
             onBack: () => context.pop(),
             onRetry: () async {
               final online = await sl<ConnectivityController>().check();

@@ -27,8 +27,8 @@ abstract final class MediaPermissions {
             icon: PermissionIcons().forType(PermissionType.camera),
             allowLabel: 'permissions.allow'.tr(),
             denyLabel: 'permissions.deny'.tr(),
-            openSettingsLabel: 'permissions.open_settings'.tr(),
-            cancelLabel: 'permissions.cancel'.tr(),
+            openSettingsLabel: 'common.open_settings'.tr(),
+            cancelLabel: 'common.cancel'.tr(),
           ),
         );
         return result.isGranted;
@@ -42,8 +42,8 @@ abstract final class MediaPermissions {
             icon: PermissionIcons().forType(PermissionType.gallery),
             allowLabel: 'permissions.allow'.tr(),
             denyLabel: 'permissions.deny'.tr(),
-            openSettingsLabel: 'permissions.open_settings'.tr(),
-            cancelLabel: 'permissions.cancel'.tr(),
+            openSettingsLabel: 'common.open_settings'.tr(),
+            cancelLabel: 'common.cancel'.tr(),
           ),
         );
         return result.isGranted;

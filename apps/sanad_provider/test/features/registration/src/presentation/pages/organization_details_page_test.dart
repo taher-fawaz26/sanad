@@ -79,7 +79,7 @@ void main() {
 
       await enterBusinessName(tester, 'ab');
 
-      expect(find.text('registration.name_length_error'), findsOneWidget);
+      expect(find.text('validation.length_range'), findsOneWidget);
     });
 
     testWidgets('too long shows the length error key', (tester) async {
@@ -87,7 +87,7 @@ void main() {
 
       await enterBusinessName(tester, 'a' * 256);
 
-      expect(find.text('registration.name_length_error'), findsOneWidget);
+      expect(find.text('validation.length_range'), findsOneWidget);
     });
 
     testWidgets('valid 3-255 chars passes with no error', (tester) async {
@@ -96,7 +96,7 @@ void main() {
       await enterBusinessName(tester, 'Acme LLC');
 
       expect(find.text('registration.field_required'), findsNothing);
-      expect(find.text('registration.name_length_error'), findsNothing);
+      expect(find.text('validation.length_range'), findsNothing);
     });
   });
 
@@ -118,7 +118,7 @@ void main() {
       await enterRepresentativeName(tester, 'A');
 
       expect(find.text('registration.field_required'), findsNothing);
-      expect(find.text('registration.name_length_error'), findsNothing);
+      expect(find.text('validation.length_range'), findsNothing);
     });
 
     testWidgets('500 chars passes — no length constraint applies', (
@@ -129,7 +129,7 @@ void main() {
       await enterRepresentativeName(tester, 'a' * 500);
 
       expect(find.text('registration.field_required'), findsNothing);
-      expect(find.text('registration.name_length_error'), findsNothing);
+      expect(find.text('validation.length_range'), findsNothing);
     });
   });
 }

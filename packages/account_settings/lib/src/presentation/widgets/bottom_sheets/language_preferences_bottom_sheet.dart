@@ -62,7 +62,7 @@ class _LanguagePreferencesBottomSheetState
     return AppActionSheet(
       showCancel: false,
       footer: AppButton(
-        label: 'settings.save_button'.tr(),
+        label: 'common.save'.tr(),
         onPressed: _save,
       ),
       child: Column(

@@ -130,7 +130,7 @@ class AuthPage extends HookWidget {
             horizontal: responsiveDimension(AppSpacing.md),
           ),
           child: Text(
-            'auth.or'.tr(),
+            'common.or'.tr(),
             style: typography.regularNormal.copyWith(
               color: colors.textPrimary,
             ),
@@ -223,7 +223,7 @@ class AuthPage extends HookWidget {
                   onSubmitted: (_) => submit(),
                   validator: (value) {
                     if (!RequiredValidator.isValid(value)) {
-                      return 'auth.field_required'.tr();
+                      return 'validation.required'.tr();
                     }
                     if (!EmailValidator.isValid(value!.trim())) {
                       return 'auth.invalid_email'.tr();
@@ -237,7 +237,7 @@ class AuthPage extends HookWidget {
                     final isLoading = state is AuthOtpRequestLoadingState;
                     return AppButton(
                       onPressed: isLoading ? null : submit,
-                      label: 'auth.continue_button'.tr(),
+                      label: 'common.continue'.tr(),
                       isLoading: isLoading,
                     );
                   },

@@ -89,7 +89,7 @@ class _BranchSearchSheetBodyState extends State<_BranchSearchSheetBody> {
           child: AppSearchField(
             controller: _controller,
             variant: AppSearchFieldVariant.bordered,
-            hint: 'branches.search_hint'.tr(),
+            hint: 'common.search_hint'.tr(),
             showMicIcon: false,
             autofocus: true,
             onChanged: (value) => context.read<BranchesBloc>().add(

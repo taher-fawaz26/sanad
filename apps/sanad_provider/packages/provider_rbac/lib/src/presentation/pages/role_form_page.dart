@@ -83,10 +83,10 @@ class _RoleFormPageState extends State<RoleFormPage> {
   /// schemas: `minLength: 1, maxLength: 100`.
   String? _validateName(String? value) {
     if (!RequiredValidator.isValid(value)) {
-      return 'provider_rbac.validation_required'.tr();
+      return 'validation.required'.tr();
     }
     if (!LengthValidator.isValid(value, minLength: 1, maxLength: 100)) {
-      return 'provider_rbac.validation_length_error'.tr(
+      return 'validation.length_range'.tr(
         namedArgs: {'min': '1', 'max': '100'},
       );
     }
@@ -101,7 +101,7 @@ class _RoleFormPageState extends State<RoleFormPage> {
   /// "not provided".
   String? _validateDescription(String? value) {
     if (!LengthValidator.isValid(value, maxLength: 255)) {
-      return 'provider_rbac.validation_max_length_error'.tr(
+      return 'validation.length_max'.tr(
         namedArgs: {'max': '255'},
       );
     }

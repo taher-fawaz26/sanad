@@ -24,8 +24,8 @@ Future<void> confirmAndEditService({
     title: 'services.edit_confirm_title'.tr(),
     description: 'services.edit_confirm_description'.tr(),
     serviceName: service.serviceName,
-    actionLabel: 'services.edit_confirm_action'.tr(),
-    cancelLabel: 'services.edit_confirm_cancel'.tr(),
+    actionLabel: 'common.yes'.tr(),
+    cancelLabel: 'common.close'.tr(),
   );
   if (!(confirmed ?? false) || !context.mounted) return;
 
@@ -57,10 +57,10 @@ Future<void> confirmAndToggleServiceStatus({
     serviceName: service.serviceName,
     actionLabel: isActive
         ? 'services.pause_confirm'.tr()
-        : 'services.resume_confirm_action'.tr(),
+        : 'common.yes'.tr(),
     cancelLabel: isActive
-        ? 'services.cancel'.tr()
-        : 'services.resume_confirm_cancel'.tr(),
+        ? 'common.cancel'.tr()
+        : 'common.close'.tr(),
     actionType: isActive ? AppButtonType.warning : AppButtonType.primary,
   );
 
@@ -87,7 +87,7 @@ Future<void> confirmAndDeleteService({
     description: 'services.delete_confirm_description'.tr(),
     serviceName: service.serviceName,
     actionLabel: 'services.delete_confirm'.tr(),
-    cancelLabel: 'services.cancel'.tr(),
+    cancelLabel: 'common.cancel'.tr(),
     destructive: true,
   );
 

@@ -26,7 +26,7 @@ class FailureErrorDisplay {
 }
 
 /// Localized retry label for error/retry states.
-String failureRetryLabel() => 'empty_states.retry'.tr();
+String failureRetryLabel() => 'common.retry'.tr();
 
 /// Maps a [failure] to localized error-state copy.
 ///

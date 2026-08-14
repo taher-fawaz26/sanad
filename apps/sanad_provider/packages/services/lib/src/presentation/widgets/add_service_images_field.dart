@@ -147,7 +147,7 @@ class _AddServiceImagesFieldState extends State<AddServiceImagesField> {
       title: 'services.delete_image_confirm_title'.tr(),
       description: 'services.delete_image_confirm_description'.tr(),
       actionLabel: 'services.delete_image_confirm_action'.tr(),
-      cancelLabel: 'services.cancel'.tr(),
+      cancelLabel: 'common.cancel'.tr(),
       destructive: true,
     );
     if ((confirmed ?? false) && context.mounted) {

@@ -131,7 +131,7 @@ class _BranchInfoEditSheetState extends State<BranchInfoEditSheet> {
           pickerTitle: 'branches.add_branch.city'.tr(),
           searchHint: 'branches.add_branch.city_search_hint'.tr(),
           emptyLabel: 'branches.add_branch.city_empty'.tr(),
-          retryLabel: 'branches.add_branch.cancel'.tr(),
+          retryLabel: 'common.cancel'.tr(),
           selectedCity: _city,
           localizedName: isArabic
               ? (city) => city.nameAr

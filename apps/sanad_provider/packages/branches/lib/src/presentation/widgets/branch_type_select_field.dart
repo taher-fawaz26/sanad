@@ -28,7 +28,7 @@ class BranchTypeSelectField extends StatelessWidget {
     await showAppActionSheet<void>(
       context: context,
       title: 'branches.add_branch.branch_type'.tr(),
-      cancelLabel: 'branches.add_branch.cancel'.tr(),
+      cancelLabel: 'common.cancel'.tr(),
       items: BranchType.values
           .map(
             (type) => AppActionSheetItem(

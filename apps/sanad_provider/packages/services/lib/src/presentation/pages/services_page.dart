@@ -244,7 +244,7 @@ class _MyServicesContentState extends State<_MyServicesContent> {
     showAppActionSheet<void>(
       context: context,
       title: 'services.filter_status'.tr(),
-      cancelLabel: 'services.cancel'.tr(),
+      cancelLabel: 'common.cancel'.tr(),
       items: [
         for (final status in const [
           ProviderServiceStatus.all,

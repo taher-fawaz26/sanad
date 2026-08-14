@@ -39,7 +39,7 @@ class OrganizationDetailsPage extends HookWidget {
       final requiredError = required(value);
       if (requiredError != null) return requiredError;
       if (!LengthValidator.isValid(value, minLength: 3, maxLength: 255)) {
-        return 'registration.name_length_error'.tr(
+        return 'validation.length_range'.tr(
           namedArgs: {'min': '3', 'max': '255'},
         );
       }
@@ -103,7 +103,7 @@ class OrganizationDetailsPage extends HookWidget {
             ),
             SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
             AppButton(
-              label: 'registration.continue'.tr(),
+              label: 'common.continue'.tr(),
               onPressed: submit,
             ),
           ],

@@ -282,7 +282,7 @@ void main() {
 
         await tester.tap(find.bySemanticsLabel('services.action_delete'));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('services.cancel'));
+        await tester.tap(find.text('common.cancel'));
         await tester.pumpAndSettle();
 
         verifyNever(() => repo.deleteProviderService(any()));

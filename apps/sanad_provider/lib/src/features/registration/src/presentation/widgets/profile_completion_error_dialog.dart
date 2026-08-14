@@ -64,7 +64,7 @@ class _ProfileCompletionErrorDialog extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: AppButtonPresets.primary(
-                label: 'registration.retry_upload'.tr(),
+                label: 'common.retry'.tr(),
                 onPressed: () => Navigator.of(context).pop(true),
               ),
             ),

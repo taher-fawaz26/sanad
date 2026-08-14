@@ -117,7 +117,7 @@ class _AddOrChangeOwnerEmailSheetBodyState
           ),
           SizedBox(height: AppSpacing.xl),
           AppButton(
-            label: 'settings.continue_button'.tr(),
+            label: 'common.continue'.tr(),
             isLoading: _submitting,
             onPressed: _canContinue && !_submitting
                 ? () => unawaited(_submit())

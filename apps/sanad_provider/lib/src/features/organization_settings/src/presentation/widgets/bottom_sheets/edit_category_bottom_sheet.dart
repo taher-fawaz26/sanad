@@ -81,7 +81,7 @@ class _EditCategoryBottomSheetState extends State<EditCategoryBottomSheet> {
     return AppActionSheet(
       showCancel: false,
       footer: AppButton(
-        label: 'settings.save_button'.tr(),
+        label: 'common.save'.tr(),
         onPressed: _selectedIds.isEmpty ? null : _save,
       ),
       child: Column(

@@ -132,7 +132,7 @@ class _BranchesTab extends StatelessWidget {
                       ),
                       child: AppSearchField(
                         variant: AppSearchFieldVariant.bordered,
-                        hint: 'branches.search_hint'.tr(),
+                        hint: 'common.search_hint'.tr(),
                         showMicIcon: false,
                         readOnly: true,
                         onTap: () => showBranchSearchSheet(context),

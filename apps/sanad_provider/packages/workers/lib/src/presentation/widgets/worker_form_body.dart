@@ -165,14 +165,14 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
 
   String? _validateFullName(String? value) {
     if (!RequiredValidator.isValid(value)) {
-      return 'workers.add_worker.validation_required'.tr();
+      return 'validation.required'.tr();
     }
     final trimmed = value!.trim();
     if (!_namePattern.hasMatch(trimmed)) {
       return 'workers.add_worker.validation_name_format'.tr();
     }
     if (!LengthValidator.isValid(trimmed, minLength: 3, maxLength: 255)) {
-      return 'workers.add_worker.validation_length_error'.tr(
+      return 'validation.length_range'.tr(
         namedArgs: {'min': '3', 'max': '255'},
       );
     }
@@ -183,7 +183,7 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
     if (widget.emailReadOnly) return null;
     if (!RequiredValidator.isValid(value)) {
       return widget.requireContact
-          ? 'workers.add_worker.validation_required'.tr()
+          ? 'validation.required'.tr()
           : null;
     }
     final trimmed = value!.trim();
@@ -207,7 +207,7 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
     final raw = phoneController.text.trim();
     if (raw.isEmpty) {
       return widget.requireContact
-          ? 'workers.add_worker.validation_required'.tr()
+          ? 'validation.required'.tr()
           : null;
     }
     return UaePhoneValidator.validationMessage(raw)?.tr();
@@ -219,7 +219,7 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
   String? _validateJobTitle(String? value) {
     if (!RequiredValidator.isValid(value)) return null;
     if (!LengthValidator.isValid(value, maxLength: 255)) {
-      return 'workers.add_worker.validation_max_length_error'.tr(
+      return 'validation.length_max'.tr(
         namedArgs: {'max': '255'},
       );
     }
@@ -281,7 +281,7 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
                   },
             enabled: !widget.typeReadOnly,
             errorText: widget.showValidationErrors && type == null
-                ? 'workers.add_worker.validation_required'.tr()
+                ? 'validation.required'.tr()
                 : null,
           ),
         ],

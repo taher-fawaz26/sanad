@@ -288,7 +288,7 @@ class _ManageRolesSheetBodyState extends State<_ManageRolesSheetBody> {
                 ),
             SizedBox(height: AppSpacing.xl),
             AppButton(
-              label: 'provider_rbac.save_button'.tr(),
+              label: 'common.save'.tr(),
               isLoading: state.isMutating,
               onPressed: state.isMutating ? null : () => _onSave(context),
             ),

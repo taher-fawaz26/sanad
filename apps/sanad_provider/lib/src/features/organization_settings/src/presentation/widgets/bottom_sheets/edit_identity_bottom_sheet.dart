@@ -81,7 +81,7 @@ class _EditIdentitySheetBodyState extends State<_EditIdentitySheetBody> {
             ),
             SizedBox(height: AppSpacing.xl),
             AppButton(
-              label: 'settings.save_button'.tr(),
+              label: 'common.save'.tr(),
               onPressed: _submit,
             ),
           ],
@@ -184,7 +184,7 @@ class _BusinessDescriptionField extends StatelessWidget {
                       maxLength: _kBusinessDescriptionMaxLength,
                     )
                     ? null
-                    : 'settings.business_description_length_error'.tr(
+                    : 'validation.length_max'.tr(
                         namedArgs: {
                           'max': '$_kBusinessDescriptionMaxLength',
                         },

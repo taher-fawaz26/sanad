@@ -146,7 +146,7 @@ class _MediaEditorPageState extends State<MediaEditorPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 AppButton(
-                  label: 'media.confirm'.tr(),
+                  label: 'common.confirm'.tr(),
                   isLoading: _isProcessing,
                   onPressed: _isProcessing ? null : _confirm,
                 ),

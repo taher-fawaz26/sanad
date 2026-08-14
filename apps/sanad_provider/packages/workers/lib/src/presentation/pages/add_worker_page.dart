@@ -111,7 +111,7 @@ class _AddWorkerPageState extends State<AddWorkerPage> {
       context: context,
       title: 'workers.add_worker.success_title'.tr(),
       description: 'workers.add_worker.success_description'.tr(),
-      primaryLabel: 'workers.add_worker.success_okay'.tr(),
+      primaryLabel: 'common.okay'.tr(),
     ).then((_) {
       // Signal the caller (worker list) that a worker was added so it can
       // refresh — see EH-S3-02 refresh convention.

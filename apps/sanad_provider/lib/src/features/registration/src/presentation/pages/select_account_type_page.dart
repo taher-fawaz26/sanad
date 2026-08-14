@@ -66,7 +66,7 @@ class SelectAccountTypePage extends HookWidget {
                 ),
                 SizedBox(height: responsiveDimension(AppSpacing.lg)),
                 AppButton(
-                  label: 'registration.continue'.tr(),
+                  label: 'common.continue'.tr(),
                   onPressed: selected.value == null
                       ? null
                       : () {

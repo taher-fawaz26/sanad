@@ -268,7 +268,7 @@ void main() {
         await tester.tap(
           find.bySemanticsLabel('workers.invitation_action_resend'),
         );
-        await _confirm(tester, 'workers.invitation_resend_action');
+        await _confirm(tester, 'common.resend');
 
         verify(() => repo.resendInvitation('i1')).called(1);
       },
@@ -312,7 +312,7 @@ void main() {
         await tester.tap(
           find.bySemanticsLabel('workers.invitation_action_delete'),
         );
-        await _confirm(tester, 'workers.invitation_delete_action');
+        await _confirm(tester, 'common.delete');
 
         verify(() => repo.deleteInvitation('i1')).called(1);
       },
@@ -329,7 +329,7 @@ void main() {
           find.bySemanticsLabel('workers.invitation_action_cancel'),
         );
         await tester.pumpAndSettle();
-        await tester.tap(find.text('workers.cancel'));
+        await tester.tap(find.text('common.cancel'));
         await tester.pumpAndSettle();
 
         verifyNever(() => repo.cancelInvitation(any()));

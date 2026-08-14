@@ -89,7 +89,7 @@ class _RoleActionsSheetBody extends StatelessWidget {
         if (onDelete != null) ...[
           const AppDivider(),
           SheetActionRow(
-            label: 'provider_rbac.action_delete'.tr(),
+            label: 'common.delete'.tr(),
             svgAsset: AppSvgs.trashBold,
             color: colors.error,
             onTap: () {

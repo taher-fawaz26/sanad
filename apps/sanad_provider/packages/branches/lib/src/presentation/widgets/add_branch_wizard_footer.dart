@@ -48,7 +48,7 @@ class AddBranchWizardFooter extends StatelessWidget {
           : switch (currentStep) {
               1 => _StepOneButton(onNext: onNext),
               2 when coverageAccessDenied => AppButton(
-                label: 'branches.add_branch.open_settings_button'.tr(),
+                label: 'common.open_settings'.tr(),
                 onPressed: onOpenLocationSettings,
               ),
               2 => _StepTwoButton(
@@ -123,7 +123,7 @@ class _StepOneButton extends StatelessWidget {
           builder: (context, rec) {
             final disabled = rec.isLoadingSetup || !canProceed;
             return AppButton(
-              label: 'branches.add_branch.next_button'.tr(),
+              label: 'common.next'.tr(),
               isLoading: rec.isLoading,
               onPressed: rec.isLoading || disabled ? null : onNext,
             );
@@ -150,12 +150,12 @@ class _StepTwoButton extends StatelessWidget {
       builder: (context, hasCoverage) {
         if (!hasCoverage) {
           return AppButton(
-            label: 'branches.add_branch.add_location_button'.tr(),
+            label: 'common.add'.tr(),
             onPressed: onAddCoverage,
           );
         }
         return AppButton(
-          label: 'branches.add_branch.next_button'.tr(),
+          label: 'common.next'.tr(),
           onPressed: onNext,
         );
       },
@@ -179,12 +179,12 @@ class _StepThreeButton extends StatelessWidget {
       builder: (context, hasServices) {
         if (!hasServices) {
           return AppButton(
-            label: 'branches.add_branch.add_services_button'.tr(),
+            label: 'common.add'.tr(),
             onPressed: onAddServices,
           );
         }
         return AppButton(
-          label: 'branches.add_branch.next_button'.tr(),
+          label: 'common.next'.tr(),
           onPressed: onNext,
         );
       },
@@ -208,13 +208,13 @@ class _StepFourButton extends StatelessWidget {
       builder: (context, hasWorkers) {
         if (!hasWorkers) {
           return AppButton(
-            label: 'branches.add_branch.add_workers_button'.tr(),
+            label: 'common.add'.tr(),
             onPressed: onAddWorkers,
           );
         }
         // Advance to the review screen (`365:14892`) before submitting.
         return AppButton(
-          label: 'branches.add_branch.next_button'.tr(),
+          label: 'common.next'.tr(),
           onPressed: onNext,
         );
       },

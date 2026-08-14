@@ -30,7 +30,7 @@ class TradeLicencePage extends StatelessWidget {
     replaceDocument: 'registration.replace_document'.tr(),
     removeDocument: 'registration.remove_document'.tr(),
     upload: 'registration.upload'.tr(),
-    retryUpload: 'registration.retry_upload'.tr(),
+    retryUpload: 'common.retry'.tr(),
   );
 
   Future<void> _capture(BuildContext context) async {
@@ -89,7 +89,7 @@ class TradeLicencePage extends StatelessWidget {
                 SizedBox(width: responsiveDimension(AppSpacing.md)),
                 Expanded(
                   child: AppButtonPresets.primary(
-                    label: 'registration.next'.tr(),
+                    label: 'common.next'.tr(),
                     onPressed: (tradeLicence?.isUploaded ?? false)
                         ? () => context.push(RegistrationRoutes.extracting)
                         : null,

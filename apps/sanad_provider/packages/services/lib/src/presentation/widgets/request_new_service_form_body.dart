@@ -119,7 +119,7 @@ class RequestNewServiceFormBodyState extends State<RequestNewServiceFormBody> {
     final selected = await showAppSelectSheet<CategoryRecordEntity>(
       context: context,
       title: 'services.request_new_service.category_name_label'.tr(),
-      searchHint: 'services.add_service.search_hint'.tr(),
+      searchHint: 'common.search_hint'.tr(),
       singleSelect: true,
       getId: (category) => category.id,
       searchFilter: (category, query) =>
@@ -131,7 +131,7 @@ class RequestNewServiceFormBodyState extends State<RequestNewServiceFormBody> {
         return result.fold((f) => throw f, (paged) => paged.items);
       },
       errorTextBuilder: (e) => e is Failure ? e.message : e.toString(),
-      retryLabel: 'services.select_service.retry'.tr(),
+      retryLabel: 'common.retry'.tr(),
       itemBuilder: (context, category, isSelected, onTap) =>
           AppTableRow(title: category.name, onTap: onTap),
     );
@@ -150,7 +150,7 @@ class RequestNewServiceFormBodyState extends State<RequestNewServiceFormBody> {
       return 'services.request_new_service.name_required_error'.tr();
     }
     if (!LengthValidator.isValid(value, maxLength: 255)) {
-      return 'services.request_new_service.name_length_error'.tr(
+      return 'validation.length_max'.tr(
         namedArgs: {'max': '255'},
       );
     }
@@ -159,7 +159,7 @@ class RequestNewServiceFormBodyState extends State<RequestNewServiceFormBody> {
 
   String? _validateDescription(String? value) {
     if (!LengthValidator.isValid(value, maxLength: 500)) {
-      return 'services.request_new_service.description_length_error'.tr(
+      return 'validation.length_max'.tr(
         namedArgs: {'max': '500'},
       );
     }

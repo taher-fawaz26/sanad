@@ -54,8 +54,8 @@ Future<void> _openSheet(WidgetTester tester, {String? initialName}) async {
 }
 
 const _requiredErrorKey = 'settings.name_required_error';
-const _lengthErrorKey = 'settings.name_length_error';
-const _saveButtonKey = 'settings.save_button';
+const _lengthErrorKey = 'validation.length_range';
+const _saveButtonKey = 'common.save';
 
 void main() {
   group('EditNameSheet validation', () {

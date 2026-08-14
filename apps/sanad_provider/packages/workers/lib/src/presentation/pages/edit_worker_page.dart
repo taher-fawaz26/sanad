@@ -84,7 +84,7 @@ class _EditWorkerPageState extends State<EditWorkerPage> {
                 ),
                 child: BlocBuilder<EditWorkerBloc, EditWorkerState>(
                   builder: (context, state) => AppButton(
-                    label: 'workers.edit_worker.save_button'.tr(),
+                    label: 'common.save'.tr(),
                     onPressed: state.isLoading ? null : _onSubmit,
                   ),
                 ),
@@ -122,7 +122,7 @@ class _EditWorkerPageState extends State<EditWorkerPage> {
       context: context,
       title: 'workers.edit_worker.success_title'.tr(),
       description: 'workers.edit_worker.success_description'.tr(),
-      primaryLabel: 'workers.edit_worker.success_okay'.tr(),
+      primaryLabel: 'common.okay'.tr(),
     ).then((_) {
       if (mounted) context.pop(updatedWorker);
     });

@@ -61,7 +61,7 @@ class BranchesSearchEmptyState extends StatelessWidget {
       description: 'branches.empty_search_description'.tr(
         namedArgs: {'query': query},
       ),
-      actionLabel: 'branches.empty_search_action'.tr(),
+      actionLabel: 'common.cancel'.tr(),
       actionStyle: AppEmptyStateActionStyle.link,
       onAction: onClearSearch,
     );

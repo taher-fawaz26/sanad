@@ -47,7 +47,7 @@ class WorkersSearchEmptyState extends StatelessWidget {
       ),
       title: title,
       description: description,
-      actionLabel: 'workers.cancel'.tr(),
+      actionLabel: 'common.cancel'.tr(),
       actionStyle: AppEmptyStateActionStyle.link,
       onAction: onCancel,
     );

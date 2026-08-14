@@ -98,7 +98,7 @@ class EditServiceFormBodyState extends State<EditServiceFormBody> {
 
   String? _validateDescription(String? value) {
     if (!LengthValidator.isValid(value, maxLength: 500)) {
-      return 'services.add_service.description_length_error'.tr(
+      return 'validation.length_max'.tr(
         namedArgs: {'max': '500'},
       );
     }

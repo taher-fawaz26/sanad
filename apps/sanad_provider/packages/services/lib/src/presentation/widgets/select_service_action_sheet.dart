@@ -28,8 +28,8 @@ Future<SelectServiceResult?> showSelectServiceActionSheet({
   final selected = await showAppSelectSheet<CatalogServiceSelection>(
     context: context,
     title: 'services.select_service.title'.tr(),
-    confirmLabel: 'services.select_service.confirm'.tr(),
-    searchHint: 'services.select_service.search_hint'.tr(),
+    confirmLabel: 'common.confirm'.tr(),
+    searchHint: 'common.search_hint'.tr(),
     searchVariant: AppSearchFieldVariant.bordered,
     getId: (s) => s.id,
     searchFilter: (s, q) =>
@@ -53,7 +53,7 @@ Future<SelectServiceResult?> showSelectServiceActionSheet({
       );
     },
     errorTextBuilder: (e) => e is Failure ? e.message : e.toString(),
-    retryLabel: 'services.select_service.retry'.tr(),
+    retryLabel: 'common.retry'.tr(),
     emptyBuilder: (context) => _ServiceEmptyState(),
     itemBuilder: (context, service, isSelected, onTap) => AppTableRow(
       title: service.name,

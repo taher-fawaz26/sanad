@@ -89,14 +89,14 @@ Future<void> _openSheet(
   await tester.pump(const Duration(milliseconds: 350));
 }
 
-const _lengthErrorKey = 'settings.business_description_length_error';
+const _lengthErrorKey = 'validation.length_max';
 
 void main() {
   group('EditIdentityBottomSheet business description length', () {
     testWidgets('empty description is optional and passes', (tester) async {
       await _openSheet(tester);
 
-      await tester.tap(find.text('settings.save_button'));
+      await tester.tap(find.text('common.save'));
       await tester.pump();
 
       expect(find.text(_lengthErrorKey), findsNothing);
@@ -110,7 +110,7 @@ void main() {
         'A great business description.',
       );
       await tester.pump();
-      await tester.tap(find.text('settings.save_button'));
+      await tester.tap(find.text('common.save'));
       await tester.pump();
 
       expect(find.text(_lengthErrorKey), findsNothing);
@@ -121,7 +121,7 @@ void main() {
 
       await tester.enterText(find.byType(TextFormField), 'a' * 350);
       await tester.pump();
-      await tester.tap(find.text('settings.save_button'));
+      await tester.tap(find.text('common.save'));
       await tester.pump();
 
       expect(find.text(_lengthErrorKey), findsNothing);
@@ -134,7 +134,7 @@ void main() {
 
       await tester.enterText(find.byType(TextFormField), 'a' * 351);
       await tester.pump();
-      await tester.tap(find.text('settings.save_button'));
+      await tester.tap(find.text('common.save'));
       await tester.pump();
 
       // EasyLocalization is not initialized in this harness, so `.tr()`

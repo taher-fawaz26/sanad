@@ -42,7 +42,7 @@ class BranchManagerPickerField extends StatelessWidget {
       context,
       _ManagerPickerSheet(
         title: 'branches.add_branch.branch_manager'.tr(),
-        cancelLabel: 'branches.add_branch.cancel'.tr(),
+        cancelLabel: 'common.cancel'.tr(),
         searchHint: 'branches.add_branch.manager_search_hint'.tr(),
         loadMoreLabel: 'branches.add_branch.load_more'.tr(),
       ),

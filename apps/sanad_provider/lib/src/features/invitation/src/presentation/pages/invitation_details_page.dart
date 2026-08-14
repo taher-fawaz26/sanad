@@ -173,7 +173,7 @@ class _InvitationDetailsContent extends StatelessWidget {
           ),
         ),
         AppButton(
-          label: 'invitation.continue_button'.tr(),
+          label: 'common.continue'.tr(),
           onPressed: () => context.push(
             InvitationRoutes.otp,
             extra: InvitationOtpRouteArgs(token: token, preview: preview),

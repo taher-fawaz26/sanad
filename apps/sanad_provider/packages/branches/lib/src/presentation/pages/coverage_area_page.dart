@@ -91,7 +91,7 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
               hint: 'branches.coverage_area.search_hint'.tr(),
               emptyMessage: 'branches.coverage_area.no_areas_found'.tr(),
               errorMessage: 'branches.coverage_area.search_error'.tr(),
-              retryLabel: 'empty_states.retry'.tr(),
+              retryLabel: 'common.retry'.tr(),
             ),
             predictions: state.predictions,
             searchStatus: state.searchStatus,
@@ -131,7 +131,7 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
         addressHint: 'branches.location_picker.address_hint'.tr(),
         genericError: 'branches.location_picker.generic_error'.tr(),
         confirm: 'branches.coverage_area.done'.tr(),
-        searchRetry: 'empty_states.retry'.tr(),
+        searchRetry: 'common.retry'.tr(),
         placeIdRequiredHint: 'branches.coverage_area.select_from_search_hint'
             .tr(),
       ),
@@ -511,7 +511,7 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
           SizedBox(
             width: 150,
             child: AppButton(
-              label: 'branches.coverage_area.add_area'.tr(),
+              label: 'common.add'.tr(),
               size: AppButtonSize.small,
               type: AppButtonType.outline,
               icon: const Icon(Icons.add),

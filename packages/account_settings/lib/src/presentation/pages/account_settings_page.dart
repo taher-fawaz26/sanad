@@ -257,9 +257,9 @@ class AccountSettingsPage extends StatelessWidget {
       featureIconSize: AppFeatureIconSize.lg,
       featureIconTheme: AppFeatureIconTheme.lightCircleOutline,
       actions: AppPopoverActions.dual,
-      primaryLabel: 'settings.delete_account_confirm'.tr(),
+      primaryLabel: 'common.delete'.tr(),
       primaryDestructive: true,
-      secondaryLabel: 'settings.cancel'.tr(),
+      secondaryLabel: 'common.cancel'.tr(),
       onPrimary: () => Navigator.of(context, rootNavigator: true).pop(true),
       onSecondary: () => Navigator.of(context, rootNavigator: true).pop(false),
     );

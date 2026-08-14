@@ -9,17 +9,17 @@ Future<bool> showDiscardChangesDialog(BuildContext context) async {
   final result = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: Text('media.discard_title'.tr()),
+      title: Text('common.discard_title'.tr()),
       content: Text('media.discard_message'.tr()),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: Text('media.keep_editing'.tr()),
+          child: Text('common.keep_editing'.tr()),
         ),
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(true),
           child: Text(
-            'media.discard_confirm'.tr(),
+            'common.discard'.tr(),
             style: TextStyle(color: colors.error),
           ),
         ),

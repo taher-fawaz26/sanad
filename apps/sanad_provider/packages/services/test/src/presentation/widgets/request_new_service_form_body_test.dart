@@ -209,7 +209,7 @@ void main() {
         findsNothing,
       );
       expect(
-        find.text('services.request_new_service.name_length_error'),
+        find.text('validation.length_max'),
         findsNothing,
       );
     });
@@ -221,7 +221,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('services.request_new_service.name_length_error'),
+        find.text('validation.length_max'),
         findsOneWidget,
       );
     });
@@ -233,7 +233,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('services.request_new_service.name_length_error'),
+        find.text('validation.length_max'),
         findsNothing,
       );
     });
@@ -247,7 +247,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('services.request_new_service.description_length_error'),
+        find.text('validation.length_max'),
         findsNothing,
       );
     });
@@ -261,7 +261,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('services.request_new_service.description_length_error'),
+        find.text('validation.length_max'),
         findsOneWidget,
       );
     });

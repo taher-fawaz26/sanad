@@ -35,7 +35,7 @@ class _IdentityVerificationPageState extends State<IdentityVerificationPage> {
     replaceDocument: 'registration.replace_document'.tr(),
     removeDocument: 'registration.remove_document'.tr(),
     upload: 'registration.upload'.tr(),
-    retryUpload: 'registration.retry_upload'.tr(),
+    retryUpload: 'common.retry'.tr(),
   );
 
   Future<void> _upload(DocumentType slot) async {
@@ -110,7 +110,7 @@ class _IdentityVerificationPageState extends State<IdentityVerificationPage> {
             reserveLeadingSpace: true,
           ),
           footer: AppButton(
-            label: 'registration.continue'.tr(),
+            label: 'common.continue'.tr(),
             onPressed: canContinue ? _continue : null,
           ),
           child: Column(

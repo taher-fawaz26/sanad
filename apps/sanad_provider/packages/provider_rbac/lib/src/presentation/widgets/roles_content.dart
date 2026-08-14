@@ -99,8 +99,8 @@ class _RolesViewState extends State<_RolesView> {
         description: 'provider_rbac.delete_role_description'.tr(
           namedArgs: {'name': role.displayName},
         ),
-        actionLabel: 'provider_rbac.delete_confirm'.tr(),
-        cancelLabel: 'provider_rbac.cancel'.tr(),
+        actionLabel: 'common.delete'.tr(),
+        cancelLabel: 'common.cancel'.tr(),
         destructive: true,
         onConfirm: () => Navigator.of(context).pop(true),
         onCancel: () => Navigator.of(context).pop(false),

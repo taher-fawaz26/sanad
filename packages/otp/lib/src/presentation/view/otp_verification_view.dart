@@ -80,7 +80,7 @@ class _OtpVerificationViewState<T> extends State<OtpVerificationView<T>> {
                     ),
                     if (config.onChangeDestination != null)
                       TextSpan(
-                        text: ' ${'otp.change'.tr()}',
+                        text: ' ${'common.change'.tr()}',
                         style: TextStyle(
                           color: colors.primary,
                           fontWeight: FontWeight.w600,

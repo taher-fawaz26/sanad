@@ -37,7 +37,7 @@ class WorkerTypeSelectField extends StatelessWidget {
     await showAppActionSheet<void>(
       context: context,
       title: 'workers.add_worker.type_label'.tr(),
-      cancelLabel: 'workers.cancel'.tr(),
+      cancelLabel: 'common.cancel'.tr(),
       items: WorkerType.values
           .map(
             (type) => AppActionSheetItem(

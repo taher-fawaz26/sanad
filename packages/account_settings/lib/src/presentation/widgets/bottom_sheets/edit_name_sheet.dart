@@ -55,7 +55,7 @@ class _EditNameSheetBodyState extends State<_EditNameSheetBody> {
     }
     if (!LengthValidator.isValid(trimmed, minLength: 2, maxLength: 255)) {
       setState(
-        () => _errorText = 'settings.name_length_error'.tr(
+        () => _errorText = 'validation.length_range'.tr(
           namedArgs: {'min': '2', 'max': '255'},
         ),
       );
@@ -72,7 +72,7 @@ class _EditNameSheetBodyState extends State<_EditNameSheetBody> {
     return AppActionSheet(
       showCancel: false,
       footer: AppButton(
-        label: 'settings.save_button'.tr(),
+        label: 'common.save'.tr(),
         onPressed: _submit,
       ),
       child: Padding(
