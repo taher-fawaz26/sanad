@@ -11,6 +11,7 @@ export 'src/gesture/sheet_drag_controller.dart';
 export 'src/presentation/sheet_navigator.dart';
 export 'src/presentation/widgets/sheet_scaffold.dart';
 export 'src/presentation/widgets/sheet_snap.dart';
+export 'src/presentation/widgets/show_confirmation_sheet.dart';
 export 'src/route/modal_sheet_route.dart';
 export 'src/route/sheet_route_settings.dart';
 export 'src/route/sheet_size.dart';

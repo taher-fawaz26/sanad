@@ -9,8 +9,8 @@ import 'package:media_upload/media_upload.dart';
 import 'package:services/src/domain/usecases/create_provider_service_usecase.dart';
 import 'package:services/src/presentation/bloc/add_service/add_service_bloc.dart';
 import 'package:services/src/presentation/widgets/add_service_form_body.dart';
-import 'package:shared_ui/shared_ui.dart';
 import 'package:services/src/routes/service_routes.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Add Service screen — submits `POST /provider-services` via
 /// [AddServiceBloc].

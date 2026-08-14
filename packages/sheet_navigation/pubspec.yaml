@@ -19,6 +19,8 @@ dependencies:
   flutter:
     sdk: flutter
   go_router: ^17.3.0
+  shared_ui:
+    path: ../shared_ui
 
 dev_dependencies:
   flutter_screenutil: ^5.9.3

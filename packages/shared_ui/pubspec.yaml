@@ -21,8 +21,6 @@ dependencies:
   infinite_scroll_pagination: ^5.1.1
   localization:
     path: ../localization
-  sheet_navigation:
-    path: ../sheet_navigation
   skeletonizer: ^2.1.3
 
 dev_dependencies:

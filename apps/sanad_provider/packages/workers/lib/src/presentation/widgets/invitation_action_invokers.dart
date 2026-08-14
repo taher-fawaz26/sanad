@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:workers/src/domain/entities/invitation_entity.dart';
-import 'package:shared_ui/shared_ui.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 import 'package:workers/src/presentation/bloc/invitation_action/invitation_action_cubit.dart';
 
 const ({AppButtonType type, bool destructive}) _resendButton = (

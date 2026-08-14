@@ -6,8 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:services/src/domain/entities/provider_service_entity.dart';
 import 'package:services/src/domain/entities/provider_service_status.dart';
 import 'package:services/src/presentation/bloc/service_action/service_action_bloc.dart';
-import 'package:shared_ui/shared_ui.dart';
 import 'package:services/src/routes/service_routes.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Confirms then navigates to edit [service], re-broadcasting the result via
 /// [ServiceExternallyUpdatedEvent].

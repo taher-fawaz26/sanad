@@ -1,7 +1,8 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_ui/src/widgets/app_confirmation_content.dart';
-import 'package:sheet_navigation/sheet_navigation.dart';
+import 'package:shared_ui/shared_ui.dart';
+import 'package:sheet_navigation/src/presentation/sheet_navigator.dart';
+import 'package:sheet_navigation/src/route/sheet_route_settings.dart';
 
 /// Bottom-sheet confirmation for a destructive/warning action — Figma
 /// `4715:26601`, `5261:44604`, `5222:44122`, `4715:26593`.

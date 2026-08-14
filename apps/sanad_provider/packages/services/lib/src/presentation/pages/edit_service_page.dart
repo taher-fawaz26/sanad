@@ -9,7 +9,7 @@ import 'package:services/src/domain/entities/provider_service_entity.dart';
 import 'package:services/src/domain/usecases/update_provider_service_description_usecase.dart';
 import 'package:services/src/presentation/bloc/edit_service/edit_service_bloc.dart';
 import 'package:services/src/presentation/widgets/edit_service_form_body.dart';
-import 'package:shared_ui/shared_ui.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Edit Service screen — submits `PATCH /provider-services/{id}` (description
 /// only) via [EditServiceBloc]. Reached from `ServiceRoutes.editFor` with the
