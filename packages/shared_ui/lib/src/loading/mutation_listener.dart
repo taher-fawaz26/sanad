@@ -62,7 +62,8 @@ class MutationListener<B extends StateStreamable<S>, S>
   @override
   Widget build(BuildContext context) {
     return BlocListener<B, S>(
-      listenWhen: listenWhen ??
+      listenWhen:
+          listenWhen ??
           (previous, current) => status(previous) != status(current),
       listener: (context, state) {
         switch (status(state)) {

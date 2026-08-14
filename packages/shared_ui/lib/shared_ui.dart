@@ -17,21 +17,13 @@ export 'src/builders/app_scroll_section_builder.dart';
 
 // Effects
 export 'src/effects/avatar_collapse_effect.dart';
-export 'src/effects/blur_effect.dart';
 export 'src/effects/fade_title_effect.dart';
-export 'src/effects/image_zoom_effect.dart';
-export 'src/effects/nav_surface_transition_effect.dart';
-export 'src/effects/parallax_effect.dart';
-export 'src/effects/stretch_effect.dart';
 
 // Extensions
 export 'src/extensions/scroll_collapse_extensions.dart';
 
 // Headers
 export 'src/headers/app_cover_header.dart';
-export 'src/headers/app_image_header.dart';
-export 'src/headers/app_profile_header.dart';
-export 'src/headers/app_search_header.dart';
 
 // Loading — app-wide skeleton (reads) + blocking progress (mutations)
 export 'src/loading/app_progress.dart';
@@ -76,14 +68,11 @@ export 'src/states/app_empty_view.dart';
 export 'src/states/app_error_state.dart';
 export 'src/states/app_error_view.dart';
 export 'src/states/app_loading_view.dart';
-export 'src/states/app_no_connection_view.dart';
-export 'src/states/app_unauthorized_view.dart';
 
 // Widgets
 export 'src/widgets/app_add_schedule_day_sheet.dart';
 export 'src/widgets/app_compliance_document_card.dart';
 export 'src/widgets/app_confirmation_content.dart';
-export 'src/widgets/app_dashed_border.dart';
 export 'src/widgets/app_enhance_with_ai_button.dart';
 export 'src/widgets/app_entity_list_item.dart';
 export 'src/widgets/app_inline_link_text.dart';
@@ -92,11 +81,8 @@ export 'src/widgets/app_progress_dialog.dart';
 export 'src/widgets/app_schedule_day_row.dart';
 export 'src/widgets/app_select_sheet.dart';
 export 'src/widgets/app_success_popover.dart';
-export 'src/widgets/app_validation_summary.dart';
 export 'src/widgets/app_verified_pill.dart';
 export 'src/widgets/main_nav_scroll_controller.dart';
-export 'src/widgets/media_upload/media_upload_drop_zone.dart';
-export 'src/widgets/media_upload/media_upload_grid.dart';
 export 'src/widgets/media_upload/media_upload_tile.dart';
 export 'src/widgets/media_upload/media_upload_tile_data.dart';
 export 'src/widgets/nav_visibility.dart';
