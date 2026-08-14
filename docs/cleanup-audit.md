@@ -159,4 +159,16 @@ No proven-dead production code, widgets, sheets, dialogs, routes, or exports rem
 
 ## Execution log
 
-Progress against this roadmap is tracked phase-by-phase as execution proceeds. See git history for the corresponding commits.
+Phases 0–7 and 9 executed and committed (Phase 8, gated HIGH/CRITICAL items, intentionally not run — see below). See git history for the corresponding commits; each phase is one commit (Phase 5's tier-dependency fix, discovered during Phase 9 verification, is a follow-up commit on top of Phase 5's).
+
+- **Phase 0**: baseline captured (core 140/140, design_system 51/52 — pre-existing cross-test flake, shared_ui 57/57).
+- **Phase 1**: removed `packages/features/` (0 tracked files), committed `firebase-debug.log`, relocated the historical OTP migration report to `docs/`.
+- **Phase 2**: added the 18 missing `settings.legal_documents.*` keys (+2 more found: `branches.add_branch.manager_search_hint`, `.load_more`) that were causing raw-key fallback in production; removed 6 dead+empty stubs and 68 further confirmed-unused keys (each `*_coming_soon`/`placeholder_*` candidate individually re-verified against sibling keys that ARE used before removal, to rule out scaffolding intent).
+- **Phase 3**: consolidated 82 keys sharing byte-identical (EN,AR) values into 22 shared `common.*`/`validation.*` keys, scoped to the plan's named generic-action-word list; caught and fixed a dynamic-key regression (`'$prefix.success_dialog_okay'.tr()`) before it shipped.
+- **Phase 4**: removed the compliance-documents stub sheet and 21 confirmed-dead widgets (shared_ui headers/effects/states, design_system dead components + catalog previews). Caught and reverted one false-positive removal (`AppRadioTile` — shares a file with `AppRadioGroup`/`AppRadioOption`, which ARE used) via a full `apps/sanad_provider` analyze pass before committing.
+- **Phase 5**: merged the two duplicate confirmation-sheet wrappers and moved `SheetActionRow` out of a cross-feature import; extracted the 4x-duplicated initials algorithm into `packages/core`. `AppBottomSheet` vs `AppModalSheet` and the two asset validators investigated and left intentionally separate (documented why).
+- **Phase 6**: removed the dead `RequestsRoutes.list` constant; repo-wide broken-export sweep found zero real hits.
+- **Phase 7**: removed the unused `provider` dependency from both apps after confirming zero imports repo-wide; `flutter_hooks`/`hydrated_bloc`/`path_provider` confirmed genuinely used, left untouched.
+- **Phase 9**: full workspace `dart analyze` (43 packages, 0 errors) plus the repo's own `tools/bin/{validate_l10n,validate_deps,scan_imports}.dart`. `validate_deps` caught a real tier violation from Phase 5 (`shared_ui` → `sheet_navigation`, tier 1 → tier 3) — fixed by relocating `showConfirmationSheet` into `sheet_navigation` (the allowed direction). `validate_l10n` independently confirmed the Phase 2/3 key count (712, exact match). `scan_imports`'s 6 findings are pre-existing, in files untouched this session (confirmed via git log).
+
+**Phase 8 (gated, not executed)**: the 5 dead/test-only BLoC events, further route/repository consolidation, and any storage/cache work remain exactly as flagged in the matrix above — HIGH/CRITICAL risk, require explicit per-item sign-off before any action.
