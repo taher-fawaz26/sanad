@@ -8,8 +8,10 @@ Future<void> _pump(WidgetTester tester, Widget child) async {
     ScreenUtilInit(
       designSize: const Size(360, 800),
       minTextAdapt: true,
-      builder: (_, _) =>
-          MaterialApp(theme: AppTheme.light(), home: Scaffold(body: child)),
+      builder: (_, _) => MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(body: child),
+      ),
     ),
   );
 }

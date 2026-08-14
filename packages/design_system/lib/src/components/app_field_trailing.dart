@@ -54,9 +54,9 @@ class AppFieldTrailingView extends StatelessWidget {
           onTap: enabled ? onTap : null,
         ),
       AppFieldTextLinkTrailing(:final label, :final onTap) => _TextLink(
-          label: label,
-          onTap: enabled ? onTap : null,
-        ),
+        label: label,
+        onTap: enabled ? onTap : null,
+      ),
     };
   }
 }

@@ -204,8 +204,7 @@ class _RequestDetailsCard extends StatelessWidget {
   }
 
   static String _statusLabel(ServiceRequestStatus status) => switch (status) {
-    ServiceRequestStatus.underReview =>
-      'services.request_status_pending'.tr(),
+    ServiceRequestStatus.underReview => 'services.request_status_pending'.tr(),
     ServiceRequestStatus.approved => 'services.request_status_approved'.tr(),
     ServiceRequestStatus.rejected => 'services.request_status_rejected'.tr(),
     ServiceRequestStatus.all => '',

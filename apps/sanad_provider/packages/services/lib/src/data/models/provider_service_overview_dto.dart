@@ -1,8 +1,10 @@
+import 'package:core/core.dart';
 import 'package:services/src/domain/entities/provider_service_overview_entity.dart';
 
 /// `GET /provider-services/overview[/:id]` — currently always returns
 /// `dataAvailable: false` with stubbed zero metrics server-side.
-class ProviderServiceOverviewDto extends ProviderServiceOverviewEntity {
+class ProviderServiceOverviewDto extends ProviderServiceOverviewEntity
+    implements EntityConverter<ProviderServiceOverviewEntity> {
   const ProviderServiceOverviewDto({
     required super.dataAvailable,
     required super.totalRequests,
@@ -19,4 +21,13 @@ class ProviderServiceOverviewDto extends ProviderServiceOverviewEntity {
         cancelledCount: (json['cancelledCount'] as num?)?.toInt() ?? 0,
         completionRate: (json['completionRate'] as num?) ?? 0,
       );
+
+  @override
+  ProviderServiceOverviewEntity toEntity() => ProviderServiceOverviewEntity(
+    dataAvailable: dataAvailable,
+    totalRequests: totalRequests,
+    completedCount: completedCount,
+    cancelledCount: cancelledCount,
+    completionRate: completionRate,
+  );
 }

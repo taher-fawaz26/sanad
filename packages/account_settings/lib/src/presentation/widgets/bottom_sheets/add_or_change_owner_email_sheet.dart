@@ -59,6 +59,15 @@ class _AddOrChangeOwnerEmailSheetBodyState
 
   bool get _canContinue => EmailValidator.isValid(_controller.text);
 
+  /// Shown once the user has typed something non-empty that fails
+  /// validation — mirrors the empty-is-not-yet-an-error convention used by
+  /// the business-side `add_or_change_email_sheet.dart` counterpart.
+  String? get _emailErrorText {
+    final value = _controller.text;
+    if (value.isEmpty || EmailValidator.isValid(value)) return null;
+    return 'settings.email_address_invalid_error'.tr();
+  }
+
   Future<void> _submit() async {
     if (!_canContinue || _submitting) return;
     final email = _controller.text.trim();
@@ -104,6 +113,7 @@ class _AddOrChangeOwnerEmailSheetBodyState
             isRequired: true,
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.done,
+            errorText: _emailErrorText,
           ),
           SizedBox(height: AppSpacing.xl),
           AppButton(

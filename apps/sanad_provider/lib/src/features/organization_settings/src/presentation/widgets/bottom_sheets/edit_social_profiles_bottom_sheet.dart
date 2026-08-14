@@ -1,4 +1,5 @@
 import 'package:app_assets/app_assets.dart';
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -48,6 +49,7 @@ class _EditSocialProfilesSheetBody extends StatefulWidget {
 
 class _EditSocialProfilesSheetBodyState
     extends State<_EditSocialProfilesSheetBody> {
+  final _formKey = GlobalKey<FormState>();
   late final TextEditingController _facebookController;
   late final TextEditingController _tiktokController;
   late final TextEditingController _instagramController;
@@ -77,6 +79,7 @@ class _EditSocialProfilesSheetBodyState
   }
 
   void _save() {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
     Navigator.of(context).pop(
       SocialProfilesData(
         facebook: _trimOrNull(_facebookController.text),
@@ -93,67 +96,84 @@ class _EditSocialProfilesSheetBodyState
     return trimmed.isEmpty ? null : trimmed;
   }
 
+  /// All social links are optional — only validate URL format when present.
+  String? _urlValidator(String? value) {
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) return null;
+    return UrlValidator.isValidHttpUrl(trimmed)
+        ? null
+        : 'settings.social_url_invalid_error'.tr();
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: EdgeInsets.only(
         bottom: MediaQuery.viewInsetsOf(context).bottom,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _SheetHeader(title: 'settings.section_social'.tr()),
-          SizedBox(height: AppSpacing.lg),
-          AppTextField(
-            label: 'settings.social_facebook'.tr(),
-            hint: 'settings.social_facebook'.tr(),
-            controller: _facebookController,
-            keyboardType: TextInputType.url,
-            textInputAction: TextInputAction.next,
-            prefixIcon: _SocialPrefixIcon(asset: AppSvgs.socialFacebook),
-          ),
-          SizedBox(height: AppSpacing.lg),
-          AppTextField(
-            label: 'settings.social_tiktok'.tr(),
-            hint: 'settings.social_tiktok'.tr(),
-            controller: _tiktokController,
-            keyboardType: TextInputType.url,
-            textInputAction: TextInputAction.next,
-            prefixIcon: _SocialPrefixIcon(asset: AppSvgs.socialTiktok),
-          ),
-          SizedBox(height: AppSpacing.lg),
-          AppTextField(
-            label: 'settings.social_instagram'.tr(),
-            hint: 'settings.social_instagram'.tr(),
-            controller: _instagramController,
-            keyboardType: TextInputType.url,
-            textInputAction: TextInputAction.next,
-            prefixIcon: _SocialPrefixIcon(asset: AppSvgs.socialInstagram),
-          ),
-          SizedBox(height: AppSpacing.lg),
-          AppTextField(
-            label: 'settings.social_twitter'.tr(),
-            hint: 'settings.social_twitter'.tr(),
-            controller: _xController,
-            keyboardType: TextInputType.url,
-            textInputAction: TextInputAction.next,
-            prefixIcon: _SocialPrefixIcon(asset: AppSvgs.socialTwitter),
-          ),
-          SizedBox(height: AppSpacing.lg),
-          AppTextField(
-            label: 'settings.social_website_url'.tr(),
-            hint: 'settings.social_website_url'.tr(),
-            controller: _websiteController,
-            keyboardType: TextInputType.url,
-            textInputAction: TextInputAction.done,
-          ),
-          SizedBox(height: AppSpacing.xl),
-          AppButton(
-            label: 'settings.save_button'.tr(),
-            onPressed: _save,
-          ),
-        ],
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _SheetHeader(title: 'settings.section_social'.tr()),
+            SizedBox(height: AppSpacing.lg),
+            AppTextField(
+              label: 'settings.social_facebook'.tr(),
+              hint: 'settings.social_facebook'.tr(),
+              controller: _facebookController,
+              keyboardType: TextInputType.url,
+              textInputAction: TextInputAction.next,
+              prefixIcon: _SocialPrefixIcon(asset: AppSvgs.socialFacebook),
+              validator: _urlValidator,
+            ),
+            SizedBox(height: AppSpacing.lg),
+            AppTextField(
+              label: 'settings.social_tiktok'.tr(),
+              hint: 'settings.social_tiktok'.tr(),
+              controller: _tiktokController,
+              keyboardType: TextInputType.url,
+              textInputAction: TextInputAction.next,
+              prefixIcon: _SocialPrefixIcon(asset: AppSvgs.socialTiktok),
+              validator: _urlValidator,
+            ),
+            SizedBox(height: AppSpacing.lg),
+            AppTextField(
+              label: 'settings.social_instagram'.tr(),
+              hint: 'settings.social_instagram'.tr(),
+              controller: _instagramController,
+              keyboardType: TextInputType.url,
+              textInputAction: TextInputAction.next,
+              prefixIcon: _SocialPrefixIcon(asset: AppSvgs.socialInstagram),
+              validator: _urlValidator,
+            ),
+            SizedBox(height: AppSpacing.lg),
+            AppTextField(
+              label: 'settings.social_twitter'.tr(),
+              hint: 'settings.social_twitter'.tr(),
+              controller: _xController,
+              keyboardType: TextInputType.url,
+              textInputAction: TextInputAction.next,
+              prefixIcon: _SocialPrefixIcon(asset: AppSvgs.socialTwitter),
+              validator: _urlValidator,
+            ),
+            SizedBox(height: AppSpacing.lg),
+            AppTextField(
+              label: 'settings.social_website_url'.tr(),
+              hint: 'settings.social_website_url'.tr(),
+              controller: _websiteController,
+              keyboardType: TextInputType.url,
+              textInputAction: TextInputAction.done,
+              validator: _urlValidator,
+            ),
+            SizedBox(height: AppSpacing.xl),
+            AppButton(
+              label: 'settings.save_button'.tr(),
+              onPressed: _save,
+            ),
+          ],
+        ),
       ),
     );
   }

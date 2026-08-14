@@ -1,5 +1,6 @@
 import 'package:branches/src/domain/entities/branch_type.dart';
 import 'package:branches/src/presentation/widgets/branch_type_select_field.dart';
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -79,12 +80,29 @@ class _BranchInfoEditSheetState extends State<BranchInfoEditSheet> {
     super.dispose();
   }
 
-  bool get _isValid => _nameController.text.trim().isNotEmpty;
+  bool get _isValid =>
+      RequiredValidator.isValid(_nameController.text) &&
+      LengthValidator.isValid(_nameController.text, maxLength: 255);
 
   bool get _hasChanges =>
       _nameController.text.trim() != widget.initialName.trim() ||
       _type != widget.initialType ||
       _city?.id != widget.initialCity?.id;
+
+  /// Live inline error — the field starts pre-filled with a name that
+  /// already satisfies the backend contract, so this only surfaces once the
+  /// user edits it into an invalid state.
+  String? get _nameError {
+    if (!RequiredValidator.isValid(_nameController.text)) {
+      return 'branches.add_branch.branch_name_required'.tr();
+    }
+    if (!LengthValidator.isValid(_nameController.text, maxLength: 255)) {
+      return 'branches.add_branch.branch_name_max_length_error'.tr(
+        namedArgs: {'max': '255'},
+      );
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -99,6 +117,7 @@ class _BranchInfoEditSheetState extends State<BranchInfoEditSheet> {
           controller: _nameController,
           label: 'branches.add_branch.branch_name'.tr(),
           hint: 'branches.add_branch.branch_name_hint'.tr(),
+          errorText: _nameError,
         ),
         SizedBox(height: AppSpacing.md),
         BranchTypeSelectField(

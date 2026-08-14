@@ -136,10 +136,7 @@ class _AddBranchStepOneState extends State<AddBranchStepOne> {
                 showErrors: widget.showValidationErrors,
               ),
               const AppDivider(thickness: AppDividerThickness.thick),
-              _ContactSection(
-                phoneController: _phoneController,
-                showErrors: widget.showValidationErrors,
-              ),
+              _ContactSection(phoneController: _phoneController),
               const AppDivider(thickness: AppDividerThickness.thick),
               _WorkingHoursSection(
                 onScheduleModeChanged: _onScheduleModeChanged,
@@ -188,8 +185,12 @@ class _MainInfoSection extends StatelessWidget {
                 label: 'branches.add_branch.branch_name'.tr(),
                 hint: 'branches.add_branch.branch_name_hint'.tr(),
                 validator: (value) {
-                  if (value?.trim().isEmpty ?? true) {
+                  if (!RequiredValidator.isValid(value)) {
                     return 'branches.add_branch.branch_name_required'.tr();
+                  }
+                  if (!LengthValidator.isValid(value, maxLength: 255)) {
+                    return 'branches.add_branch.branch_name_max_length_error'
+                        .tr(namedArgs: {'max': '255'});
                   }
                   return null;
                 },
@@ -258,18 +259,14 @@ class _MainInfoSection extends StatelessWidget {
 }
 
 class _ContactSection extends StatelessWidget {
-  const _ContactSection({
-    required this.phoneController,
-    required this.showErrors,
-  });
+  const _ContactSection({required this.phoneController});
 
   final TextEditingController phoneController;
-  final bool showErrors;
 
-  String? _phoneError(String phone) {
-    if (!showErrors) return null;
-    final trimmed = phone.trim();
-    if (trimmed.isEmpty || !UaePhoneValidator.isValid(trimmed)) {
+  String? _phoneValidator(String? value) {
+    final phone = (value ?? '').trim();
+    if (phone.isEmpty) return null;
+    if (!UaePhoneValidator.isValid(phone)) {
       return 'branches.add_branch.invalid_phone'.tr();
     }
     return null;
@@ -292,16 +289,11 @@ class _ContactSection extends StatelessWidget {
           ),
           child: Column(
             children: [
-              BlocSelector<AddBranchDraftCubit, AddBranchDraft, String>(
-                selector: (state) => state.phone,
-                builder: (context, phone) {
-                  return AppPhoneField(
-                    label: 'branches.add_branch.branch_phone'.tr(),
-                    controller: phoneController,
-                    hint: 'branches.add_branch.branch_phone_hint'.tr(),
-                    errorText: _phoneError(phone),
-                  );
-                },
+              AppPhoneField(
+                label: 'branches.add_branch.branch_phone'.tr(),
+                controller: phoneController,
+                hint: 'branches.add_branch.branch_phone_hint'.tr(),
+                validator: _phoneValidator,
               ),
               SizedBox(height: AppSpacing.md),
               BlocSelector<

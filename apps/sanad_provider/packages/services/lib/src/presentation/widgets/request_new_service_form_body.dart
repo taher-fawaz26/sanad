@@ -39,10 +39,20 @@ class RequestNewServiceFormBodyState extends State<RequestNewServiceFormBody> {
 
   CategoryRecordEntity? _category;
   bool _wasComplete = false;
+  bool _showCategoryError = false;
 
   String get name => _serviceNameController.text.trim();
   String? get categoryId => _category?.id;
   String get description => _descriptionController.text.trim();
+
+  /// Validates the category-selection field, revealing its error text if
+  /// nothing is selected. Called by `RequestNewServicePage` on submit —
+  /// mirrors `AddServiceFormBodyState.validateSelection`.
+  bool validateCategory() {
+    final isValid = _category != null;
+    if (!isValid) setState(() => _showCategoryError = true);
+    return isValid;
+  }
 
   @override
   void dispose() {
@@ -63,6 +73,8 @@ class RequestNewServiceFormBodyState extends State<RequestNewServiceFormBody> {
             isRequired: true,
             hint: 'services.request_new_service.service_name_hint'.tr(),
             controller: _serviceNameController,
+            validator: _validateName,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             onChanged: (_) => _reportCompleteness(),
           ),
           SizedBox(height: AppSpacing.lg),
@@ -72,6 +84,9 @@ class RequestNewServiceFormBodyState extends State<RequestNewServiceFormBody> {
             hint: 'services.request_new_service.category_name_hint'.tr(),
             value: _category?.name,
             onTap: _pickCategory,
+            errorText: _showCategoryError && _category == null
+                ? 'services.request_new_service.category_required_error'.tr()
+                : null,
           ),
           SizedBox(height: AppSpacing.lg),
           Stack(
@@ -82,6 +97,8 @@ class RequestNewServiceFormBodyState extends State<RequestNewServiceFormBody> {
                 hint: 'services.request_new_service.description_hint'.tr(),
                 controller: _descriptionController,
                 maxLines: 5,
+                validator: _validateDescription,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
                 onChanged: (_) => _reportCompleteness(),
               ),
               PositionedDirectional(
@@ -120,13 +137,42 @@ class RequestNewServiceFormBodyState extends State<RequestNewServiceFormBody> {
     );
     if (selected == null || selected.isEmpty) return;
 
-    setState(() => _category = selected.first);
+    setState(() {
+      _category = selected.first;
+      _showCategoryError = false;
+    });
     _reportCompleteness();
+  }
+
+  /// Per `CreateServiceRequestDto.name`: required, maxLength 255.
+  String? _validateName(String? value) {
+    if (!RequiredValidator.isValid(value)) {
+      return 'services.request_new_service.name_required_error'.tr();
+    }
+    if (!LengthValidator.isValid(value, maxLength: 255)) {
+      return 'services.request_new_service.name_length_error'.tr(
+        namedArgs: {'max': '255'},
+      );
+    }
+    return null;
+  }
+
+  String? _validateDescription(String? value) {
+    if (!LengthValidator.isValid(value, maxLength: 500)) {
+      return 'services.request_new_service.description_length_error'.tr(
+        namedArgs: {'max': '500'},
+      );
+    }
+    return null;
   }
 
   void _reportCompleteness() {
     final isComplete =
-        name.isNotEmpty && categoryId != null && description.isNotEmpty;
+        name.isNotEmpty &&
+        _validateName(_serviceNameController.text) == null &&
+        categoryId != null &&
+        description.isNotEmpty &&
+        LengthValidator.isValid(description, maxLength: 500);
 
     if (isComplete == _wasComplete) return;
     _wasComplete = isComplete;

@@ -1,3 +1,4 @@
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -48,8 +49,16 @@ class _EditNameSheetBodyState extends State<_EditNameSheetBody> {
 
   void _submit() {
     final trimmed = _controller.text.trim();
-    if (trimmed.isEmpty) {
+    if (!RequiredValidator.isValid(trimmed)) {
       setState(() => _errorText = 'settings.name_required_error'.tr());
+      return;
+    }
+    if (!LengthValidator.isValid(trimmed, minLength: 2, maxLength: 255)) {
+      setState(
+        () => _errorText = 'settings.name_length_error'.tr(
+          namedArgs: {'min': '2', 'max': '255'},
+        ),
+      );
       return;
     }
     Navigator.of(context).pop(trimmed);

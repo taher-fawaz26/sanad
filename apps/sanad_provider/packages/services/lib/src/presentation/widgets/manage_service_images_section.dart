@@ -129,13 +129,7 @@ class _ManageServiceImagesSectionState
     ).run();
     if (!mounted) return;
     setState(() => _busyImageId = null);
-    result.fold(_showFailure, (_) {
-      widget.onServiceUpdated(
-        widget.service.copyWith(
-          images: widget.service.images.where((i) => i.id != image.id).toList(),
-        ),
-      );
-    });
+    result.fold(_showFailure, widget.onServiceUpdated);
   }
 
   void _showFailure(Failure failure) {

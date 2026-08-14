@@ -38,13 +38,13 @@ abstract final class IconButtonTokens {
   }) {
     final (dimension, iconDimension) = switch (size) {
       AppIconButtonSize.small => (
-          AppDimension.iconButtonSm,
-          AppDimension.iconMd,
-        ),
+        AppDimension.iconButtonSm,
+        AppDimension.iconMd,
+      ),
       AppIconButtonSize.large => (
-          AppDimension.iconButtonLg,
-          AppDimension.iconMenu,
-        ),
+        AppDimension.iconButtonLg,
+        AppDimension.iconMenu,
+      ),
     };
 
     return IconButtonStyleSpec(

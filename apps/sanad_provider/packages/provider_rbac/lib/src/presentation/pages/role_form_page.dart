@@ -77,6 +77,37 @@ class _RoleFormPageState extends State<RoleFormPage> {
     return slug.length > 50 ? slug.substring(0, 50) : slug;
   }
 
+  /// This field's raw input becomes `CreateRoleDto.displayName` /
+  /// `UpdateRoleDto.displayName` in [_onSubmit] (`name` is only its
+  /// slugified derivative) — bounds confirmed live against both DTOs'
+  /// schemas: `minLength: 1, maxLength: 100`.
+  String? _validateName(String? value) {
+    if (!RequiredValidator.isValid(value)) {
+      return 'provider_rbac.validation_required'.tr();
+    }
+    if (!LengthValidator.isValid(value, minLength: 1, maxLength: 100)) {
+      return 'provider_rbac.validation_length_error'.tr(
+        namedArgs: {'min': '1', 'max': '100'},
+      );
+    }
+    return null;
+  }
+
+  /// Maps to the standalone `description` field on `CreateRoleDto` /
+  /// `UpdateRoleDto` (NOT `displayName` — that's the name field above).
+  /// Confirmed live against both DTOs' schemas: `minLength: 1, maxLength:
+  /// 255`, OPTIONAL (not in either DTO's required-fields array). Not
+  /// enforcing the minimum client-side since an empty value simply means
+  /// "not provided".
+  String? _validateDescription(String? value) {
+    if (!LengthValidator.isValid(value, maxLength: 255)) {
+      return 'provider_rbac.validation_max_length_error'.tr(
+        namedArgs: {'max': '255'},
+      );
+    }
+    return null;
+  }
+
   void _onSubmit() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
@@ -196,9 +227,7 @@ class _RoleFormPageState extends State<RoleFormPage> {
                               ? 'provider_rbac.modification_title_hint'.tr()
                               : 'provider_rbac.name_hint'.tr(),
                           isRequired: true,
-                          validator: (value) => (value?.trim().isEmpty ?? true)
-                              ? 'provider_rbac.validation_required'.tr()
-                              : null,
+                          validator: _validateName,
                         ),
                         SizedBox(height: AppSpacing.lg),
                         Stack(
@@ -207,16 +236,12 @@ class _RoleFormPageState extends State<RoleFormPage> {
                               controller: _descriptionController,
                               label: 'provider_rbac.description_label'.tr(),
                               hint: 'provider_rbac.description_hint'.tr(),
-                              isRequired: true,
                               maxLines: 5,
-                              validator: (value) =>
-                                  (value?.trim().isEmpty ?? true)
-                                  ? 'provider_rbac.validation_required'.tr()
-                                  : null,
+                              validator: _validateDescription,
                             ),
                             Positioned(
-                              right: AppSpacing.sm,
-                              bottom: AppSpacing.sm,
+                              right: AppSpacing.xs,
+                              bottom: AppSpacing.lg,
                               child: AppEnhanceWithAiButton(
                                 label: 'provider_rbac.enhance_with_ai'.tr(),
                               ),

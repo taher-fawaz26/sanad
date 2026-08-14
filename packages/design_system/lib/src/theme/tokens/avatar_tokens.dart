@@ -37,9 +37,9 @@ abstract final class AvatarTokens {
   AvatarTokens._();
 
   static double size(AppAvatarSize avatarSize) => switch (avatarSize) {
-        AppAvatarSize.small => AppDimension.iconLg,
-        AppAvatarSize.medium => AppDimension.fieldHeightMd,
-      };
+    AppAvatarSize.small => AppDimension.iconLg,
+    AppAvatarSize.medium => AppDimension.fieldHeightMd,
+  };
 
   static AvatarStyleSpec resolve({
     required AppAvatarSize avatarSize,

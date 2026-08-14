@@ -93,6 +93,7 @@
     "placeholder_description": "ستتوفر إعدادات الحساب والتطبيق هنا في تحديث مستقبلي.",
     "section_identity": "الهوية",
     "business_description": "وصف النشاط التجاري",
+    "business_description_length_error": "يجب ألا يتجاوز {max} حرفًا.",
     "enhance_with_ai": "تحسين بالذكاء الاصطناعي",
     "save_button": "حفظ",
     "section_category": "الفئة",
@@ -111,9 +112,12 @@
     "social_instagram": "إنستغرام",
     "social_twitter": "تويتر",
     "social_website_url": "رابط الموقع",
+    "social_url_invalid_error": "يرجى إدخال رابط صحيح",
     "add_day": "إضافة يوم",
     "enter_phone_title": "إدخال رقم الهاتف",
     "enter_email_title": "إدخال البريد الإلكتروني",
+    "email_address_invalid_error": "يرجى إدخال بريد إلكتروني صحيح",
+    "phone_number_invalid_error": "يرجى إدخال رقم هاتف صحيح",
     "continue_button": "متابعة",
     "section_account_credentials": "بيانات اعتماد الحساب",
     "name": "الاسم",
@@ -123,6 +127,7 @@
     "deleting_account_title": "جارٍ حذف الحساب...",
     "name_hint": "أدخل اسمك",
     "name_required_error": "الاسم مطلوب",
+    "name_length_error": "يجب أن يكون الطول بين {min} و {max} حرفًا.",
     "section_language_preferences": "تفضيلات اللغة",
     "language": "اللغة",
     "section_help_support": "المساعدة والدعم",
@@ -286,6 +291,7 @@
         "friday": "الجمعة"
       },
       "branch_name_required": "اسم الفرع مطلوب",
+      "branch_name_max_length_error": "يجب ألا يتجاوز الطول {max} حرفًا.",
       "city_required": "يرجى اختيار مدينة",
       "invalid_phone": "أدخل رقم هاتف صالحاً",
       "submitting_title": "جارٍ إضافة فرعك...",
@@ -454,8 +460,10 @@
       "service_select_hint": "اختر الخدمة",
       "inline_not_found_prefix": "لم تجد خدمتك؟",
       "inline_request_link": " طلب خدمة جديدة",
+      "service_required_error": "الرجاء اختيار خدمة",
       "description_label": "وصف الخدمة",
       "description_hint": "صف الخدمة واشرح ما سيطلبه العملاء.",
+      "description_length_error": "يجب ألا يتجاوز {max} حرفًا.",
       "ai_enhance": "تحسين بالذكاء الاصطناعي",
       "images_label": "الصور",
       "images_max_size_caption": "PNG أو JPG أو SVG. الحد الأقصى 5 ميجابايت. المقاس المقترح: 1200 × 800 بكسل",
@@ -471,10 +479,14 @@
       "warning_banner": "إرسال الطلب لا ينشر الخدمة فورًا. سيقوم سند بمراجعتها قبل أن تصبح متاحة.",
       "service_name_label": "اسم الخدمة المطلوبة",
       "service_name_hint": "أدخل اسم الخدمة",
+      "name_required_error": "الرجاء إدخال اسم الخدمة",
+      "name_length_error": "يجب ألا يتجاوز {max} حرفًا.",
       "category_name_label": "اسم الفئة المطلوبة",
       "category_name_hint": "أدخل اسم فئة جديدة",
+      "category_required_error": "الرجاء اختيار فئة",
       "description_label": "وصف الخدمة",
       "description_hint": "صف الخدمة واشرح ما سيطلبه العملاء.",
+      "description_length_error": "يجب ألا يتجاوز {max} حرفًا.",
       "submit_button": "طلب"
     }
   },
@@ -498,6 +510,8 @@
     "description_label": "الوصف",
     "description_hint": "صف الخدمة ووضّح ما سيطلبه العملاء.",
     "validation_required": "هذا الحقل مطلوب",
+    "validation_length_error": "يجب أن يكون الطول بين {min} و {max} حرفًا.",
+    "validation_max_length_error": "يجب ألا يتجاوز الطول {max} حرفًا.",
     "create_button": "إنشاء دور",
     "save_button": "حفظ",
     "worker_roles_title": "الأدوار المعينة",
@@ -631,7 +645,9 @@
       "validation_required": "هذا الحقل مطلوب",
       "validation_email": "يرجى إدخال بريد إلكتروني صحيح",
       "validation_reserved_domain": "لا يمكن لهذا النطاق استقبال الدعوات. يرجى استخدام بريد إلكتروني حقيقي.",
-      "validation_name_format": "يجب أن يحتوي الاسم على حروف ومسافات وشرطات وفواصل عليا فقط"
+      "validation_name_format": "يجب أن يحتوي الاسم على حروف ومسافات وشرطات وفواصل عليا فقط",
+      "validation_length_error": "يجب أن يكون الطول بين {min} و {max} حرفًا.",
+      "validation_max_length_error": "يجب ألا يتجاوز الطول {max} حرفًا."
     },
     "edit_worker": {
       "title": "تعديل عضو الفريق",
@@ -803,6 +819,7 @@
     "representative_name": "اسم الممثل",
     "representative_name_hint": "أحمد محمد المنصوري",
     "field_required": "هذا الحقل مطلوب.",
+    "name_length_error": "يجب أن يكون الطول بين {min} و {max} حرفًا.",
     "individual_details_title": "بيانات الفرد",
     "individual_details_subtitle": "أخبرنا عن نفسك لإعداد حساب مزوّد الخدمة الخاص بك.",
     "full_name": "الاسم الكامل",
@@ -878,5 +895,10 @@
     "title": "",
     "empty_title": "",
     "empty_description": ""
+  },
+  "validation": {
+    "form": {
+      "uae_phone_invalid": "يرجى إدخال رقم هاتف إماراتي صحيح."
+    }
   }
 }

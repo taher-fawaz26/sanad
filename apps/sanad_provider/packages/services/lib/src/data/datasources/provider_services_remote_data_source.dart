@@ -5,7 +5,6 @@ import 'package:services/src/data/endpoints/services_api_paths.dart';
 import 'package:services/src/data/models/add_provider_service_image_dto.dart';
 import 'package:services/src/data/models/create_provider_service_dto.dart';
 import 'package:services/src/data/models/provider_service_dto.dart';
-import 'package:services/src/data/models/provider_service_image_dto.dart';
 import 'package:services/src/data/models/provider_service_overview_dto.dart';
 import 'package:services/src/data/models/services_paginated_response.dart';
 import 'package:services/src/data/models/update_provider_service_dto.dart';
@@ -44,12 +43,12 @@ abstract interface class ProviderServicesRemoteDataSource {
 
   TaskEither<Failure, ProviderServiceOverviewDto> getOverview();
 
-  TaskEither<Failure, ProviderServiceImageDto> addImage(
-    String id,
-    String mediaId,
-  );
+  TaskEither<Failure, ProviderServiceDto> addImage(String id, String mediaId);
 
-  TaskEither<Failure, Unit> deleteImage(String id, String imageId);
+  TaskEither<Failure, ProviderServiceDto> deleteImage(
+    String id,
+    String imageId,
+  );
 
   TaskEither<Failure, ProviderServiceDto> setPrimaryImage(
     String id,
@@ -141,24 +140,25 @@ class ProviderServicesRemoteDataSourceImpl
       );
 
   @override
-  TaskEither<Failure, ProviderServiceImageDto> addImage(
+  TaskEither<Failure, ProviderServiceDto> addImage(
     String id,
     String mediaId,
-  ) => _apiClient.request<ProviderServiceImageDto>(
+  ) => _apiClient.request<ProviderServiceDto>(
     path: ServicesApiPaths.providerServiceImages(id),
     method: RequestMethod.post,
     body: AddProviderServiceImageDto(mediaId: mediaId).toJson(),
-    parser: (data) =>
-        ProviderServiceImageDto.fromJson(data as Map<String, dynamic>),
+    parser: (data) => ProviderServiceDto.fromJson(data as Map<String, dynamic>),
   );
 
   @override
-  TaskEither<Failure, Unit> deleteImage(String id, String imageId) =>
-      _apiClient.request<Unit>(
-        path: ServicesApiPaths.providerServiceImage(id, imageId),
-        method: RequestMethod.delete,
-        parser: (_) => unit,
-      );
+  TaskEither<Failure, ProviderServiceDto> deleteImage(
+    String id,
+    String imageId,
+  ) => _apiClient.request<ProviderServiceDto>(
+    path: ServicesApiPaths.providerServiceImage(id, imageId),
+    method: RequestMethod.delete,
+    parser: (data) => ProviderServiceDto.fromJson(data as Map<String, dynamic>),
+  );
 
   @override
   TaskEither<Failure, ProviderServiceDto> setPrimaryImage(

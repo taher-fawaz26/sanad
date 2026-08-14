@@ -46,8 +46,10 @@ Future<void> _pump(WidgetTester tester, Widget child) async {
     ScreenUtilInit(
       designSize: const Size(360, 800),
       minTextAdapt: true,
-      builder: (_, _) =>
-          MaterialApp(theme: AppTheme.light(), home: Scaffold(body: child)),
+      builder: (_, _) => MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(body: child),
+      ),
     ),
   );
 }
@@ -113,5 +115,89 @@ void main() {
         expect(tester.getSize(finder).width, greaterThan(0));
       },
     );
+  });
+
+  group('AppPhoneField validator', () {
+    testWidgets('shows the validator message when validation fails', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        Form(
+          child: AppPhoneField(
+            label: 'Phone',
+            controller: TextEditingController(text: ''),
+            autovalidateMode: AutovalidateMode.always,
+            validator: (value) =>
+                (value == null || value.isEmpty) ? 'Invalid phone' : null,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Invalid phone'), findsOneWidget);
+    });
+
+    testWidgets('shows no error when the validator passes', (tester) async {
+      await _pump(
+        tester,
+        Form(
+          child: AppPhoneField(
+            label: 'Phone',
+            controller: TextEditingController(text: '501234567'),
+            autovalidateMode: AutovalidateMode.always,
+            validator: (value) =>
+                (value == null || value.isEmpty) ? 'Invalid phone' : null,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Invalid phone'), findsNothing);
+    });
+
+    testWidgets('an explicit errorText overrides the validator result', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        Form(
+          child: AppPhoneField(
+            label: 'Phone',
+            controller: TextEditingController(text: '501234567'),
+            autovalidateMode: AutovalidateMode.always,
+            errorText: 'Server says invalid',
+            validator: (value) => null,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Server says invalid'), findsOneWidget);
+    });
+
+    testWidgets('Form.validate() triggers the validator and surfaces its '
+        'message', (tester) async {
+      final formKey = GlobalKey<FormState>();
+      await _pump(
+        tester,
+        Form(
+          key: formKey,
+          child: AppPhoneField(
+            label: 'Phone',
+            controller: TextEditingController(text: ''),
+            validator: (value) =>
+                (value == null || value.isEmpty) ? 'Required' : null,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final isValid = formKey.currentState!.validate();
+      await tester.pump();
+
+      expect(isValid, isFalse);
+      expect(find.text('Required'), findsOneWidget);
+    });
   });
 }

@@ -1,4 +1,5 @@
 import 'package:app_assets/app_assets.dart';
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -64,9 +65,21 @@ class IndividualDetailsPage extends HookWidget {
               textInputAction: TextInputAction.done,
               textCapitalization: TextCapitalization.words,
               autovalidateMode: AutovalidateMode.onUserInteraction,
-              validator: (value) => (value == null || value.trim().isEmpty)
-                  ? 'registration.field_required'.tr()
-                  : null,
+              validator: (value) {
+                if (!RequiredValidator.isValid(value)) {
+                  return 'registration.field_required'.tr();
+                }
+                if (!LengthValidator.isValid(
+                  value,
+                  minLength: 3,
+                  maxLength: 255,
+                )) {
+                  return 'registration.name_length_error'.tr(
+                    namedArgs: {'min': '3', 'max': '255'},
+                  );
+                }
+                return null;
+              },
               onSubmitted: (_) => submit(),
             ),
             SizedBox(height: responsiveDimension(AppSpacing.xxxl)),

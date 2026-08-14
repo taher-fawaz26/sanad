@@ -4,7 +4,8 @@ enum ServiceRequestStatus {
   underReview,
   approved,
   rejected,
-  all;
+  all
+  ;
 
   static ServiceRequestStatus fromApi(String value) => switch (value) {
     'underreview' => ServiceRequestStatus.underReview,

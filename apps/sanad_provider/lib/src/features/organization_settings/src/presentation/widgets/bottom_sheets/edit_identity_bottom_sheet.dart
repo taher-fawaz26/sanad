@@ -1,9 +1,13 @@
 import 'package:app_assets/app_assets.dart';
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
+
+/// Backend cap on `UpdateServiceProviderSettingsDto.description`.
+const _kBusinessDescriptionMaxLength = 350;
 
 /// Shows the edit identity bottom sheet.
 ///
@@ -37,6 +41,7 @@ class _EditIdentitySheetBody extends StatefulWidget {
 }
 
 class _EditIdentitySheetBodyState extends State<_EditIdentitySheetBody> {
+  final _formKey = GlobalKey<FormState>();
   late final TextEditingController _controller;
 
   @override
@@ -60,29 +65,35 @@ class _EditIdentitySheetBodyState extends State<_EditIdentitySheetBody> {
       padding: EdgeInsets.only(
         bottom: MediaQuery.viewInsetsOf(context).bottom,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _Header(colors: colors, typography: typography),
-          SizedBox(height: AppSpacing.xxl),
-          _BusinessDescriptionField(
-            controller: _controller,
-            colors: colors,
-            typography: typography,
-            onEnhanceWithAi: widget.onEnhanceWithAi,
-          ),
-          SizedBox(height: AppSpacing.xl),
-          AppButton(
-            label: 'settings.save_button'.tr(),
-            onPressed: _submit,
-          ),
-        ],
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _Header(colors: colors, typography: typography),
+            SizedBox(height: AppSpacing.xxl),
+            _BusinessDescriptionField(
+              controller: _controller,
+              colors: colors,
+              typography: typography,
+              onEnhanceWithAi: widget.onEnhanceWithAi,
+            ),
+            SizedBox(height: AppSpacing.xl),
+            AppButton(
+              label: 'settings.save_button'.tr(),
+              onPressed: _submit,
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  void _submit() => Navigator.of(context).pop(_controller.text);
+  void _submit() {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    Navigator.of(context).pop(_controller.text);
+  }
 }
 
 class _Header extends StatelessWidget {
@@ -155,7 +166,7 @@ class _BusinessDescriptionField extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextField(
+              TextFormField(
                 controller: controller,
                 maxLines: null,
                 keyboardType: TextInputType.multiline,
@@ -167,6 +178,17 @@ class _BusinessDescriptionField extends StatelessWidget {
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.zero,
                 ),
+                validator: (value) =>
+                    LengthValidator.isValid(
+                      value,
+                      maxLength: _kBusinessDescriptionMaxLength,
+                    )
+                    ? null
+                    : 'settings.business_description_length_error'.tr(
+                        namedArgs: {
+                          'max': '$_kBusinessDescriptionMaxLength',
+                        },
+                      ),
               ),
               SizedBox(height: AppSpacing.xxl),
               AppEnhanceWithAiButton(

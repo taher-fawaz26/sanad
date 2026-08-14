@@ -30,7 +30,7 @@ abstract final class AddBranchParamsMapper {
       branchType: draft.branchType,
       branchAddress: draft.branchAddress ?? '',
       cityId: city.id,
-      branchPhone: UaePhoneValidator.normalize(draft.phone),
+      branchPhone: _normalizePhone(draft.phone),
       branchManagerId: draft.selectedManager!.id,
       lat: position.latitude,
       lng: position.longitude,
@@ -74,7 +74,7 @@ abstract final class AddBranchParamsMapper {
       branchType: draft.branchType,
       branchAddress: draft.branchAddress ?? '',
       cityId: city.id,
-      branchPhone: UaePhoneValidator.normalize(draft.phone),
+      branchPhone: _normalizePhone(draft.phone),
       branchManagerId: draft.selectedManager!.id,
       lat: position.latitude,
       lng: position.longitude,
@@ -87,6 +87,14 @@ abstract final class AddBranchParamsMapper {
           : null,
       serviceIds: _serviceIds(draft),
     );
+  }
+
+  /// Branch phone is optional on the backend — normalize only when the user
+  /// actually entered one, so an empty draft phone maps to an empty string
+  /// instead of [UaePhoneValidator.normalize]'s bogus `+971` fallback.
+  static String _normalizePhone(String phone) {
+    final trimmed = phone.trim();
+    return trimmed.isEmpty ? '' : UaePhoneValidator.normalize(trimmed);
   }
 
   static BranchAvailabilityMode _availabilityMode(bool isCustom) => isCustom
@@ -134,7 +142,7 @@ abstract final class AddBranchParamsMapper {
       id: branch.id,
       branchName: branch.branchName.trim(),
       branchAddress: branch.branchAddress,
-      branchPhone: UaePhoneValidator.normalize(branch.branchPhone),
+      branchPhone: _normalizePhone(branch.branchPhone),
       branchType: branch.branchType,
       cityId: branch.cityId,
       branchManagerId: branch.branchManagerId,

@@ -57,7 +57,10 @@ class ServicesListBloc extends Bloc<ServicesListEvent, ServicesListState>
     required ListProviderServicesUseCase listProviderServicesUseCase,
   }) : _listProviderServicesUseCase = listProviderServicesUseCase,
        super(const ServicesListState()) {
-    on<ServicesListFetchEvent>((event, emit) => loadFirstPage(emit));
+    on<ServicesListFetchEvent>(
+      (event, emit) => loadFirstPage(emit),
+      transformer: droppable(),
+    );
     on<ServicesListRefreshEvent>(
       (event, emit) => refresh(emit),
       transformer: droppable(),
@@ -139,25 +142,26 @@ class ServicesListBloc extends Bloc<ServicesListEvent, ServicesListState>
   @override
   TaskEither<Failure, Page<ProviderServiceEntity>> fetchPage(
     _ServicesQuery query,
-  ) => _listProviderServicesUseCase(
-    ListProviderServicesParams(
-      page: query.page,
-      limit: query.limit,
-      search: query.search,
-      status: query.status,
-    ),
-  ).map(
-    (result) => Page(
-      items: result.items,
-      meta: PageMeta(
-        totalItems: result.meta.totalItems,
-        itemCount: result.meta.itemCount,
-        itemsPerPage: result.meta.itemsPerPage,
-        totalPages: result.meta.totalPages,
-        currentPage: result.meta.currentPage,
-      ),
-    ),
-  );
+  ) =>
+      _listProviderServicesUseCase(
+        ListProviderServicesParams(
+          page: query.page,
+          limit: query.limit,
+          search: query.search,
+          status: query.status,
+        ),
+      ).map(
+        (result) => Page(
+          items: result.items,
+          meta: PageMeta(
+            totalItems: result.meta.totalItems,
+            itemCount: result.meta.itemCount,
+            itemsPerPage: result.meta.itemsPerPage,
+            totalPages: result.meta.totalPages,
+            currentPage: result.meta.currentPage,
+          ),
+        ),
+      );
 
   @override
   Object dedupKey(ProviderServiceEntity item) => item.id;

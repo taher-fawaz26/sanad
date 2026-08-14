@@ -1,4 +1,5 @@
 import 'package:app_assets/app_assets.dart';
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -30,9 +31,20 @@ class OrganizationDetailsPage extends HookWidget {
     final formKey = useMemoized(GlobalKey<FormState>.new);
     final colors = context.appColors;
 
-    String? required(String? value) => (value == null || value.trim().isEmpty)
-        ? 'registration.field_required'.tr()
-        : null;
+    String? required(String? value) => RequiredValidator.isValid(value)
+        ? null
+        : 'registration.field_required'.tr();
+
+    String? businessNameValidator(String? value) {
+      final requiredError = required(value);
+      if (requiredError != null) return requiredError;
+      if (!LengthValidator.isValid(value, minLength: 3, maxLength: 255)) {
+        return 'registration.name_length_error'.tr(
+          namedArgs: {'min': '3', 'max': '255'},
+        );
+      }
+      return null;
+    }
 
     void submit() {
       if (!(formKey.currentState?.validate() ?? false)) return;
@@ -73,7 +85,7 @@ class OrganizationDetailsPage extends HookWidget {
               textInputAction: TextInputAction.next,
               textCapitalization: TextCapitalization.words,
               autovalidateMode: AutovalidateMode.onUserInteraction,
-              validator: required,
+              validator: businessNameValidator,
             ),
             SizedBox(height: responsiveDimension(AppSpacing.lg)),
             AppTextField(
@@ -83,6 +95,9 @@ class OrganizationDetailsPage extends HookWidget {
               textInputAction: TextInputAction.done,
               textCapitalization: TextCapitalization.words,
               autovalidateMode: AutovalidateMode.onUserInteraction,
+              // No length check: `representativeName` has no matching field
+              // in `CreateProviderProfileDto` (confirmed against the live API
+              // schema), so there's no backend constraint to reconcile.
               validator: required,
               onSubmitted: (_) => submit(),
             ),

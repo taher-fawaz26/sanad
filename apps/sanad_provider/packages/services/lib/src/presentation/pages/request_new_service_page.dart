@@ -31,7 +31,9 @@ class _RequestNewServicePageState extends State<RequestNewServicePage> {
       create: (_) => sl<MediaUploadBloc>(
         param1: const MediaUploadConfig(
           maxFileSize: 5 * 1024 * 1024,
-          maxFiles: 5,
+          // "Images are optional (max 6)" per this screen's own doc
+          // comment above — was previously capped at 5.
+          maxFiles: 6,
           allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
         ),
       ),
@@ -122,6 +124,7 @@ class _RequestNewServicePageState extends State<RequestNewServicePage> {
   void _onSubmit(BuildContext context) {
     final formState = _formBodyKey.currentState;
     if (formState == null) return;
+    if (!formState.validateCategory()) return;
     final categoryId = formState.categoryId;
     if (categoryId == null) return;
 

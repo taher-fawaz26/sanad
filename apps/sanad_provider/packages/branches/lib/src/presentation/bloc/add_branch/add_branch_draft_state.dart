@@ -67,7 +67,6 @@ class AddBranchDraft extends Equatable {
   bool get isStepOneComplete =>
       branchName.trim().isNotEmpty &&
       selectedCity != null &&
-      phone.trim().isNotEmpty &&
       branchAddress != null &&
       pickedPosition != null &&
       selectedManager != null;

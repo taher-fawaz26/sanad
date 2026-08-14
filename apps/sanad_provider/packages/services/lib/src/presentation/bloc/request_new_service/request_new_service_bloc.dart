@@ -1,3 +1,4 @@
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -14,7 +15,9 @@ class RequestNewServiceBloc
     required CreateServiceRequestUseCase createServiceRequestUseCase,
   }) : _createServiceRequestUseCase = createServiceRequestUseCase,
        super(const RequestNewServiceState()) {
-    on<RequestNewServiceSubmittedEvent>(_onSubmitted);
+    // Drop duplicate submits while one is in flight (double-tap guard),
+    // matching AddServiceBloc/EditServiceBloc/ServiceActionBloc.
+    on<RequestNewServiceSubmittedEvent>(_onSubmitted, transformer: droppable());
   }
 
   final CreateServiceRequestUseCase _createServiceRequestUseCase;

@@ -182,4 +182,121 @@ void main() {
       expect(completenessEvents.last, isTrue);
     },
   );
+
+  group('name validation', () {
+    testWidgets('empty name shows the required error', (tester) async {
+      await _pump(tester, bloc, onCompletenessChanged: (_) {});
+
+      await tester.enterText(find.byType(TextField).at(0), 'a');
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).at(0), '');
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('services.request_new_service.name_required_error'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('valid name shows no error', (tester) async {
+      await _pump(tester, bloc, onCompletenessChanged: (_) {});
+
+      await tester.enterText(find.byType(TextField).at(0), 'Ceramic Coating');
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('services.request_new_service.name_required_error'),
+        findsNothing,
+      );
+      expect(
+        find.text('services.request_new_service.name_length_error'),
+        findsNothing,
+      );
+    });
+
+    testWidgets('256 characters fails the length check', (tester) async {
+      await _pump(tester, bloc, onCompletenessChanged: (_) {});
+
+      await tester.enterText(find.byType(TextField).at(0), 'a' * 256);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('services.request_new_service.name_length_error'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('255 characters (the boundary) passes', (tester) async {
+      await _pump(tester, bloc, onCompletenessChanged: (_) {});
+
+      await tester.enterText(find.byType(TextField).at(0), 'a' * 255);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('services.request_new_service.name_length_error'),
+        findsNothing,
+      );
+    });
+  });
+
+  group('description validation', () {
+    testWidgets('exactly 500 characters passes', (tester) async {
+      await _pump(tester, bloc, onCompletenessChanged: (_) {});
+
+      await tester.enterText(find.byType(TextField).at(1), 'a' * 500);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('services.request_new_service.description_length_error'),
+        findsNothing,
+      );
+    });
+
+    testWidgets('501 characters shows the corrected length error', (
+      tester,
+    ) async {
+      await _pump(tester, bloc, onCompletenessChanged: (_) {});
+
+      await tester.enterText(find.byType(TextField).at(1), 'a' * 501);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('services.request_new_service.description_length_error'),
+        findsOneWidget,
+      );
+    });
+  });
+
+  testWidgets(
+    'validateCategory reveals the required error when no category is '
+    'selected, and clears it once one is picked',
+    (tester) async {
+      final key = GlobalKey<RequestNewServiceFormBodyState>();
+      await _pump(tester, bloc, onCompletenessChanged: (_) {}, key: key);
+
+      expect(
+        find.text('services.request_new_service.category_required_error'),
+        findsNothing,
+      );
+
+      final isValid = key.currentState!.validateCategory();
+      await tester.pumpAndSettle();
+
+      expect(isValid, isFalse);
+      expect(
+        find.text('services.request_new_service.category_required_error'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byType(AppSelectField).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Car'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('services.request_new_service.category_required_error'),
+        findsNothing,
+      );
+    },
+  );
 }

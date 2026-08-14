@@ -1,6 +1,7 @@
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
 import 'package:fpdart/fpdart.dart';
+import 'package:services/src/domain/entities/provider_service_entity.dart';
 import 'package:services/src/domain/repositories/provider_services_repository.dart';
 
 class DeleteProviderServiceImageParams extends Equatable {
@@ -17,12 +18,14 @@ class DeleteProviderServiceImageParams extends Equatable {
 }
 
 class DeleteProviderServiceImageUseCase
-    implements UseCase<Unit, DeleteProviderServiceImageParams> {
+    implements
+        UseCase<ProviderServiceEntity, DeleteProviderServiceImageParams> {
   const DeleteProviderServiceImageUseCase(this._repository);
 
   final ProviderServicesRepository _repository;
 
   @override
-  TaskEither<Failure, Unit> call(DeleteProviderServiceImageParams params) =>
-      _repository.deleteImage(id: params.id, imageId: params.imageId);
+  TaskEither<Failure, ProviderServiceEntity> call(
+    DeleteProviderServiceImageParams params,
+  ) => _repository.deleteImage(id: params.id, imageId: params.imageId);
 }

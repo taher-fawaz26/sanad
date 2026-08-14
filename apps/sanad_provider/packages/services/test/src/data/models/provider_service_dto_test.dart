@@ -92,6 +92,56 @@ void main() {
       },
     );
 
+    test(
+      'falls back to wrapping primaryImage as a single-item list when '
+      'the full images array is absent (list-row shape)',
+      () {
+        final json = {
+          'id': 's1',
+          'serviceId': 'catalog-1',
+          'serviceName': 'Plumbing service',
+          'category': {'id': 'cat-1', 'name': 'Home', 'description': null},
+          'description': null,
+          'status': 'active',
+          'createdAt': '2026-01-01T00:00:00.000Z',
+          'updatedAt': '2026-01-01T00:00:00.000Z',
+          'primaryImage': {
+            'id': 'img-1',
+            'mediaId': 'media-1',
+            'url': 'https://example.com/media/1.jpg',
+            'isPrimary': true,
+          },
+        };
+
+        final dto = ProviderServiceDto.fromJson(json);
+
+        expect(dto.images, hasLength(1));
+        expect(dto.primaryImage?.id, 'img-1');
+      },
+    );
+
+    test(
+      'no images and no primaryImage yields an empty images list, not a '
+      'parse error',
+      () {
+        final json = {
+          'id': 's1',
+          'serviceId': 'catalog-1',
+          'serviceName': 'Plumbing service',
+          'category': {'id': 'cat-1', 'name': 'Home', 'description': null},
+          'description': null,
+          'status': 'active',
+          'createdAt': '2026-01-01T00:00:00.000Z',
+          'updatedAt': '2026-01-01T00:00:00.000Z',
+        };
+
+        final dto = ProviderServiceDto.fromJson(json);
+
+        expect(dto.images, isEmpty);
+        expect(dto.primaryImage, isNull);
+      },
+    );
+
     test('parses non-zero requests/revenue', () {
       final json = {
         'id': 's1',

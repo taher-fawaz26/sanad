@@ -69,7 +69,10 @@ class _ContactEditSheetState extends State<ContactEditSheet> {
     super.dispose();
   }
 
-  bool get _isValid => UaePhoneValidator.isValid(_phoneController.text.trim());
+  bool get _isValid {
+    final phone = _phoneController.text.trim();
+    return phone.isEmpty || UaePhoneValidator.isValid(phone);
+  }
 
   bool get _hasChanges =>
       _phoneController.text.trim() != widget.initialPhone.trim() ||
@@ -77,8 +80,9 @@ class _ContactEditSheetState extends State<ContactEditSheet> {
 
   String? get _phoneError {
     if (!_showErrors) return null;
-    return UaePhoneValidator.validationMessage(_phoneController.text.trim())
-        ?.tr();
+    final phone = _phoneController.text.trim();
+    if (phone.isEmpty) return null;
+    return UaePhoneValidator.validationMessage(phone)?.tr();
   }
 
   @override

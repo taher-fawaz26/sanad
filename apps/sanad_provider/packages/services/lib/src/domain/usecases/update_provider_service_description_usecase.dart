@@ -19,10 +19,7 @@ class UpdateProviderServiceDescriptionParams extends Equatable {
 
 class UpdateProviderServiceDescriptionUseCase
     implements
-        UseCase<
-          ProviderServiceEntity,
-          UpdateProviderServiceDescriptionParams
-        > {
+        UseCase<ProviderServiceEntity, UpdateProviderServiceDescriptionParams> {
   const UpdateProviderServiceDescriptionUseCase(this._repository);
 
   final ProviderServicesRepository _repository;

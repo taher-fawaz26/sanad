@@ -96,4 +96,44 @@ void main() {
     expect(key.currentState!.hasUnsavedInput, isTrue);
     expect(key.currentState!.description, 'Full valet wash');
   });
+
+  group('description validation', () {
+    testWidgets('valid input shows no length error', (tester) async {
+      await _pump(tester, bloc, onCompletenessChanged: (_) {});
+
+      await tester.enterText(find.byType(TextField).first, 'A valid update');
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('services.add_service.description_length_error'),
+        findsNothing,
+      );
+    });
+
+    testWidgets('exactly 500 characters passes', (tester) async {
+      await _pump(tester, bloc, onCompletenessChanged: (_) {});
+
+      await tester.enterText(find.byType(TextField).first, 'a' * 500);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('services.add_service.description_length_error'),
+        findsNothing,
+      );
+    });
+
+    testWidgets('501 characters shows the corrected length error', (
+      tester,
+    ) async {
+      await _pump(tester, bloc, onCompletenessChanged: (_) {});
+
+      await tester.enterText(find.byType(TextField).first, 'a' * 501);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('services.add_service.description_length_error'),
+        findsOneWidget,
+      );
+    });
+  });
 }

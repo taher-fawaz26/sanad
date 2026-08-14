@@ -93,6 +93,7 @@
     "placeholder_description": "Account and app settings will be available here in a future update.",
     "section_identity": "Identity",
     "business_description": "Business Description",
+    "business_description_length_error": "Must be at most {max} characters.",
     "enhance_with_ai": "Enhance with AI",
     "save_button": "Save",
     "section_category": "Category",
@@ -111,9 +112,12 @@
     "social_instagram": "Instagram",
     "social_twitter": "Twitter",
     "social_website_url": "Website URL",
+    "social_url_invalid_error": "Please enter a valid URL",
     "add_day": "Add a Day",
     "enter_phone_title": "Enter Phone Number",
     "enter_email_title": "Enter Email",
+    "email_address_invalid_error": "Please enter a valid email address",
+    "phone_number_invalid_error": "Please enter a valid phone number",
     "continue_button": "Continue",
     "section_account_credentials": "Account Credentials",
     "name": "Name",
@@ -123,6 +127,7 @@
     "deleting_account_title": "Deleting account…",
     "name_hint": "Enter your name",
     "name_required_error": "Name is required",
+    "name_length_error": "Must be between {min} and {max} characters.",
     "section_language_preferences": "Language Preferences",
     "language": "Language",
     "section_help_support": "Help & Support",
@@ -286,6 +291,7 @@
         "friday": "Friday"
       },
       "branch_name_required": "Branch name is required",
+      "branch_name_max_length_error": "Must not exceed {max} characters.",
       "city_required": "Please select a city",
       "invalid_phone": "Enter a valid phone number",
       "submitting_title": "Adding your branch...",
@@ -454,8 +460,10 @@
       "service_select_hint": "Select Service",
       "inline_not_found_prefix": "Didn't find your service?",
       "inline_request_link": " Request New service",
+      "service_required_error": "Please select a service",
       "description_label": "Service Description",
       "description_hint": "Describe the service and explain what customers will request.",
+      "description_length_error": "Must be at most {max} characters.",
       "ai_enhance": "Enhance with AI",
       "images_label": "Images",
       "images_max_size_caption": "PNG, JPG, or SVG. Max 5 MB. Recommended size: 1200 × 800 px",
@@ -471,10 +479,14 @@
       "warning_banner": "Submitting a request does not publish the service immediately. Sanad will review it before it becomes available.",
       "service_name_label": "Requested Service Name",
       "service_name_hint": "Enter the service name",
+      "name_required_error": "Please enter a service name",
+      "name_length_error": "Must be at most {max} characters.",
       "category_name_label": "Requested Category Name",
       "category_name_hint": "Enter a new category name",
+      "category_required_error": "Please select a category",
       "description_label": "Service Description",
       "description_hint": "Describe the service and explain what customers will request.",
+      "description_length_error": "Must be at most {max} characters.",
       "submit_button": "Request"
     }
   },
@@ -498,6 +510,8 @@
     "description_label": "Description",
     "description_hint": "Describe the service and explain what customers will request.",
     "validation_required": "This field is required",
+    "validation_length_error": "Must be between {min} and {max} characters.",
+    "validation_max_length_error": "Must be no more than {max} characters.",
     "create_button": "Create role",
     "save_button": "Save",
     "worker_roles_title": "Assigned roles",
@@ -631,7 +645,9 @@
       "validation_required": "This field is required",
       "validation_email": "Please enter a valid email",
       "validation_reserved_domain": "This email domain cannot receive invitations. Please use a real email address.",
-      "validation_name_format": "Name can only contain letters, spaces, dashes and apostrophes"
+      "validation_name_format": "Name can only contain letters, spaces, dashes and apostrophes",
+      "validation_length_error": "Must be between {min} and {max} characters.",
+      "validation_max_length_error": "Must be no more than {max} characters."
     },
     "edit_worker": {
       "title": "Edit Member Team",
@@ -803,6 +819,7 @@
     "representative_name": "Representative Name",
     "representative_name_hint": "Ahmed Mohammed Al Mansouri",
     "field_required": "This field is required.",
+    "name_length_error": "Must be between {min} and {max} characters.",
     "individual_details_title": "Individual Details",
     "individual_details_subtitle": "Tell us about yourself to set up your provider account.",
     "full_name": "Full name",
@@ -878,5 +895,10 @@
     "title": "Contact Verification",
     "empty_title": "No contact_verification yet",
     "empty_description": "Your contact_verification will appear here"
+  },
+  "validation": {
+    "form": {
+      "uae_phone_invalid": "Please enter a valid UAE phone number."
+    }
   }
 }

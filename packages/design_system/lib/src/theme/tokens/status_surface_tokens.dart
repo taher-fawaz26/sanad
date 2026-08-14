@@ -17,29 +17,29 @@ abstract final class StatusSurfaceTokens {
   }) {
     return switch (type) {
       AppAlertType.warning => (
-          colors.palettes.yellow.shade50,
-          colors.warning,
-          colors.warning,
-        ),
+        colors.palettes.yellow.shade50,
+        colors.warning,
+        colors.warning,
+      ),
       AppAlertType.error => (
-          brightness == Brightness.dark
-              ? colors.errorContainer
-              : colors.palettes.red.shade50,
-          colors.error,
-          colors.error,
-        ),
+        brightness == Brightness.dark
+            ? colors.errorContainer
+            : colors.palettes.red.shade50,
+        colors.error,
+        colors.error,
+      ),
       AppAlertType.info => (
-          _infoAlertBackground(colors, brightness),
-          colors.onInfoContainer,
-          colors.onInfoContainer,
-        ),
+        _infoAlertBackground(colors, brightness),
+        colors.onInfoContainer,
+        colors.onInfoContainer,
+      ),
       AppAlertType.rejected => (
-          brightness == Brightness.dark
-              ? colors.errorContainer
-              : colors.palettes.red.shade50,
-          colors.palettes.red.shade400,
-          colors.palettes.red.shade400,
-        ),
+        brightness == Brightness.dark
+            ? colors.errorContainer
+            : colors.palettes.red.shade50,
+        colors.palettes.red.shade400,
+        colors.palettes.red.shade400,
+      ),
     };
   }
 
@@ -50,25 +50,25 @@ abstract final class StatusSurfaceTokens {
   }) {
     return switch (type) {
       AppStatusBadgeType.warning => (
-          colors.warningContainer,
-          colors.warning,
-          colors.onWarningContainer,
-        ),
+        colors.warningContainer,
+        colors.warning,
+        colors.onWarningContainer,
+      ),
       AppStatusBadgeType.alert => (
-          colors.errorContainer,
-          colors.error,
-          colors.onErrorContainer,
-        ),
+        colors.errorContainer,
+        colors.error,
+        colors.onErrorContainer,
+      ),
       AppStatusBadgeType.info => (
-          colors.infoContainer,
-          colors.onInfoContainer,
-          colors.onInfoContainer,
-        ),
+        colors.infoContainer,
+        colors.onInfoContainer,
+        colors.onInfoContainer,
+      ),
       AppStatusBadgeType.success => (
-          colors.successContainer,
-          colors.success,
-          colors.onSuccessContainer,
-        ),
+        colors.successContainer,
+        colors.success,
+        colors.onSuccessContainer,
+      ),
     };
   }
 

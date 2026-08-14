@@ -84,11 +84,10 @@ class _AddBranchPageState extends State<AddBranchPage> {
 
     switch (wizard.state.currentStep) {
       case 1:
+        // Phone validity (UaePhoneValidator) is enforced by AppPhoneField's
+        // own validator, part of this form — formValid already covers it.
         final formValid = _stepOneFormKey.currentState?.validate() ?? false;
-        final phoneValid =
-            draft.phone.trim().isNotEmpty &&
-            UaePhoneValidator.isValid(draft.phone);
-        if (!formValid || !draft.isStepOneComplete || !phoneValid) {
+        if (!formValid || !draft.isStepOneComplete) {
           // Surface the Figma inline field errors (`1513:7801` error frame).
           wizard.showStepOneErrors();
           return;

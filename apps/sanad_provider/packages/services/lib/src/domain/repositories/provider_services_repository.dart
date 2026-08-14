@@ -41,7 +41,7 @@ abstract interface class ProviderServicesRepository {
     required String mediaId,
   });
 
-  TaskEither<Failure, Unit> deleteImage({
+  TaskEither<Failure, ProviderServiceEntity> deleteImage({
     required String id,
     required String imageId,
   });

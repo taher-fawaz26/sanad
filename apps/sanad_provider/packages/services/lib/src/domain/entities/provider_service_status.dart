@@ -3,7 +3,8 @@
 enum ProviderServiceStatus {
   active,
   inactive,
-  all;
+  all
+  ;
 
   static ProviderServiceStatus fromApi(String value) => switch (value) {
     'active' => ProviderServiceStatus.active,

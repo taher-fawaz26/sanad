@@ -61,7 +61,6 @@ void main() {
         expect(states.single.coverageAccessDenied, isTrue);
       });
     });
-
   });
 
   group('AddBranchWizardCubit — edit mode', () {

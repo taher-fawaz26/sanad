@@ -11,8 +11,7 @@ class CatalogRepositoryImpl implements CatalogRepository {
   final CatalogRemoteDataSource _remoteDataSource;
 
   @override
-  TaskEither<Failure, ServicesPagedResult<CatalogServiceEntity>>
-  browseCatalog({
+  TaskEither<Failure, ServicesPagedResult<CatalogServiceEntity>> browseCatalog({
     int page = 1,
     int limit = 10,
     String? search,

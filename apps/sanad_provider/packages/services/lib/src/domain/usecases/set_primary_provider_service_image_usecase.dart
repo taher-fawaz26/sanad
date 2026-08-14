@@ -19,10 +19,7 @@ class SetPrimaryProviderServiceImageParams extends Equatable {
 
 class SetPrimaryProviderServiceImageUseCase
     implements
-        UseCase<
-          ProviderServiceEntity,
-          SetPrimaryProviderServiceImageParams
-        > {
+        UseCase<ProviderServiceEntity, SetPrimaryProviderServiceImageParams> {
   const SetPrimaryProviderServiceImageUseCase(this._repository);
 
   final ProviderServicesRepository _repository;

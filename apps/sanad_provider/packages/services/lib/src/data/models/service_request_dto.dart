@@ -60,8 +60,6 @@ class ServiceRequestDto extends ServiceRequestEntity
     updatedAt: updatedAt,
     description: description,
     rejectionReason: rejectionReason,
-    images: images
-        .map((m) => MediaRefEntity(id: m.id, url: m.url))
-        .toList(),
+    images: images.map((m) => MediaRefEntity(id: m.id, url: m.url)).toList(),
   );
 }

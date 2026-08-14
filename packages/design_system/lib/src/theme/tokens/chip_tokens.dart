@@ -49,15 +49,15 @@ abstract final class ChipTokens {
   ChipTokens._();
 
   static double minHeight(AppChipSize size) => switch (size) {
-        AppChipSize.compact => AppDimension.fieldHeightMd - AppSpacing.sm,
-        AppChipSize.expanded => AppDimension.fieldHeightMd,
-      };
+    AppChipSize.compact => AppDimension.fieldHeightMd - AppSpacing.sm,
+    AppChipSize.expanded => AppDimension.fieldHeightMd,
+  };
 
   static BorderRadius borderRadius(AppChipSize size) => BorderRadius.circular(
-        size == AppChipSize.compact
-            ? AppDimension.radiusPill
-            : AppDimension.fieldHeightMd / 2,
-      );
+    size == AppChipSize.compact
+        ? AppDimension.radiusPill
+        : AppDimension.fieldHeightMd / 2,
+  );
 
   static EdgeInsets padding({
     AppChipIconPosition iconPosition = AppChipIconPosition.none,
@@ -66,21 +66,21 @@ abstract final class ChipTokens {
     final gap = AppSpacing.sm;
     return switch (iconPosition) {
       AppChipIconPosition.right => EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          vertical,
-          AppSpacing.lg - gap / 2,
-          vertical,
-        ),
+        AppSpacing.lg,
+        vertical,
+        AppSpacing.lg - gap / 2,
+        vertical,
+      ),
       AppChipIconPosition.left => EdgeInsets.fromLTRB(
-          AppSpacing.lg - gap / 2,
-          vertical,
-          AppSpacing.lg,
-          vertical,
-        ),
+        AppSpacing.lg - gap / 2,
+        vertical,
+        AppSpacing.lg,
+        vertical,
+      ),
       AppChipIconPosition.none => EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: vertical,
-        ),
+        horizontal: AppSpacing.lg,
+        vertical: vertical,
+      ),
     };
   }
 

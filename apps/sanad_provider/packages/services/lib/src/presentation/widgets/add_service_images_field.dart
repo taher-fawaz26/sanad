@@ -157,11 +157,19 @@ class _AddServiceImagesFieldState extends State<AddServiceImagesField> {
 
   Future<void> _pickImages(BuildContext context) async {
     final bloc = context.read<MediaUploadBloc>();
+    final maxFiles = bloc.state.config.maxFiles ?? 5;
+    final remaining = maxFiles - bloc.state.items.length;
+    if (remaining <= 0) return;
     final result = await AssetPicker.pick(
       context,
-      options: const AssetPickerOptions(
+      options: AssetPickerOptions(
         allowFiles: false,
         allowMultiple: true,
+        // Without this, `maxSelection` defaults to 1 and the gallery
+        // provider silently truncates a multi-select down to the first
+        // asset — bound it to the remaining slots instead so a batch pick
+        // can never exceed `maxFiles` either.
+        maxSelection: remaining,
       ),
     );
     if (!result.hasAssets) return;

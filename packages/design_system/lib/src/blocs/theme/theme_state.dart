@@ -19,11 +19,11 @@ class ThemeState extends Equatable {
   final AppThemeMode mode;
 
   bool resolvesToDark(BuildContext context) => switch (mode) {
-        AppThemeMode.light => false,
-        AppThemeMode.dark => true,
-        AppThemeMode.system =>
-          MediaQuery.platformBrightnessOf(context) == Brightness.dark,
-      };
+    AppThemeMode.light => false,
+    AppThemeMode.dark => true,
+    AppThemeMode.system =>
+      MediaQuery.platformBrightnessOf(context) == Brightness.dark,
+  };
 
   @override
   List<Object> get props => [mode];

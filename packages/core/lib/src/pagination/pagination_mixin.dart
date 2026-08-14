@@ -45,15 +45,27 @@ mixin PaginationMixin<Event, State, Item, Q extends PageQuery>
   /// has a stable id field.
   Object? dedupKey(Item item) => item;
 
+  /// Bumped by every operation that starts a fresh page-1 view
+  /// ([loadFirstPage], [refresh], [onQueryChanged]). A fetch started under
+  /// an earlier epoch is dropped when it resolves instead of being applied,
+  /// so a slow `loadNextPage` (or a superseded `refresh`) can never land
+  /// after a newer one and graft stale rows / stale `meta` onto it —
+  /// `loadNextPage` runs under `droppable()` while search/filter changes
+  /// typically run under `restartable()`, so they don't cancel each other
+  /// via `bloc_concurrency` alone.
+  int _fetchEpoch = 0;
+
   /// Loads page 1, replacing any existing items. Use for initial load and
   /// for retrying after a first-page error.
   Future<void> loadFirstPage(Emitter<State> emit) async {
+    final epoch = ++_fetchEpoch;
     final data = readPage(state).copyWith(
       status: RequestStatus.loading,
+      loadingMore: false,
       clearFirstPageError: true,
     );
     emit(writePage(state, data));
-    await _fetch(emit, page: 1, append: false);
+    await _fetch(emit, page: 1, append: false, epoch: epoch);
   }
 
   /// Loads the next page and appends it. No-op if already loading more or
@@ -67,37 +79,45 @@ mixin PaginationMixin<Event, State, Item, Q extends PageQuery>
         data.copyWith(loadingMore: true, clearNextPageError: true),
       ),
     );
-    await _fetch(emit, page: data.nextPage, append: true);
+    await _fetch(emit, page: data.nextPage, append: true, epoch: _fetchEpoch);
   }
 
   /// Reloads page 1 (pull-to-refresh / manual refresh), replacing items but
   /// preserving the current search/filter query.
   Future<void> refresh(Emitter<State> emit) async {
+    final epoch = ++_fetchEpoch;
     final data = readPage(state).copyWith(
       status: RequestStatus.loading,
+      loadingMore: false,
       clearFirstPageError: true,
     );
     emit(writePage(state, data));
-    await _fetch(emit, page: 1, append: false);
+    await _fetch(emit, page: 1, append: false, epoch: epoch);
   }
 
   /// Call after the feature updates its search/filter/sort fields. Resets
   /// to page 1 and clears previously loaded items before re-fetching, so a
   /// changed query never mixes results with the old one.
   Future<void> onQueryChanged(Emitter<State> emit) async {
+    final epoch = ++_fetchEpoch;
     emit(
       writePage(state, PaginationData<Item>(status: RequestStatus.loading)),
     );
-    await _fetch(emit, page: 1, append: false);
+    await _fetch(emit, page: 1, append: false, epoch: epoch);
   }
 
   Future<void> _fetch(
     Emitter<State> emit, {
     required int page,
     required bool append,
+    required int epoch,
   }) async {
     final query = buildQuery(page: page);
     final result = await fetchPage(query).run();
+    // A newer loadFirstPage/refresh/onQueryChanged already superseded this
+    // fetch — applying it now would graft a stale page (or stale `meta`)
+    // onto whatever that newer operation already loaded.
+    if (epoch != _fetchEpoch) return;
     result.match(
       (failure) {
         final current = readPage(state);

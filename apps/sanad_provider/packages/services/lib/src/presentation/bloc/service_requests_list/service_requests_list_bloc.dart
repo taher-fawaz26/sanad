@@ -54,7 +54,10 @@ class ServiceRequestsListBloc
     required GetMyServiceRequestsUseCase getMyServiceRequestsUseCase,
   }) : _getMyServiceRequestsUseCase = getMyServiceRequestsUseCase,
        super(const ServiceRequestsListState()) {
-    on<ServiceRequestsListFetchEvent>((event, emit) => loadFirstPage(emit));
+    on<ServiceRequestsListFetchEvent>(
+      (event, emit) => loadFirstPage(emit),
+      transformer: droppable(),
+    );
     on<ServiceRequestsListRefreshEvent>(
       (event, emit) => refresh(emit),
       transformer: droppable(),
@@ -118,25 +121,26 @@ class ServiceRequestsListBloc
   @override
   TaskEither<Failure, Page<ServiceRequestEntity>> fetchPage(
     _ServiceRequestsQuery query,
-  ) => _getMyServiceRequestsUseCase(
-    GetMyServiceRequestsParams(
-      page: query.page,
-      limit: query.limit,
-      search: query.search,
-      status: query.status,
-    ),
-  ).map(
-    (result) => Page(
-      items: result.items,
-      meta: PageMeta(
-        totalItems: result.meta.totalItems,
-        itemCount: result.meta.itemCount,
-        itemsPerPage: result.meta.itemsPerPage,
-        totalPages: result.meta.totalPages,
-        currentPage: result.meta.currentPage,
-      ),
-    ),
-  );
+  ) =>
+      _getMyServiceRequestsUseCase(
+        GetMyServiceRequestsParams(
+          page: query.page,
+          limit: query.limit,
+          search: query.search,
+          status: query.status,
+        ),
+      ).map(
+        (result) => Page(
+          items: result.items,
+          meta: PageMeta(
+            totalItems: result.meta.totalItems,
+            itemCount: result.meta.itemCount,
+            itemsPerPage: result.meta.itemsPerPage,
+            totalPages: result.meta.totalPages,
+            currentPage: result.meta.currentPage,
+          ),
+        ),
+      );
 
   @override
   Object dedupKey(ServiceRequestEntity item) => item.id;

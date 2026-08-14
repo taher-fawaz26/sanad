@@ -371,6 +371,64 @@ void main() {
         expect(bloc.state.page.meta.currentPage, 1);
       },
     );
+
+    // `loadNextPage` and a query-change reducer (`onQueryChanged`/`refresh`)
+    // are different reducers a feature typically wires to *different* event
+    // types under *different* bloc_concurrency transformers (e.g.
+    // `droppable()` for load-more, `restartable()` for search) — so
+    // bloc_concurrency alone won't cancel one for the other. The mixin's
+    // fetch-epoch guard is what actually prevents a slow load-more from
+    // landing after a newer query reset.
+    blocTest<_TestBloc, _TestState>(
+      'a slow in-flight load-more resolving after a query change does not '
+      'graft stale rows onto the new query',
+      build: () => _TestBloc((q) async {
+        if (q.search != null) {
+          return right(_pageOf([9], currentPage: 1, totalPages: 1));
+        }
+        if (q.page == 2) {
+          await Future<void>.delayed(const Duration(milliseconds: 500));
+          return right(_pageOf([3], currentPage: 2, totalPages: 2));
+        }
+        return right(_pageOf([1, 2], currentPage: 1, totalPages: 2));
+      }),
+      act: (bloc) async {
+        bloc.add(_Fetch());
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(_LoadMore());
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        bloc.add(_SearchChanged('x'));
+      },
+      wait: const Duration(milliseconds: 900),
+      verify: (bloc) {
+        expect(bloc.state.page.items, [_Item(9)]);
+        expect(bloc.state.page.loadingMore, isFalse);
+      },
+    );
+
+    blocTest<_TestBloc, _TestState>(
+      'a slow in-flight load-more resolving after a refresh does not graft '
+      'stale rows onto the refreshed page 1',
+      build: () => _TestBloc((q) async {
+        if (q.page == 2) {
+          await Future<void>.delayed(const Duration(milliseconds: 500));
+          return right(_pageOf([3], currentPage: 2, totalPages: 2));
+        }
+        return right(_pageOf([1, 2], currentPage: 1, totalPages: 2));
+      }),
+      act: (bloc) async {
+        bloc.add(_Fetch());
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(_LoadMore());
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        bloc.add(_Refresh());
+      },
+      wait: const Duration(milliseconds: 900),
+      verify: (bloc) {
+        expect(bloc.state.page.items, [_Item(1), _Item(2)]);
+        expect(bloc.state.page.loadingMore, isFalse);
+      },
+    );
   });
 
   group('PaginationMixin.dedupKey', () {

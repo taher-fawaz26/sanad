@@ -285,7 +285,11 @@ void main() {
         'updateServices sets service list',
         build: () => cubit,
         act: (c) => c.updateServices(const [
-          CatalogServiceSelection(id: 's1', name: 'Haircut', categoryName: 'Hair'),
+          CatalogServiceSelection(
+            id: 's1',
+            name: 'Haircut',
+            categoryName: 'Hair',
+          ),
         ]),
         expect: () => [
           isA<AddBranchDraft>().having(
@@ -421,7 +425,11 @@ void main() {
         expect(
           const AddBranchDraft(
             selectedServices: [
-              CatalogServiceSelection(id: 's1', name: 'Cut', categoryName: 'Hair'),
+              CatalogServiceSelection(
+                id: 's1',
+                name: 'Cut',
+                categoryName: 'Hair',
+              ),
             ],
           ).isStepThreeComplete,
           isTrue,

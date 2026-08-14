@@ -33,19 +33,19 @@ class ColorScale {
 
   /// Returns the shade for [step] — one of `50, 100, …, 950`.
   Color operator [](int step) => switch (step) {
-        50 => shade50,
-        100 => shade100,
-        200 => shade200,
-        300 => shade300,
-        400 => shade400,
-        500 => shade500,
-        600 => shade600,
-        700 => shade700,
-        800 => shade800,
-        900 => shade900,
-        950 => shade950,
-        _ => throw ArgumentError.value(step, 'step', 'Invalid palette step'),
-      };
+    50 => shade50,
+    100 => shade100,
+    200 => shade200,
+    300 => shade300,
+    400 => shade400,
+    500 => shade500,
+    600 => shade600,
+    700 => shade700,
+    800 => shade800,
+    900 => shade900,
+    950 => shade950,
+    _ => throw ArgumentError.value(step, 'step', 'Invalid palette step'),
+  };
 
   ColorScale lerp(ColorScale other, double t) {
     return ColorScale(

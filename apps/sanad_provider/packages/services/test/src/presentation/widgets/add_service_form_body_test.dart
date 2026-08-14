@@ -27,12 +27,20 @@ class _FakeBrowseCatalogUseCase implements BrowseCatalogUseCase {
     const CatalogServiceEntity(
       id: 'svc-wash-car',
       name: 'Wash Car',
-      category: CategoryRefEntity(id: 'cat-car', name: 'Car', description: null),
+      category: CategoryRefEntity(
+        id: 'cat-car',
+        name: 'Car',
+        description: null,
+      ),
     ),
     const CatalogServiceEntity(
       id: 'svc-oil-change',
       name: 'Oil Change',
-      category: CategoryRefEntity(id: 'cat-car', name: 'Car', description: null),
+      category: CategoryRefEntity(
+        id: 'cat-car',
+        name: 'Car',
+        description: null,
+      ),
     ),
   ];
 
@@ -193,4 +201,156 @@ void main() {
       expect(completenessEvents, isNot(contains(true)));
     },
   );
+
+  group('description validation', () {
+    testWidgets('valid input shows no length error', (tester) async {
+      await _pump(tester, bloc, onCompletenessChanged: (_) {});
+
+      await tester.enterText(
+        find.byType(TextField).first,
+        'A valid description',
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('services.add_service.description_length_error'),
+        findsNothing,
+      );
+    });
+
+    testWidgets('exactly 500 characters passes', (tester) async {
+      await _pump(tester, bloc, onCompletenessChanged: (_) {});
+
+      await tester.enterText(find.byType(TextField).first, 'a' * 500);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('services.add_service.description_length_error'),
+        findsNothing,
+      );
+    });
+
+    testWidgets('501 characters shows the corrected length error', (
+      tester,
+    ) async {
+      await _pump(tester, bloc, onCompletenessChanged: (_) {});
+
+      await tester.enterText(find.byType(TextField).first, 'a' * 501);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('services.add_service.description_length_error'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('over 500 characters shows the length error', (tester) async {
+      await _pump(tester, bloc, onCompletenessChanged: (_) {});
+
+      await tester.enterText(find.byType(TextField).first, 'a' * 600);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('services.add_service.description_length_error'),
+        findsOneWidget,
+      );
+    });
+  });
+
+  testWidgets(
+    'validateSelection reveals the required error when no service is '
+    'selected, and clears it once one is picked',
+    (tester) async {
+      final key = GlobalKey<AddServiceFormBodyState>();
+      await _pump(tester, bloc, onCompletenessChanged: (_) {}, key: key);
+
+      expect(
+        find.text('services.add_service.service_required_error'),
+        findsNothing,
+      );
+
+      final isValid = key.currentState!.validateSelection();
+      await tester.pumpAndSettle();
+
+      expect(isValid, isFalse);
+      expect(
+        find.text('services.add_service.service_required_error'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byType(AppSelectField).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Wash Car'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('services.add_service.service_required_error'),
+        findsNothing,
+      );
+    },
+  );
+
+  group('images count', () {
+    testWidgets('0 uploaded images keeps the form incomplete', (
+      tester,
+    ) async {
+      final completenessEvents = <bool>[];
+      await _pump(tester, bloc, onCompletenessChanged: completenessEvents.add);
+
+      await tester.tap(find.byType(AppSelectField).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Wash Car'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, 'Great service');
+      await tester.pumpAndSettle();
+
+      expect(completenessEvents, isNot(contains(true)));
+    });
+
+    testWidgets(
+      '6 successfully-uploaded images (the backend maxItems) satisfies the '
+      'images requirement',
+      (tester) async {
+        final completenessEvents = <bool>[];
+        await _pump(
+          tester,
+          bloc,
+          onCompletenessChanged: completenessEvents.add,
+        );
+
+        // Seed 6 already-successful items directly via the bloc's
+        // existing-items-seed event (used in real usage for pre-filling an
+        // edit form) — this exercises `AddServiceFormBody`'s completeness
+        // check against a real 6-item success count without touching
+        // `asset_picker`/`media_upload` internals.
+        bloc.add(
+          MediaUploadExistingItemsSeeded([
+            for (var i = 0; i < 6; i++)
+              MediaUploadItem.remote(
+                mediaId: 'media-$i',
+                url: 'https://x/$i.jpg',
+              ),
+          ]),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byType(AppSelectField).first);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Wash Car'));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField).first, 'Great service');
+        await tester.pumpAndSettle();
+
+        expect(completenessEvents.last, isTrue);
+      },
+    );
+
+    // A 7th image is not reachable through this widget's own UI — the
+    // picker itself is capped at `maxFiles` (wired to 6 by `AddServicePage`,
+    // see its `MediaUploadConfig`), and `AddServiceImagesField` only ever
+    // adds up to that cap via `AssetPicker.pick`'s `maxSelection`. Driving
+    // the bloc to 7 successful items directly (bypassing the picker) would
+    // only be testing `MediaUploadBloc` internals, not this form body, so
+    // it's left untested here per the task's guidance to use judgment.
+  });
 }

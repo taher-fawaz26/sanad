@@ -42,3 +42,6 @@ doc/api/
 # dart-define secrets: commit only the *.example.json templates, never the real files
 **/dart_defines/*.json
 !**/dart_defines/*.example.json
+
+# stray `flutter analyze`/`flutter test` run logs left in package roots
+flutter_[0-9][0-9].log

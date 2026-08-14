@@ -79,22 +79,19 @@ class ProviderServicesRepositoryImpl implements ProviderServicesRepository {
 
   @override
   TaskEither<Failure, ProviderServiceOverviewEntity> getOverview() =>
-      _remoteDataSource.getOverview();
+      _remoteDataSource.getOverview().map((dto) => dto.toEntity());
 
   @override
   TaskEither<Failure, ProviderServiceEntity> addImage({
     required String id,
     required String mediaId,
-  }) => _remoteDataSource
-      .addImage(id, mediaId)
-      .flatMap((_) => _remoteDataSource.getProviderService(id))
-      .map((dto) => dto.toEntity());
+  }) => _remoteDataSource.addImage(id, mediaId).map((dto) => dto.toEntity());
 
   @override
-  TaskEither<Failure, Unit> deleteImage({
+  TaskEither<Failure, ProviderServiceEntity> deleteImage({
     required String id,
     required String imageId,
-  }) => _remoteDataSource.deleteImage(id, imageId);
+  }) => _remoteDataSource.deleteImage(id, imageId).map((dto) => dto.toEntity());
 
   @override
   TaskEither<Failure, ProviderServiceEntity> setPrimaryImage({

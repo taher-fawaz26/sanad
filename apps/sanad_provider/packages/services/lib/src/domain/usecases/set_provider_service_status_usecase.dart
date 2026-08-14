@@ -19,8 +19,7 @@ class SetProviderServiceStatusParams extends Equatable {
 }
 
 class SetProviderServiceStatusUseCase
-    implements
-        UseCase<ProviderServiceEntity, SetProviderServiceStatusParams> {
+    implements UseCase<ProviderServiceEntity, SetProviderServiceStatusParams> {
   const SetProviderServiceStatusUseCase(this._repository);
 
   final ProviderServicesRepository _repository;

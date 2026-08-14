@@ -8,21 +8,32 @@ import 'package:flutter/material.dart';
 /// `GET /services?search=`), not a navigate-away trigger — Figma shows it
 /// inline in the list, not as a separate search screen.
 ///
-/// Status/Type are decorative per Figma but have no backend/BLoC filter
-/// param (`GetServicesListParams` only supports `page`/`search`) — `onTap`
-/// is exposed so a caller COULD wire a picker, but nothing calls it yet
-/// (see audit blockers: no server-side status/type filter exists).
+/// Status is a real server-side filter (`GET /provider-services?status=`,
+/// `active`/`inactive`/`all`) — [onStatusTap] opens a picker and
+/// [statusLabel] reflects the current selection.
+///
+/// Type has no backend query param to filter on (confirmed against the live
+/// API contract — `GET /provider-services` only accepts `page`/`limit`/
+/// `search`/`status`) — [onTypeTap] is intentionally left unset by every
+/// caller so the dropdown stays visible but inert until the backend adds
+/// one. Do not fake client-side filtering for it.
 class ServicesFilterBar extends StatelessWidget {
   const ServicesFilterBar({
     super.key,
     this.searchController,
     this.onSearchChanged,
+    this.statusLabel,
     this.onStatusTap,
     this.onTypeTap,
   });
 
   final TextEditingController? searchController;
   final ValueChanged<String>? onSearchChanged;
+
+  /// Label shown on the Status dropdown — pass the current filter's display
+  /// text (e.g. "Active") so the selection is visible; defaults to the
+  /// generic "Status" placeholder when unset.
+  final String? statusLabel;
   final VoidCallback? onStatusTap;
   final VoidCallback? onTypeTap;
 
@@ -42,7 +53,7 @@ class ServicesFilterBar extends StatelessWidget {
           children: [
             Expanded(
               child: _FilterDropdown(
-                label: 'services.filter_status'.tr(),
+                label: statusLabel ?? 'services.filter_status'.tr(),
                 onTap: onStatusTap,
               ),
             ),

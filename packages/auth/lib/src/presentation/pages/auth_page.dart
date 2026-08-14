@@ -222,7 +222,7 @@ class AuthPage extends HookWidget {
                   autovalidateMode: AutovalidateMode.onUserInteraction,
                   onSubmitted: (_) => submit(),
                   validator: (value) {
-                    if (value?.trim().isEmpty ?? true) {
+                    if (!RequiredValidator.isValid(value)) {
                       return 'auth.field_required'.tr();
                     }
                     if (!EmailValidator.isValid(value!.trim())) {

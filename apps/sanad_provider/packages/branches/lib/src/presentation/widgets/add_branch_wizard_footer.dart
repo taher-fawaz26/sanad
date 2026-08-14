@@ -70,8 +70,8 @@ class AddBranchWizardFooter extends StatelessWidget {
 }
 
 /// Edit-mode footer: Save on every step, enabled only when the whole draft is
-/// valid (all steps complete + a valid phone), disabled while a save is in
-/// flight.
+/// valid (all steps complete + phone is either empty or a valid format),
+/// disabled while a save is in flight.
 class _EditSaveButton extends StatelessWidget {
   const _EditSaveButton({required this.onSave});
 
@@ -80,8 +80,11 @@ class _EditSaveButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocSelector<AddBranchDraftCubit, AddBranchDraft, bool>(
-      selector: (state) =>
-          state.canSubmit && UaePhoneValidator.isValid(state.phone),
+      selector: (state) {
+        final phone = state.phone.trim();
+        final phoneValid = phone.isEmpty || UaePhoneValidator.isValid(phone);
+        return state.canSubmit && phoneValid;
+      },
       builder: (context, canSave) {
         return BlocSelector<AddBranchBloc, AddBranchState, bool>(
           selector: (state) => state.isLoading,

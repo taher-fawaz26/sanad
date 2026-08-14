@@ -42,6 +42,7 @@ class AddServiceFormBodyState extends State<AddServiceFormBody> {
 
   CatalogServiceEntity? _selectedService;
   bool _wasComplete = false;
+  bool _showSelectionError = false;
 
   /// Read by `AddServicePage` on submit — the catalog service id
   /// (`serviceId` in `CreateProviderServiceDto`).
@@ -52,6 +53,16 @@ class AddServiceFormBodyState extends State<AddServiceFormBody> {
   /// confirmation on back navigation.
   bool get hasUnsavedInput =>
       _selectedService != null || _descriptionController.text.trim().isNotEmpty;
+
+  /// Validates the service-selection field, revealing its error text if
+  /// nothing is selected. Called by `AddServicePage` on submit — the
+  /// dropdown has no built-in `Form`/`validator` hook, so this mirrors
+  /// `WorkerTypeSelectField`'s `showValidationErrors` pattern instead.
+  bool validateSelection() {
+    final isValid = _selectedService != null;
+    if (!isValid) setState(() => _showSelectionError = true);
+    return isValid;
+  }
 
   @override
   void dispose() {
@@ -72,6 +83,9 @@ class AddServiceFormBodyState extends State<AddServiceFormBody> {
             hint: 'services.add_service.service_select_hint'.tr(),
             value: _selectedService?.name,
             onTap: _pickService,
+            errorText: _showSelectionError && _selectedService == null
+                ? 'services.add_service.service_required_error'.tr()
+                : null,
           ),
           SizedBox(height: AppSpacing.sm),
           AppInlineLinkText(
@@ -96,6 +110,8 @@ class AddServiceFormBodyState extends State<AddServiceFormBody> {
                 hint: 'services.add_service.description_hint'.tr(),
                 controller: _descriptionController,
                 maxLines: 5,
+                validator: _validateDescription,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
                 onChanged: (_) => _reportCompleteness(),
               ),
               PositionedDirectional(
@@ -138,16 +154,40 @@ class AddServiceFormBodyState extends State<AddServiceFormBody> {
     );
     if (selected == null || selected.isEmpty) return;
 
-    setState(() => _selectedService = selected.first);
+    setState(() {
+      _selectedService = selected.first;
+      _showSelectionError = false;
+    });
     _reportCompleteness();
   }
 
+  String? _validateDescription(String? value) {
+    if (!LengthValidator.isValid(value, maxLength: 500)) {
+      return 'services.add_service.description_length_error'.tr(
+        namedArgs: {'max': '500'},
+      );
+    }
+    return null;
+  }
+
   void _reportCompleteness() {
-    final hasImage = context.read<MediaUploadBloc>().state.items.any(
-      (item) => item.isSuccess,
+    final uploadedCount = context
+        .read<MediaUploadBloc>()
+        .state
+        .items
+        .where((item) => item.isSuccess)
+        .length;
+    // `CreateProviderServiceDto.imageIds`: minItems 1, maxItems 6.
+    final hasImage = CollectionSizeValidator.isValid(
+      uploadedCount,
+      minItems: 1,
+      maxItems: 6,
     );
     final isComplete =
-        _selectedService != null && description.isNotEmpty && hasImage;
+        _selectedService != null &&
+        description.isNotEmpty &&
+        LengthValidator.isValid(description, maxLength: 500) &&
+        hasImage;
 
     if (isComplete == _wasComplete) return;
     _wasComplete = isComplete;

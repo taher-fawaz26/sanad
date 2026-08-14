@@ -42,8 +42,7 @@ class EditServiceFormBodyState extends State<EditServiceFormBody> {
 
   /// Read by `EditServicePage` to decide whether to show the
   /// discard-changes confirmation on back navigation.
-  bool get hasUnsavedInput =>
-      description != (widget.service.description ?? '');
+  bool get hasUnsavedInput => description != (widget.service.description ?? '');
 
   @override
   void initState() {
@@ -82,11 +81,13 @@ class EditServiceFormBodyState extends State<EditServiceFormBody> {
               hint: 'services.add_service.description_hint'.tr(),
               controller: _descriptionController,
               maxLines: 5,
+              validator: _validateDescription,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
               onChanged: (_) => _reportCompleteness(),
             ),
             PositionedDirectional(
-             end: AppSpacing.xs,
-                bottom: AppSpacing.lg,
+              end: AppSpacing.xs,
+              bottom: AppSpacing.lg,
               child: AddServiceAiEnhanceButton(),
             ),
           ],
@@ -95,8 +96,19 @@ class EditServiceFormBodyState extends State<EditServiceFormBody> {
     );
   }
 
+  String? _validateDescription(String? value) {
+    if (!LengthValidator.isValid(value, maxLength: 500)) {
+      return 'services.add_service.description_length_error'.tr(
+        namedArgs: {'max': '500'},
+      );
+    }
+    return null;
+  }
+
   void _reportCompleteness() {
-    final isComplete = description.isNotEmpty;
+    final isComplete =
+        description.isNotEmpty &&
+        LengthValidator.isValid(description, maxLength: 500);
     if (isComplete == _wasComplete) return;
     _wasComplete = isComplete;
     widget.onCompletenessChanged(isComplete);

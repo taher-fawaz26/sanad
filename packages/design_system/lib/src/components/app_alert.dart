@@ -78,8 +78,8 @@ class AppAlert extends StatelessWidget {
   }
 
   static String _iconAssetFor(AppAlertType type) => switch (type) {
-        AppAlertType.warning => AppSvgs.alertTriangle,
-        AppAlertType.error => AppSvgs.alertCircle,
-        AppAlertType.info || AppAlertType.rejected => AppSvgs.reloadWindow,
-      };
+    AppAlertType.warning => AppSvgs.alertTriangle,
+    AppAlertType.error => AppSvgs.alertCircle,
+    AppAlertType.info || AppAlertType.rejected => AppSvgs.reloadWindow,
+  };
 }

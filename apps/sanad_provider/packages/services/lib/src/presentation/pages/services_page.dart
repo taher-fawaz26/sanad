@@ -60,6 +60,13 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
     );
   }
 
+  /// Whether the empty-state layout (swapped background, hidden FAB, no
+  /// segmented control) should show for the current tab/state combination.
+  bool _showEmpty(ServicesListState state) =>
+      _selectedTab == 0 &&
+      state.status == RequestStatus.success &&
+      state.services.isEmpty;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
@@ -67,12 +74,17 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
     return BlocListener<ServiceActionBloc, ServiceActionState>(
       listener: _handleActionState,
       child: BlocBuilder<ServicesListBloc, ServicesListState>(
+        // The page chrome below (nav bar, FAB, segmented control vs. empty
+        // state) only depends on `_showEmpty` — every other pagination emit
+        // (load-more, loadingMore toggling, item updates) is irrelevant to
+        // it. `_MyServicesContent` reads `ServicesListBloc` itself via its
+        // own `BlocBuilder`, so it still rebuilds on every emit; only this
+        // outer chrome is spared the redundant rebuilds.
+        buildWhen: (previous, current) =>
+            _showEmpty(previous) != _showEmpty(current),
         builder: (context, listState) {
           final isMyServices = _selectedTab == 0;
-          final showEmpty =
-              isMyServices &&
-              listState.status == RequestStatus.success &&
-              listState.services.isEmpty;
+          final showEmpty = _showEmpty(listState);
 
           return Scaffold(
             backgroundColor: showEmpty ? colors.surface : colors.background,
@@ -126,10 +138,7 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
                     ),
                     Expanded(
                       child: isMyServices
-                          ? _MyServicesContent(
-                              state: listState,
-                              onAddService: _onAddService,
-                            )
+                          ? _MyServicesContent(onAddService: _onAddService)
                           : const _ServiceRequestsContent(),
                     ),
                   ],
@@ -198,9 +207,8 @@ class _DashboardHeader extends StatelessWidget {
 }
 
 class _MyServicesContent extends StatefulWidget {
-  const _MyServicesContent({required this.state, required this.onAddService});
+  const _MyServicesContent({required this.onAddService});
 
-  final ServicesListState state;
   final VoidCallback onAddService;
 
   @override
@@ -209,7 +217,7 @@ class _MyServicesContent extends StatefulWidget {
 
 class _MyServicesContentState extends State<_MyServicesContent> {
   late final _searchController = TextEditingController(
-    text: widget.state.searchQuery,
+    text: context.read<ServicesListBloc>().state.searchQuery,
   );
 
   @override
@@ -227,6 +235,39 @@ class _MyServicesContentState extends State<_MyServicesContent> {
       context.read<ServicesListBloc>().add(const ServicesListRefreshEvent());
     });
   }
+
+  void _showStatusFilterSheet(
+    BuildContext context,
+    ProviderServiceStatus current,
+  ) {
+    final bloc = context.read<ServicesListBloc>();
+    showAppActionSheet<void>(
+      context: context,
+      title: 'services.filter_status'.tr(),
+      cancelLabel: 'services.cancel'.tr(),
+      items: [
+        for (final status in const [
+          ProviderServiceStatus.all,
+          ProviderServiceStatus.active,
+          ProviderServiceStatus.inactive,
+        ])
+          AppActionSheetItem(
+            label: _statusFilterLabel(status),
+            onTap: () {
+              if (status == current) return;
+              bloc.add(ServicesListStatusChangedEvent(status));
+            },
+          ),
+      ],
+    );
+  }
+
+  static String _statusFilterLabel(ProviderServiceStatus status) =>
+      switch (status) {
+        ProviderServiceStatus.all => 'services.requests_filter_all'.tr(),
+        ProviderServiceStatus.active => 'services.status_active'.tr(),
+        ProviderServiceStatus.inactive => 'services.status_inactive'.tr(),
+      };
 
   /// Realistic mock used only to skeletonize the real row via
   /// [AppSkeletonizer] — no bespoke skeleton widget.
@@ -248,92 +289,108 @@ class _MyServicesContentState extends State<_MyServicesContent> {
 
   @override
   Widget build(BuildContext context) {
-    final state = widget.state;
     final onAddService = widget.onAddService;
 
-    // First-page load: skeletonize the *real* row widget with mock data (no
-    // bespoke skeleton layout), matching the workers/invitations convention.
-    if (state.isLoading) {
-      return AppSkeletonList(
-        itemBuilder: (_, _) => ServiceListItem(service: _skeletonService),
-      );
-    }
+    // Own `BlocBuilder` (rather than receiving state via a constructor
+    // param) so this content rebuilds on every `ServicesListBloc` emit
+    // independent of the parent page's chrome, which only rebuilds on the
+    // rarer empty-state transition — see `_ProviderServicesPageState.build`.
+    return BlocBuilder<ServicesListBloc, ServicesListState>(
+      builder: (context, state) {
+        // First-page load: skeletonize the *real* row widget with mock data
+        // (no bespoke skeleton layout), matching the workers/invitations
+        // convention.
+        if (state.isLoading) {
+          return AppSkeletonList(
+            itemBuilder: (_, _) => ServiceListItem(service: _skeletonService),
+          );
+        }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.xl,
-            AppSpacing.md,
-            AppSpacing.xl,
-            0,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const ServiceMetricsSection(),
-              SizedBox(height: AppSpacing.lg),
-              ServicesFilterBar(
-                searchController: _searchController,
-                onSearchChanged: (query) =>
-                    context.read<ServicesListBloc>().add(
-                      ServicesListSearchChangedEvent(query),
-                    ),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.xl,
+                AppSpacing.md,
+                AppSpacing.xl,
+                0,
               ),
-              SizedBox(height: AppSpacing.xl),
-            ],
-          ),
-        ),
-        Expanded(
-          child: AppRefreshIndicator(
-            onRefresh: () async => context.read<ServicesListBloc>().add(
-              const ServicesListRefreshEvent(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const ServiceMetricsSection(),
+                  SizedBox(height: AppSpacing.lg),
+                  ServicesFilterBar(
+                    searchController: _searchController,
+                    onSearchChanged: (query) =>
+                        context.read<ServicesListBloc>().add(
+                          ServicesListSearchChangedEvent(query),
+                        ),
+                    statusLabel: state.statusFilter == ProviderServiceStatus.all
+                        ? null
+                        : _statusFilterLabel(state.statusFilter),
+                    onStatusTap: () =>
+                        _showStatusFilterSheet(context, state.statusFilter),
+                    // Type has no backend query param to filter on (see
+                    // ServicesFilterBar's doc comment) — intentionally left
+                    // unwired; the dropdown stays visible but inert.
+                  ),
+                  SizedBox(height: AppSpacing.xl),
+                ],
+              ),
             ),
-            child: AppSwipeActionsGroup(
-              child: SanadPagedList<ProviderServiceEntity>(
-                state: toPagingState(state.pagination),
-                controller: MainNavScrollController.maybeOf(context),
-                // AppRefreshIndicator needs the child to always accept an
-                // overscroll drag — without this, a short list (few items)
-                // fights the refresh gesture with clamping physics.
-                physics: const AlwaysScrollableScrollPhysics(),
-                fetchNextPage: () => context.read<ServicesListBloc>().add(
-                  const ServicesListLoadMoreEvent(),
+            Expanded(
+              child: AppRefreshIndicator(
+                onRefresh: () async => context.read<ServicesListBloc>().add(
+                  const ServicesListRefreshEvent(),
                 ),
-                padding: EdgeInsets.fromLTRB(
-                  AppSpacing.xl,
-                  0,
-                  AppSpacing.xl,
-                  AppSpacing.xl,
-                ),
-                separatorBuilder: (_, _) => SizedBox(height: AppSpacing.md),
-                itemBuilder: (context, service, index) => ServiceListItem(
-                  key: ValueKey(service.id),
-                  service: service,
-                  onTap: () => _onServiceTap(context, service),
-                ),
-                firstPageErrorIndicatorBuilder: (_) => Center(
-                  child: _ServicesErrorState(
-                    failure: state.failure,
-                    onRetry: () => context.read<ServicesListBloc>().add(
-                      const ServicesListFetchEvent(),
+                child: AppSwipeActionsGroup(
+                  child: SanadPagedList<ProviderServiceEntity>(
+                    state: toPagingState(state.pagination),
+                    controller: MainNavScrollController.maybeOf(context),
+                    // AppRefreshIndicator needs the child to always accept an
+                    // overscroll drag — without this, a short list (few items)
+                    // fights the refresh gesture with clamping physics.
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    fetchNextPage: () => context.read<ServicesListBloc>().add(
+                      const ServicesListLoadMoreEvent(),
+                    ),
+                    padding: EdgeInsets.fromLTRB(
+                      AppSpacing.xl,
+                      0,
+                      AppSpacing.xl,
+                      AppSpacing.xl,
+                    ),
+                    separatorBuilder: (_, _) => SizedBox(height: AppSpacing.md),
+                    itemBuilder: (context, service, index) => ServiceListItem(
+                      key: ValueKey(service.id),
+                      service: service,
+                      onTap: () => _onServiceTap(context, service),
+                    ),
+                    firstPageErrorIndicatorBuilder: (_) => Center(
+                      child: _ServicesErrorState(
+                        failure: state.failure,
+                        onRetry: () => context.read<ServicesListBloc>().add(
+                          const ServicesListFetchEvent(),
+                        ),
+                      ),
+                    ),
+                    newPageErrorIndicatorBuilder: (_) => _NextPageErrorRetry(
+                      onRetry: () => context.read<ServicesListBloc>().add(
+                        const ServicesListLoadMoreEvent(),
+                      ),
+                    ),
+                    noItemsFoundIndicatorBuilder: (_) => Center(
+                      child: ServicesEmptyState(onAddService: onAddService),
                     ),
                   ),
                 ),
-                newPageErrorIndicatorBuilder: (_) => _NextPageErrorRetry(
-                  onRetry: () => context.read<ServicesListBloc>().add(
-                    const ServicesListLoadMoreEvent(),
-                  ),
-                ),
-                noItemsFoundIndicatorBuilder: (_) => Center(
-                  child: ServicesEmptyState(onAddService: onAddService),
-                ),
               ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 }

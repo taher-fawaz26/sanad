@@ -33,6 +33,8 @@ class AppPhoneField extends StatefulWidget {
     this.trailing,
     this.showVerifiedBadge = false,
     this.readOnly = false,
+    this.validator,
+    this.autovalidateMode,
   });
 
   final String label;
@@ -62,6 +64,14 @@ class AppPhoneField extends StatefulWidget {
 
   /// Read-only display for verified phone with trailing Change action.
   final bool readOnly;
+
+  /// Optional field-level validation, mirroring [AppTextField.validator].
+  /// Ignored while [errorText] is set — [errorText] always takes priority.
+  final FormFieldValidator<String>? validator;
+
+  /// Mirrors [AppTextField.autovalidateMode]; only relevant when
+  /// [validator] is set.
+  final AutovalidateMode? autovalidateMode;
 
   /// Gap between flag and country-code group — Figma `gap-[14px]`.
   static const double _prefixGap = 14;
@@ -127,13 +137,31 @@ class _AppPhoneFieldState extends State<AppPhoneField> {
 
   @override
   Widget build(BuildContext context) {
+    return FormField<String>(
+      validator: (value) => widget.validator?.call(_controller.text),
+      initialValue: _controller.text,
+      autovalidateMode: widget.autovalidateMode,
+      enabled: widget.enabled,
+      builder: (field) => _buildField(context, field),
+    );
+  }
+
+  String? _resolveError(FormFieldState<String> field) {
+    if (widget.errorText != null && widget.errorText!.isNotEmpty) {
+      return widget.errorText;
+    }
+    return field.errorText;
+  }
+
+  Widget _buildField(BuildContext context, FormFieldState<String> field) {
     final colors = context.appColors;
     final typography = context.appTypography;
     final brightness = Theme.of(context).brightness;
     final fieldHeight = responsiveDimension(FieldTokens.fieldHeight);
     final labelGap = responsiveDimension(FieldTokens.labelGap);
     final iconSize = AppDimension.iconLg;
-    final hasError = widget.errorText != null && widget.errorText!.isNotEmpty;
+    final resolvedError = _resolveError(field);
+    final hasError = resolvedError != null && resolvedError.isNotEmpty;
     final dark = colors.palettes.dark;
 
     return Column(
@@ -154,7 +182,10 @@ class _AppPhoneFieldState extends State<AppPhoneField> {
             readOnly: widget.readOnly,
             keyboardType: TextInputType.phone,
             textInputAction: TextInputAction.next,
-            onChanged: widget.onChanged,
+            onChanged: (value) {
+              field.didChange(value);
+              widget.onChanged?.call(value);
+            },
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             style: FieldTokens.valueStyle(
               typography,
@@ -290,7 +321,7 @@ class _AppPhoneFieldState extends State<AppPhoneField> {
         if (hasError) ...[
           SizedBox(height: labelGap),
           Text(
-            widget.errorText!,
+            resolvedError,
             style: FieldTokens.errorStyle(typography, colors, brightness),
           ),
         ],

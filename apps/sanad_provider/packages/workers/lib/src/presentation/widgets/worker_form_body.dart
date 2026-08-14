@@ -80,7 +80,7 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
   /// All required fields are filled (and contact fields are valid when
   /// [WorkerFormBody.requireContact] is true).
   bool get isComplete {
-    if (fullName.isEmpty || jobTitle.isEmpty || type == null) return false;
+    if (fullName.isEmpty || type == null) return false;
     if (_validateFullName(fullNameController.text) != null) return false;
     if (widget.requireContact) {
       if (_validateEmail(emailController.text) != null) return false;
@@ -150,28 +150,43 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
   /// Mirrors the backend's `name` rule: letters, spaces, dashes, and
   /// apostrophes only — no digits or other punctuation (backend rejects with
   /// "...حروف ومسافات وشرطات وفواصل عليا فقط").
+  ///
+  /// Deliberately NOT `PersonNameValidator` (core): that validator requires
+  /// ≥2 words, but a worker may legitimately be registered under a single
+  /// name (e.g. "Ahmed"). The backend's `UpdateWorkerDto.name` schema has no
+  /// word-count constraint either — only `minLength`/`maxLength` on a plain
+  /// string — which confirms single-word names are valid product behavior
+  /// here, not an oversight. Do not "fix" this by swapping in
+  /// `PersonNameValidator`.
   static final RegExp _namePattern = RegExp(
     r"^[\p{L}\s'-]+$",
     unicode: true,
   );
 
   String? _validateFullName(String? value) {
-    final trimmed = value?.trim() ?? '';
-    if (trimmed.isEmpty) return 'workers.add_worker.validation_required'.tr();
+    if (!RequiredValidator.isValid(value)) {
+      return 'workers.add_worker.validation_required'.tr();
+    }
+    final trimmed = value!.trim();
     if (!_namePattern.hasMatch(trimmed)) {
       return 'workers.add_worker.validation_name_format'.tr();
+    }
+    if (!LengthValidator.isValid(trimmed, minLength: 3, maxLength: 255)) {
+      return 'workers.add_worker.validation_length_error'.tr(
+        namedArgs: {'min': '3', 'max': '255'},
+      );
     }
     return null;
   }
 
   String? _validateEmail(String? value) {
     if (widget.emailReadOnly) return null;
-    final trimmed = value?.trim() ?? '';
-    if (trimmed.isEmpty) {
+    if (!RequiredValidator.isValid(value)) {
       return widget.requireContact
           ? 'workers.add_worker.validation_required'.tr()
           : null;
     }
+    final trimmed = value!.trim();
     if (!EmailValidator.isValid(trimmed)) {
       return 'workers.add_worker.validation_email'.tr();
     }
@@ -185,9 +200,30 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
     return null;
   }
 
-  String? get _phoneErrorText {
-    if (!widget.showValidationErrors || !widget.requireContact) return null;
-    return isPhoneValid ? null : 'workers.add_worker.validation_required'.tr();
+  /// Empty text is only an error when the field is required; a non-empty
+  /// value that fails [UaePhoneValidator] gets its own distinct format
+  /// error rather than being conflated with "required".
+  String? _validatePhone(String? _) {
+    final raw = phoneController.text.trim();
+    if (raw.isEmpty) {
+      return widget.requireContact
+          ? 'workers.add_worker.validation_required'.tr()
+          : null;
+    }
+    return UaePhoneValidator.validationMessage(raw)?.tr();
+  }
+
+  /// `UpdateWorkerDto.jobTitle` / `CreateInvitationDto.jobTitle` are both
+  /// optional (maxLength 255, not required) — so an empty job title is
+  /// valid; only enforce the length limit when a value is present.
+  String? _validateJobTitle(String? value) {
+    if (!RequiredValidator.isValid(value)) return null;
+    if (!LengthValidator.isValid(value, maxLength: 255)) {
+      return 'workers.add_worker.validation_max_length_error'.tr(
+        namedArgs: {'max': '255'},
+      );
+    }
+    return null;
   }
 
   @override
@@ -224,17 +260,14 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
             controller: phoneController,
             hint: 'workers.add_worker.phone_hint'.tr(),
             isRequired: widget.requireContact,
-            errorText: _phoneErrorText,
+            validator: _validatePhone,
           ),
           SizedBox(height: AppSpacing.md),
           AppTextField(
             controller: jobTitleController,
             label: 'workers.add_worker.job_title_label'.tr(),
             hint: 'workers.add_worker.job_title_hint'.tr(),
-            isRequired: true,
-            validator: (value) => (value?.trim().isEmpty ?? true)
-                ? 'workers.add_worker.validation_required'.tr()
-                : null,
+            validator: _validateJobTitle,
           ),
           SizedBox(height: AppSpacing.md),
           WorkerTypeSelectField(
