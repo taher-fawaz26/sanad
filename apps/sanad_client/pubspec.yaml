@@ -41,7 +41,6 @@ dependencies:
   network:
     path: ../../packages/network
   path_provider: ^2.1.5
-  provider: ^6.1.5
   storage:
     path: ../../packages/storage
 
