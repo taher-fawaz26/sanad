@@ -43,7 +43,6 @@ export 'src/presentation/services/worker_branch_assigner.dart';
 export 'src/presentation/services/worker_role_assigner.dart';
 export 'src/presentation/services/worker_roles_tab.dart';
 // Presentation — widgets
-export 'src/presentation/widgets/action_confirmation_sheet.dart';
 export 'src/presentation/widgets/invitations_content.dart';
 export 'src/presentation/widgets/select_worker_action_sheet.dart';
 export 'src/presentation/widgets/worker_form_body.dart';

@@ -3,8 +3,8 @@ import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:provider_rbac/src/domain/entities/role_entity.dart';
+import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
-import 'package:workers/workers.dart' show SheetActionRow;
 
 /// The "more" menu opened from a role card — Figma `Views / Bottom Sheets`
 /// (`5492:23946`): View Details / Edit Information / Delete.

@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:services/src/domain/entities/provider_service_entity.dart';
 import 'package:services/src/domain/entities/provider_service_status.dart';
 import 'package:services/src/presentation/bloc/service_action/service_action_bloc.dart';
-import 'package:services/src/presentation/widgets/service_confirmation_sheet.dart';
+import 'package:shared_ui/shared_ui.dart';
 import 'package:services/src/routes/service_routes.dart';
 
 /// Confirms then navigates to edit [service], re-broadcasting the result via
@@ -19,11 +19,11 @@ Future<void> confirmAndEditService({
   required BuildContext context,
   required ProviderServiceEntity service,
 }) async {
-  final confirmed = await showServiceConfirmationSheet(
+  final confirmed = await showConfirmationSheet(
     context: context,
     title: 'services.edit_confirm_title'.tr(),
     description: 'services.edit_confirm_description'.tr(),
-    serviceName: service.serviceName,
+    badgeLabel: service.serviceName,
     actionLabel: 'common.yes'.tr(),
     cancelLabel: 'common.close'.tr(),
   );
@@ -46,7 +46,7 @@ Future<void> confirmAndToggleServiceStatus({
   required ProviderServiceEntity service,
 }) async {
   final isActive = service.status == ProviderServiceStatus.active;
-  final confirmed = await showServiceConfirmationSheet(
+  final confirmed = await showConfirmationSheet(
     context: context,
     title: isActive
         ? 'services.pause_confirm_title'.tr()
@@ -54,13 +54,9 @@ Future<void> confirmAndToggleServiceStatus({
     description: isActive
         ? 'services.pause_confirm_description'.tr()
         : 'services.resume_confirm_description'.tr(),
-    serviceName: service.serviceName,
-    actionLabel: isActive
-        ? 'services.pause_confirm'.tr()
-        : 'common.yes'.tr(),
-    cancelLabel: isActive
-        ? 'common.cancel'.tr()
-        : 'common.close'.tr(),
+    badgeLabel: service.serviceName,
+    actionLabel: isActive ? 'services.pause_confirm'.tr() : 'common.yes'.tr(),
+    cancelLabel: isActive ? 'common.cancel'.tr() : 'common.close'.tr(),
     actionType: isActive ? AppButtonType.warning : AppButtonType.primary,
   );
 
@@ -81,11 +77,11 @@ Future<void> confirmAndDeleteService({
   required BuildContext context,
   required ProviderServiceEntity service,
 }) async {
-  final confirmed = await showServiceConfirmationSheet(
+  final confirmed = await showConfirmationSheet(
     context: context,
     title: 'services.delete_confirm_title'.tr(),
     description: 'services.delete_confirm_description'.tr(),
-    serviceName: service.serviceName,
+    badgeLabel: service.serviceName,
     actionLabel: 'services.delete_confirm'.tr(),
     cancelLabel: 'common.cancel'.tr(),
     destructive: true,

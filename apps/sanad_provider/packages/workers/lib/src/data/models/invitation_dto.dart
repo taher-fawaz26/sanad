@@ -49,12 +49,5 @@ class InvitationDto extends InvitationEntity
     invitationLink: invitationLink,
   );
 
-  static String _initials(String name) {
-    final words = name.trim().split(RegExp(r'\s+'));
-    return words
-        .where((w) => w.isNotEmpty)
-        .take(2)
-        .map((w) => w[0].toUpperCase())
-        .join();
-  }
+  static String _initials(String name) => initialsOf(name) ?? '';
 }

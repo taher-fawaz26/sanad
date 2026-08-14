@@ -4,7 +4,6 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:media_upload/media_upload.dart';
-import 'package:services/src/presentation/widgets/service_confirmation_sheet.dart';
 import 'package:services/src/presentation/widgets/service_image_card.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
@@ -142,7 +141,7 @@ class _AddServiceImagesFieldState extends State<AddServiceImagesField> {
   }
 
   Future<void> _onDeleteImage(BuildContext context, String id) async {
-    final confirmed = await showServiceConfirmationSheet(
+    final confirmed = await showConfirmationSheet(
       context: context,
       title: 'services.delete_image_confirm_title'.tr(),
       description: 'services.delete_image_confirm_description'.tr(),

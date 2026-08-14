@@ -1,5 +1,6 @@
 import 'package:auth/src/auth/auth_status.dart';
 import 'package:auth/src/auth/auth_status_notifier.dart';
+import 'package:core/core.dart';
 import 'package:auth/src/data/models/permission_model.dart';
 import 'package:auth/src/data/models/profiles/auth_profile_model.dart';
 import 'package:auth/src/data/models/responses/auth_account_settings_response_dto.dart';
@@ -309,13 +310,7 @@ class SessionManager {
 
   /// Up to two initials derived from [displayName], [businessName], or
   /// [email], in that order — a stable placeholder for avatar UI.
-  String? get initials {
-    final basis = displayName ?? businessName ?? email;
-    final trimmed = basis?.trim();
-    if (trimmed == null || trimmed.isEmpty) return null;
-    final words = trimmed.split(RegExp(r'\s+')).take(2);
-    return words.map((w) => w[0].toUpperCase()).join();
-  }
+  String? get initials => initialsOf(displayName ?? businessName ?? email);
 
   /// Avatar image URL. No such field exists in the current backend
   /// contract (session, profile, or account settings) — kept as a stable

@@ -9,7 +9,7 @@ import 'package:media_upload/media_upload.dart';
 import 'package:services/src/domain/usecases/create_provider_service_usecase.dart';
 import 'package:services/src/presentation/bloc/add_service/add_service_bloc.dart';
 import 'package:services/src/presentation/widgets/add_service_form_body.dart';
-import 'package:services/src/presentation/widgets/service_confirmation_sheet.dart';
+import 'package:shared_ui/shared_ui.dart';
 import 'package:services/src/routes/service_routes.dart';
 
 /// Add Service screen — submits `POST /provider-services` via
@@ -124,7 +124,7 @@ class _AddServicePageState extends State<AddServicePage> {
       return;
     }
 
-    final discard = await showServiceConfirmationSheet(
+    final discard = await showConfirmationSheet(
       context: context,
       title: 'services.discard_confirm_title'.tr(),
       description: 'services.discard_confirm_description'.tr(),

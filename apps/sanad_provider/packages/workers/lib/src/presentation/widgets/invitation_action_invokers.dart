@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:workers/src/domain/entities/invitation_entity.dart';
+import 'package:shared_ui/shared_ui.dart';
 import 'package:workers/src/presentation/bloc/invitation_action/invitation_action_cubit.dart';
-import 'package:workers/src/presentation/widgets/action_confirmation_sheet.dart';
 
 const ({AppButtonType type, bool destructive}) _resendButton = (
   type: AppButtonType.warning,
@@ -42,7 +42,7 @@ Future<void> confirmAndResendInvitation({
   required BuildContext context,
   required InvitationEntity invitation,
 }) async {
-  final confirmed = await showWorkerConfirmationSheet(
+  final confirmed = await showConfirmationSheet(
     context: context,
     title: 'workers.invitation_resend_title'.tr(),
     description: 'workers.invitation_resend_description'.tr(
@@ -64,7 +64,7 @@ Future<void> confirmAndCancelInvitation({
   required BuildContext context,
   required InvitationEntity invitation,
 }) async {
-  final confirmed = await showWorkerConfirmationSheet(
+  final confirmed = await showConfirmationSheet(
     context: context,
     title: 'workers.invitation_cancel_title'.tr(),
     description: 'workers.invitation_cancel_description'.tr(
@@ -86,7 +86,7 @@ Future<void> confirmAndDeleteInvitation({
   required BuildContext context,
   required InvitationEntity invitation,
 }) async {
-  final confirmed = await showWorkerConfirmationSheet(
+  final confirmed = await showConfirmationSheet(
     context: context,
     title: 'workers.invitation_delete_title'.tr(),
     description: 'workers.invitation_delete_description'.tr(

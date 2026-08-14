@@ -7,7 +7,7 @@ import 'package:services/src/domain/entities/provider_service_entity.dart';
 import 'package:services/src/domain/entities/provider_service_image_entity.dart';
 import 'package:services/src/domain/usecases/delete_provider_service_image_usecase.dart';
 import 'package:services/src/domain/usecases/set_primary_provider_service_image_usecase.dart';
-import 'package:services/src/presentation/widgets/service_confirmation_sheet.dart';
+import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Live image lifecycle for an existing provider service — Service
@@ -110,7 +110,7 @@ class _ManageServiceImagesSectionState
   }
 
   Future<void> _deleteImage(ProviderServiceImageEntity image) async {
-    final confirmed = await showServiceConfirmationSheet(
+    final confirmed = await showConfirmationSheet(
       context: context,
       title: 'services.delete_image_confirm_title'.tr(),
       description: 'services.delete_image_confirm_description'.tr(),

@@ -182,9 +182,7 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
   String? _validateEmail(String? value) {
     if (widget.emailReadOnly) return null;
     if (!RequiredValidator.isValid(value)) {
-      return widget.requireContact
-          ? 'validation.required'.tr()
-          : null;
+      return widget.requireContact ? 'validation.required'.tr() : null;
     }
     final trimmed = value!.trim();
     if (!EmailValidator.isValid(trimmed)) {
@@ -206,9 +204,7 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
   String? _validatePhone(String? _) {
     final raw = phoneController.text.trim();
     if (raw.isEmpty) {
-      return widget.requireContact
-          ? 'validation.required'.tr()
-          : null;
+      return widget.requireContact ? 'validation.required'.tr() : null;
     }
     return UaePhoneValidator.validationMessage(raw)?.tr();
   }

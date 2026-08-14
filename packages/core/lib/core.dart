@@ -29,6 +29,7 @@ export 'src/utils/constants/app_opacities.dart';
 export 'src/utils/constants/defaults.dart';
 export 'src/utils/constants/storage_keys.dart';
 export 'src/utils/debounce.dart';
+export 'src/utils/initials.dart';
 export 'src/utils/throttle.dart';
 export 'src/utils/uuid_v4.dart';
 export 'src/validators/collection_size_validator.dart';

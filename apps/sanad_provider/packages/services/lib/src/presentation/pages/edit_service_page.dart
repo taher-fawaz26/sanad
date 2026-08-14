@@ -9,7 +9,7 @@ import 'package:services/src/domain/entities/provider_service_entity.dart';
 import 'package:services/src/domain/usecases/update_provider_service_description_usecase.dart';
 import 'package:services/src/presentation/bloc/edit_service/edit_service_bloc.dart';
 import 'package:services/src/presentation/widgets/edit_service_form_body.dart';
-import 'package:services/src/presentation/widgets/service_confirmation_sheet.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 /// Edit Service screen — submits `PATCH /provider-services/{id}` (description
 /// only) via [EditServiceBloc]. Reached from `ServiceRoutes.editFor` with the
@@ -97,7 +97,7 @@ class _EditServicePageState extends State<EditServicePage> {
       return;
     }
 
-    final discard = await showServiceConfirmationSheet(
+    final discard = await showConfirmationSheet(
       context: context,
       title: 'services.discard_confirm_title'.tr(),
       description: 'services.discard_confirm_description'.tr(),

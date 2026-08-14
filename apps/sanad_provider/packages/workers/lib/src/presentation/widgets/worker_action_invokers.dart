@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
 import 'package:workers/src/domain/entities/worker_status.dart';
+import 'package:shared_ui/shared_ui.dart';
 import 'package:workers/src/presentation/bloc/worker_action/worker_action_cubit.dart';
-import 'package:workers/src/presentation/widgets/action_confirmation_sheet.dart';
 
 const ({AppButtonType type, bool destructive}) _suspendButton = (
   type: AppButtonType.warning,
@@ -30,7 +30,7 @@ Future<void> confirmAndChangeWorkerStatus({
   required bool isSuspending,
 }) async {
   final btnConfig = isSuspending ? _suspendButton : _unsuspendButton;
-  final confirmed = await showWorkerConfirmationSheet(
+  final confirmed = await showConfirmationSheet(
     context: context,
     title: isSuspending
         ? 'workers.suspend_title'.tr()
@@ -61,7 +61,7 @@ Future<void> confirmAndDeleteWorker({
   required BuildContext context,
   required WorkerEntity worker,
 }) async {
-  final confirmed = await showWorkerConfirmationSheet(
+  final confirmed = await showConfirmationSheet(
     context: context,
     title: 'workers.delete_title'.tr(),
     description: 'workers.delete_description'.tr(
