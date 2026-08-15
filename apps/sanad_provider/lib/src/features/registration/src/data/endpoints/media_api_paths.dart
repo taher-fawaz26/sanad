@@ -17,7 +17,7 @@ abstract final class MediaApiPaths {
   /// (`CreateProviderProfileDto`).
   ///
   /// Body: `{ emiratesIdFrontId, emiratesIdBackId, userType,
-  /// fullName? (individualProvider), businessName?, representativeFullName?,
+  /// fullName? (individualProvider), businessName?,
   /// tradeLicenseId? (organizationProvider) }`.
   /// Uses the onboarding Bearer token.
   static const profile = 'auth/profile';

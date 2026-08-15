@@ -21,4 +21,5 @@ export 'src/widgets/media_avatar.dart';
 export 'src/widgets/media_busy_overlay.dart';
 export 'src/widgets/media_cover_photo.dart';
 export 'src/widgets/media_edit_button.dart';
+export 'src/widgets/media_failure_overlay.dart';
 export 'src/widgets/media_skeletons.dart';

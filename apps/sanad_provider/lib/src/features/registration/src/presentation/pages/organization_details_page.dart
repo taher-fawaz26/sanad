@@ -13,7 +13,7 @@ import 'package:sanad_provider/src/features/registration/src/routes/registration
 
 const _kIconSize = 48.0;
 
-/// Step 4 (Organization path) — business + representative name entry.
+/// Step 4 (Organization path) — business name entry.
 ///
 /// Figma: `Organization` (`2142:14190`).
 class OrganizationDetailsPage extends HookWidget {
@@ -24,9 +24,6 @@ class OrganizationDetailsPage extends HookWidget {
     final state = context.read<RegistrationDetailsCubit>().state;
     final businessNameController = useTextEditingController(
       text: state.businessName,
-    );
-    final representativeNameController = useTextEditingController(
-      text: state.representativeName,
     );
     final formKey = useMemoized(GlobalKey<FormState>.new);
     final colors = context.appColors;
@@ -50,7 +47,6 @@ class OrganizationDetailsPage extends HookWidget {
       if (!(formKey.currentState?.validate() ?? false)) return;
       context.read<RegistrationDetailsCubit>().setOrganizationDetails(
         businessName: businessNameController.text.trim(),
-        representativeName: representativeNameController.text.trim(),
       );
       context
         ..syncDocumentFlowContext()
@@ -82,23 +78,10 @@ class OrganizationDetailsPage extends HookWidget {
               controller: businessNameController,
               label: 'registration.business_name'.tr(),
               hint: 'registration.business_name_hint'.tr(),
-              textInputAction: TextInputAction.next,
-              textCapitalization: TextCapitalization.words,
-              autovalidateMode: AutovalidateMode.onUserInteraction,
-              validator: businessNameValidator,
-            ),
-            SizedBox(height: responsiveDimension(AppSpacing.lg)),
-            AppTextField(
-              controller: representativeNameController,
-              label: 'registration.representative_name'.tr(),
-              hint: 'registration.representative_name_hint'.tr(),
               textInputAction: TextInputAction.done,
               textCapitalization: TextCapitalization.words,
               autovalidateMode: AutovalidateMode.onUserInteraction,
-              // No length check: `representativeName` has no matching field
-              // in `CreateProviderProfileDto` (confirmed against the live API
-              // schema), so there's no backend constraint to reconcile.
-              validator: required,
+              validator: businessNameValidator,
               onSubmitted: (_) => submit(),
             ),
             SizedBox(height: responsiveDimension(AppSpacing.xxxl)),

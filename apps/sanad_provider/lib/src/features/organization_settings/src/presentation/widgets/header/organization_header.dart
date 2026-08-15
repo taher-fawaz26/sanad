@@ -2,6 +2,7 @@ import 'package:core/core.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:localization/localization.dart';
 import 'package:media/media.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/organization_media_slot.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/bloc/identity_header/identity_header_bloc.dart';
@@ -119,6 +120,10 @@ class _OrganizationHeaderView extends StatelessWidget {
   ) async {
     final bloc = context.read<IdentityHeaderBloc>();
     final slotState = bloc.state.slot(slot);
+    // Defensive: the edit affordance is already hidden while busy, but
+    // guard here too so a stray tap mid-transition can't race a new upload
+    // against the in-flight one.
+    if (slotState.isBusy) return;
     final isCover = slot == OrganizationMediaSlot.cover;
 
     final result = await MediaCoordinator.start(
@@ -140,6 +145,28 @@ class _OrganizationHeaderView extends StatelessWidget {
       case MediaCancelled():
         break;
     }
+  }
+
+  void _cancel(BuildContext context, OrganizationMediaSlot slot) {
+    context.read<IdentityHeaderBloc>().add(
+      IdentityHeaderUploadCancelled(slot: slot),
+    );
+  }
+
+  void _retry(BuildContext context, OrganizationMediaSlot slot) {
+    context.read<IdentityHeaderBloc>().add(
+      IdentityHeaderUploadRetried(slot: slot),
+    );
+  }
+
+  /// Localized message for a failed [slot] upload — falls back to a generic
+  /// message when the failure carries no user-facing text.
+  String? _errorMessage(IdentityMediaSlotState slotState) {
+    if (!slotState.hasError) return null;
+    final message = slotState.failure?.localizedMessage();
+    return (message == null || message.trim().isEmpty)
+        ? 'media.upload_failed'.tr()
+        : message;
   }
 
   @override
@@ -170,10 +197,25 @@ class _OrganizationHeaderView extends StatelessWidget {
             avatarUrl: state.logo.imageUrl,
             coverBusy: state.cover.isBusy,
             avatarBusy: state.logo.isBusy,
+            coverFailed: state.cover.hasError,
+            avatarFailed: state.logo.hasError,
             coverProgress: state.cover.progress,
             avatarProgress: state.logo.progress,
+            coverErrorMessage: _errorMessage(state.cover),
+            avatarErrorMessage: _errorMessage(state.logo),
             onEditCover: () => _edit(context, OrganizationMediaSlot.cover),
             onEditAvatar: () => _edit(context, OrganizationMediaSlot.logo),
+            onCancelCover: () => _cancel(context, OrganizationMediaSlot.cover),
+            onCancelAvatar: () => _cancel(context, OrganizationMediaSlot.logo),
+            // Retry only applies once a slot has media to retry (a failure
+            // with nothing to resend, e.g. a failed removal, has no retry
+            // affordance — matches `IdentityMediaSlotState.canRetry`).
+            onRetryCover: state.cover.canRetry
+                ? () => _retry(context, OrganizationMediaSlot.cover)
+                : null,
+            onRetryAvatar: state.logo.canRetry
+                ? () => _retry(context, OrganizationMediaSlot.logo)
+                : null,
           ),
         );
       },

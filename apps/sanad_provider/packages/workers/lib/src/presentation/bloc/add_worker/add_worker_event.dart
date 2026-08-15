@@ -15,7 +15,3 @@ final class AddWorkerSubmitEvent extends AddWorkerEvent {
   @override
   List<Object?> get props => [params];
 }
-
-final class AddWorkerResetEvent extends AddWorkerEvent {
-  const AddWorkerResetEvent();
-}

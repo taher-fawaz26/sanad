@@ -28,7 +28,6 @@ export 'src/domain/repositories/catalog_repository.dart';
 export 'src/domain/repositories/categories_repository.dart';
 export 'src/domain/repositories/provider_services_repository.dart';
 export 'src/domain/repositories/service_requests_repository.dart';
-export 'src/domain/usecases/add_provider_service_image_usecase.dart';
 export 'src/domain/usecases/browse_catalog_usecase.dart';
 export 'src/domain/usecases/create_provider_service_usecase.dart';
 export 'src/domain/usecases/create_service_request_usecase.dart';

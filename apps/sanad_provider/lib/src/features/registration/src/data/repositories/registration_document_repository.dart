@@ -116,9 +116,6 @@ class RegistrationDocumentRepository implements DocumentFlowRepository {
       businessName: isOrganization
           ? (businessName.isNotEmpty ? businessName : null)
           : null,
-      representativeFullName: isOrganization
-          ? (params.context.get<String>('representativeName') ?? '')
-          : null,
     );
 
     return _networkGuard

@@ -18,7 +18,6 @@ class AddWorkerBloc extends Bloc<AddWorkerEvent, AddWorkerState> {
       super(const AddWorkerState()) {
     // Drop duplicate submits while one is in flight (double-tap guard).
     on<AddWorkerSubmitEvent>(_onSubmit, transformer: droppable());
-    on<AddWorkerResetEvent>(_onReset);
   }
 
   final InviteWorkerUseCase _inviteWorkerUseCase;
@@ -37,9 +36,5 @@ class AddWorkerBloc extends Bloc<AddWorkerEvent, AddWorkerState> {
       ),
       (_) => emit(state.copyWith(status: RequestStatus.success)),
     );
-  }
-
-  void _onReset(AddWorkerResetEvent event, Emitter<AddWorkerState> emit) {
-    emit(const AddWorkerState());
   }
 }

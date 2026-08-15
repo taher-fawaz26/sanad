@@ -46,6 +46,9 @@
     "discard_message": "Your edits will be lost.",
     "remove_confirm_title": "Remove photo?",
     "remove_confirm_message": "This will remove the current photo.",
+    "upload_failed": "Upload failed. Please try again.",
+    "cancel_upload_a11y": "Cancel upload",
+    "retry_upload_a11y": "Retry upload",
     "validation": {
       "unsupported_type": "Only image files are supported.",
       "too_large": "This image is too large.",
@@ -715,8 +718,6 @@
     "org_details_subtitle": "Tell us about your organization to set up your provider account.",
     "business_name": "Business name",
     "business_name_hint": "Al Khaleej General Trading LLC",
-    "representative_name": "Representative Name",
-    "representative_name_hint": "Ahmed Mohammed Al Mansouri",
     "field_required": "This field is required.",
     "individual_details_title": "Individual Details",
     "individual_details_subtitle": "Tell us about yourself to set up your provider account.",

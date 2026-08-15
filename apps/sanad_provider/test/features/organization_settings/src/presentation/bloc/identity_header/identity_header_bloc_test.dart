@@ -1,5 +1,6 @@
 // ignore_for_file: prefer_const_constructors
 
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:bloc_test/bloc_test.dart';
@@ -47,6 +48,7 @@ void main() {
     registerFallbackValue(
       const RemoveOrganizationMediaParams(slot: OrganizationMediaSlot.cover),
     );
+    registerFallbackValue(OrganizationMediaSlot.cover);
   });
 
   setUp(() {
@@ -147,6 +149,67 @@ void main() {
       expect(bloc.state.logo.status, RequestStatus.success);
       expect(bloc.state.logo.imageUrl, 'ok.jpg');
       verify(() => uploadUseCase(any())).called(1);
+    },
+  );
+
+  blocTest<IdentityHeaderBloc, IdentityHeaderState>(
+    'cancelling an in-flight upload returns to initial, not failure, and '
+    "asks the repository to cancel the slot's in-flight request",
+    build: build,
+    setUp: () {
+      when(() => repository.cancelUpload(any())).thenAnswer((_) {});
+    },
+    seed: () => IdentityHeaderState(
+      logo: IdentityMediaSlotState(
+        status: RequestStatus.loading,
+        lastMedia: media,
+      ),
+    ),
+    act: (bloc) =>
+        bloc.add(IdentityHeaderUploadCancelled(slot: OrganizationMediaSlot.logo)),
+    verify: (bloc) {
+      verify(
+        () => repository.cancelUpload(OrganizationMediaSlot.logo),
+      ).called(1);
+      // Cancelling alone doesn't resolve the in-flight upload future — the
+      // slot stays `loading` (still busy) until that future completes and
+      // the bloc swallows the resulting failure. See the next test.
+      expect(bloc.state.logo.status, RequestStatus.loading);
+    },
+  );
+
+  blocTest<IdentityHeaderBloc, IdentityHeaderState>(
+    "a cancelled upload's eventual failure is swallowed — the slot resets "
+    'to initial instead of surfacing an error',
+    build: build,
+    setUp: () {
+      when(() => repository.cancelUpload(any())).thenAnswer((_) {});
+    },
+    act: (bloc) async {
+      final completer = Completer<Either<Failure, OrganizationMediaEntity>>();
+      when(
+        () => uploadUseCase(any()),
+      ).thenAnswer((_) => TaskEither(() => completer.future));
+
+      bloc.add(
+        IdentityHeaderMediaSelected(
+          slot: OrganizationMediaSlot.logo,
+          media: media,
+        ),
+      );
+      // Let `_upload` run up to its `await uploadUseCase(...)` point before
+      // cancelling, so the cancel is genuinely racing an in-flight upload.
+      await Future<void>.delayed(Duration.zero);
+      bloc.add(
+        IdentityHeaderUploadCancelled(slot: OrganizationMediaSlot.logo),
+      );
+      await Future<void>.delayed(Duration.zero);
+      completer.complete(Left(const ServerFailure(message: 'boom')));
+    },
+    verify: (bloc) {
+      expect(bloc.state.logo.status, RequestStatus.initial);
+      expect(bloc.state.logo.hasError, isFalse);
+      expect(bloc.state.logo.progress, 0);
     },
   );
 

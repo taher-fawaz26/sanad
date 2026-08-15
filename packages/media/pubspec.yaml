@@ -30,6 +30,7 @@ dependencies:
     path: ../sheet_navigation
 
 dev_dependencies:
+  flutter_screenutil: ^5.9.3
   flutter_test:
     sdk: flutter
   mocktail: ^1.0.4

@@ -65,24 +65,6 @@ class AuthModule extends FeatureModule {
         ),
       ),
       GoRoute(
-        path: AuthRoutes.signUp,
-        builder: (context, state) => AuthPage(
-          initialIsLogin: false,
-          onOtpSent: (email, intent) => context.push(
-            AuthRoutes.otp,
-            extra: AuthOtpRouteArgs(email: email, intent: intent),
-          ),
-          onAuthenticated: () => context.go(home),
-          onOnboarding: (email, token) => context.push(
-            AuthRoutes.otp,
-            extra: AuthOtpRouteArgs(
-              email: email,
-              intent: AuthFlowIntent.createAccount,
-            ),
-          ),
-        ),
-      ),
-      GoRoute(
         path: AuthRoutes.suspended,
         builder: (context, state) => SuspendedPage(
           onLoggedOut: () => context.go(AuthRoutes.login),

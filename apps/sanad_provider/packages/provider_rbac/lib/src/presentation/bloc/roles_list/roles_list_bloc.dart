@@ -16,9 +16,10 @@ const _searchDebounce = Duration(milliseconds: 350);
 /// Owns the roles list: fetch, refresh, load-more, and server-side search,
 /// using the shared [PaginationMixin] over `GET /provider/roles`.
 ///
-/// Role mutations (delete) live in [RoleActionBloc]; create/edit live in
-/// `RoleFormBloc`. Their results are folded back into this list via
-/// [RoleRemovedFromListEvent] / [RoleUpsertedInListEvent] to avoid a refetch.
+/// Role mutations (delete) live in [RoleActionBloc] and fold their result
+/// back into this list via [RoleRemovedFromListEvent], avoiding a refetch.
+/// Create/edit live in `RoleFormBloc`; their result triggers a plain
+/// [RefreshRolesEvent] instead (see `roles_content.dart`).
 class RolesListBloc extends Bloc<RolesListEvent, RolesListState>
     with
         PaginationMixin<
@@ -41,7 +42,6 @@ class RolesListBloc extends Bloc<RolesListEvent, RolesListState>
     );
     on<SearchRolesChangedEvent>(_onSearchChanged, transformer: restartable());
     on<RoleRemovedFromListEvent>(_onRemoved);
-    on<RoleUpsertedInListEvent>(_onUpserted);
   }
 
   final GetRolesUseCase _getRolesUseCase;
@@ -60,19 +60,6 @@ class RolesListBloc extends Bloc<RolesListEvent, RolesListState>
     Emitter<RolesListState> emit,
   ) {
     final updated = state.roles.where((r) => r.id != event.roleId).toList();
-    emit(state.copyWith(pagination: state.pagination.copyWith(items: updated)));
-  }
-
-  void _onUpserted(
-    RoleUpsertedInListEvent event,
-    Emitter<RolesListState> emit,
-  ) {
-    final exists = state.roles.any((r) => r.id == event.role.id);
-    final updated = exists
-        ? state.roles
-              .map((r) => r.id == event.role.id ? event.role : r)
-              .toList()
-        : [...state.roles, event.role];
     emit(state.copyWith(pagination: state.pagination.copyWith(items: updated)));
   }
 

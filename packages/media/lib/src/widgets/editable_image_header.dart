@@ -20,12 +20,20 @@ class EditableImageHeader extends StatelessWidget {
     this.badge,
     this.coverBusy = false,
     this.avatarBusy = false,
+    this.coverFailed = false,
+    this.avatarFailed = false,
     this.coverProgress = 0.0,
     this.avatarProgress = 0.0,
     this.coverLoading = false,
     this.avatarLoading = false,
+    this.coverErrorMessage,
+    this.avatarErrorMessage,
     this.coverHeroTag,
     this.avatarHeroTag,
+    this.onCancelCover,
+    this.onCancelAvatar,
+    this.onRetryCover,
+    this.onRetryAvatar,
     super.key,
   });
 
@@ -39,14 +47,32 @@ class EditableImageHeader extends StatelessWidget {
   final Widget? badge;
   final bool coverBusy;
   final bool avatarBusy;
+
+  /// Whether the last upload for this slot failed — shows the failure
+  /// overlay and (if the matching `onRetry*` callback is supplied) a retry
+  /// affordance instead of the busy overlay.
+  final bool coverFailed;
+  final bool avatarFailed;
   final double coverProgress;
   final double avatarProgress;
   final bool coverLoading;
   final bool avatarLoading;
+  final String? coverErrorMessage;
+  final String? avatarErrorMessage;
   final Object? coverHeroTag;
   final Object? avatarHeroTag;
   final VoidCallback onEditCover;
   final VoidCallback onEditAvatar;
+
+  /// Cancels an in-flight upload for the matching slot. `null` hides the
+  /// cancel affordance on the busy overlay.
+  final VoidCallback? onCancelCover;
+  final VoidCallback? onCancelAvatar;
+
+  /// Retries the last failed upload for the matching slot. `null` hides the
+  /// retry affordance on the failure overlay.
+  final VoidCallback? onRetryCover;
+  final VoidCallback? onRetryAvatar;
 
   @override
   Widget build(BuildContext context) {
@@ -62,9 +88,13 @@ class EditableImageHeader extends StatelessWidget {
           imageUrl: coverUrl,
           isBusy: coverBusy,
           isLoading: coverLoading,
+          hasFailed: coverFailed,
           progress: coverProgress,
+          errorMessage: coverErrorMessage,
           heroTag: coverHeroTag,
           onEditTap: onEditCover,
+          onCancel: onCancelCover,
+          onRetry: onRetryCover,
         ),
         Row(
           spacing: AppSpacing.lg,
@@ -73,9 +103,13 @@ class EditableImageHeader extends StatelessWidget {
               imageUrl: avatarUrl,
               isBusy: avatarBusy,
               isLoading: avatarLoading,
+              hasFailed: avatarFailed,
               progress: avatarProgress,
+              errorMessage: avatarErrorMessage,
               heroTag: avatarHeroTag,
               onEditTap: onEditAvatar,
+              onCancel: onCancelAvatar,
+              onRetry: onRetryAvatar,
             ),
             Expanded(
               child: Column(

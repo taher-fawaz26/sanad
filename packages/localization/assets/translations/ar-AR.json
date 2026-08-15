@@ -46,6 +46,9 @@
     "discard_message": "ستفقد تعديلاتك.",
     "remove_confirm_title": "إزالة الصورة؟",
     "remove_confirm_message": "سيؤدي هذا إلى إزالة الصورة الحالية.",
+    "upload_failed": "فشل الرفع. حاول مرة أخرى.",
+    "cancel_upload_a11y": "إلغاء الرفع",
+    "retry_upload_a11y": "إعادة محاولة الرفع",
     "validation": {
       "unsupported_type": "الملفات المدعومة هي الصور فقط.",
       "too_large": "حجم هذه الصورة كبير جداً.",
@@ -715,8 +718,6 @@
     "org_details_subtitle": "أخبرنا عن مؤسستك لإعداد حساب مزوّد الخدمة الخاص بك.",
     "business_name": "اسم النشاط التجاري",
     "business_name_hint": "الخليج للتجارة العامة ذ.م.م",
-    "representative_name": "اسم الممثل",
-    "representative_name_hint": "أحمد محمد المنصوري",
     "field_required": "هذا الحقل مطلوب.",
     "individual_details_title": "بيانات الفرد",
     "individual_details_subtitle": "أخبرنا عن نفسك لإعداد حساب مزوّد الخدمة الخاص بك.",

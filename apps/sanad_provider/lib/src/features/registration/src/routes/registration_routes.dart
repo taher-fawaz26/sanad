@@ -8,7 +8,7 @@ abstract final class RegistrationRoutes {
 
   static const selectAccountType = '/signup/account-type';
 
-  /// Organization path — business + representative details.
+  /// Organization path — business name details.
   static const organizationDetails = '/signup/organization-details';
 
   /// Individual path — full name.

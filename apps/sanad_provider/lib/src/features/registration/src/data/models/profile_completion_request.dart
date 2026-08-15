@@ -12,7 +12,6 @@ class ProfileCompletionRequest {
     this.tradeLicenseId,
     this.fullName,
     this.businessName,
-    this.representativeFullName,
   });
 
   final String emiratesIdFrontId;
@@ -25,7 +24,6 @@ class ProfileCompletionRequest {
 
   // Organization provider fields.
   final String? businessName;
-  final String? representativeFullName;
 
   Map<String, dynamic> toJson() => {
     'emiratesIdFrontId': emiratesIdFrontId,
@@ -34,7 +32,5 @@ class ProfileCompletionRequest {
     if (tradeLicenseId != null) 'tradeLicenseId': tradeLicenseId,
     if (fullName != null) 'fullName': fullName,
     if (businessName != null) 'businessName': businessName,
-    if (representativeFullName != null)
-      'representativeFullName': representativeFullName,
   };
 }

@@ -9,7 +9,6 @@ import 'package:provider_rbac/src/domain/repositories/roles_repository.dart';
 import 'package:provider_rbac/src/domain/usecases/assign_worker_roles_usecase.dart';
 import 'package:provider_rbac/src/domain/usecases/get_roles_usecase.dart';
 import 'package:provider_rbac/src/domain/usecases/get_worker_roles_usecase.dart';
-import 'package:provider_rbac/src/domain/usecases/remove_worker_role_usecase.dart';
 import 'package:provider_rbac/src/presentation/bloc/worker_roles/worker_roles_bloc.dart';
 
 class _MockRolesRepository extends Mock implements RolesRepository {}
@@ -27,7 +26,6 @@ WorkerRolesBloc _buildBloc(RolesRepository repository) => WorkerRolesBloc(
   getWorkerRolesUseCase: GetWorkerRolesUseCase(repository),
   getRolesUseCase: GetRolesUseCase(repository),
   assignWorkerRolesUseCase: AssignWorkerRolesUseCase(repository),
-  removeWorkerRoleUseCase: RemoveWorkerRoleUseCase(repository),
 );
 
 void main() {
@@ -105,38 +103,6 @@ void main() {
       const WorkerRolesState(
         status: RequestStatus.success,
         roles: [],
-        mutationStatus: RequestStatus.success,
-      ),
-    ],
-  );
-
-  blocTest<WorkerRolesBloc, WorkerRolesState>(
-    'RemoveRoleRequestedEvent removes the role and marks mutation success',
-    build: () {
-      when(
-        () => repository.removeWorkerRole(
-          workerId: 'w1',
-          roleId: 'a',
-        ),
-      ).thenAnswer((_) => TaskEither.of(unit));
-      return _buildBloc(repository);
-    },
-    seed: () => WorkerRolesState(
-      status: RequestStatus.success,
-      roles: [_role('a'), _role('b')],
-    ),
-    act: (bloc) => bloc.add(
-      const RemoveRoleRequestedEvent(workerId: 'w1', roleId: 'a'),
-    ),
-    expect: () => [
-      WorkerRolesState(
-        status: RequestStatus.success,
-        roles: [_role('a'), _role('b')],
-        mutationStatus: RequestStatus.loading,
-      ),
-      WorkerRolesState(
-        status: RequestStatus.success,
-        roles: [_role('b')],
         mutationStatus: RequestStatus.success,
       ),
     ],

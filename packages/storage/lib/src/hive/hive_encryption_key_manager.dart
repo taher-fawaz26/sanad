@@ -12,7 +12,6 @@ class HiveEncryptionKeyManager {
   final Map<String, HiveCipher?> _cipherCache = {};
 
   static const Set<String> _secureBoxes = {
-    HiveBoxes.user,
     HiveBoxes.session,
   };
 

@@ -15,7 +15,6 @@ class RegistrationDetails extends Equatable {
     this.onboardingToken,
     this.providerType,
     this.businessName = '',
-    this.representativeName = '',
     this.fullName = '',
   });
 
@@ -23,7 +22,6 @@ class RegistrationDetails extends Equatable {
   final String? onboardingToken;
   final ProviderTypeSpec? providerType;
   final String businessName;
-  final String representativeName;
   final String fullName;
 
   bool get isOrganization => providerType?.requiresTradeLicence ?? false;
@@ -33,7 +31,6 @@ class RegistrationDetails extends Equatable {
     'providerType': providerType,
     'email': email,
     'businessName': businessName,
-    'representativeName': representativeName,
     'fullName': fullName,
   });
 
@@ -42,14 +39,12 @@ class RegistrationDetails extends Equatable {
     String? onboardingToken,
     ProviderTypeSpec? providerType,
     String? businessName,
-    String? representativeName,
     String? fullName,
   }) => RegistrationDetails(
     email: email ?? this.email,
     onboardingToken: onboardingToken ?? this.onboardingToken,
     providerType: providerType ?? this.providerType,
     businessName: businessName ?? this.businessName,
-    representativeName: representativeName ?? this.representativeName,
     fullName: fullName ?? this.fullName,
   );
 
@@ -59,7 +54,6 @@ class RegistrationDetails extends Equatable {
     onboardingToken,
     providerType,
     businessName,
-    representativeName,
     fullName,
   ];
 }
@@ -75,15 +69,8 @@ class RegistrationDetailsCubit extends Cubit<RegistrationDetails> {
   void setProviderType(ProviderTypeSpec type) =>
       emit(state.copyWith(providerType: type));
 
-  void setOrganizationDetails({
-    required String businessName,
-    required String representativeName,
-  }) => emit(
-    state.copyWith(
-      businessName: businessName,
-      representativeName: representativeName,
-    ),
-  );
+  void setOrganizationDetails({required String businessName}) =>
+      emit(state.copyWith(businessName: businessName));
 
   void setFullName(String fullName) => emit(state.copyWith(fullName: fullName));
 }

@@ -6,15 +6,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sanad_provider/src/features/registration/src/presentation/cubit/registration_details_cubit.dart';
 import 'package:sanad_provider/src/features/registration/src/presentation/pages/organization_details_page.dart';
 
-/// Business-name and representative-name field validation on the
-/// organization registration step.
+/// Business-name field validation on the organization registration step.
 ///
-/// `organization_details_page.dart`'s validators were confirmed correct
-/// against the live backend Swagger:
-/// - `businessName` matches `CreateProviderProfileDto.businessName`
-///   (minLength 3 / maxLength 255).
-/// - `representativeName` is required-only, and intentionally has no length
-///   check — there is no matching field on any backend DTO to constrain it.
+/// `organization_details_page.dart`'s validator was confirmed correct
+/// against the live backend Swagger: `businessName` matches
+/// `CreateProviderProfileDto.businessName` (minLength 3 / maxLength 255).
+///
+/// `representativeName`/`representativeFullName` was removed repository-wide
+/// after a backend contract change dropped it from
+/// `CreateProviderProfileDto` — the organization step now has a single
+/// field, business name.
 ///
 /// These tests lock that behavior in, they do not change it.
 ///
@@ -49,18 +50,9 @@ void main() {
     );
   }
 
-  // Business name is the first AppTextField/TextField, representative name
-  // is the second.
+  // Business name is the only field on this step.
   Future<void> enterBusinessName(WidgetTester tester, String value) async {
     await tester.enterText(find.byType(TextField).first, value);
-    await tester.pump();
-  }
-
-  Future<void> enterRepresentativeName(
-    WidgetTester tester,
-    String value,
-  ) async {
-    await tester.enterText(find.byType(TextField).last, value);
     await tester.pump();
   }
 
@@ -98,38 +90,14 @@ void main() {
       expect(find.text('registration.field_required'), findsNothing);
       expect(find.text('validation.length_range'), findsNothing);
     });
-  });
 
-  group('representative name', () {
-    testWidgets('empty shows the required error key', (tester) async {
-      await pumpPage(tester);
+    testWidgets(
+      'is the only field on the step — no representativeName field exists',
+      (tester) async {
+        await pumpPage(tester);
 
-      await enterRepresentativeName(tester, 'a');
-      await enterRepresentativeName(tester, '');
-
-      expect(find.text('registration.field_required'), findsOneWidget);
-    });
-
-    testWidgets('1 char passes — no length constraint applies', (
-      tester,
-    ) async {
-      await pumpPage(tester);
-
-      await enterRepresentativeName(tester, 'A');
-
-      expect(find.text('registration.field_required'), findsNothing);
-      expect(find.text('validation.length_range'), findsNothing);
-    });
-
-    testWidgets('500 chars passes — no length constraint applies', (
-      tester,
-    ) async {
-      await pumpPage(tester);
-
-      await enterRepresentativeName(tester, 'a' * 500);
-
-      expect(find.text('registration.field_required'), findsNothing);
-      expect(find.text('validation.length_range'), findsNothing);
-    });
+        expect(find.byType(TextField), findsOneWidget);
+      },
+    );
   });
 }

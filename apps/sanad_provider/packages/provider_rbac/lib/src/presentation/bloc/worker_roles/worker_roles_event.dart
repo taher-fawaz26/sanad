@@ -34,16 +34,3 @@ class AssignRolesRequestedEvent extends WorkerRolesEvent {
   @override
   List<Object?> get props => [workerId, roleIds];
 }
-
-class RemoveRoleRequestedEvent extends WorkerRolesEvent {
-  const RemoveRoleRequestedEvent({
-    required this.workerId,
-    required this.roleId,
-  });
-
-  final String workerId;
-  final String roleId;
-
-  @override
-  List<Object?> get props => [workerId, roleId];
-}
