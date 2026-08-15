@@ -78,8 +78,14 @@ void main() {
   }
 
   group('showSettingsMenuSheet — General Settings destination', () {
+    // Both personas navigate to the shell Settings tab route
+    // (`OrganizationSettingsRoutes.hub`), never pushing the full-screen
+    // `/settings/general` child. The tab's route builder then renders the
+    // persona-appropriate page (KPI hub vs General Settings) — see
+    // `persona_settings_tab_test.dart`. Routing to the tab keeps the bottom
+    // nav visible and avoids stacking a duplicate settings page.
     testWidgets(
-      'organization provider tapping General Settings goes to the hub',
+      'organization provider tapping General Settings goes to the Settings tab',
       (tester) async {
         when(() => session.isCompany).thenReturn(true);
         await pumpSheetOpener(tester);
@@ -93,8 +99,8 @@ void main() {
     );
 
     testWidgets(
-      'individual provider tapping General Settings goes directly to '
-      'General Settings, skipping the hub',
+      'individual provider tapping General Settings goes to the Settings tab '
+      '(not the full-screen /settings/general child)',
       (tester) async {
         when(() => session.isCompany).thenReturn(false);
         await pumpSheetOpener(tester);
@@ -102,8 +108,8 @@ void main() {
         await tester.tap(find.text('settings.general_settings'));
         await tester.pumpAndSettle();
 
-        expect(find.text('general'), findsOneWidget);
-        expect(find.text('hub'), findsNothing);
+        expect(find.text('hub'), findsOneWidget);
+        expect(find.text('general'), findsNothing);
       },
     );
   });

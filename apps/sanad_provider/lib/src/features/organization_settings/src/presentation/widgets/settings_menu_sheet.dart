@@ -1,11 +1,9 @@
 import 'package:account_settings/account_settings.dart';
-import 'package:auth/auth.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/routes/organization_settings_routes.dart';
-import 'package:sanad_provider/src/routing/provider_capabilities.dart';
 import 'package:shared_ui/shared_ui.dart';
 
 /// Settings menu opened from the bottom-nav Settings tab — Figma `3829:5902`.
@@ -17,7 +15,6 @@ import 'package:shared_ui/shared_ui.dart';
 void showSettingsMenuSheet(BuildContext context, {GlobalKey? anchorKey}) {
   final colors = context.appColors;
   final typography = context.appTypography;
-  final canManageOrganization = context.session.canManageOrganization;
   final labelStyle = typography.bodyMedium.copyWith(color: colors.gray900);
 
   final menu = PopupMenu(
@@ -46,15 +43,14 @@ void showSettingsMenuSheet(BuildContext context, {GlobalKey? anchorKey}) {
     onClickMenu: (item) {
       switch (item.menuUserInfo as _SettingsMenuAction) {
         case _SettingsMenuAction.general:
-          // Organization providers land on the KPI/setup hub first (it hosts
-          // the "General settings" entry point); individual providers have
-          // no organization surfaces to see, so they go straight to the
-          // General Settings detail screen.
-          context.go(
-            canManageOrganization
-                ? OrganizationSettingsRoutes.hub
-                : OrganizationSettingsRoutes.general,
-          );
+          // Both personas go to the shell Settings tab, whose route builder
+          // renders the persona-appropriate page: the KPI/setup hub for
+          // organization providers (it hosts the "General settings" entry
+          // point), or General Settings itself for individual providers (who
+          // have no organization surfaces). Navigating to the tab — rather
+          // than pushing `/settings/general` — keeps the bottom nav visible
+          // and avoids stacking a duplicate settings page.
+          context.go(OrganizationSettingsRoutes.hub);
         case _SettingsMenuAction.account:
           context.push(AccountSettingsRoutes.hub);
       }

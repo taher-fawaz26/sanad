@@ -2,6 +2,7 @@ import 'package:core/core.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:media_upload/media_upload.dart';
 import 'package:services/src/di/services_di.dart';
 import 'package:services/src/domain/entities/provider_service_entity.dart';
 import 'package:services/src/domain/entities/service_request_entity.dart';
@@ -18,6 +19,7 @@ import 'package:services/src/presentation/pages/request_details_page.dart';
 import 'package:services/src/presentation/pages/request_new_service_page.dart';
 import 'package:services/src/presentation/pages/service_details_page.dart';
 import 'package:services/src/presentation/pages/services_page.dart';
+import 'package:services/src/presentation/widgets/manage_service_images_section.dart';
 import 'package:services/src/routes/service_routes.dart';
 
 class ServicesModule extends FeatureModule {
@@ -105,8 +107,23 @@ class ServicesModule extends FeatureModule {
               if (extra is! ProviderServiceEntity) {
                 return const _MissingRouteArgs();
               }
-              return BlocProvider(
-                create: (_) => sl<EditServiceBloc>(),
+              return MultiBlocProvider(
+                providers: [
+                  BlocProvider(create: (_) => sl<EditServiceBloc>()),
+                  BlocProvider(
+                    create: (_) => sl<MediaUploadBloc>(
+                      param1: const MediaUploadConfig(
+                        maxFileSize: 5 * 1024 * 1024,
+                        maxFiles: kMaxServiceImages,
+                        allowedMimeTypes: [
+                          'image/jpeg',
+                          'image/png',
+                          'image/webp',
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
                 child: EditServicePage(service: extra),
               );
             },

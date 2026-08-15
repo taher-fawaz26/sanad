@@ -2,6 +2,7 @@ import 'package:auth/auth.dart';
 import 'package:branches/branches.dart';
 import 'package:core/core.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:network/network.dart';
 import 'package:provider_rbac/provider_rbac.dart';
@@ -132,8 +133,10 @@ GoRouter buildProviderRouter() {
                 routes: [
                   GoRoute(
                     path: AppRoutes.settings,
-                    builder: (context, state) =>
-                        const OrganizationSettingsPage(),
+                    builder: (context, state) => buildSettingsTabPage(
+                      canManageOrganization:
+                          context.session.canManageOrganization,
+                    ),
                   ),
                 ],
               ),
@@ -162,6 +165,21 @@ GoRouter buildProviderRouter() {
   );
 }
 
+/// The page mounted by the shell Settings tab ([AppRoutes.settings]) for the
+/// given persona — extracted from the route builder so the persona split is
+/// unit-testable without standing up GoRouter/DI.
+///
+/// Organization providers ([canManageOrganization] == true) land on the
+/// KPI/setup hub, which pushes General Settings as a child route (with a back
+/// button). Individual providers have no organization hub, so General Settings
+/// IS their primary Settings tab: mounted here as a root destination
+/// ([GeneralSettingsPage.isRootTab] == true) with the bottom nav visible and no
+/// back affordance — there is nothing to pop back to.
+Widget buildSettingsTabPage({required bool canManageOrganization}) =>
+    canManageOrganization
+    ? const OrganizationSettingsPage()
+    : const GeneralSettingsPage(isRootTab: true);
+
 /// Pure redirect decision for [buildProviderRouter] — extracted so the
 /// auth-guard and organization-only-route rules are unit-testable without
 /// standing up GoRouter/DI.
@@ -183,18 +201,19 @@ String? resolveProviderRedirect({
     return AuthRoutes.login;
   }
 
-  // Organization-only surfaces: branches, workers/team (+invitations),
-  // provider RBAC, and the organization setup/KPI hub itself (NOT its
-  // `/settings/general` or `/settings/legal-documents` children, which
-  // both persona types may reach). Individual providers are redirected to
-  // General Settings rather than shown a 403/empty organization page.
+  // Organization-only surfaces: branches, workers/team (+invitations), and
+  // provider RBAC. The Settings hub itself (`/settings`) is NOT listed here:
+  // it is the shell Settings tab, and its route builder already renders the
+  // persona-appropriate page (KPI hub for organizations, General Settings for
+  // individuals). Individual providers hitting an org-only surface are sent to
+  // their Settings tab — which keeps the bottom nav visible — rather than the
+  // full-screen `/settings/general` child (which has no parent to pop back to).
   final isOrgOnlyRoute =
       BranchRoutes.isProtectedRoute(location) ||
       WorkerRoutes.isProtectedRoute(location) ||
-      ProviderRbacRoutes.isProtectedRoute(location) ||
-      location == OrganizationSettingsRoutes.hub;
+      ProviderRbacRoutes.isProtectedRoute(location);
   if (isOrgOnlyRoute && isAuthenticated && !canManageOrganization) {
-    return OrganizationSettingsRoutes.general;
+    return OrganizationSettingsRoutes.hub;
   }
 
   return null;

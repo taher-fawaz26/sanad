@@ -59,7 +59,17 @@ final _skeletonCompletion = ProviderCompletionEntity(
 /// service-provider/settings`, `PUT service-provider/working-hours`).
 class GeneralSettingsPage extends StatelessWidget {
   /// Creates the general settings page.
-  const GeneralSettingsPage({super.key});
+  const GeneralSettingsPage({super.key, this.isRootTab = false});
+
+  /// Whether this page is mounted as the provider shell's Settings tab
+  /// (individual providers) rather than pushed as a child of the KPI hub
+  /// (organization providers).
+  ///
+  /// A root tab is the bottom-nav destination itself — there is no parent
+  /// settings screen to return to, so the AppBar shows no back affordance and
+  /// never calls `context.pop()` (which would throw `GoError: There is nothing
+  /// to pop`). Set by the route builder, not derived inside the widget.
+  final bool isRootTab;
 
   @override
   Widget build(BuildContext context) {
@@ -67,13 +77,15 @@ class GeneralSettingsPage extends StatelessWidget {
       create: (_) =>
           sl<OrganizationSettingsBloc>()
             ..add(const OrganizationSettingsLoaded()),
-      child: const _GeneralSettingsView(),
+      child: _GeneralSettingsView(isRootTab: isRootTab),
     );
   }
 }
 
 class _GeneralSettingsView extends StatefulWidget {
-  const _GeneralSettingsView();
+  const _GeneralSettingsView({required this.isRootTab});
+
+  final bool isRootTab;
 
   @override
   State<_GeneralSettingsView> createState() => _GeneralSettingsViewState();
@@ -340,8 +352,8 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
               AppSliverAppBar(
                 navBar: AppNavBar(
                   title: 'settings.general_settings'.tr(),
-                  showBackButton: true,
-                  onLeadingTap: () => context.pop(),
+                  showBackButton: !widget.isRootTab,
+                  onLeadingTap: widget.isRootTab ? null : () => context.pop(),
                   trailingAction: AppNavBarTrailingAction.icon,
                   trailing: const Icon(Icons.notifications_outlined),
                   onTrailingTap: () => _showComingSoon(context),

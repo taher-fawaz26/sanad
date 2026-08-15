@@ -8,6 +8,27 @@ import 'package:services/services.dart';
 import 'package:workers/workers.dart';
 
 void main() {
+  group('buildSettingsTabPage — persona-aware Settings tab', () {
+    test('organization providers get the KPI/setup hub', () {
+      final page = buildSettingsTabPage(canManageOrganization: true);
+      expect(page, isA<OrganizationSettingsPage>());
+    });
+
+    test('individual providers get General Settings mounted as a root tab '
+        '(no back affordance to pop)', () {
+      final page = buildSettingsTabPage(canManageOrganization: false);
+      expect(page, isA<GeneralSettingsPage>());
+      expect((page as GeneralSettingsPage).isRootTab, isTrue);
+    });
+
+    test('the organization hub is never a root tab — General Settings stays a '
+        'pushed child there', () {
+      final page = buildSettingsTabPage(canManageOrganization: true);
+      // Sanity: the org path is a different page type, not GeneralSettingsPage.
+      expect(page, isNot(isA<GeneralSettingsPage>()));
+    });
+  });
+
   group('resolveProviderRedirect — auth guard', () {
     test('unauthenticated access to a protected route redirects to login', () {
       expect(
@@ -75,19 +96,21 @@ void main() {
       WorkerRoutes.list,
       ProviderRbacRoutes.list,
       ProviderRbacRoutes.add,
-      OrganizationSettingsRoutes.hub,
     ];
 
     for (final location in orgOnlyRoutes) {
-      test('individual provider hitting $location is redirected to General '
-          'Settings', () {
+      test('individual provider hitting $location is redirected to the '
+          'Settings tab', () {
         expect(
           resolveProviderRedirect(
             location: location,
             isAuthenticated: true,
             canManageOrganization: false,
           ),
-          OrganizationSettingsRoutes.general,
+          // The shell Settings tab — its builder renders General Settings for
+          // individuals, keeping the bottom nav visible. NOT the full-screen
+          // `/settings/general` child, which has no parent to pop back to.
+          OrganizationSettingsRoutes.hub,
         );
       });
 
@@ -102,6 +125,29 @@ void main() {
         );
       });
     }
+
+    test('individual provider is NOT redirected away from the Settings tab '
+        '(its builder renders General Settings for them)', () {
+      expect(
+        resolveProviderRedirect(
+          location: OrganizationSettingsRoutes.hub,
+          isAuthenticated: true,
+          canManageOrganization: false,
+        ),
+        isNull,
+      );
+    });
+
+    test('organization provider can access the Settings hub', () {
+      expect(
+        resolveProviderRedirect(
+          location: OrganizationSettingsRoutes.hub,
+          isAuthenticated: true,
+          canManageOrganization: true,
+        ),
+        isNull,
+      );
+    });
 
     test('individual provider CAN access Services', () {
       for (final location in [
@@ -162,7 +208,7 @@ void main() {
           isAuthenticated: true,
           canManageOrganization: false,
         ),
-        OrganizationSettingsRoutes.general,
+        OrganizationSettingsRoutes.hub,
       );
       expect(
         resolveProviderRedirect(
@@ -170,7 +216,7 @@ void main() {
           isAuthenticated: true,
           canManageOrganization: false,
         ),
-        OrganizationSettingsRoutes.general,
+        OrganizationSettingsRoutes.hub,
       );
     });
 
@@ -181,7 +227,7 @@ void main() {
           isAuthenticated: true,
           canManageOrganization: false,
         ),
-        OrganizationSettingsRoutes.general,
+        OrganizationSettingsRoutes.hub,
       );
     });
 
@@ -192,7 +238,7 @@ void main() {
           isAuthenticated: true,
           canManageOrganization: false,
         ),
-        OrganizationSettingsRoutes.general,
+        OrganizationSettingsRoutes.hub,
       );
     });
   });

@@ -11,6 +11,7 @@ import 'package:services/src/domain/repositories/catalog_repository.dart';
 import 'package:services/src/domain/repositories/categories_repository.dart';
 import 'package:services/src/domain/repositories/provider_services_repository.dart';
 import 'package:services/src/domain/repositories/service_requests_repository.dart';
+import 'package:services/src/domain/usecases/add_provider_service_image_usecase.dart';
 import 'package:services/src/domain/usecases/browse_catalog_usecase.dart';
 import 'package:services/src/domain/usecases/create_provider_service_usecase.dart';
 import 'package:services/src/domain/usecases/create_service_request_usecase.dart';
@@ -113,6 +114,11 @@ abstract final class ServicesDI {
       )
       ..registerLazySingleton(
         () => GetProviderServicesOverviewUseCase(
+          sl<ProviderServicesRepository>(),
+        ),
+      )
+      ..registerLazySingleton(
+        () => AddProviderServiceImageUseCase(
           sl<ProviderServicesRepository>(),
         ),
       )

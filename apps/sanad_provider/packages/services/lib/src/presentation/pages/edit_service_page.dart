@@ -9,11 +9,19 @@ import 'package:services/src/domain/entities/provider_service_entity.dart';
 import 'package:services/src/domain/usecases/update_provider_service_description_usecase.dart';
 import 'package:services/src/presentation/bloc/edit_service/edit_service_bloc.dart';
 import 'package:services/src/presentation/widgets/edit_service_form_body.dart';
+import 'package:services/src/presentation/widgets/manage_service_images_section.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Edit Service screen — submits `PATCH /provider-services/{id}` (description
 /// only) via [EditServiceBloc]. Reached from `ServiceRoutes.editFor` with the
 /// [ProviderServiceEntity] being edited passed via the route `extra`.
+///
+/// Image mutations (add/delete/set-primary), handled by
+/// [ManageServiceImagesSection], are separate, immediately-committed
+/// requests against their own endpoints — they don't go through
+/// [EditServiceBloc]/`PATCH /provider-services/{id}`. [_service] tracks the
+/// latest server state so the screen can pop it back even when only images
+/// changed and description Save was never pressed.
 class EditServicePage extends StatefulWidget {
   const EditServicePage({required this.service, super.key});
 
@@ -26,6 +34,8 @@ class EditServicePage extends StatefulWidget {
 class _EditServicePageState extends State<EditServicePage> {
   final _formBodyKey = GlobalKey<EditServiceFormBodyState>();
   bool _isFormComplete = true;
+  late ProviderServiceEntity _service = widget.service;
+  bool _imagesDirty = false;
 
   @override
   Widget build(BuildContext context) {
@@ -55,13 +65,28 @@ class _EditServicePageState extends State<EditServicePage> {
                       horizontal: AppSpacing.lg,
                       vertical: AppSpacing.md,
                     ),
-                    child: EditServiceFormBody(
-                      key: _formBodyKey,
-                      service: widget.service,
-                      onCompletenessChanged: (complete) {
-                        if (_isFormComplete == complete) return;
-                        setState(() => _isFormComplete = complete);
-                      },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        EditServiceFormBody(
+                          key: _formBodyKey,
+                          service: widget.service,
+                          onCompletenessChanged: (complete) {
+                            if (_isFormComplete == complete) return;
+                            setState(() => _isFormComplete = complete);
+                          },
+                        ),
+                        SizedBox(height: AppSpacing.xl),
+                        ManageServiceImagesSection(
+                          service: _service,
+                          onServiceUpdated: (updated) {
+                            setState(() {
+                              _service = updated;
+                              _imagesDirty = true;
+                            });
+                          },
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -89,11 +114,14 @@ class _EditServicePageState extends State<EditServicePage> {
   }
 
   /// Figma `4715:26609` — same discard-unsaved-changes guard as Add Service,
-  /// scoped to this screen.
+  /// scoped to this screen. Only guards the description text field —
+  /// image mutations are already committed to the backend by the time
+  /// they're reflected in [_service], so there's nothing to "discard" for
+  /// them; back navigation always returns whatever image state exists.
   Future<void> _onBackPressed(BuildContext context) async {
     final hasUnsaved = _formBodyKey.currentState?.hasUnsavedInput ?? false;
     if (!hasUnsaved) {
-      if (context.canPop()) context.pop();
+      if (context.canPop()) context.pop(_imagesDirty ? _service : null);
       return;
     }
 
@@ -107,7 +135,7 @@ class _EditServicePageState extends State<EditServicePage> {
     );
 
     if ((discard ?? false) && context.mounted && context.canPop()) {
-      context.pop();
+      context.pop(_imagesDirty ? _service : null);
     }
   }
 
@@ -127,7 +155,8 @@ class _EditServicePageState extends State<EditServicePage> {
 
   void _handleEditServiceState(BuildContext context, EditServiceState state) {
     if (state.status == RequestStatus.success) {
-      if (context.canPop()) context.pop(state.updatedService);
+      final updated = state.updatedService ?? _service;
+      if (context.canPop()) context.pop(updated);
       return;
     }
     if (state.status == RequestStatus.failure && state.failure != null) {

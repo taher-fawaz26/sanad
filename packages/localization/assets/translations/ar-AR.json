@@ -367,6 +367,7 @@
     "delete_image_confirm_description": "هل أنت متأكد أنك تريد حذف هذه الصورة؟",
     "delete_image_confirm_action": "حذف الصورة",
     "image_menu_set_main": "تعيين كصورة رئيسية",
+    "image_limit_reached": "يمكنك إضافة حتى {max} صور لكل خدمة.",
     "images_count_label": "الصور ({count}/{max})",
     "images_max_badge": "الحد الأقصى {max}",
     "images_main_badge": "رئيسية",
