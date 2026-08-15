@@ -26,11 +26,10 @@ class FilePickerFileProvider implements FileProvider {
     try {
       final List<PlatformFile> platformFiles;
       if (options.allowMultiple) {
-        final result = await FilePicker.pickFiles(
+        platformFiles = await FilePicker.pickFiles(
           type: type,
           allowedExtensions: allowedExtensions,
         );
-        platformFiles = result?.files ?? const [];
       } else {
         final file = await FilePicker.pickFile(
           type: type,
@@ -77,7 +76,7 @@ class FilePickerFileProvider implements FileProvider {
       path: file.path ?? '',
       bytes: loadBytes ? await file.readAsBytes() : null,
       mimeType: AssetMimeResolver.fromExtension(extension),
-      size: file.size,
+      size: await file.length(),
       assetType: AssetType.fromExtension(extension),
     );
   }
