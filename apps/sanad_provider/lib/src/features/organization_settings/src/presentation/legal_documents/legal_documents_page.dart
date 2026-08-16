@@ -5,6 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sanad_provider/src/features/organization_settings/src/presentation/legal_documents/document_scope.dart';
 import 'package:shared_ui/shared_ui.dart';
 
 DocumentUploadCardLabels _labels() => DocumentUploadCardLabels(
@@ -27,15 +28,18 @@ const _kCaptureOptions = AssetPickerOptions(
   maxFileSize: 10 * 1024 * 1024,
 );
 
-/// Update flow for the organization's Emirates ID + trade licence documents.
+/// Update flow for a single organization legal document (Emirates ID, or
+/// Trade Licence) — never both at once.
 ///
 /// Prefills from whatever is already on file (`DocumentFlowConfig
-/// .enablePrefetch`), lets the user replace any document, re-runs OCR
-/// verification, then saves via `PUT service-provider/legal-data/documents`.
-/// Pops with `true` on a successful save so the caller can refresh
-/// `OrganizationSettingsBloc`.
+/// .enablePrefetch`), lets the user replace the document(s) in [scope],
+/// re-runs OCR verification, then saves via
+/// `PUT service-provider/legal-data/documents`. Pops with `true` on a
+/// successful save so the caller can refresh `OrganizationSettingsBloc`.
 class LegalDocumentsPage extends StatefulWidget {
-  const LegalDocumentsPage({super.key});
+  const LegalDocumentsPage({required this.scope, super.key});
+
+  final DocumentScope scope;
 
   @override
   State<LegalDocumentsPage> createState() => _LegalDocumentsPageState();
@@ -85,7 +89,7 @@ class _LegalDocumentsPageState extends State<LegalDocumentsPage> {
           slivers: [
             AppSliverAppBar(
               navBar: AppNavBar(
-                title: 'settings.legal_documents.title'.tr(),
+                title: widget.scope.titleKey.tr(),
                 showBackButton: true,
                 onLeadingTap: () => context.pop(),
               ),
@@ -97,69 +101,75 @@ class _LegalDocumentsPageState extends State<LegalDocumentsPage> {
               ),
               sliver: SliverMainAxisGroup(
                 slivers: [
-                  AppSliverBox(
-                    child: DocumentUploadCard(
-                      title: 'settings.legal_documents.id_front'.tr(),
-                      labels: _labels(),
-                      uploadable: state.documentAt(
-                        DocumentType.emiratesIdFront,
-                      ),
-                      onUpload: () => _pick(DocumentType.emiratesIdFront),
-                      onReplace: () => _pick(DocumentType.emiratesIdFront),
-                      onCancel: () => context.read<DocumentFlowBloc>().add(
-                        const DocumentUploadCancelled(
+                  if (widget.scope == DocumentScope.emiratesId) ...[
+                    AppSliverBox(
+                      child: DocumentUploadCard(
+                        title: 'settings.legal_documents.id_front'.tr(),
+                        labels: _labels(),
+                        uploadable: state.documentAt(
                           DocumentType.emiratesIdFront,
                         ),
-                      ),
-                      onRemove: () => context.read<DocumentFlowBloc>().add(
-                        const DocumentRemoved(DocumentType.emiratesIdFront),
+                        onUpload: () => _pick(DocumentType.emiratesIdFront),
+                        onReplace: () => _pick(DocumentType.emiratesIdFront),
+                        onCancel: () => context.read<DocumentFlowBloc>().add(
+                          const DocumentUploadCancelled(
+                            DocumentType.emiratesIdFront,
+                          ),
+                        ),
+                        onRemove: () => context.read<DocumentFlowBloc>().add(
+                          const DocumentRemoved(DocumentType.emiratesIdFront),
+                        ),
                       ),
                     ),
-                  ),
-                  AppSliverGap(AppSpacing.lg),
-                  AppSliverBox(
-                    child: DocumentUploadCard(
-                      title: 'settings.legal_documents.id_back'.tr(),
-                      labels: _labels(),
-                      uploadable: state.documentAt(DocumentType.emiratesIdBack),
-                      onUpload: () => _pick(DocumentType.emiratesIdBack),
-                      onReplace: () => _pick(DocumentType.emiratesIdBack),
-                      onCancel: () => context.read<DocumentFlowBloc>().add(
-                        const DocumentUploadCancelled(
+                    AppSliverGap(AppSpacing.lg),
+                    AppSliverBox(
+                      child: DocumentUploadCard(
+                        title: 'settings.legal_documents.id_back'.tr(),
+                        labels: _labels(),
+                        uploadable: state.documentAt(
                           DocumentType.emiratesIdBack,
                         ),
-                      ),
-                      onRemove: () => context.read<DocumentFlowBloc>().add(
-                        const DocumentRemoved(DocumentType.emiratesIdBack),
-                      ),
-                    ),
-                  ),
-                  AppSliverGap(AppSpacing.lg),
-                  AppSliverBox(
-                    child: DocumentUploadCard(
-                      title: 'settings.legal_documents.trade_license'.tr(),
-                      labels: _labels(),
-                      uploadable: state.documentAt(DocumentType.tradeLicense),
-                      onUpload: () => _pick(DocumentType.tradeLicense),
-                      onReplace: () => _pick(DocumentType.tradeLicense),
-                      onCancel: () => context.read<DocumentFlowBloc>().add(
-                        const DocumentUploadCancelled(
-                          DocumentType.tradeLicense,
+                        onUpload: () => _pick(DocumentType.emiratesIdBack),
+                        onReplace: () => _pick(DocumentType.emiratesIdBack),
+                        onCancel: () => context.read<DocumentFlowBloc>().add(
+                          const DocumentUploadCancelled(
+                            DocumentType.emiratesIdBack,
+                          ),
+                        ),
+                        onRemove: () => context.read<DocumentFlowBloc>().add(
+                          const DocumentRemoved(DocumentType.emiratesIdBack),
                         ),
                       ),
-                      onRemove: () => context.read<DocumentFlowBloc>().add(
-                        const DocumentRemoved(DocumentType.tradeLicense),
+                    ),
+                  ] else ...[
+                    AppSliverBox(
+                      child: DocumentUploadCard(
+                        title: 'settings.legal_documents.trade_license'.tr(),
+                        labels: _labels(),
+                        uploadable: state.documentAt(DocumentType.tradeLicense),
+                        onUpload: () => _pick(DocumentType.tradeLicense),
+                        onReplace: () => _pick(DocumentType.tradeLicense),
+                        onCancel: () => context.read<DocumentFlowBloc>().add(
+                          const DocumentUploadCancelled(
+                            DocumentType.tradeLicense,
+                          ),
+                        ),
+                        onRemove: () => context.read<DocumentFlowBloc>().add(
+                          const DocumentRemoved(DocumentType.tradeLicense),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                   if (extracted != null) ...[
-                    for (final section in extracted.sections) ...[
+                    for (final section in extracted.sections.where(
+                      (section) => widget.scope == DocumentScope.tradeLicense
+                          ? section.type == DocumentType.tradeLicense
+                          : section.type != DocumentType.tradeLicense,
+                    )) ...[
                       AppSliverGap(AppSpacing.lg),
                       AppSliverBox(
                         child: ExtractedFieldsView(
-                          title: section.type == DocumentType.tradeLicense
-                              ? 'settings.legal_documents.trade_license'.tr()
-                              : 'settings.legal_documents.emirates_id'.tr(),
+                          title: widget.scope.titleKey.tr(),
                           issue: section.issue,
                           fields: section.fields,
                           replaceLabel:

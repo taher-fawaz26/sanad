@@ -80,15 +80,6 @@ class AddBranchDraft extends Equatable {
 
   bool get isStepFourComplete => selectedWorkers.isNotEmpty;
 
-  /// All steps complete — the draft can be submitted (create or edit). Phone
-  /// format validity is enforced separately by the caller (via
-  /// `UaePhoneValidator`), matching the create flow.
-  bool get canSubmit =>
-      isStepOneComplete &&
-      isStepTwoComplete &&
-      isStepThreeComplete &&
-      isStepFourComplete;
-
   AddBranchDraft copyWith({
     String? branchName,
     BranchType? branchType,

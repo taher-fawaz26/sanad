@@ -105,79 +105,39 @@ class _BranchesTab extends StatelessWidget {
             onRefresh: () async {
               context.read<BranchesBloc>().add(const BranchesRefreshEvent());
             },
-            child: CustomScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                SliverAppBar(
-                  pinned: true,
-                  toolbarHeight: 0,
-                  automaticallyImplyLeading: false,
-                  backgroundColor: colors.surface,
-                  surfaceTintColor: Colors.transparent,
-                  scrolledUnderElevation: 0,
-                  elevation: 0,
-                  expandedHeight: _expandedHeaderHeight(),
-                  flexibleSpace: const FlexibleSpaceBar(
-                    background: SingleChildScrollView(
-                      physics: NeverScrollableScrollPhysics(),
-                      child: _CollapsingHeader(),
-                    ),
-                  ),
-                  bottom: PreferredSize(
-                    preferredSize: Size.fromHeight(_bottomBarHeight()),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppSpacing.xl,
-                        vertical: responsiveSpacing(10),
-                      ),
-                      child: AppSearchField(
-                        variant: AppSearchFieldVariant.bordered,
-                        hint: 'common.search_hint'.tr(),
-                        showMicIcon: false,
-                        readOnly: true,
-                        onTap: () => showBranchSearchSheet(context),
+            child: AppSwipeActionsGroup(
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverAppBar(
+                    pinned: true,
+                    toolbarHeight: 0,
+                    automaticallyImplyLeading: false,
+                    backgroundColor: colors.surface,
+                    surfaceTintColor: Colors.transparent,
+                    scrolledUnderElevation: 0,
+                    elevation: 0,
+                    expandedHeight: _expandedHeaderHeight(),
+                    flexibleSpace: const FlexibleSpaceBar(
+                      background: SingleChildScrollView(
+                        physics: NeverScrollableScrollPhysics(),
+                        child: _CollapsingHeader(),
                       ),
                     ),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xl,
-                      vertical: AppSpacing.sm,
-                    ),
-                    child: _FilterRow(currentFilter: state.filter),
-                  ),
-                ),
-                if (state.hasError && state.branches.isEmpty)
-                  AppSliverFillRemaining(
-                    child: _ErrorState(
-                      failure: state.failure,
-                      onRetry: () => context.read<BranchesBloc>().add(
-                        const BranchesRefreshEvent(),
-                      ),
-                    ),
-                  )
-                else if (branches.isEmpty)
-                  AppSliverFillRemaining(
-                    child: _EmptyState(
-                      searchQuery: state.searchQuery,
-                      onClearSearch: () => context.read<BranchesBloc>().add(
-                        const BranchesSearchChangedEvent(''),
-                      ),
-                    ),
-                  )
-                else ...[
-                  SliverList.separated(
-                    itemCount: branches.length,
-                    separatorBuilder: (context, index) =>
-                        SizedBox(height: AppSpacing.md),
-                    itemBuilder: (context, index) => RepaintBoundary(
+                    bottom: PreferredSize(
+                      preferredSize: Size.fromHeight(_bottomBarHeight()),
                       child: Padding(
                         padding: EdgeInsets.symmetric(
                           horizontal: AppSpacing.xl,
+                          vertical: responsiveSpacing(10),
                         ),
-                        child: BranchListItem(branch: branches[index]),
+                        child: AppSearchField(
+                          variant: AppSearchFieldVariant.bordered,
+                          hint: 'common.search_hint'.tr(),
+                          showMicIcon: false,
+                          readOnly: true,
+                          onTap: () => showBranchSearchSheet(context),
+                        ),
                       ),
                     ),
                   ),
@@ -185,18 +145,60 @@ class _BranchesTab extends StatelessWidget {
                     child: Padding(
                       padding: EdgeInsets.symmetric(
                         horizontal: AppSpacing.xl,
-                        vertical: AppSpacing.lg,
+                        vertical: AppSpacing.sm,
                       ),
-                      child: AppButton(
-                        label: 'branches.add_button'.tr(),
-                        icon: const Icon(Icons.add_circle_outline),
-                        iconPosition: AppButtonIconPosition.center,
-                        onPressed: () => _openAddBranch(context),
-                      ),
+                      child: _FilterRow(currentFilter: state.filter),
                     ),
                   ),
+                  if (state.hasError && state.branches.isEmpty)
+                    AppSliverFillRemaining(
+                      child: _ErrorState(
+                        failure: state.failure,
+                        onRetry: () => context.read<BranchesBloc>().add(
+                          const BranchesRefreshEvent(),
+                        ),
+                      ),
+                    )
+                  else if (branches.isEmpty)
+                    AppSliverFillRemaining(
+                      child: _EmptyState(
+                        searchQuery: state.searchQuery,
+                        onClearSearch: () => context.read<BranchesBloc>().add(
+                          const BranchesSearchChangedEvent(''),
+                        ),
+                      ),
+                    )
+                  else ...[
+                    SliverList.separated(
+                      itemCount: branches.length,
+                      separatorBuilder: (context, index) =>
+                          SizedBox(height: AppSpacing.md),
+                      itemBuilder: (context, index) => RepaintBoundary(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSpacing.xl,
+                          ),
+                          child: BranchListItem(branch: branches[index]),
+                        ),
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppSpacing.xl,
+                          vertical: AppSpacing.lg,
+                        ),
+                        child: AppButton(
+                          label: 'branches.add_button'.tr(),
+                          icon: const Icon(Icons.add_circle_outline),
+                          iconPosition: AppButtonIconPosition.center,
+                          onPressed: () => _openAddBranch(context),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           );
         },

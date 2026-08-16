@@ -73,6 +73,7 @@ export 'src/states/app_loading_view.dart';
 export 'src/widgets/app_add_schedule_day_sheet.dart';
 export 'src/widgets/app_compliance_document_card.dart';
 export 'src/widgets/app_confirmation_content.dart';
+export 'src/widgets/app_description_field.dart';
 export 'src/widgets/app_enhance_with_ai_button.dart';
 export 'src/widgets/app_entity_list_item.dart';
 export 'src/widgets/app_inline_link_text.dart';

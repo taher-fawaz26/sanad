@@ -8,20 +8,21 @@ import 'package:sanad_provider/src/features/organization_settings/src/presentati
 /// `update_service_provider_settings_params.dart`. A prior migration had the
 /// UI constant wrongly set to 2000; these tests pin the corrected 350 limit.
 ///
-/// Root-cause note: the sheet's "Enhance with AI" button
-/// (`AppEnhanceWithAiButton`) runs a continuous rainbow-border animation
-/// whenever `MediaQuery.disableAnimationsOf(context)` is false, so
-/// `pumpAndSettle()` never quiesces — every interaction below uses bounded
-/// `pump()` calls instead. Disabling animations via accessibility features
-/// also sidesteps a second, unrelated pre-existing issue: that button's
-/// label sizes to a literal 160x41 pixel box, sized for the real
-/// (translated) "Enhance with AI" text; with EasyLocalization NOT
-/// bootstrapped (this repo's widget-test convention — see
-/// worker_list_item_test.dart), `.tr()` falls back to the longer raw key
-/// `settings.enhance_with_ai`, which overflows that fixed box. That overflow
-/// is a decorative, out-of-scope pre-existing issue unrelated to the
-/// description-length validation under test here, so `_pumpOpener` below
-/// suppresses just that one `FlutterError` for the duration of each test.
+/// Root-cause note: the field's "Enhance with AI" button
+/// (`AppEnhanceWithAiButton`, rendered via the shared `AppDescriptionField`)
+/// runs a continuous rainbow-border animation whenever
+/// `MediaQuery.disableAnimationsOf(context)` is false, so `pumpAndSettle()`
+/// never quiesces — every interaction below uses bounded `pump()` calls
+/// instead. Disabling animations via accessibility features also sidesteps
+/// a second, unrelated pre-existing issue: that button's label sizes to a
+/// literal 160x41 pixel box, sized for the real (translated) "Enhance with
+/// AI" text; with EasyLocalization NOT bootstrapped (this repo's widget-test
+/// convention — see worker_list_item_test.dart), `.tr()` falls back to the
+/// longer raw key `common.enhance_with_ai`, which overflows that fixed box.
+/// That overflow is a decorative, out-of-scope pre-existing issue unrelated
+/// to the description-length validation under test here, so `_pumpOpener`
+/// below suppresses just that one `FlutterError` for the duration of each
+/// test.
 Future<void> _pumpOpener(
   WidgetTester tester, {
   String? initialDescription,
@@ -106,7 +107,7 @@ void main() {
       await _openSheet(tester);
 
       await tester.enterText(
-        find.byType(TextFormField),
+        find.byType(TextField),
         'A great business description.',
       );
       await tester.pump();
@@ -119,7 +120,7 @@ void main() {
     testWidgets('exactly 350 characters passes', (tester) async {
       await _openSheet(tester);
 
-      await tester.enterText(find.byType(TextFormField), 'a' * 350);
+      await tester.enterText(find.byType(TextField), 'a' * 350);
       await tester.pump();
       await tester.tap(find.text('common.save'));
       await tester.pump();
@@ -132,7 +133,7 @@ void main() {
     ) async {
       await _openSheet(tester);
 
-      await tester.enterText(find.byType(TextFormField), 'a' * 351);
+      await tester.enterText(find.byType(TextField), 'a' * 351);
       await tester.pump();
       await tester.tap(find.text('common.save'));
       await tester.pump();

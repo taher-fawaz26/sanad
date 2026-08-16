@@ -9,27 +9,14 @@ import 'package:services/services.dart';
 import 'package:workers/workers.dart';
 
 class AddBranchDraftCubit extends Cubit<AddBranchDraft> {
-  AddBranchDraftCubit({AddBranchDraft initial = const AddBranchDraft()})
-    : _initial = initial,
-      super(initial);
+  AddBranchDraftCubit() : super(const AddBranchDraft());
 
-  /// Baseline the draft is compared against for change tracking. Empty in
-  /// create mode; the branch-seeded draft in edit mode. Updated by [seed] when
-  /// the branch is loaded lazily (id-only edit entry).
-  AddBranchDraft _initial;
-
-  /// The baseline used for the discard guard ([AddBranchDraft.hasChangesFrom]).
-  AddBranchDraft get initial => _initial;
+  /// Baseline the draft is compared against for the discard-unsaved-changes
+  /// guard ([AddBranchDraft.hasChangesFrom]) — always the empty draft.
+  static const _initial = AddBranchDraft();
 
   /// Whether the current draft differs from its baseline.
   bool get hasChanges => state.hasChangesFrom(_initial);
-
-  /// Replaces both the baseline and the current draft. Used when the branch is
-  /// fetched lazily in edit mode (only the id was provided at entry).
-  void seed(AddBranchDraft draft) {
-    _initial = draft;
-    emit(draft);
-  }
 
   void updateBasicInfo({
     String? branchName,

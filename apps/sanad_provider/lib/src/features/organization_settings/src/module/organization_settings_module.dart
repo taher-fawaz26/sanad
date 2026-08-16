@@ -3,6 +3,7 @@ import 'package:document_flow/document_flow.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/di/organization_settings_di.dart';
+import 'package:sanad_provider/src/features/organization_settings/src/presentation/legal_documents/document_scope.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/legal_documents/legal_documents_page.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/legal_documents/organization_document_flow_config.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/pages/general_settings_page.dart';
@@ -37,24 +38,29 @@ class OrganizationSettingsModule extends FeatureModule {
     ),
     GoRoute(
       path: OrganizationSettingsRoutes.legalDocuments,
-      builder: (context, state) => BlocProvider(
-        create: (_) => DocumentFlowBloc(
-          config: organizationDocumentFlowConfig,
-          uploadMedia: sl<UploadMediaUseCase>(
-            instanceName: organizationDocumentFlowInstance,
+      builder: (context, state) {
+        final scope = state.extra is DocumentScope
+            ? state.extra! as DocumentScope
+            : DocumentScope.emiratesId;
+        return BlocProvider(
+          create: (_) => DocumentFlowBloc(
+            config: organizationDocumentFlowConfigFor(scope),
+            uploadMedia: sl<UploadMediaUseCase>(
+              instanceName: organizationDocumentFlowInstance,
+            ),
+            extractDocuments: sl<ExtractDocumentsUseCase>(
+              instanceName: organizationDocumentFlowInstance,
+            ),
+            submitDocuments: sl<SubmitDocumentsUseCase>(
+              instanceName: organizationDocumentFlowInstance,
+            ),
+            fetchDocuments: sl<FetchDocumentsUseCase>(
+              instanceName: organizationDocumentFlowInstance,
+            ),
           ),
-          extractDocuments: sl<ExtractDocumentsUseCase>(
-            instanceName: organizationDocumentFlowInstance,
-          ),
-          submitDocuments: sl<SubmitDocumentsUseCase>(
-            instanceName: organizationDocumentFlowInstance,
-          ),
-          fetchDocuments: sl<FetchDocumentsUseCase>(
-            instanceName: organizationDocumentFlowInstance,
-          ),
-        ),
-        child: const LegalDocumentsPage(),
-      ),
+          child: LegalDocumentsPage(scope: scope),
+        );
+      },
     ),
   ];
 }

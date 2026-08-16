@@ -42,8 +42,27 @@ class BottomNavBar<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Edge-to-edge Android reports system nav height in viewPadding (not
-    // padding). Keep the floating bar above the system navigation/home bar.
+    // padding). Keep bar content clear of the system navigation/home bar.
     final safeBottom = MediaQuery.viewPaddingOf(context).bottom;
+
+    if (_isFlat) {
+      // Flush design (Figma `Bars / Tab Bars: Icon & Text`, `1526:12109`):
+      // square bottom corners mean the bar's background must extend through
+      // the safe-area inset down to the physical edge — a transparent gap
+      // below the bar reads as a rendering bug, not a floating pill. Only
+      // the tappable content is inset from the bottom edge.
+      final bottomContentInset = theme.bottomInset + safeBottom;
+      return Padding(
+        padding: EdgeInsets.symmetric(horizontal: theme.horizontalInset),
+        child: SizedBox(
+          height: theme.barHeight + bottomContentInset,
+          child: _buildFlatBar(
+            context,
+            bottomContentInset: bottomContentInset,
+          ),
+        ),
+      );
+    }
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -54,12 +73,15 @@ class BottomNavBar<T> extends StatelessWidget {
       ),
       child: SizedBox(
         height: theme.barHeight,
-        child: _isFlat ? _buildFlatBar(context) : _buildNotchedBar(context),
+        child: _buildNotchedBar(context),
       ),
     );
   }
 
-  Widget _buildFlatBar(BuildContext context) {
+  Widget _buildFlatBar(
+    BuildContext context, {
+    required double bottomContentInset,
+  }) {
     final barColor = theme.resolveBarColor(context);
     final shadowColor = theme.resolveShadowColor(context);
     final radius = Radius.circular(theme.cornerRadius);
@@ -81,7 +103,12 @@ class BottomNavBar<T> extends StatelessWidget {
             : null,
       ),
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: theme.contentPadding),
+        padding: EdgeInsets.fromLTRB(
+          theme.contentPadding,
+          0,
+          theme.contentPadding,
+          bottomContentInset,
+        ),
         child: Row(
           children: [
             for (final destination in destinations)

@@ -230,23 +230,14 @@ class _RoleFormPageState extends State<RoleFormPage> {
                           validator: _validateName,
                         ),
                         SizedBox(height: AppSpacing.lg),
-                        Stack(
-                          children: [
-                            AppTextField(
-                              controller: _descriptionController,
-                              label: 'provider_rbac.description_label'.tr(),
-                              hint: 'provider_rbac.description_hint'.tr(),
-                              maxLines: 5,
-                              validator: _validateDescription,
-                            ),
-                            Positioned(
-                              right: AppSpacing.xs,
-                              bottom: AppSpacing.lg,
-                              child: AppEnhanceWithAiButton(
-                                label: 'provider_rbac.enhance_with_ai'.tr(),
-                              ),
-                            ),
-                          ],
+                        AppDescriptionField(
+                          controller: _descriptionController,
+                          label: 'provider_rbac.description_label'.tr(),
+                          hint: 'provider_rbac.description_hint'.tr(),
+                          maxLines: 5,
+                          maxLength: 255,
+                          validator: _validateDescription,
+                          aiActionLabel: 'common.enhance_with_ai'.tr(),
                         ),
                         SizedBox(height: AppSpacing.lg),
                         BlocBuilder<RoleFormBloc, RoleFormState>(

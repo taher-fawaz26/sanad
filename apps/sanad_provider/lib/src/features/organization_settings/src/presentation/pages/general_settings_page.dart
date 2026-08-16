@@ -14,6 +14,7 @@ import 'package:sanad_provider/src/features/organization_settings/src/domain/ent
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/social_profiles_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/working_hours_day_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/bloc/organization_settings/organization_settings_bloc.dart';
+import 'package:sanad_provider/src/features/organization_settings/src/presentation/legal_documents/document_scope.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/bottom_sheets/edit_category_bottom_sheet.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/bottom_sheets/edit_identity_bottom_sheet.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/bottom_sheets/edit_social_profiles_bottom_sheet.dart';
@@ -143,7 +144,8 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
           countdownText: personal.status == LegalDataStatus.expiringSoon
               ? _countdownText(personal.expiryDate)
               : null,
-          onUpdateDocument: _updateLegalDocuments,
+          onUpdateDocument: () =>
+              _updateLegalDocument(DocumentScope.emiratesId),
         ),
       );
     }
@@ -159,7 +161,8 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
           countdownText: tradeLicense.status == LegalDataStatus.expiringSoon
               ? _countdownText(tradeLicense.expiryDate)
               : null,
-          onUpdateDocument: _updateLegalDocuments,
+          onUpdateDocument: () =>
+              _updateLegalDocument(DocumentScope.tradeLicense),
         ),
       );
     }
@@ -205,9 +208,10 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
     return 'In $days days';
   }
 
-  Future<void> _updateLegalDocuments() async {
+  Future<void> _updateLegalDocument(DocumentScope scope) async {
     final refreshed = await context.push<bool>(
       OrganizationSettingsRoutes.legalDocuments,
+      extra: scope,
     );
     if ((refreshed ?? false) && mounted) {
       context.read<OrganizationSettingsBloc>().add(

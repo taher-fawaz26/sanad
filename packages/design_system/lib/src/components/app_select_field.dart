@@ -7,6 +7,7 @@ import 'package:design_system/src/theme/colors/field_tokens.dart';
 import 'package:design_system/src/theme/typography/app_typography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 /// Figma select / dropdown field — read-only tap target with chevron.
 class AppSelectField extends StatelessWidget {
@@ -118,11 +119,20 @@ class AppSelectField extends StatelessWidget {
                       ),
                       if (showChevron) ...[
                         SizedBox(width: AppSpacing.sm),
-                        SvgPicture.asset(
-                          AppSvgs.chevronDown,
-                          package: AppAssets.package,
-                          width: iconSize,
-                          height: iconSize,
+                        // Not data-driven — would otherwise paint as-is under
+                        // an active Skeletonizer, since flutter_svg paints
+                        // via Canvas.drawPicture, which the skeleton engine
+                        // never intercepts. Skeleton.replace swaps in a bone
+                        // shape instead of relying on paint-layer
+                        // interception.
+                        Skeleton.replace(
+                          replacement: Bone.icon(size: iconSize),
+                          child: SvgPicture.asset(
+                            AppSvgs.chevronDown,
+                            package: AppAssets.package,
+                            width: iconSize,
+                            height: iconSize,
+                          ),
                         ),
                       ],
                     ],

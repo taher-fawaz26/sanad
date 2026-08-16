@@ -45,8 +45,7 @@ class ServiceListItem extends StatelessWidget {
         AppSwipeAction(
           icon: Icons.edit_outlined,
           semanticLabel: 'services.action_edit'.tr(),
-          onPressed: () =>
-              confirmAndEditService(context: context, service: service),
+          onPressed: () => editService(context: context, service: service),
         ),
         AppSwipeAction(
           icon: _isActive

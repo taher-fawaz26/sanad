@@ -20,7 +20,7 @@ part 'service_action_state.dart';
 /// ServiceImagesBloc (images)    ┼─▶ EditServicePage pops the entity
 /// (nothing changed → pops null) ┘        │
 ///                                        ▼
-///              service_action_invokers.confirmAndEditService
+///              service_action_invokers.editService
 ///                                        │ ServiceExternallyUpdatedEvent
 ///                                        ▼
 ///                                 ServiceActionBloc (this bloc)

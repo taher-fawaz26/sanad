@@ -1,3 +1,4 @@
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/domain/entities/paginated_branches_entity.dart';
 import 'package:branches/src/domain/usecases/branch_usecase_params.dart';
@@ -24,8 +25,12 @@ class BranchesBloc extends Bloc<BranchesEvent, BranchesState> {
     on<BranchesRefreshEvent>(_onRefresh);
     on<BranchesFilterChangedEvent>(_onFilterChanged);
     on<BranchesSearchChangedEvent>(_onSearchChanged);
-    on<BranchDeletedEvent>(_onBranchDeleted);
-    on<BranchStatusChangedEvent>(_onBranchStatusChanged);
+    // Drop duplicate submits while one is in flight (double-tap guard).
+    on<BranchDeletedEvent>(_onBranchDeleted, transformer: droppable());
+    on<BranchStatusChangedEvent>(
+      _onBranchStatusChanged,
+      transformer: droppable(),
+    );
     on<BranchActionFailureClearedEvent>(_onActionFailureCleared);
   }
 

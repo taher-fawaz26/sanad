@@ -181,26 +181,6 @@
             "flutterMode": "release"
         },
         {
-            "name": "sand_change_password",
-            "cwd": "packages/sand_change_password",
-            "request": "launch",
-            "type": "dart"
-        },
-        {
-            "name": "sand_change_password (profile mode)",
-            "cwd": "packages/sand_change_password",
-            "request": "launch",
-            "type": "dart",
-            "flutterMode": "profile"
-        },
-        {
-            "name": "sand_change_password (release mode)",
-            "cwd": "packages/sand_change_password",
-            "request": "launch",
-            "type": "dart",
-            "flutterMode": "release"
-        },
-        {
             "name": "sand_config",
             "cwd": "packages/sand_config",
             "request": "launch",
@@ -263,26 +243,6 @@
             "cwd": "packages/sand_flavors",
             "request": "launch",
             "type": "dart"
-        },
-        {
-            "name": "sand_forgot_password",
-            "cwd": "packages/sand_forgot_password",
-            "request": "launch",
-            "type": "dart"
-        },
-        {
-            "name": "sand_forgot_password (profile mode)",
-            "cwd": "packages/sand_forgot_password",
-            "request": "launch",
-            "type": "dart",
-            "flutterMode": "profile"
-        },
-        {
-            "name": "sand_forgot_password (release mode)",
-            "cwd": "packages/sand_forgot_password",
-            "request": "launch",
-            "type": "dart",
-            "flutterMode": "release"
         },
         {
             "name": "sand_localization",
@@ -526,46 +486,6 @@
         {
             "name": "auth (release mode)",
             "cwd": "packages/shared_features/auth",
-            "request": "launch",
-            "type": "dart",
-            "flutterMode": "release"
-        },
-        {
-            "name": "change_password",
-            "cwd": "packages/shared_features/change_password",
-            "request": "launch",
-            "type": "dart"
-        },
-        {
-            "name": "change_password (profile mode)",
-            "cwd": "packages/shared_features/change_password",
-            "request": "launch",
-            "type": "dart",
-            "flutterMode": "profile"
-        },
-        {
-            "name": "change_password (release mode)",
-            "cwd": "packages/shared_features/change_password",
-            "request": "launch",
-            "type": "dart",
-            "flutterMode": "release"
-        },
-        {
-            "name": "forgot_password",
-            "cwd": "packages/shared_features/forgot_password",
-            "request": "launch",
-            "type": "dart"
-        },
-        {
-            "name": "forgot_password (profile mode)",
-            "cwd": "packages/shared_features/forgot_password",
-            "request": "launch",
-            "type": "dart",
-            "flutterMode": "profile"
-        },
-        {
-            "name": "forgot_password (release mode)",
-            "cwd": "packages/shared_features/forgot_password",
             "request": "launch",
             "type": "dart",
             "flutterMode": "release"

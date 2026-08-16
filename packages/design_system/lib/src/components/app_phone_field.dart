@@ -11,6 +11,7 @@ import 'package:design_system/src/theme/typography/app_typography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 /// Figma phone field (`1616:12907`) — flag + country code prefix + number.
 ///
@@ -212,11 +213,20 @@ class _AppPhoneFieldState extends State<AppPhoneField> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      SvgPicture.asset(
-                        widget.countryFlagAsset,
-                        package: AppAssets.package,
-                        width: iconSize,
-                        height: iconSize,
+                      // The flag is a static default (not data-driven), so it
+                      // would otherwise render as-is under an active
+                      // Skeletonizer — flutter_svg paints via
+                      // Canvas.drawPicture, which the skeleton engine never
+                      // intercepts. Skeleton.replace swaps in a bone shape
+                      // instead of relying on paint-layer interception.
+                      Skeleton.replace(
+                        replacement: Bone.icon(size: iconSize),
+                        child: SvgPicture.asset(
+                          widget.countryFlagAsset,
+                          package: AppAssets.package,
+                          width: iconSize,
+                          height: iconSize,
+                        ),
                       ),
                       SizedBox(
                         width: responsiveSpacing(AppPhoneField._prefixGap),

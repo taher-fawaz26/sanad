@@ -92,7 +92,7 @@ class _ServiceActionsSheetBody extends StatelessWidget {
   Future<void> _onEditPressed(BuildContext context) async {
     Navigator.of(context).pop();
     if (!pageContext.mounted) return;
-    await confirmAndEditService(context: pageContext, service: service);
+    await editService(context: pageContext, service: service);
   }
 
   Future<void> _onStatusTogglePressed(BuildContext context) async {

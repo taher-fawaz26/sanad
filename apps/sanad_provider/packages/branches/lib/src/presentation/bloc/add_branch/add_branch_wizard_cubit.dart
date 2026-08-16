@@ -12,26 +12,18 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 /// `AddBranchDraftCubit` and `AddBranchBloc`.
 class AddBranchWizardState extends Equatable {
   const AddBranchWizardState({
-    required this.isEdit,
     this.currentStep = 1,
     this.furthestStep = 1,
     this.showStepOneErrors = false,
-    this.isSeeded = true,
     this.coverageAccessDenied = false,
   });
 
-  final bool isEdit;
   final int currentStep;
   final int furthestStep;
 
   /// True after the user tries to advance from step 1 with invalid input —
   /// flips inline field validators on.
   final bool showStepOneErrors;
-
-  /// True once the edit-mode draft has been seeded from a fetched branch.
-  /// Always true in create mode and in edit mode when the branch was
-  /// pre-loaded.
-  final bool isSeeded;
 
   /// True when location permission is hard-denied while opening the coverage
   /// step — swaps in the "Location access needed" body.
@@ -41,50 +33,29 @@ class AddBranchWizardState extends Equatable {
     int? currentStep,
     int? furthestStep,
     bool? showStepOneErrors,
-    bool? isSeeded,
     bool? coverageAccessDenied,
   }) => AddBranchWizardState(
-    isEdit: isEdit,
     currentStep: currentStep ?? this.currentStep,
     furthestStep: furthestStep ?? this.furthestStep,
     showStepOneErrors: showStepOneErrors ?? this.showStepOneErrors,
-    isSeeded: isSeeded ?? this.isSeeded,
     coverageAccessDenied: coverageAccessDenied ?? this.coverageAccessDenied,
   );
 
   @override
   List<Object?> get props => [
-    isEdit,
     currentStep,
     furthestStep,
     showStepOneErrors,
-    isSeeded,
     coverageAccessDenied,
   ];
 }
 
 class AddBranchWizardCubit extends Cubit<AddBranchWizardState> {
-  AddBranchWizardCubit({required bool isEdit, required int totalSteps})
+  AddBranchWizardCubit({required int totalSteps})
     : _totalSteps = totalSteps,
-      super(
-        AddBranchWizardState(
-          isEdit: isEdit,
-          // Edit mode lets the user tap any step from the start; create mode
-          // walks the wizard linearly.
-          furthestStep: isEdit ? totalSteps : 1,
-          // Edit-with-preloaded-branch is seeded immediately; the id-only
-          // fetch path flips this to false via [markSeedingRequired].
-          isSeeded: true,
-        ),
-      );
+      super(const AddBranchWizardState());
 
   final int _totalSteps;
-
-  /// Marks the wizard as awaiting a branch fetch before it can seed the
-  /// draft. Called from the page's initState in edit-with-id mode.
-  void markSeedingRequired() => emit(state.copyWith(isSeeded: false));
-
-  void markSeeded() => emit(state.copyWith(isSeeded: true));
 
   /// Jumps to [step], extending [furthestStep] as needed.
   void advanceTo(int step) => emit(

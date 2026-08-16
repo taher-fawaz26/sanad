@@ -75,8 +75,6 @@ class _EditIdentitySheetBodyState extends State<_EditIdentitySheetBody> {
             SizedBox(height: AppSpacing.xxl),
             _BusinessDescriptionField(
               controller: _controller,
-              colors: colors,
-              typography: typography,
               onEnhanceWithAi: widget.onEnhanceWithAi,
             ),
             SizedBox(height: AppSpacing.xl),
@@ -130,75 +128,30 @@ class _Header extends StatelessWidget {
 class _BusinessDescriptionField extends StatelessWidget {
   const _BusinessDescriptionField({
     required this.controller,
-    required this.colors,
-    required this.typography,
     this.onEnhanceWithAi,
   });
 
   final TextEditingController controller;
-  final AppColors colors;
-  final AppTypography typography;
   final VoidCallback? onEnhanceWithAi;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'settings.business_description'.tr(),
-          style: typography.smallNormal.copyWith(
-            color: colors.textSecondary,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        SizedBox(height: AppSpacing.xs),
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            color: colors.surface,
-            border: Border.all(color: colors.border),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextFormField(
-                controller: controller,
-                maxLines: null,
-                keyboardType: TextInputType.multiline,
-                style: typography.smallNormal.copyWith(
-                  color: colors.textPrimary,
-                ),
-                decoration: const InputDecoration(
-                  isDense: true,
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
-                ),
-                validator: (value) =>
-                    LengthValidator.isValid(
-                      value,
-                      maxLength: _kBusinessDescriptionMaxLength,
-                    )
-                    ? null
-                    : 'validation.length_max'.tr(
-                        namedArgs: {
-                          'max': '$_kBusinessDescriptionMaxLength',
-                        },
-                      ),
-              ),
-              SizedBox(height: AppSpacing.xxl),
-              AppEnhanceWithAiButton(
-                label: 'settings.enhance_with_ai'.tr(),
-                onTap: onEnhanceWithAi,
-              ),
-            ],
-          ),
-        ),
-      ],
+    return AppDescriptionField(
+      controller: controller,
+      label: 'settings.business_description'.tr(),
+      maxLines: 5,
+      maxLength: _kBusinessDescriptionMaxLength,
+      validator: (value) =>
+          LengthValidator.isValid(
+            value,
+            maxLength: _kBusinessDescriptionMaxLength,
+          )
+          ? null
+          : 'validation.length_max'.tr(
+              namedArgs: {'max': '$_kBusinessDescriptionMaxLength'},
+            ),
+      aiActionLabel: 'common.enhance_with_ai'.tr(),
+      onImproveWithAi: onEnhanceWithAi,
     );
   }
 }

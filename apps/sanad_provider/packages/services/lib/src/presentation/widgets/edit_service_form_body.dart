@@ -3,7 +3,7 @@ import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:services/src/domain/entities/provider_service_entity.dart';
-import 'package:services/src/presentation/widgets/add_service_ai_enhance_button.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 /// The Edit Service form's fields — prefilled from the [service] being
 /// edited.
@@ -73,24 +73,17 @@ class EditServiceFormBodyState extends State<EditServiceFormBody> {
           onTap: null,
         ),
         SizedBox(height: AppSpacing.lg),
-        Stack(
-          children: [
-            AppTextField(
-              label: 'services.add_service.description_label'.tr(),
-              isRequired: true,
-              hint: 'services.add_service.description_hint'.tr(),
-              controller: _descriptionController,
-              maxLines: 5,
-              validator: _validateDescription,
-              autovalidateMode: AutovalidateMode.onUserInteraction,
-              onChanged: (_) => _reportCompleteness(),
-            ),
-            PositionedDirectional(
-              end: AppSpacing.xs,
-              bottom: AppSpacing.lg,
-              child: AddServiceAiEnhanceButton(),
-            ),
-          ],
+        AppDescriptionField(
+          label: 'services.add_service.description_label'.tr(),
+          isRequired: true,
+          hint: 'services.add_service.description_hint'.tr(),
+          controller: _descriptionController,
+          maxLines: 5,
+          maxLength: 500,
+          validator: _validateDescription,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          onChanged: (_) => _reportCompleteness(),
+          aiActionLabel: 'common.enhance_with_ai'.tr(),
         ),
       ],
     );

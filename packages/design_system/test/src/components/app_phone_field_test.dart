@@ -1,7 +1,10 @@
+import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -52,6 +55,12 @@ Future<void> _pump(WidgetTester tester, Widget child) async {
       ),
     ),
   );
+}
+
+bool _isFlagAsset(Widget widget) {
+  if (widget is! SvgPicture) return false;
+  final loader = widget.bytesLoader;
+  return loader is SvgAssetLoader && loader.assetName == AppSvgs.flagAe;
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -199,5 +208,69 @@ void main() {
       expect(isValid, isFalse);
       expect(find.text('Required'), findsOneWidget);
     });
+  });
+
+  group('AppPhoneField skeleton', () {
+    testWidgets(
+      'hides the real country flag while an enabled Skeletonizer is active',
+      (tester) async {
+        await _pump(
+          tester,
+          Skeletonizer(
+            child: AppPhoneField(
+              label: 'Phone',
+              controller: TextEditingController(text: '501234567'),
+            ),
+          ),
+        );
+        // The shimmer animation repeats indefinitely — pump bounded frames
+        // instead of pumpAndSettle(), which would never return.
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.byWidgetPredicate(_isFlagAsset), findsNothing);
+      },
+    );
+
+    testWidgets('shows the real country flag when not skeletonized', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        AppPhoneField(
+          label: 'Phone',
+          controller: TextEditingController(text: '501234567'),
+        ),
+      );
+
+      expect(find.byWidgetPredicate(_isFlagAsset), findsOneWidget);
+    });
+
+    testWidgets(
+      'shows the real country flag again once Skeletonizer is disabled',
+      (tester) async {
+        final controller = TextEditingController(text: '501234567');
+
+        await _pump(
+          tester,
+          Skeletonizer(
+            child: AppPhoneField(label: 'Phone', controller: controller),
+          ),
+        );
+        await tester.pump();
+        expect(find.byWidgetPredicate(_isFlagAsset), findsNothing);
+
+        await _pump(
+          tester,
+          Skeletonizer(
+            enabled: false,
+            child: AppPhoneField(label: 'Phone', controller: controller),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byWidgetPredicate(_isFlagAsset), findsOneWidget);
+      },
+    );
   });
 }

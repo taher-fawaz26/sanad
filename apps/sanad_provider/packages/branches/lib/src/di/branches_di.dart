@@ -63,8 +63,6 @@ abstract final class BranchesDI {
         () => AddBranchBloc(
           createBranchUseCase: sl<CreateBranchUseCase>(),
           getCompanyScheduleUseCase: sl<GetCompanyScheduleUseCase>(),
-          updateBranchUseCase: sl<UpdateBranchUseCase>(),
-          getBranchUseCase: sl<GetBranchUseCase>(),
         ),
       )
       ..registerLazySingleton<WorkerBranchAssigner>(

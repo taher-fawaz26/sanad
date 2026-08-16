@@ -9,30 +9,20 @@ import 'package:services/src/presentation/bloc/service_action/service_action_blo
 import 'package:services/src/routes/service_routes.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 
-/// Confirms then navigates to edit [service], re-broadcasting the result via
+/// Navigates directly to edit [service] (editing is not destructive, so no
+/// confirmation gate), re-broadcasting the result via
 /// [ServiceExternallyUpdatedEvent].
 ///
 /// Shared by any invocation surface (the details-page actions sheet, and
 /// `AppSwipeActions` on the My Services list) so they run the exact same
-/// confirmation + business logic.
-Future<void> confirmAndEditService({
+/// navigation + business logic.
+Future<void> editService({
   required BuildContext context,
   required ProviderServiceEntity service,
 }) async {
-  final confirmed = await showConfirmationSheet(
-    context: context,
-    title: 'services.edit_confirm_title'.tr(),
-    description: 'services.edit_confirm_description'.tr(),
-    badgeLabel: service.serviceName,
-    actionLabel: 'common.yes'.tr(),
-    cancelLabel: 'common.close'.tr(),
-  );
-  if (!(confirmed ?? false) || !context.mounted) return;
-
   // No `extra` — Edit fetches the full service itself by id (see
-  // `EditServicePage`'s doc comment). `service` here is used only for the
-  // confirmation sheet's title/badge and to extract the id, never as the
-  // page's data source.
+  // `EditServicePage`'s doc comment). `service` here is used only to extract
+  // the id, never as the page's data source.
   final updated = await context.push<ProviderServiceEntity>(
     ServiceRoutes.editFor(service.id),
   );

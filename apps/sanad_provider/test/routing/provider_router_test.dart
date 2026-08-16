@@ -201,18 +201,10 @@ void main() {
       );
     });
 
-    test('a branch detail/edit deep link is org-only', () {
+    test('a branch detail deep link is org-only', () {
       expect(
         resolveProviderRedirect(
           location: BranchRoutes.detailsFor('b1'),
-          isAuthenticated: true,
-          canManageOrganization: false,
-        ),
-        OrganizationSettingsRoutes.hub,
-      );
-      expect(
-        resolveProviderRedirect(
-          location: BranchRoutes.editFor('b1'),
           isAuthenticated: true,
           canManageOrganization: false,
         ),

@@ -45,50 +45,6 @@ abstract final class AddBranchParamsMapper {
     );
   }
 
-  /// Maps a fully-filled edit draft to a PATCH params object for [id]. Reuses
-  /// the same schedule selection and serving-area/service/worker mapping as
-  /// [toCreateParams]. In edit mode every step is prefilled and Save is gated
-  /// on step completeness, so the required fields are guaranteed present.
-  static UpdateBranchParams toUpdateParams(
-    AddBranchDraft draft, {
-    required String id,
-    required List<BranchAvailabilityEntity> companySchedule,
-  }) {
-    if (draft.selectedWorkers.isEmpty) {
-      throw ArgumentError(
-        'At least one worker must be assigned before saving a branch.',
-      );
-    }
-
-    final isCustom = draft.scheduleMode == BranchScheduleMode.custom;
-    final schedule = isCustom ? draft.customSchedule : companySchedule;
-
-    final city = draft.selectedCity!;
-    final position = draft.pickedPosition!;
-    final radiusKm = draft.coverageRadiusKm!;
-    final servingAreaPlaceIds = _servingAreaPlaceIds(draft);
-
-    return UpdateBranchParams(
-      id: id,
-      branchName: draft.branchName.trim(),
-      branchType: draft.branchType,
-      branchAddress: draft.branchAddress ?? '',
-      cityId: city.id,
-      branchPhone: _normalizePhone(draft.phone),
-      branchManagerId: draft.selectedManager!.id,
-      lat: position.latitude,
-      lng: position.longitude,
-      radiusKm: radiusKm,
-      workerIds: draft.selectedWorkers.map((w) => w.id).toList(growable: false),
-      availabilityMode: _availabilityMode(isCustom),
-      availability: schedule.isNotEmpty ? schedule : null,
-      servingAreaPlaceIds: servingAreaPlaceIds.isNotEmpty
-          ? servingAreaPlaceIds
-          : null,
-      serviceIds: _serviceIds(draft),
-    );
-  }
-
   /// Branch phone is optional on the backend — normalize only when the user
   /// actually entered one, so an empty draft phone maps to an empty string
   /// instead of [UaePhoneValidator.normalize]'s bogus `+971` fallback.

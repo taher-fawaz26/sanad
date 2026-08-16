@@ -34,8 +34,8 @@ Future<void> _pump(
   whenListen(bloc, const Stream<RoleFormState>.empty(), initialState: state);
 
   // Since EasyLocalization isn't bootstrapped (see convention note above),
-  // `.tr()` falls back to the raw key, e.g. 'provider_rbac.enhance_with_ai'
-  // — far longer than any real translation, which overflows
+  // `.tr()` falls back to the raw key, e.g. 'common.enhance_with_ai' — far
+  // longer than any real translation, which overflows
   // AppEnhanceWithAiButton's fixed-width (160px) pill. That's a byproduct
   // of the untranslated test key, not a real layout bug in the page under
   // test, so it's filtered out here. flutter_test reinstalls its own

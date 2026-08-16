@@ -29,7 +29,8 @@
     "next": "التالي",
     "or": "أو",
     "resend": "إعادة الإرسال",
-    "change": "تغيير"
+    "change": "تغيير",
+    "enhance_with_ai": "تحسين بالذكاء الاصطناعي"
   },
   "media": {
     "edit_cover": "تعديل صورة الغلاف",
@@ -93,7 +94,6 @@
     "setup_required_summary": "تم إكمال {completed} من {total} مراحل الإعداد المطلوبة",
     "section_identity": "الهوية",
     "business_description": "وصف النشاط التجاري",
-    "enhance_with_ai": "تحسين بالذكاء الاصطناعي",
     "section_category": "الفئة",
     "select_category": "اختر الفئة",
     "section_contact": "معلومات الاتصال",
@@ -163,17 +163,18 @@
     "empty_first_branch_action": "إضافة فرع",
     "empty_search_title": "لم يتم العثور على فروع",
     "empty_search_description": "لا توجد نتائج لـ \"{query}\". جرّب اسماً آخر أو امسح البحث.",
-    "more_actions": "مزيد من الإجراءات",
     "actions": {
-      "service_center": "مركز الخدمة",
-      "view_branch": "عرض الفرع",
-      "set_under_maintenance": "تعيين تحت الصيانة",
-      "delete_branch": "حذف الفرع",
       "delete_confirm_title": "حذف الفرع",
       "delete_confirm_description": "هل أنت متأكد أنك تريد حذف هذا الفرع؟ لا يمكن التراجع عن هذا الإجراء.",
       "maintenance_confirm_title": "تعيين تحت الصيانة؟",
       "maintenance_confirm_description": "سيؤدي هذا إلى تعطيل جميع العمليات مؤقتًا لفرع {name}. لن يتمكن العملاء من حجز المواعيد أو الوصول إلى الخدمات حتى يتم إيقاف وضع الصيانة.",
-      "action_failed": "حدث خطأ. يرجى المحاولة مرة أخرى."
+      "action_failed": "حدث خطأ. يرجى المحاولة مرة أخرى.",
+      "action_edit": "تعديل الفرع",
+      "action_delete": "حذف الفرع",
+      "action_set_maintenance": "تعيين إلى صيانة",
+      "action_set_active": "تعيين إلى نشط",
+      "activate_confirm_title": "تعيين الفرع كنشط؟",
+      "activate_confirm_description": "سيؤدي هذا إلى إعادة تفعيل جميع العمليات لفرع {name}. سيتمكن العملاء من حجز المواعيد والوصول إلى الخدمات مرة أخرى."
     },
     "details": {
       "section_branch_info": "معلومات الفرع",
@@ -200,12 +201,7 @@
       "team_min_workers_error": "يجب تعيين عامل واحد على الأقل للفرع."
     },
     "edit_branch": {
-      "title": "تعديل الفرع",
-      "save_button": "حفظ التغييرات",
-      "success_dialog_title_highlight": "تم الحفظ! ",
-      "success_dialog_title_body": "تم تحديث الفرع.",
-      "success_dialog_description": "التغييرات الآن سارية.",
-      "success_dialog_okay": "حسناً"
+      "save_button": "حفظ التغييرات"
     },
     "add_branch": {
       "title": "إضافة فرع",
@@ -357,8 +353,6 @@
     "pause_confirm": "إيقاف الخدمة",
     "resume_confirm_title": "استئناف الخدمة؟",
     "resume_confirm_description": "هل أنت متأكد أنك تريد استئناف هذه الخدمة؟",
-    "edit_confirm_title": "تعديل الخدمة؟",
-    "edit_confirm_description": "هل أنت متأكد أنك تريد تعديل هذه الخدمة؟",
     "discard_confirm_title": "تجاهل التغييرات غير المحفوظة؟",
     "discard_confirm_description": "لن يتم حفظ التغييرات التي أجريتها.",
     "discard_confirm_action": "تجاهل التغييرات",
@@ -430,7 +424,6 @@
       "service_required_error": "الرجاء اختيار خدمة",
       "description_label": "وصف الخدمة",
       "description_hint": "صف الخدمة واشرح ما سيطلبه العملاء.",
-      "ai_enhance": "تحسين بالذكاء الاصطناعي",
       "images_label": "الصور",
       "images_max_size_caption": "PNG أو JPG أو SVG. الحد الأقصى 5 ميجابايت. المقاس المقترح: 1200 × 800 بكسل",
       "images_add_label": "إضافة صورة",
@@ -494,7 +487,6 @@
     "assigned_permissions": "الصلاحيات المعينة ({count})",
     "modification_title_label": "عنوان التعديل",
     "modification_title_hint": "مثال: تغيير لون الشعار",
-    "enhance_with_ai": "تحسين بالذكاء الاصطناعي",
     "create_new_role_button": "إنشاء دور جديد",
     "save_changes_button": "حفظ التغييرات"
   },

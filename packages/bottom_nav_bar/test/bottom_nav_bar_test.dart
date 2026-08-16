@@ -240,6 +240,102 @@ void main() {
         ),
       );
     });
+
+    testWidgets(
+      'flat bar extends its background through the system nav inset '
+      'and keeps content clear of it',
+      (tester) async {
+        const systemBottom = 48.0;
+        const theme = BottomNavThemeData(
+          centerGap: 0,
+          barHeight: 56,
+          bottomInset: 0,
+          contentPadding: 0,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MediaQuery(
+              data: const MediaQueryData(
+                padding: EdgeInsets.zero,
+                viewPadding: EdgeInsets.only(bottom: systemBottom),
+              ),
+              child: const Scaffold(
+                bottomNavigationBar: BottomNavBar<_Dest>(
+                  destinations: [
+                    BottomNavDestination(
+                      item: _Dest.home,
+                      label: 'Home',
+                      iconBuilder: _icon,
+                    ),
+                    BottomNavDestination(
+                      item: _Dest.settings,
+                      label: 'Settings',
+                      iconBuilder: _icon,
+                    ),
+                  ],
+                  selectedItem: _Dest.home,
+                  theme: theme,
+                  onDestinationSelected: _noop,
+                ),
+              ),
+            ),
+          ),
+        );
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('Home'), findsOneWidget);
+        expect(find.text('Settings'), findsOneWidget);
+
+        // The colored bar (SizedBox driving the DecoratedBox) must grow to
+        // cover barHeight + the system inset, so its background paints all
+        // the way to the physical bottom edge instead of floating above a
+        // transparent gap.
+        final sizedBox = tester.widget<SizedBox>(
+          find
+              .descendant(
+                of: find.byType(BottomNavBar<_Dest>),
+                matching: find.byType(SizedBox),
+              )
+              .first,
+        );
+        expect(sizedBox.height, theme.barHeight + systemBottom);
+
+        // The outer Padding around the whole bar must not add the system
+        // inset a second time as a transparent gap.
+        final outerPadding = tester.widget<Padding>(
+          find
+              .descendant(
+                of: find.byType(BottomNavBar<_Dest>),
+                matching: find.byType(Padding),
+              )
+              .first,
+        );
+        expect(
+          outerPadding.padding,
+          EdgeInsets.symmetric(horizontal: theme.horizontalInset),
+        );
+
+        // Equal-width tiles: both destinations occupy the same width.
+        final homeWidth = tester
+            .getSize(
+              find.ancestor(
+                of: find.text('Home'),
+                matching: find.byType(Expanded),
+              ),
+            )
+            .width;
+        final settingsWidth = tester
+            .getSize(
+              find.ancestor(
+                of: find.text('Settings'),
+                matching: find.byType(Expanded),
+              ),
+            )
+            .width;
+        expect(homeWidth, settingsWidth);
+      },
+    );
   });
 }
 

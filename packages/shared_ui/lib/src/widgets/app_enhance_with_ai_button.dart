@@ -16,6 +16,7 @@ class AppEnhanceWithAiButton extends StatefulWidget {
     required this.label,
     this.onTap,
     this.animate = true,
+    this.isLoading = false,
   });
 
   final String label;
@@ -23,6 +24,10 @@ class AppEnhanceWithAiButton extends StatefulWidget {
 
   /// Whether the rainbow border flows around the outline.
   final bool animate;
+
+  /// When `true`, disables tap and shows a loading indicator in place of the
+  /// icon/label — mirrors [AppButton]'s `isLoading` idiom.
+  final bool isLoading;
 
   static const _width = 160.0;
   static const _height = 41.0;
@@ -98,6 +103,8 @@ class _AppEnhanceWithAiButtonState extends State<AppEnhanceWithAiButton>
       Radius.circular(AppEnhanceWithAiButton._radius),
     );
 
+    final enabled = widget.onTap != null && !widget.isLoading;
+
     return SizedBox(
       width: AppEnhanceWithAiButton._width,
       height: AppEnhanceWithAiButton._height,
@@ -106,32 +113,36 @@ class _AppEnhanceWithAiButtonState extends State<AppEnhanceWithAiButton>
         borderRadius: radius,
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: widget.onTap,
+          onTap: enabled ? widget.onTap : null,
           borderRadius: radius,
           child: Stack(
             fit: StackFit.expand,
             children: [
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.auto_awesome,
-                      size: 14,
-                      color: AppEnhanceWithAiButton._sparkleColor,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      widget.label,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.black,
+                child: widget.isLoading
+                    ? const Center(
+                        child: AppLoadingIndicator(size: 16),
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.auto_awesome,
+                            size: 14,
+                            color: AppEnhanceWithAiButton._sparkleColor,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            widget.label,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w400,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
               ),
               // Isolated paint layer — animation only invalidates this boundary.
               Positioned.fill(

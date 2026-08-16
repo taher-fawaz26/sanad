@@ -2,19 +2,18 @@ import 'package:branches/branches.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('AddBranchWizardCubit — create mode', () {
+  group('AddBranchWizardCubit', () {
     late AddBranchWizardCubit cubit;
 
     setUp(() {
-      cubit = AddBranchWizardCubit(isEdit: false, totalSteps: 4);
+      cubit = AddBranchWizardCubit(totalSteps: 4);
     });
 
     tearDown(() => cubit.close());
 
-    test('starts at step 1 with furthest = 1 and seeded=true', () {
+    test('starts at step 1 with furthest = 1', () {
       expect(cubit.state.currentStep, 1);
       expect(cubit.state.furthestStep, 1);
-      expect(cubit.state.isSeeded, isTrue);
       expect(cubit.state.showStepOneErrors, isFalse);
       expect(cubit.state.coverageAccessDenied, isFalse);
     });
@@ -60,28 +59,6 @@ void main() {
         expect(states.length, 1);
         expect(states.single.coverageAccessDenied, isTrue);
       });
-    });
-  });
-
-  group('AddBranchWizardCubit — edit mode', () {
-    test('edit mode starts with furthest = totalSteps (all reachable)', () {
-      final cubit = AddBranchWizardCubit(isEdit: true, totalSteps: 4);
-      addTearDown(cubit.close);
-      expect(cubit.state.currentStep, 1);
-      expect(cubit.state.furthestStep, 4);
-      expect(cubit.state.isEdit, isTrue);
-      expect(cubit.state.isSeeded, isTrue);
-    });
-
-    test('markSeedingRequired / markSeeded track the fetch lifecycle', () {
-      final cubit = AddBranchWizardCubit(isEdit: true, totalSteps: 4);
-      addTearDown(cubit.close);
-
-      cubit.markSeedingRequired();
-      expect(cubit.state.isSeeded, isFalse);
-
-      cubit.markSeeded();
-      expect(cubit.state.isSeeded, isTrue);
     });
   });
 }

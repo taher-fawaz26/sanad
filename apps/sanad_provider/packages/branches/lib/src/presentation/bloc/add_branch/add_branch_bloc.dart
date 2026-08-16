@@ -3,9 +3,7 @@ import 'package:branches/src/domain/entities/branch_availability_entity.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/domain/usecases/branch_usecase_params.dart';
 import 'package:branches/src/domain/usecases/create_branch_usecase.dart';
-import 'package:branches/src/domain/usecases/get_branch_usecase.dart';
 import 'package:branches/src/domain/usecases/get_company_schedule_usecase.dart';
-import 'package:branches/src/domain/usecases/update_branch_usecase.dart';
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -17,24 +15,16 @@ class AddBranchBloc extends Bloc<AddBranchEvent, AddBranchState> {
   AddBranchBloc({
     required CreateBranchUseCase createBranchUseCase,
     required GetCompanyScheduleUseCase getCompanyScheduleUseCase,
-    UpdateBranchUseCase? updateBranchUseCase,
-    GetBranchUseCase? getBranchUseCase,
   }) : _createBranchUseCase = createBranchUseCase,
        _getCompanyScheduleUseCase = getCompanyScheduleUseCase,
-       _updateBranchUseCase = updateBranchUseCase,
-       _getBranchUseCase = getBranchUseCase,
        super(const AddBranchState()) {
     on<AddBranchStarted>(_onStarted);
     // Drop duplicate submits while one is in flight (double-tap guard).
     on<AddBranchSubmitEvent>(_onSubmit, transformer: droppable());
-    on<UpdateBranchSubmitEvent>(_onUpdateSubmit, transformer: droppable());
-    on<AddBranchLoadForEditEvent>(_onLoadForEdit);
   }
 
   final CreateBranchUseCase _createBranchUseCase;
   final GetCompanyScheduleUseCase _getCompanyScheduleUseCase;
-  final UpdateBranchUseCase? _updateBranchUseCase;
-  final GetBranchUseCase? _getBranchUseCase;
 
   Future<void> _onStarted(
     AddBranchStarted event,
@@ -81,58 +71,6 @@ class AddBranchBloc extends Bloc<AddBranchEvent, AddBranchState> {
         state.copyWith(
           status: RequestStatus.success,
           createdBranch: branch,
-        ),
-      ),
-    );
-  }
-
-  Future<void> _onUpdateSubmit(
-    UpdateBranchSubmitEvent event,
-    Emitter<AddBranchState> emit,
-  ) async {
-    final useCase = _updateBranchUseCase;
-    if (useCase == null) {
-      throw StateError('UpdateBranchUseCase is required in edit mode.');
-    }
-    emit(state.copyWith(status: RequestStatus.loading, clearFailure: true));
-
-    final result = await useCase(event.params).run();
-
-    result.fold(
-      (failure) => emit(
-        state.copyWith(status: RequestStatus.failure, failure: failure),
-      ),
-      (branch) => emit(
-        state.copyWith(
-          status: RequestStatus.success,
-          createdBranch: branch,
-        ),
-      ),
-    );
-  }
-
-  Future<void> _onLoadForEdit(
-    AddBranchLoadForEditEvent event,
-    Emitter<AddBranchState> emit,
-  ) async {
-    final useCase = _getBranchUseCase;
-    if (useCase == null) {
-      throw StateError('GetBranchUseCase is required in edit mode.');
-    }
-    emit(
-      state.copyWith(loadStatus: RequestStatus.loading, clearLoadFailure: true),
-    );
-
-    final result = await useCase(GetBranchParams(id: event.branchId)).run();
-
-    result.fold(
-      (failure) => emit(
-        state.copyWith(loadStatus: RequestStatus.failure, loadFailure: failure),
-      ),
-      (branch) => emit(
-        state.copyWith(
-          loadStatus: RequestStatus.success,
-          loadedBranch: branch,
         ),
       ),
     );

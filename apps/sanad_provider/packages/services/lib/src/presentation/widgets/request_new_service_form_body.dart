@@ -6,7 +6,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:media_upload/media_upload.dart';
 import 'package:services/src/domain/entities/category_record_entity.dart';
 import 'package:services/src/presentation/bloc/request_new_service/request_new_service_bloc.dart';
-import 'package:services/src/presentation/widgets/add_service_ai_enhance_button.dart';
 import 'package:services/src/presentation/widgets/add_service_images_field.dart';
 import 'package:shared_ui/shared_ui.dart';
 
@@ -102,24 +101,17 @@ class RequestNewServiceFormBodyState extends State<RequestNewServiceFormBody> {
             ),
           ),
           SizedBox(height: AppSpacing.lg),
-          Stack(
-            children: [
-              AppTextField(
-                label: 'services.request_new_service.description_label'.tr(),
-                isRequired: true,
-                hint: 'services.request_new_service.description_hint'.tr(),
-                controller: _descriptionController,
-                maxLines: 5,
-                validator: _validateDescription,
-                autovalidateMode: AutovalidateMode.onUserInteraction,
-                onChanged: (_) => _reportCompleteness(),
-              ),
-              PositionedDirectional(
-                end: AppSpacing.xs,
-                bottom: AppSpacing.lg,
-                child: const AddServiceAiEnhanceButton(),
-              ),
-            ],
+          AppDescriptionField(
+            label: 'services.request_new_service.description_label'.tr(),
+            isRequired: true,
+            hint: 'services.request_new_service.description_hint'.tr(),
+            controller: _descriptionController,
+            maxLines: 5,
+            maxLength: 500,
+            validator: _validateDescription,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            onChanged: (_) => _reportCompleteness(),
+            aiActionLabel: 'common.enhance_with_ai'.tr(),
           ),
           SizedBox(height: AppSpacing.lg),
           const AddServiceImagesField(),

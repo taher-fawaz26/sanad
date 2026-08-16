@@ -182,7 +182,6 @@ class BottomNavThemeData {
     return (resolved ?? const TextStyle(fontSize: 12)).copyWith(
       fontWeight: selected ? FontWeight.w500 : FontWeight.w500,
       color: color,
-      height: 16 / 12,
     );
   }
 

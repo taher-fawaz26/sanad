@@ -83,6 +83,28 @@ Future<void> _pump(
     tester.view.resetDevicePixelRatio();
   });
 
+  // The description field's AppEnhanceWithAiButton (from AppDescriptionField)
+  // runs a perpetual rainbow-border animation that never settles on its own,
+  // which would hang pumpAndSettle(); disabling animations makes the widget
+  // stop its controller (it checks MediaQuery.disableAnimationsOf).
+  tester.platformDispatcher.accessibilityFeaturesTestValue =
+      const FakeAccessibilityFeatures(disableAnimations: true);
+  addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+
+  // EasyLocalization isn't bootstrapped in this harness, so `.tr()` falls
+  // back to the raw key ('common.enhance_with_ai') — longer than any real
+  // translation, which overflows AppEnhanceWithAiButton's fixed-width
+  // (160px) pill. That's a byproduct of the untranslated test key, not a
+  // real layout bug in the widget under test.
+  final originalOnError = FlutterError.onError;
+  FlutterError.onError = (details) {
+    if (details.exception.toString().contains('A RenderFlex overflowed')) {
+      return;
+    }
+    originalOnError?.call(details);
+  };
+  addTearDown(() => FlutterError.onError = originalOnError);
+
   final mediaBloc = MediaUploadBloc(repository: _MockMediaUploadRepository());
   final requestNewServiceBloc = RequestNewServiceBloc(
     createServiceRequestUseCase: _UnusedCreateServiceRequestUseCase(),

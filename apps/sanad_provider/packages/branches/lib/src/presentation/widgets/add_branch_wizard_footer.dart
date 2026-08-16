@@ -1,7 +1,6 @@
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_cubit.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_state.dart';
-import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -15,7 +14,6 @@ class AddBranchWizardFooter extends StatelessWidget {
     required this.onAddCoverage,
     required this.onAddServices,
     required this.onAddWorkers,
-    this.isEdit = false,
     this.coverageAccessDenied = false,
     this.onOpenLocationSettings,
     super.key,
@@ -27,10 +25,6 @@ class AddBranchWizardFooter extends StatelessWidget {
   final VoidCallback onAddCoverage;
   final VoidCallback onAddServices;
   final VoidCallback onAddWorkers;
-
-  /// Edit mode: show a Save button on every step (the whole draft is submitted
-  /// as one PATCH from anywhere) instead of the create flow's per-step buttons.
-  final bool isEdit;
   final bool coverageAccessDenied;
   final VoidCallback? onOpenLocationSettings;
 
@@ -43,59 +37,25 @@ class AddBranchWizardFooter extends StatelessWidget {
         AppSpacing.xl,
         AppSpacing.sm,
       ),
-      child: isEdit
-          ? _EditSaveButton(onSave: onSubmit)
-          : switch (currentStep) {
-              1 => _StepOneButton(onNext: onNext),
-              2 when coverageAccessDenied => AppButton(
-                label: 'common.open_settings'.tr(),
-                onPressed: onOpenLocationSettings,
-              ),
-              2 => _StepTwoButton(
-                onNext: onNext,
-                onAddCoverage: onAddCoverage,
-              ),
-              3 => _StepThreeButton(
-                onNext: onNext,
-                onAddServices: onAddServices,
-              ),
-              4 => _StepFourButton(
-                onNext: onNext,
-                onAddWorkers: onAddWorkers,
-              ),
-              _ => _SubmitButton(onSubmit: onSubmit),
-            },
-    );
-  }
-}
-
-/// Edit-mode footer: Save on every step, enabled only when the whole draft is
-/// valid (all steps complete + phone is either empty or a valid format),
-/// disabled while a save is in flight.
-class _EditSaveButton extends StatelessWidget {
-  const _EditSaveButton({required this.onSave});
-
-  final VoidCallback onSave;
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocSelector<AddBranchDraftCubit, AddBranchDraft, bool>(
-      selector: (state) {
-        final phone = state.phone.trim();
-        final phoneValid = phone.isEmpty || UaePhoneValidator.isValid(phone);
-        return state.canSubmit && phoneValid;
-      },
-      builder: (context, canSave) {
-        return BlocSelector<AddBranchBloc, AddBranchState, bool>(
-          selector: (state) => state.isLoading,
-          builder: (context, isLoading) {
-            return AppButton(
-              label: 'branches.edit_branch.save_button'.tr(),
-              isLoading: isLoading,
-              onPressed: (!canSave || isLoading) ? null : onSave,
-            );
-          },
-        );
+      child: switch (currentStep) {
+        1 => _StepOneButton(onNext: onNext),
+        2 when coverageAccessDenied => AppButton(
+          label: 'common.open_settings'.tr(),
+          onPressed: onOpenLocationSettings,
+        ),
+        2 => _StepTwoButton(
+          onNext: onNext,
+          onAddCoverage: onAddCoverage,
+        ),
+        3 => _StepThreeButton(
+          onNext: onNext,
+          onAddServices: onAddServices,
+        ),
+        4 => _StepFourButton(
+          onNext: onNext,
+          onAddWorkers: onAddWorkers,
+        ),
+        _ => _SubmitButton(onSubmit: onSubmit),
       },
     );
   }
