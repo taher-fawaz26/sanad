@@ -6,14 +6,30 @@ import 'package:core/core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:services/src/domain/entities/category_record_entity.dart';
 import 'package:services/src/domain/entities/category_ref_entity.dart';
+import 'package:services/src/domain/entities/pagination_meta_entity.dart';
 import 'package:services/src/domain/entities/service_request_entity.dart';
 import 'package:services/src/domain/entities/service_request_status.dart';
+import 'package:services/src/domain/repositories/categories_repository.dart';
 import 'package:services/src/domain/repositories/service_requests_repository.dart';
 import 'package:services/src/domain/usecases/create_service_request_usecase.dart';
+import 'package:services/src/domain/usecases/get_categories_usecase.dart';
 import 'package:services/src/presentation/bloc/request_new_service/request_new_service_bloc.dart';
 
 class _MockRepo extends Mock implements ServiceRequestsRepository {}
+
+class _MockCategoriesRepo extends Mock implements CategoriesRepository {}
+
+CategoryRecordEntity _category(String id) => CategoryRecordEntity(
+  id: id,
+  slug: id,
+  name: 'Car',
+  description: 'Car services',
+  icon: null,
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+);
 
 ServiceRequestEntity _request(String id) => ServiceRequestEntity(
   id: id,
@@ -37,13 +53,16 @@ const _params = CreateServiceRequestParams(
 
 void main() {
   late _MockRepo repo;
+  late _MockCategoriesRepo categoriesRepo;
 
   setUp(() {
     repo = _MockRepo();
+    categoriesRepo = _MockCategoriesRepo();
   });
 
   RequestNewServiceBloc buildBloc() => RequestNewServiceBloc(
     createServiceRequestUseCase: CreateServiceRequestUseCase(repo),
+    getCategoriesUseCase: GetCategoriesUseCase(categoriesRepo),
   );
 
   group('RequestNewServiceBloc', () {
@@ -128,6 +147,76 @@ void main() {
         ).called(1);
         expect(bloc.state.status, RequestStatus.success);
       },
+    );
+  });
+
+  group('RequestNewServiceBloc — categories picker', () {
+    blocTest<RequestNewServiceBloc, RequestNewServiceState>(
+      'categories fetch success emits the loaded list',
+      setUp: () => when(
+        () => categoriesRepo.getCategories(limit: 100),
+      ).thenAnswer(
+        (_) => TaskEither.of(
+          ServicesPagedResult(
+            items: [_category('cat-car')],
+            meta: const PaginationMetaEntity(
+              totalItems: 1,
+              itemCount: 1,
+              itemsPerPage: 100,
+              totalPages: 1,
+              currentPage: 1,
+            ),
+          ),
+        ),
+      ),
+      build: buildBloc,
+      act: (bloc) => bloc.add(const RequestNewServiceCategoriesRequested()),
+      expect: () => [
+        isA<RequestNewServiceState>().having(
+          (s) => s.categoriesStatus,
+          'categoriesStatus',
+          RequestNewServiceCategoriesStatus.loading,
+        ),
+        isA<RequestNewServiceState>()
+            .having(
+              (s) => s.categoriesStatus,
+              'categoriesStatus',
+              RequestNewServiceCategoriesStatus.success,
+            )
+            .having(
+              (s) => s.categories.map((c) => c.id),
+              'categories',
+              ['cat-car'],
+            ),
+      ],
+    );
+
+    blocTest<RequestNewServiceBloc, RequestNewServiceState>(
+      'categories fetch failure surfaces the failure',
+      setUp: () => when(() => categoriesRepo.getCategories(limit: 100))
+          .thenAnswer(
+            (_) => TaskEither.left(const ServerFailure(message: 'boom')),
+          ),
+      build: buildBloc,
+      act: (bloc) => bloc.add(const RequestNewServiceCategoriesRequested()),
+      expect: () => [
+        isA<RequestNewServiceState>().having(
+          (s) => s.categoriesStatus,
+          'categoriesStatus',
+          RequestNewServiceCategoriesStatus.loading,
+        ),
+        isA<RequestNewServiceState>()
+            .having(
+              (s) => s.categoriesStatus,
+              'categoriesStatus',
+              RequestNewServiceCategoriesStatus.failure,
+            )
+            .having(
+              (s) => s.categoriesFailure,
+              'categoriesFailure',
+              const ServerFailure(message: 'boom'),
+            ),
+      ],
     );
   });
 }

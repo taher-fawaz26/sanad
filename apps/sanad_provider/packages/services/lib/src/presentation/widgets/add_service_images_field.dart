@@ -1,20 +1,19 @@
 import 'package:asset_picker/asset_picker.dart';
-import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:media_upload/media_upload.dart';
-import 'package:services/src/presentation/widgets/service_image_card.dart';
+import 'package:services/src/presentation/models/service_image_tile.dart';
+import 'package:services/src/presentation/widgets/service_images_editor.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// "Images" field of the Add Service / Request New Service forms — real
 /// `media_upload` integration, no bespoke upload logic.
 ///
-/// Renders a Services-specific 2-column card grid ([ServiceImageCard]) that
-/// matches Figma `5261:44387`/`5222:44137` (filename caption, inline status
-/// row, "Main" badge, "⋮" menu) — [MediaUploadBloc] still owns every
-/// upload/progress/retry/remove behaviour, this widget is presentation only.
+/// Renders the shared [ServiceImagesEditor] — [MediaUploadBloc] still owns
+/// every upload/progress/retry/remove behaviour, this widget is
+/// presentation only.
 ///
 /// The first successfully-uploaded image is shown with the "Main" badge —
 /// this mirrors the real backend rule (`POST /provider-services`: the
@@ -37,7 +36,7 @@ class _AddServiceImagesFieldState extends State<AddServiceImagesField> {
   Widget build(BuildContext context) {
     return BlocBuilder<MediaUploadBloc, MediaUploadState>(
       builder: (context, state) {
-        final items = [
+        final tileData = [
           for (final item in state.items)
             MediaUploadTileData(
               id: item.localId,
@@ -48,95 +47,33 @@ class _AddServiceImagesFieldState extends State<AddServiceImagesField> {
               errorMessage: item.failure?.message,
             ),
         ];
+        final mainId = tileData.isEmpty
+            ? null
+            : tileData
+                  .firstWhere(
+                    (i) => i.status == MediaUploadTileStatus.success,
+                    orElse: () => tileData.first,
+                  )
+                  .id;
+        final items = [
+          for (final data in tileData)
+            ServiceImageTile(data: data, isMain: data.id == mainId),
+        ];
 
         final maxFiles = state.config.maxFiles ?? 5;
-        final isEmpty = items.isEmpty;
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: AppFieldLabel(
-                    label: isEmpty
-                        ? 'services.add_service.images_label'.tr()
-                        : 'services.images_count_label'.tr(
-                            namedArgs: {
-                              'count': items.length.toString(),
-                              'max': maxFiles.toString(),
-                            },
-                          ),
-                    isRequired: isEmpty,
-                  ),
-                ),
-                Flexible(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: context.appColors.palettes.sky.shade50,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      child: Text(
-                        'services.images_max_badge'.tr(
-                          namedArgs: {'max': maxFiles.toString()},
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.appTypography.tinyNormal.copyWith(
-                          color: context.appColors.textSecondary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: AppSpacing.md),
-            if (isEmpty)
-              _ImagesDropZone(onTap: () => _pickImages(context))
-            else
-              _buildGrid(context, items, maxFiles),
-          ],
+        return ServiceImagesEditor(
+          items: items,
+          maxImages: maxFiles,
+          label: 'services.add_service.images_label'.tr(),
+          isRequired: true,
+          onMenuTap: (id) => _onDeleteImage(context, id),
+          onRetry: (id) => context.read<MediaUploadBloc>().add(
+            MediaUploadRetryRequested(id),
+          ),
+          onAddTap: () => _pickImages(context),
         );
       },
-    );
-  }
-
-  Widget _buildGrid(
-    BuildContext context,
-    List<MediaUploadTileData> items,
-    int maxFiles,
-  ) {
-    final mainId = items
-        .firstWhere(
-          (i) => i.status == MediaUploadTileStatus.success,
-          orElse: () => items.first,
-        )
-        .id;
-    final canAddMore = items.length < maxFiles;
-
-    return Wrap(
-      spacing: AppSpacing.sm,
-      runSpacing: AppSpacing.sm,
-      children: [
-        for (final item in items)
-          ServiceImageCard(
-            key: ValueKey(item.id),
-            data: item,
-            isMain: item.id == mainId,
-            onMenuTap: () => _onDeleteImage(context, item.id),
-            onRetry: () => context.read<MediaUploadBloc>().add(
-              MediaUploadRetryRequested(item.id),
-            ),
-          ),
-        if (canAddMore) ServiceImageAddCard(onTap: () => _pickImages(context)),
-      ],
     );
   }
 
@@ -182,53 +119,4 @@ class _AddServiceImagesFieldState extends State<AddServiceImagesField> {
         MediaUploadStatus.success => MediaUploadTileStatus.success,
         MediaUploadStatus.failure => MediaUploadTileStatus.failure,
       };
-}
-
-class _ImagesDropZone extends StatelessWidget {
-  const _ImagesDropZone({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final typography = context.appTypography;
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppDimension.radiusMd),
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(
-          horizontal: AppSpacing.xl,
-          vertical: AppSpacing.xxl,
-        ),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFAFBFC),
-          borderRadius: BorderRadius.circular(AppDimension.radiusMd),
-          border: Border.all(color: const Color(0xFFEAECF0)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.add, size: 24, color: colors.primary),
-            SizedBox(height: AppSpacing.sm),
-            Text(
-              'services.add_service.images_add_label'.tr(),
-              style: typography.regularNormal.copyWith(
-                color: colors.primary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            SizedBox(height: AppSpacing.xs),
-            Text(
-              'services.add_service.images_max_size_caption'.tr(),
-              textAlign: TextAlign.center,
-              style: typography.smallNormal.copyWith(color: colors.textMuted),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

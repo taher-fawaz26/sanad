@@ -14,6 +14,7 @@ import 'package:services/src/domain/usecases/delete_provider_service_usecase.dar
 import 'package:services/src/domain/usecases/get_provider_service_usecase.dart';
 import 'package:services/src/domain/usecases/set_provider_service_status_usecase.dart';
 import 'package:services/src/presentation/bloc/service_action/service_action_bloc.dart';
+import 'package:services/src/presentation/bloc/service_details/service_details_bloc.dart';
 import 'package:services/src/presentation/pages/service_details_page.dart';
 import 'package:shared_ui/shared_ui.dart';
 
@@ -45,6 +46,12 @@ const _surfaceSize = Size(1200, 1600);
 void main() {
   late _MockRepository repository;
   late ServiceActionBloc actionBloc;
+  // `detailsBloc` is intentionally NOT built in `setUp` — a bloc constructed
+  // there never delivers its stream to a widget subscribed later in the
+  // same `testWidgets` body (its `BlocBuilder` never rebuilds out of the
+  // initial `AppSkeletonizer` shimmer, hanging `pumpAndSettle`). Building it
+  // from code reached via the test body itself (here, `pump()`) avoids it.
+  late ServiceDetailsBloc detailsBloc;
 
   setUp(() {
     repository = _MockRepository();
@@ -58,9 +65,14 @@ void main() {
 
   tearDown(() async {
     await actionBloc.close();
+    await detailsBloc.close();
   });
 
   Future<void> pump(WidgetTester tester) async {
+    detailsBloc = ServiceDetailsBloc(
+      getProviderServiceUseCase: GetProviderServiceUseCase(repository),
+    );
+
     await tester.binding.setSurfaceSize(_surfaceSize);
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -70,9 +82,12 @@ void main() {
         minTextAdapt: true,
         builder: (_, _) => MaterialApp(
           theme: AppTheme.light(),
-          home: BlocProvider<ServiceActionBloc>.value(
-            value: actionBloc,
-            child: const ServiceDetailsPage(serviceId: 'svc-1'),
+          home: MultiBlocProvider(
+            providers: [
+              BlocProvider<ServiceActionBloc>.value(value: actionBloc),
+              BlocProvider<ServiceDetailsBloc>.value(value: detailsBloc),
+            ],
+            child: const ServiceDetailsPage(),
           ),
         ),
       ),
@@ -87,13 +102,10 @@ void main() {
         when(
           () => repository.getProviderService('svc-1'),
         ).thenReturn(TaskEither.right(_service));
-        sl.registerLazySingleton<GetProviderServiceUseCase>(
-          () => GetProviderServiceUseCase(repository),
-        );
-        addTearDown(() => sl.unregister<GetProviderServiceUseCase>());
 
         await pump(tester);
-        await tester.pump(); // let the fetch future resolve
+        detailsBloc.add(const ServiceDetailsFetchRequested('svc-1'));
+        await tester.pump();
         await tester.pumpAndSettle();
 
         verify(() => repository.getProviderService('svc-1')).called(1);
@@ -109,12 +121,9 @@ void main() {
         when(
           () => repository.getProviderService('svc-1'),
         ).thenReturn(TaskEither.right(_service));
-        sl.registerLazySingleton<GetProviderServiceUseCase>(
-          () => GetProviderServiceUseCase(repository),
-        );
-        addTearDown(() => sl.unregister<GetProviderServiceUseCase>());
 
         await pump(tester);
+        detailsBloc.add(const ServiceDetailsFetchRequested('svc-1'));
         await tester.pump();
         await tester.pumpAndSettle();
 
@@ -133,12 +142,9 @@ void main() {
               ? TaskEither.left(const ServerFailure(message: 'boom'))
               : TaskEither.right(_service);
         });
-        sl.registerLazySingleton<GetProviderServiceUseCase>(
-          () => GetProviderServiceUseCase(repository),
-        );
-        addTearDown(() => sl.unregister<GetProviderServiceUseCase>());
 
         await pump(tester);
+        detailsBloc.add(const ServiceDetailsFetchRequested('svc-1'));
         await tester.pump();
         await tester.pumpAndSettle();
 

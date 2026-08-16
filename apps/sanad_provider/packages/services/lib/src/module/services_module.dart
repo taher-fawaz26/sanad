@@ -2,24 +2,22 @@ import 'package:core/core.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:media_upload/media_upload.dart';
 import 'package:services/src/di/services_di.dart';
-import 'package:services/src/domain/entities/provider_service_entity.dart';
 import 'package:services/src/domain/entities/service_request_entity.dart';
 import 'package:services/src/presentation/bloc/add_service/add_service_bloc.dart';
+import 'package:services/src/presentation/bloc/request_details/request_details_bloc.dart';
 import 'package:services/src/presentation/bloc/request_new_service/request_new_service_bloc.dart';
 import 'package:services/src/presentation/bloc/service_action/service_action_bloc.dart';
 import 'package:services/src/presentation/bloc/service_analytics/service_analytics_bloc.dart';
+import 'package:services/src/presentation/bloc/service_details/service_details_bloc.dart';
 import 'package:services/src/presentation/bloc/service_requests_list/service_requests_list_bloc.dart';
 import 'package:services/src/presentation/bloc/services_list/services_list_bloc.dart';
-import 'package:services/src/presentation/bloc/edit_service/edit_service_bloc.dart';
 import 'package:services/src/presentation/pages/add_service_page.dart';
 import 'package:services/src/presentation/pages/edit_service_page.dart';
 import 'package:services/src/presentation/pages/request_details_page.dart';
 import 'package:services/src/presentation/pages/request_new_service_page.dart';
 import 'package:services/src/presentation/pages/service_details_page.dart';
 import 'package:services/src/presentation/pages/services_page.dart';
-import 'package:services/src/presentation/widgets/manage_service_images_section.dart';
 import 'package:services/src/routes/service_routes.dart';
 
 class ServicesModule extends FeatureModule {
@@ -84,7 +82,11 @@ class ServicesModule extends FeatureModule {
           if (extra is! ServiceRequestEntity) {
             return const _MissingRouteArgs();
           }
-          return RequestDetailsPage(request: extra);
+          return BlocProvider(
+            create: (_) => sl<RequestDetailsBloc>(param1: extra)
+              ..add(const RequestDetailsFetchRequested()),
+            child: const RequestDetailsPage(),
+          );
         },
       ),
       GoRoute(
@@ -94,37 +96,29 @@ class ServicesModule extends FeatureModule {
           if (id == null || id.isEmpty) {
             return const _MissingRouteArgs();
           }
-          return BlocProvider(
-            create: (_) => sl<ServiceActionBloc>(),
-            child: ServiceDetailsPage(serviceId: id),
+          return MultiBlocProvider(
+            providers: [
+              BlocProvider(create: (_) => sl<ServiceActionBloc>()),
+              BlocProvider(
+                create: (_) => sl<ServiceDetailsBloc>()
+                  ..add(ServiceDetailsFetchRequested(id)),
+              ),
+            ],
+            child: const ServiceDetailsPage(),
           );
         },
         routes: [
           GoRoute(
             path: 'edit',
             builder: (context, state) {
-              final extra = state.extra;
-              if (extra is! ProviderServiceEntity) {
+              final id = state.pathParameters['id'];
+              if (id == null || id.isEmpty) {
                 return const _MissingRouteArgs();
               }
-              return MultiBlocProvider(
-                providers: [
-                  BlocProvider(create: (_) => sl<EditServiceBloc>()),
-                  BlocProvider(
-                    create: (_) => sl<MediaUploadBloc>(
-                      param1: const MediaUploadConfig(
-                        maxFileSize: 5 * 1024 * 1024,
-                        maxFiles: kMaxServiceImages,
-                        allowedMimeTypes: [
-                          'image/jpeg',
-                          'image/png',
-                          'image/webp',
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-                child: EditServicePage(service: extra),
+              return BlocProvider(
+                create: (_) => sl<ServiceDetailsBloc>()
+                  ..add(ServiceDetailsFetchRequested(id)),
+                child: EditServicePage(serviceId: id),
               );
             },
           ),

@@ -46,7 +46,12 @@ class ProviderServicesPage extends StatefulWidget {
 }
 
 class _ProviderServicesPageState extends State<ProviderServicesPage> {
-  late int _selectedTab = widget.initialTab;
+  // Ephemeral UI-only state (which tab is showing) — `ValueNotifier` +
+  // `ValueListenableBuilder` instead of `setState`, per this package's
+  // zero-`setState` architecture rule.
+  late final ValueNotifier<int> _selectedTab = ValueNotifier(
+    widget.initialTab,
+  );
 
   @override
   void initState() {
@@ -60,10 +65,16 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
     );
   }
 
+  @override
+  void dispose() {
+    _selectedTab.dispose();
+    super.dispose();
+  }
+
   /// Whether the empty-state layout (swapped background, hidden FAB, no
   /// segmented control) should show for the current tab/state combination.
-  bool _showEmpty(ServicesListState state) =>
-      _selectedTab == 0 &&
+  bool _showEmpty(ServicesListState state, int selectedTab) =>
+      selectedTab == 0 &&
       state.status == RequestStatus.success &&
       state.services.isEmpty;
 
@@ -73,80 +84,91 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
 
     return BlocListener<ServiceActionBloc, ServiceActionState>(
       listener: _handleActionState,
-      child: BlocBuilder<ServicesListBloc, ServicesListState>(
-        // The page chrome below (nav bar, FAB, segmented control vs. empty
-        // state) only depends on `_showEmpty` — every other pagination emit
-        // (load-more, loadingMore toggling, item updates) is irrelevant to
-        // it. `_MyServicesContent` reads `ServicesListBloc` itself via its
-        // own `BlocBuilder`, so it still rebuilds on every emit; only this
-        // outer chrome is spared the redundant rebuilds.
-        buildWhen: (previous, current) =>
-            _showEmpty(previous) != _showEmpty(current),
-        builder: (context, listState) {
-          final isMyServices = _selectedTab == 0;
-          final showEmpty = _showEmpty(listState);
+      child: ValueListenableBuilder<int>(
+        valueListenable: _selectedTab,
+        builder: (context, selectedTab, _) =>
+            BlocBuilder<ServicesListBloc, ServicesListState>(
+              // The page chrome below (nav bar, FAB, segmented control vs.
+              // empty state) only depends on `_showEmpty` — every other
+              // pagination emit (load-more, loadingMore toggling, item
+              // updates) is irrelevant to it. `_MyServicesContent` reads
+              // `ServicesListBloc` itself via its own `BlocBuilder`, so it
+              // still rebuilds on every emit; only this outer chrome is
+              // spared the redundant rebuilds.
+              buildWhen: (previous, current) =>
+                  _showEmpty(previous, selectedTab) !=
+                  _showEmpty(current, selectedTab),
+              builder: (context, listState) {
+                final isMyServices = selectedTab == 0;
+                final showEmpty = _showEmpty(listState, selectedTab);
 
-          return Scaffold(
-            backgroundColor: showEmpty ? colors.surface : colors.background,
-            floatingActionButton: showEmpty
-                ? null
-                : AppFloatingActionButton(
-                    onPressed: _onAddService,
-                    semanticLabel: 'services.add_new_service'.tr(),
-                  ),
-            body: SafeArea(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  AppNavBar(
-                    title: 'services.title'.tr(),
-                    onLeadingTap: () {
-                      if (context.canPop()) context.pop();
-                    },
-                    trailing: AppNotificationIcon(
-                      hasUnread: true,
-                      onTap: () {},
-                    ),
-                  ),
-                  if (showEmpty) ...[
-                    AppLargeNavBar(title: 'services.title'.tr()),
-                    Expanded(
-                      child: ServicesEmptyState(onAddService: _onAddService),
-                    ),
-                  ] else ...[
-                    const _DashboardHeader(),
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppSpacing.lg,
-                        vertical: AppSpacing.sm,
-                      ),
-                      child: AppSegmentedControl<int>(
-                        items: [
-                          AppSegmentedControlItem(
-                            value: 0,
-                            label: 'services.tab_my_services'.tr(),
+                return Scaffold(
+                  backgroundColor: showEmpty
+                      ? colors.surface
+                      : colors.background,
+                  floatingActionButton: showEmpty
+                      ? null
+                      : AppFloatingActionButton(
+                          onPressed: _onAddService,
+                          semanticLabel: 'services.add_new_service'.tr(),
+                        ),
+                  body: SafeArea(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        AppNavBar(
+                          title: 'services.title'.tr(),
+                          onLeadingTap: () {
+                            if (context.canPop()) context.pop();
+                          },
+                          trailing: AppNotificationIcon(
+                            hasUnread: true,
+                            onTap: () {},
                           ),
-                          AppSegmentedControlItem(
-                            value: 1,
-                            label: 'services.tab_service_request'.tr(),
+                        ),
+                        if (showEmpty) ...[
+                          AppLargeNavBar(title: 'services.title'.tr()),
+                          Expanded(
+                            child: ServicesEmptyState(
+                              onAddService: _onAddService,
+                            ),
+                          ),
+                        ] else ...[
+                          const _DashboardHeader(),
+                          Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: AppSpacing.lg,
+                              vertical: AppSpacing.sm,
+                            ),
+                            child: AppSegmentedControl<int>(
+                              items: [
+                                AppSegmentedControlItem(
+                                  value: 0,
+                                  label: 'services.tab_my_services'.tr(),
+                                ),
+                                AppSegmentedControlItem(
+                                  value: 1,
+                                  label: 'services.tab_service_request'.tr(),
+                                ),
+                              ],
+                              selectedValue: selectedTab,
+                              onChanged: (index) => _selectedTab.value = index,
+                            ),
+                          ),
+                          Expanded(
+                            child: isMyServices
+                                ? _MyServicesContent(
+                                    onAddService: _onAddService,
+                                  )
+                                : const _ServiceRequestsContent(),
                           ),
                         ],
-                        selectedValue: _selectedTab,
-                        onChanged: (index) =>
-                            setState(() => _selectedTab = index),
-                      ),
+                      ],
                     ),
-                    Expanded(
-                      child: isMyServices
-                          ? _MyServicesContent(onAddService: _onAddService)
-                          : const _ServiceRequestsContent(),
-                    ),
-                  ],
-                ],
-              ),
+                  ),
+                );
+              },
             ),
-          );
-        },
       ),
     );
   }
@@ -297,15 +319,11 @@ class _MyServicesContentState extends State<_MyServicesContent> {
     // rarer empty-state transition — see `_ProviderServicesPageState.build`.
     return BlocBuilder<ServicesListBloc, ServicesListState>(
       builder: (context, state) {
-        // First-page load: skeletonize the *real* row widget with mock data
-        // (no bespoke skeleton layout), matching the workers/invitations
-        // convention.
-        if (state.isLoading) {
-          return AppSkeletonList(
-            itemBuilder: (_, _) => ServiceListItem(service: _skeletonService),
-          );
-        }
-
+        // Search/filter chrome renders unconditionally — on the very first
+        // load AND on any filter-changed reload, since both set the same
+        // `state.isLoading` flag (there's no separate "reloading" state).
+        // Only the list/cards region below skeletonizes; the search field
+        // and status filter must stay visible and interactive throughout.
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -341,52 +359,79 @@ class _MyServicesContentState extends State<_MyServicesContent> {
               ),
             ),
             Expanded(
-              child: AppRefreshIndicator(
-                onRefresh: () async => context.read<ServicesListBloc>().add(
-                  const ServicesListRefreshEvent(),
-                ),
-                child: AppSwipeActionsGroup(
-                  child: SanadPagedList<ProviderServiceEntity>(
-                    state: toPagingState(state.pagination),
-                    controller: MainNavScrollController.maybeOf(context),
-                    // AppRefreshIndicator needs the child to always accept an
-                    // overscroll drag — without this, a short list (few items)
-                    // fights the refresh gesture with clamping physics.
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    fetchNextPage: () => context.read<ServicesListBloc>().add(
-                      const ServicesListLoadMoreEvent(),
-                    ),
-                    padding: EdgeInsets.fromLTRB(
-                      AppSpacing.xl,
-                      0,
-                      AppSpacing.xl,
-                      AppSpacing.xl,
-                    ),
-                    separatorBuilder: (_, _) => SizedBox(height: AppSpacing.md),
-                    itemBuilder: (context, service, index) => ServiceListItem(
-                      key: ValueKey(service.id),
-                      service: service,
-                      onTap: () => _onServiceTap(context, service),
-                    ),
-                    firstPageErrorIndicatorBuilder: (_) => Center(
-                      child: _ServicesErrorState(
-                        failure: state.failure,
-                        onRetry: () => context.read<ServicesListBloc>().add(
-                          const ServicesListFetchEvent(),
+              // First-page load or a filter-changed reload: skeletonize
+              // the *real* row widget with mock data (no bespoke skeleton
+              // layout), matching the workers/invitations convention —
+              // scoped to just this region, not the chrome above.
+              child: state.isLoading
+                  ? AppSkeletonList(
+                      padding: EdgeInsets.fromLTRB(
+                        AppSpacing.xl,
+                        0,
+                        AppSpacing.xl,
+                        AppSpacing.xl,
+                      ),
+                      itemBuilder: (_, _) =>
+                          ServiceListItem(service: _skeletonService),
+                    )
+                  : AppRefreshIndicator(
+                      onRefresh: () async =>
+                          context.read<ServicesListBloc>().add(
+                            const ServicesListRefreshEvent(),
+                          ),
+                      child: AppSwipeActionsGroup(
+                        child: SanadPagedList<ProviderServiceEntity>(
+                          state: toPagingState(state.pagination),
+                          controller: MainNavScrollController.maybeOf(
+                            context,
+                          ),
+                          // AppRefreshIndicator needs the child to always
+                          // accept an overscroll drag — without this, a
+                          // short list (few items) fights the refresh
+                          // gesture with clamping physics.
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          fetchNextPage: () =>
+                              context.read<ServicesListBloc>().add(
+                                const ServicesListLoadMoreEvent(),
+                              ),
+                          padding: EdgeInsets.fromLTRB(
+                            AppSpacing.xl,
+                            0,
+                            AppSpacing.xl,
+                            AppSpacing.xl,
+                          ),
+                          separatorBuilder: (_, _) =>
+                              SizedBox(height: AppSpacing.md),
+                          itemBuilder: (context, service, index) =>
+                              ServiceListItem(
+                                key: ValueKey(service.id),
+                                service: service,
+                                onTap: () => _onServiceTap(context, service),
+                              ),
+                          firstPageErrorIndicatorBuilder: (_) => Center(
+                            child: _ServicesErrorState(
+                              failure: state.failure,
+                              onRetry: () =>
+                                  context.read<ServicesListBloc>().add(
+                                    const ServicesListFetchEvent(),
+                                  ),
+                            ),
+                          ),
+                          newPageErrorIndicatorBuilder: (_) =>
+                              _NextPageErrorRetry(
+                                onRetry: () =>
+                                    context.read<ServicesListBloc>().add(
+                                      const ServicesListLoadMoreEvent(),
+                                    ),
+                              ),
+                          noItemsFoundIndicatorBuilder: (_) => Center(
+                            child: ServicesEmptyState(
+                              onAddService: onAddService,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                    newPageErrorIndicatorBuilder: (_) => _NextPageErrorRetry(
-                      onRetry: () => context.read<ServicesListBloc>().add(
-                        const ServicesListLoadMoreEvent(),
-                      ),
-                    ),
-                    noItemsFoundIndicatorBuilder: (_) => Center(
-                      child: ServicesEmptyState(onAddService: onAddService),
-                    ),
-                  ),
-                ),
-              ),
             ),
           ],
         );

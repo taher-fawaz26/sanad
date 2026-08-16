@@ -26,10 +26,11 @@ class FilePickerFileProvider implements FileProvider {
     try {
       final List<PlatformFile> platformFiles;
       if (options.allowMultiple) {
-        platformFiles = await FilePicker.pickFiles(
+        final result = await FilePicker.pickFiles(
           type: type,
           allowedExtensions: allowedExtensions,
         );
+        platformFiles = result?.files ?? const [];
       } else {
         final file = await FilePicker.pickFile(
           type: type,

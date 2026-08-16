@@ -9,7 +9,9 @@ import 'package:go_router/go_router.dart';
 import 'package:media_upload/media_upload.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:services/src/domain/entities/category_record_entity.dart';
+import 'package:services/src/domain/entities/catalog_service_entity.dart';
 import 'package:services/src/domain/entities/pagination_meta_entity.dart';
+import 'package:services/src/domain/usecases/browse_catalog_usecase.dart';
 import 'package:services/src/domain/usecases/create_provider_service_usecase.dart';
 import 'package:services/src/domain/usecases/create_service_request_usecase.dart';
 import 'package:services/src/domain/usecases/get_categories_usecase.dart';
@@ -44,6 +46,26 @@ class _FakeGetCategoriesUseCase implements GetCategoriesUseCase {
       meta: const PaginationMetaEntity(
         totalItems: 1,
         itemCount: 1,
+        itemsPerPage: 100,
+        totalPages: 1,
+        currentPage: 1,
+      ),
+    ),
+  );
+}
+
+class _FakeBrowseCatalogUseCase implements BrowseCatalogUseCase {
+  const _FakeBrowseCatalogUseCase();
+
+  @override
+  TaskEither<Failure, ServicesPagedResult<CatalogServiceEntity>> call(
+    BrowseCatalogParams params,
+  ) => TaskEither.right(
+    const ServicesPagedResult(
+      items: [],
+      meta: PaginationMetaEntity(
+        totalItems: 0,
+        itemCount: 0,
         itemsPerPage: 100,
         totalPages: 1,
         currentPage: 1,
@@ -119,11 +141,13 @@ void main() {
       ..registerFactory<AddServiceBloc>(
         () => AddServiceBloc(
           createProviderServiceUseCase: _MockCreateProviderServiceUseCase(),
+          browseCatalogUseCase: const _FakeBrowseCatalogUseCase(),
         ),
       )
       ..registerFactory<RequestNewServiceBloc>(
         () => RequestNewServiceBloc(
           createServiceRequestUseCase: _MockCreateServiceRequestUseCase(),
+          getCategoriesUseCase: const _FakeGetCategoriesUseCase(),
         ),
       );
   });

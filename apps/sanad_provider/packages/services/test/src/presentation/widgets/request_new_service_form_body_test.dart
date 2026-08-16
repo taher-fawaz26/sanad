@@ -10,11 +10,19 @@ import 'package:media_upload/media_upload.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:services/src/domain/entities/category_record_entity.dart';
 import 'package:services/src/domain/entities/pagination_meta_entity.dart';
+import 'package:services/src/domain/usecases/create_service_request_usecase.dart';
 import 'package:services/src/domain/usecases/get_categories_usecase.dart';
+import 'package:services/src/presentation/bloc/request_new_service/request_new_service_bloc.dart';
 import 'package:services/src/presentation/widgets/request_new_service_form_body.dart';
 
 class _MockMediaUploadRepository extends Mock
     implements MediaUploadRepository {}
+
+/// Never invoked by these tests — this widget only ever dispatches
+/// [RequestNewServiceCategoriesRequested]; submission is
+/// [RequestNewServicePage]'s job.
+class _UnusedCreateServiceRequestUseCase extends Mock
+    implements CreateServiceRequestUseCase {}
 
 class _FakeGetCategoriesUseCase implements GetCategoriesUseCase {
   const _FakeGetCategoriesUseCase();
@@ -54,9 +62,16 @@ PickedAsset _asset({String name = 'photo.jpg'}) => PickedAsset(
   assetType: AssetType.image,
 );
 
+/// Builds and pumps the widget tree, constructing both blocs here — inside
+/// the `testWidgets` body's own zone — rather than in a top-level
+/// `setUp()`. A bloc built in `setUp()` and then subscribed to (via
+/// `RequestNewServiceBloc.stream` in `_loadCategories`) from inside the
+/// test body never delivers its emissions to that subscriber under
+/// `flutter_test`'s FakeAsync zone; constructing it here avoids the
+/// mismatch (see `add_service_form_body_test.dart`'s `_pump` for the same
+/// pattern).
 Future<void> _pump(
-  WidgetTester tester,
-  MediaUploadBloc bloc, {
+  WidgetTester tester, {
   required ValueChanged<bool> onCompletenessChanged,
   Key? key,
 }) async {
@@ -68,6 +83,16 @@ Future<void> _pump(
     tester.view.resetDevicePixelRatio();
   });
 
+  final mediaBloc = MediaUploadBloc(repository: _MockMediaUploadRepository());
+  final requestNewServiceBloc = RequestNewServiceBloc(
+    createServiceRequestUseCase: _UnusedCreateServiceRequestUseCase(),
+    getCategoriesUseCase: const _FakeGetCategoriesUseCase(),
+  );
+  addTearDown(() {
+    mediaBloc.close();
+    requestNewServiceBloc.close();
+  });
+
   await tester.pumpWidget(
     ScreenUtilInit(
       designSize: const Size(360, 800),
@@ -75,8 +100,13 @@ Future<void> _pump(
       builder: (_, _) => MaterialApp(
         theme: AppTheme.light(),
         home: Scaffold(
-          body: BlocProvider<MediaUploadBloc>.value(
-            value: bloc,
+          body: MultiBlocProvider(
+            providers: [
+              BlocProvider<MediaUploadBloc>.value(value: mediaBloc),
+              BlocProvider<RequestNewServiceBloc>.value(
+                value: requestNewServiceBloc,
+              ),
+            ],
             child: SingleChildScrollView(
               child: RequestNewServiceFormBody(
                 key: key,
@@ -91,32 +121,15 @@ Future<void> _pump(
 }
 
 void main() {
-  late _MockMediaUploadRepository repository;
-  late MediaUploadBloc bloc;
-
   setUpAll(() {
     registerFallbackValue(_asset());
-    sl.registerLazySingleton<GetCategoriesUseCase>(
-      () => const _FakeGetCategoriesUseCase(),
-    );
   });
-
-  tearDownAll(() {
-    sl.unregister<GetCategoriesUseCase>();
-  });
-
-  setUp(() {
-    repository = _MockMediaUploadRepository();
-    bloc = MediaUploadBloc(repository: repository);
-  });
-
-  tearDown(() => bloc.close());
 
   testWidgets(
     'renders free-text Service Name, a real Category dropdown, Description '
     'and Images fields',
     (tester) async {
-      await _pump(tester, bloc, onCompletenessChanged: (_) {});
+      await _pump(tester, onCompletenessChanged: (_) {});
 
       expect(find.byType(AppSelectField), findsOneWidget);
       expect(find.byType(AppTextField), findsNWidgets(2));
@@ -133,7 +146,7 @@ void main() {
 
   testWidgets('entering a service name updates the field', (tester) async {
     final key = GlobalKey<RequestNewServiceFormBodyState>();
-    await _pump(tester, bloc, onCompletenessChanged: (_) {}, key: key);
+    await _pump(tester, onCompletenessChanged: (_) {}, key: key);
 
     await tester.enterText(find.byType(TextField).at(0), 'Ceramic Coating');
     await tester.pumpAndSettle();
@@ -145,7 +158,7 @@ void main() {
     tester,
   ) async {
     final key = GlobalKey<RequestNewServiceFormBodyState>();
-    await _pump(tester, bloc, onCompletenessChanged: (_) {}, key: key);
+    await _pump(tester, onCompletenessChanged: (_) {}, key: key);
 
     await tester.tap(find.byType(AppSelectField).first);
     await tester.pumpAndSettle();
@@ -161,7 +174,7 @@ void main() {
     'images are optional',
     (tester) async {
       final completenessEvents = <bool>[];
-      await _pump(tester, bloc, onCompletenessChanged: completenessEvents.add);
+      await _pump(tester, onCompletenessChanged: completenessEvents.add);
 
       await tester.enterText(find.byType(TextField).at(0), 'Ceramic Coating');
       await tester.pumpAndSettle();
@@ -185,7 +198,7 @@ void main() {
 
   group('name validation', () {
     testWidgets('empty name shows the required error', (tester) async {
-      await _pump(tester, bloc, onCompletenessChanged: (_) {});
+      await _pump(tester, onCompletenessChanged: (_) {});
 
       await tester.enterText(find.byType(TextField).at(0), 'a');
       await tester.pumpAndSettle();
@@ -199,7 +212,7 @@ void main() {
     });
 
     testWidgets('valid name shows no error', (tester) async {
-      await _pump(tester, bloc, onCompletenessChanged: (_) {});
+      await _pump(tester, onCompletenessChanged: (_) {});
 
       await tester.enterText(find.byType(TextField).at(0), 'Ceramic Coating');
       await tester.pumpAndSettle();
@@ -215,7 +228,7 @@ void main() {
     });
 
     testWidgets('256 characters fails the length check', (tester) async {
-      await _pump(tester, bloc, onCompletenessChanged: (_) {});
+      await _pump(tester, onCompletenessChanged: (_) {});
 
       await tester.enterText(find.byType(TextField).at(0), 'a' * 256);
       await tester.pumpAndSettle();
@@ -227,7 +240,7 @@ void main() {
     });
 
     testWidgets('255 characters (the boundary) passes', (tester) async {
-      await _pump(tester, bloc, onCompletenessChanged: (_) {});
+      await _pump(tester, onCompletenessChanged: (_) {});
 
       await tester.enterText(find.byType(TextField).at(0), 'a' * 255);
       await tester.pumpAndSettle();
@@ -241,7 +254,7 @@ void main() {
 
   group('description validation', () {
     testWidgets('exactly 500 characters passes', (tester) async {
-      await _pump(tester, bloc, onCompletenessChanged: (_) {});
+      await _pump(tester, onCompletenessChanged: (_) {});
 
       await tester.enterText(find.byType(TextField).at(1), 'a' * 500);
       await tester.pumpAndSettle();
@@ -255,7 +268,7 @@ void main() {
     testWidgets('501 characters shows the corrected length error', (
       tester,
     ) async {
-      await _pump(tester, bloc, onCompletenessChanged: (_) {});
+      await _pump(tester, onCompletenessChanged: (_) {});
 
       await tester.enterText(find.byType(TextField).at(1), 'a' * 501);
       await tester.pumpAndSettle();
@@ -272,7 +285,7 @@ void main() {
     'selected, and clears it once one is picked',
     (tester) async {
       final key = GlobalKey<RequestNewServiceFormBodyState>();
-      await _pump(tester, bloc, onCompletenessChanged: (_) {}, key: key);
+      await _pump(tester, onCompletenessChanged: (_) {}, key: key);
 
       expect(
         find.text('services.request_new_service.category_required_error'),

@@ -9,8 +9,8 @@ import 'package:localization/localization.dart';
 import 'package:services/src/domain/entities/category_ref_entity.dart';
 import 'package:services/src/domain/entities/provider_service_entity.dart';
 import 'package:services/src/domain/entities/provider_service_status.dart';
-import 'package:services/src/domain/usecases/get_provider_service_usecase.dart';
 import 'package:services/src/presentation/bloc/service_action/service_action_bloc.dart';
+import 'package:services/src/presentation/bloc/service_details/service_details_bloc.dart';
 import 'package:services/src/presentation/widgets/service_actions_bottom_sheet.dart';
 import 'package:services/src/presentation/widgets/service_images_preview.dart';
 import 'package:shared_ui/shared_ui.dart';
@@ -18,53 +18,15 @@ import 'package:shared_ui/shared_ui.dart';
 /// Per-service detail screen — Figma `4715:26284` (active) / `5119:42089`
 /// (paused).
 ///
-/// Fetches the full, up-to-date service via `GET /provider-services/:id`
-/// (`GetProviderServiceUseCase`) rather than trusting the row `extra` from
-/// the services list — the list endpoint's rows carry only a subset of what
-/// this screen needs (e.g. only `primaryImage`, not the full `images` array,
-/// and no `requests`/`revenue`).
-class ServiceDetailsPage extends StatefulWidget {
-  const ServiceDetailsPage({required this.serviceId, super.key});
-
-  final String serviceId;
-
-  @override
-  State<ServiceDetailsPage> createState() => _ServiceDetailsPageState();
-}
-
-class _ServiceDetailsPageState extends State<ServiceDetailsPage> {
-  ProviderServiceEntity? _service;
-  Failure? _loadFailure;
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _loadFailure = null;
-    });
-
-    final result = await sl<GetProviderServiceUseCase>()(
-      widget.serviceId,
-    ).run();
-    if (!mounted) return;
-
-    result.fold(
-      (failure) => setState(() {
-        _isLoading = false;
-        _loadFailure = failure;
-      }),
-      (service) => setState(() {
-        _isLoading = false;
-        _service = service;
-      }),
-    );
-  }
+/// Renders [ServiceDetailsBloc] state — the bloc fetches the full,
+/// up-to-date service via `GET /provider-services/:id` rather than trusting
+/// the row `extra` from the services list (the list endpoint's rows carry
+/// only a subset of what this screen needs, e.g. only `primaryImage`, not
+/// the full `images` array, and no `requests`/`revenue`), and folds in
+/// updates from [ServiceActionBloc] (status toggle / delete) so this page
+/// stays purely presentational.
+class ServiceDetailsPage extends StatelessWidget {
+  const ServiceDetailsPage({super.key});
 
   /// Realistic mock used only to skeletonize the real layout via
   /// [AppSkeletonizer] — no bespoke skeleton widget.
@@ -114,33 +76,39 @@ class _ServiceDetailsPageState extends State<ServiceDetailsPage> {
   }
 
   Widget _buildBody(BuildContext context) {
-    if (_isLoading) {
-      return AppSkeletonizer(
-        enabled: true,
-        child: _buildContent(_skeletonService),
-      );
-    }
+    return BlocBuilder<ServiceDetailsBloc, ServiceDetailsState>(
+      builder: (context, state) {
+        if (state.isLoading) {
+          return AppSkeletonizer(
+            enabled: true,
+            child: _buildContent(context, _skeletonService),
+          );
+        }
 
-    final service = _service;
-    if (service == null) {
-      final display = failureErrorDisplay(_loadFailure);
-      return Center(
-        child: AppErrorState(
-          style: display.isConnectivity
-              ? AppErrorStateStyle.network
-              : AppErrorStateStyle.generic,
-          title: display.title,
-          description: display.description,
-          retryLabel: failureRetryLabel(),
-          onRetry: display.isRetryable ? _load : null,
-        ),
-      );
-    }
+        final service = state.service;
+        if (service == null) {
+          final display = failureErrorDisplay(state.failure);
+          return Center(
+            child: AppErrorState(
+              style: display.isConnectivity
+                  ? AppErrorStateStyle.network
+                  : AppErrorStateStyle.generic,
+              title: display.title,
+              description: display.description,
+              retryLabel: failureRetryLabel(),
+              onRetry: display.isRetryable
+                  ? () => _fetch(context)
+                  : null,
+            ),
+          );
+        }
 
-    return _buildContent(service);
+        return _buildContent(context, service);
+      },
+    );
   }
 
-  Widget _buildContent(ProviderServiceEntity service) {
+  Widget _buildContent(BuildContext context, ProviderServiceEntity service) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -148,7 +116,7 @@ class _ServiceDetailsPageState extends State<ServiceDetailsPage> {
           padding: EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
           child: _Header(
             service: service,
-            onMoreTap: () => _onMoreTap(service),
+            onMoreTap: () => _onMoreTap(context, service),
           ),
         ),
         if (service.status != ProviderServiceStatus.active)
@@ -181,18 +149,29 @@ class _ServiceDetailsPageState extends State<ServiceDetailsPage> {
     );
   }
 
-  void _onMoreTap(ProviderServiceEntity service) {
+  void _fetch(BuildContext context) {
+    final serviceId = context.read<ServiceDetailsBloc>().state.serviceId;
+    if (serviceId != null) {
+      context.read<ServiceDetailsBloc>().add(
+        ServiceDetailsFetchRequested(serviceId),
+      );
+    }
+  }
+
+  void _onMoreTap(BuildContext context, ProviderServiceEntity service) {
     showServiceActionsBottomSheet(context: context, service: service);
   }
 
   void _handleActionState(BuildContext context, ServiceActionState state) {
     if (state.status != RequestStatus.success) return;
-    final current = _service;
+    final current = context.read<ServiceDetailsBloc>().state.service;
     if (current == null) return;
 
     if (state.updatedService != null &&
         state.updatedService!.id == current.id) {
-      setState(() => _service = state.updatedService);
+      context.read<ServiceDetailsBloc>().add(
+        ServiceDetailsExternallyUpdated(state.updatedService!),
+      );
     }
     if (state.deletedServiceId == current.id) {
       if (context.canPop()) context.pop();

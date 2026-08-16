@@ -15,3 +15,8 @@ final class AddServiceSubmittedEvent extends AddServiceEvent {
   @override
   List<Object?> get props => [params];
 }
+
+/// Requests the `GET /services` catalog for the service-name picker.
+final class AddServiceCatalogRequested extends AddServiceEvent {
+  const AddServiceCatalogRequested();
+}

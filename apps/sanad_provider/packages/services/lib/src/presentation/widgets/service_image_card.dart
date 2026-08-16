@@ -16,6 +16,7 @@ class ServiceImageCard extends StatelessWidget {
     required this.onMenuTap,
     super.key,
     this.onRetry,
+    this.isBusy = false,
     this.size = 153,
   });
 
@@ -23,11 +24,12 @@ class ServiceImageCard extends StatelessWidget {
   final bool isMain;
   final VoidCallback onMenuTap;
   final VoidCallback? onRetry;
-  final double size;
 
-  static const _successBg = Color(0xFFECFDF3);
-  static const _successText = Color(0xFF027A48);
-  static const _failedText = Color(0xFFFF5666);
+  /// True while a mutation (set-primary/delete) targeting this exact image
+  /// is in flight — Edit-mode-only; Add's staged images are never "busy"
+  /// in this sense (only uploading, covered by [MediaUploadTileStatus]).
+  final bool isBusy;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
@@ -59,6 +61,13 @@ class ServiceImageCard extends StatelessWidget {
                           color: colors.textSecondary,
                         ),
                 ),
+                // NOTE: `Colors.black`/`Colors.white` below are a known,
+                // documented design-system gap — there is no `appColors`
+                // token for a photo-overlay scrim (`OverlayTokens` is
+                // explicitly scoped to dialog/sheet chrome, not photo
+                // overlays; see the Services architecture audit). Left
+                // as-is pending a design_system token addition rather than
+                // inventing a one-off local token.
                 if (isMain)
                   PositionedDirectional(
                     top: AppSpacing.sm,
@@ -106,6 +115,22 @@ class ServiceImageCard extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (isBusy)
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.35),
+                    ),
+                    child: const Center(
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -142,7 +167,7 @@ class ServiceImageCard extends StatelessWidget {
       case MediaUploadTileStatus.success:
         return DecoratedBox(
           decoration: BoxDecoration(
-            color: _successBg,
+            color: colors.successContainer,
             borderRadius: BorderRadius.circular(4),
           ),
           child: Padding(
@@ -152,7 +177,7 @@ class ServiceImageCard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: typography.tinyNormal.copyWith(
-                color: _successText,
+                color: colors.onSuccessContainer,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -195,12 +220,15 @@ class ServiceImageCard extends StatelessWidget {
           ],
         );
       case MediaUploadTileStatus.failure:
+        // `palettes.red.shade500` is an exact match for the Figma failed-
+        // state red (0xFFFF5666) — see `AppPalettes`/`RedPalette`.
+        final failedColor = colors.palettes.red.shade500;
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             DecoratedBox(
               decoration: BoxDecoration(
-                color: _failedText.withValues(alpha: 0.1),
+                color: failedColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Padding(
@@ -211,7 +239,7 @@ class ServiceImageCard extends StatelessWidget {
                 child: Text(
                   'services.images_failed'.tr(),
                   style: typography.tinyNormal.copyWith(
-                    color: _failedText,
+                    color: failedColor,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -256,9 +284,9 @@ class ServiceImageAddCard extends StatelessWidget {
         height: responsiveDimension(size),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: const Color(0xFFFAFBFC),
+          color: colors.palettes.sky.shade50,
           borderRadius: BorderRadius.circular(AppDimension.radiusMd),
-          border: Border.all(color: const Color(0xFFEAECF0)),
+          border: Border.all(color: colors.border),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

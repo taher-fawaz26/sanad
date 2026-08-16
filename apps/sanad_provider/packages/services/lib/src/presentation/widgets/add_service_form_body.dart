@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:media_upload/media_upload.dart';
 import 'package:services/src/domain/entities/catalog_service_entity.dart';
-import 'package:services/src/domain/usecases/browse_catalog_usecase.dart';
+import 'package:services/src/presentation/bloc/add_service/add_service_bloc.dart';
 import 'package:services/src/presentation/widgets/add_service_ai_enhance_button.dart';
 import 'package:services/src/presentation/widgets/add_service_images_field.dart';
 import 'package:shared_ui/shared_ui.dart';
@@ -14,10 +14,12 @@ import 'package:shared_ui/shared_ui.dart';
 ///
 /// "Add a Service" means adding a catalog service to the provider's own
 /// offered services (`POST /provider-services`). Service Name is a
-/// read-only picker backed by the real catalog (`GET /services` via
-/// [BrowseCatalogUseCase]) — the user only ever sees the catalog service's
-/// name; category is derived from the selection and shown read-only.
-/// There is no price on this contract.
+/// read-only picker backed by the real catalog (`GET /services`, owned by
+/// [AddServiceBloc] — this widget only dispatches
+/// [AddServiceCatalogRequested] and reads the resulting state, it never
+/// resolves a use case itself) — the user only ever sees the catalog
+/// service's name; category is derived from the selection and shown
+/// read-only. There is no price on this contract.
 class AddServiceFormBody extends StatefulWidget {
   /// Creates the Add Service form body.
   const AddServiceFormBody({
@@ -40,33 +42,42 @@ class AddServiceFormBody extends StatefulWidget {
 class AddServiceFormBodyState extends State<AddServiceFormBody> {
   final _descriptionController = TextEditingController();
 
-  CatalogServiceEntity? _selectedService;
+  // Ephemeral UI-only state (the catalog-service selection and whether its
+  // "required" error should show) — `ValueNotifier` + a `ListenableBuilder`
+  // merging both, instead of `setState`, per this package's zero-`setState`
+  // architecture rule.
+  final ValueNotifier<CatalogServiceEntity?> _selectedService = ValueNotifier(
+    null,
+  );
+  final ValueNotifier<bool> _showSelectionError = ValueNotifier(false);
   bool _wasComplete = false;
-  bool _showSelectionError = false;
 
   /// Read by `AddServicePage` on submit — the catalog service id
   /// (`serviceId` in `CreateProviderServiceDto`).
-  String? get serviceId => _selectedService?.id;
+  String? get serviceId => _selectedService.value?.id;
   String get description => _descriptionController.text.trim();
 
   /// Read by `AddServicePage` to decide whether to show the discard-changes
   /// confirmation on back navigation.
   bool get hasUnsavedInput =>
-      _selectedService != null || _descriptionController.text.trim().isNotEmpty;
+      _selectedService.value != null ||
+      _descriptionController.text.trim().isNotEmpty;
 
   /// Validates the service-selection field, revealing its error text if
   /// nothing is selected. Called by `AddServicePage` on submit — the
   /// dropdown has no built-in `Form`/`validator` hook, so this mirrors
   /// `WorkerTypeSelectField`'s `showValidationErrors` pattern instead.
   bool validateSelection() {
-    final isValid = _selectedService != null;
-    if (!isValid) setState(() => _showSelectionError = true);
+    final isValid = _selectedService.value != null;
+    if (!isValid) _showSelectionError.value = true;
     return isValid;
   }
 
   @override
   void dispose() {
     _descriptionController.dispose();
+    _selectedService.dispose();
+    _showSelectionError.dispose();
     super.dispose();
   }
 
@@ -77,30 +88,44 @@ class AddServiceFormBodyState extends State<AddServiceFormBody> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AppSelectField(
-            label: 'services.add_service.service_name_label'.tr(),
-            isRequired: true,
-            hint: 'services.add_service.service_select_hint'.tr(),
-            value: _selectedService?.name,
-            onTap: _pickService,
-            errorText: _showSelectionError && _selectedService == null
-                ? 'services.add_service.service_required_error'.tr()
-                : null,
+          ListenableBuilder(
+            listenable: Listenable.merge([
+              _selectedService,
+              _showSelectionError,
+            ]),
+            builder: (context, _) {
+              final selected = _selectedService.value;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AppSelectField(
+                    label: 'services.add_service.service_name_label'.tr(),
+                    isRequired: true,
+                    hint: 'services.add_service.service_select_hint'.tr(),
+                    value: selected?.name,
+                    onTap: _pickService,
+                    errorText: _showSelectionError.value && selected == null
+                        ? 'services.add_service.service_required_error'.tr()
+                        : null,
+                  ),
+                  SizedBox(height: AppSpacing.sm),
+                  AppInlineLinkText(
+                    text: 'services.add_service.inline_not_found_prefix'.tr(),
+                    linkText: 'services.add_service.inline_request_link'.tr(),
+                    onLinkTap: widget.onRequestNewService,
+                  ),
+                  if (selected != null) ...[
+                    SizedBox(height: AppSpacing.lg),
+                    AppSelectField(
+                      label: 'services.add_service.category_label'.tr(),
+                      value: selected.category.name,
+                      onTap: null,
+                    ),
+                  ],
+                ],
+              );
+            },
           ),
-          SizedBox(height: AppSpacing.sm),
-          AppInlineLinkText(
-            text: 'services.add_service.inline_not_found_prefix'.tr(),
-            linkText: 'services.add_service.inline_request_link'.tr(),
-            onLinkTap: widget.onRequestNewService,
-          ),
-          if (_selectedService != null) ...[
-            SizedBox(height: AppSpacing.lg),
-            AppSelectField(
-              label: 'services.add_service.category_label'.tr(),
-              value: _selectedService!.category.name,
-              onTap: null,
-            ),
-          ],
           SizedBox(height: AppSpacing.lg),
           Stack(
             children: [
@@ -129,10 +154,11 @@ class AddServiceFormBodyState extends State<AddServiceFormBody> {
   }
 
   /// Service Name dropdown — Figma `5261:44387`. Backed by the real
-  /// `GET /services` catalog via [BrowseCatalogUseCase]. Only
-  /// [CatalogServiceEntity.name] is shown to the user; the id is retained
-  /// internally as `serviceId`.
+  /// `GET /services` catalog, fetched by [AddServiceBloc] in response to
+  /// [AddServiceCatalogRequested]. Only [CatalogServiceEntity.name] is
+  /// shown to the user; the id is retained internally as `serviceId`.
   Future<void> _pickService() async {
+    final bloc = context.read<AddServiceBloc>();
     final selected = await showAppSelectSheet<CatalogServiceEntity>(
       context: context,
       title: 'services.add_service.service_name_label'.tr(),
@@ -141,12 +167,7 @@ class AddServiceFormBodyState extends State<AddServiceFormBody> {
       getId: (service) => service.id,
       searchFilter: (service, query) =>
           service.name.toLowerCase().contains(query),
-      loadItems: () async {
-        final result = await sl<BrowseCatalogUseCase>()(
-          const BrowseCatalogParams(limit: 100),
-        ).run();
-        return result.fold((f) => throw f, (paged) => paged.items);
-      },
+      loadItems: () => _loadCatalog(bloc),
       errorTextBuilder: (e) => e is Failure ? e.message : e.toString(),
       retryLabel: 'common.retry'.tr(),
       itemBuilder: (context, service, isSelected, onTap) =>
@@ -154,11 +175,24 @@ class AddServiceFormBodyState extends State<AddServiceFormBody> {
     );
     if (selected == null || selected.isEmpty) return;
 
-    setState(() {
-      _selectedService = selected.first;
-      _showSelectionError = false;
-    });
+    _selectedService.value = selected.first;
+    _showSelectionError.value = false;
     _reportCompleteness();
+  }
+
+  /// Bridges [AppSelectSheet]'s pull-based `loadItems` contract onto
+  /// [AddServiceBloc]'s event/state cycle: dispatches
+  /// [AddServiceCatalogRequested] and awaits the resulting state — this
+  /// widget only ever talks to the bloc, never to a use case.
+  Future<List<CatalogServiceEntity>> _loadCatalog(AddServiceBloc bloc) async {
+    bloc.add(const AddServiceCatalogRequested());
+    final state = await bloc.stream.firstWhere(
+      (s) => s.catalogStatus != AddServiceCatalogStatus.loading,
+    );
+    if (state.catalogStatus == AddServiceCatalogStatus.failure) {
+      throw state.catalogFailure!;
+    }
+    return state.catalogItems;
   }
 
   String? _validateDescription(String? value) {
@@ -184,7 +218,7 @@ class AddServiceFormBodyState extends State<AddServiceFormBody> {
       maxItems: 6,
     );
     final isComplete =
-        _selectedService != null &&
+        _selectedService.value != null &&
         description.isNotEmpty &&
         LengthValidator.isValid(description, maxLength: 500) &&
         hasImage;

@@ -207,10 +207,34 @@ class _AddBranchPageState extends State<AddBranchPage> {
     final draft = context.read<AddBranchDraftCubit>().state;
     final result = await showSelectServiceActionSheet(
       context: context,
+      loadItems: _loadCatalogServiceSelections,
       initialSelectedIds: draft.selectedServices.map((s) => s.id).toSet(),
     );
     if (!mounted || result == null) return;
     context.read<AddBranchDraftCubit>().updateServices(result.selectedServices);
+  }
+
+  /// Builds the `loadItems` closure `showSelectServiceActionSheet` needs
+  /// from [BrowseCatalogUseCase] (`GET /services`, mapped down to the
+  /// lightweight [CatalogServiceSelection] shape the sheet expects) — this
+  /// page resolves and owns the use case itself, as its own composition
+  /// root, rather than the sheet (a shared `services` package widget)
+  /// doing so.
+  Future<List<CatalogServiceSelection>> _loadCatalogServiceSelections() async {
+    final result = await sl<BrowseCatalogUseCase>()(
+      const BrowseCatalogParams(limit: 100),
+    ).run();
+    return result.fold(
+      (f) => throw f,
+      (paged) => [
+        for (final service in paged.items)
+          CatalogServiceSelection(
+            id: service.id,
+            name: service.name,
+            categoryName: service.category.name,
+          ),
+      ],
+    );
   }
 
   Future<void> _openSelectWorkers() async {

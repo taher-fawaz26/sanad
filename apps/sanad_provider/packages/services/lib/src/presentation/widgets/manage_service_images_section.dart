@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:asset_picker/asset_picker.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
@@ -8,148 +6,143 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:localization/localization.dart';
 import 'package:media_upload/media_upload.dart';
-import 'package:services/src/domain/entities/provider_service_entity.dart';
+import 'package:services/src/domain/constants/service_image_limits.dart';
 import 'package:services/src/domain/entities/provider_service_image_entity.dart';
-import 'package:services/src/domain/usecases/add_provider_service_image_usecase.dart';
-import 'package:services/src/domain/usecases/delete_provider_service_image_usecase.dart';
-import 'package:services/src/domain/usecases/set_primary_provider_service_image_usecase.dart';
-import 'package:services/src/presentation/widgets/service_image_card.dart';
+import 'package:services/src/presentation/bloc/service_images/service_images_bloc.dart';
+import 'package:services/src/presentation/models/service_image_tile.dart';
+import 'package:services/src/presentation/widgets/service_images_editor.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
-
-/// Maximum images a service may carry — matches the backend's "Image limit
-/// of six reached" rule enforced by `POST .../images`.
-const int kMaxServiceImages = 6;
 
 /// Live image lifecycle for an existing provider service — mounted in Edit
 /// Service, below the name/category/description fields.
 ///
-/// Every action here hits the backend immediately (no staging, no
-/// resubmission through `PATCH /provider-services/{id}`): add via
-/// `POST /provider-services/:id/images`, set primary via
-/// `PATCH .../images/:imageId/primary`, delete via
-/// `DELETE .../images/:imageId`. `:imageId` is always the image row id
-/// ([ProviderServiceImageEntity.id]), never the underlying `mediaId`
-/// returned by the upload step.
-///
-/// New images are staged through the [MediaUploadBloc] already provided
-/// above this widget (see `ServicesModule`'s `edit` route) exactly like
-/// Add Service — upload success and attach success are tracked separately:
-/// an uploaded item only leaves the "in progress" row once
-/// [AddProviderServiceImageUseCase] confirms the attach. An attach failure
-/// never re-triggers the (already-successful) upload; retrying it only
-/// re-calls the attach.
-class ManageServiceImagesSection extends StatefulWidget {
-  const ManageServiceImagesSection({
-    required this.service,
-    required this.onServiceUpdated,
-    super.key,
-  });
-
-  final ProviderServiceEntity service;
-
-  /// Called with the refreshed service after any successful mutation.
-  final ValueChanged<ProviderServiceEntity> onServiceUpdated;
-
-  @override
-  State<ManageServiceImagesSection> createState() =>
-      _ManageServiceImagesSectionState();
-}
-
-enum _AttachStatus { attaching, failed }
-
-class _ManageServiceImagesSectionState
-    extends State<ManageServiceImagesSection> {
-  String? _busyImageId;
-
-  /// Attach phase for upload-succeeded items, keyed by
-  /// [MediaUploadItem.localId].
-  /// Absent once attached (the item is folded into `widget.service.images`
-  /// and dropped from the in-progress row) or while the upload itself is
-  /// still pending/uploading/failed.
-  final Map<String, _AttachStatus> _attachStatus = {};
+/// Purely presentational: renders [ServiceImagesBloc] state through the
+/// shared [ServiceImagesEditor] (same component Add Service uses) and
+/// dispatches events. Requires a [ServiceImagesBloc] and a `MediaUploadBloc`
+/// already provided above it (see `ServicesModule`'s `edit` route) —
+/// new-image uploads are staged through the latter exactly like Add
+/// Service, and this widget forwards its state into [ServiceImagesBloc]
+/// verbatim ([ServiceImagesUploadStateChanged]); the bloc alone decides
+/// which items are newly-succeeded and kicks off their attach.
+class ManageServiceImagesSection extends StatelessWidget {
+  const ManageServiceImagesSection({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final typography = context.appTypography;
-
+    // Outer `BlocConsumer<MediaUploadBloc>` both forwards its state into
+    // `ServiceImagesBloc` (listener) AND hands its already-subscribed state
+    // down to the inner builder as a plain value — deliberately NOT a
+    // second, independent `context.watch<MediaUploadBloc>()` call nested
+    // inside `ServiceImagesBloc`'s own builder, to keep the two blocs'
+    // rebuild triggers structurally separate.
     return BlocConsumer<MediaUploadBloc, MediaUploadState>(
-      listener: (context, state) => _onUploadStateChanged(state),
+      listener: (context, uploadState) => context
+          .read<ServiceImagesBloc>()
+          .add(ServiceImagesUploadStateChanged(uploadState.items)),
       builder: (context, uploadState) {
-        final images = widget.service.images;
-        final inProgress = uploadState.items.where(_isInProgress).toList();
-        final remaining =
-            kMaxServiceImages - images.length - inProgress.length;
+        return BlocConsumer<ServiceImagesBloc, ServiceImagesState>(
+          listenWhen: (previous, current) =>
+              current.failureNonce != previous.failureNonce,
+          listener: _showFailure,
+          builder: (context, state) {
+            final images = state.service.images;
+            final inProgress = uploadState.items
+                .where((item) => _isInProgress(item, state))
+                .toList();
+            final remaining =
+                kMaxServiceImages - images.length - inProgress.length;
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'services.details.images'.tr(),
-              style: typography
-                  .medium(typography.smallNormal)
-                  .copyWith(color: colors.textSecondary),
-            ),
-            SizedBox(height: AppSpacing.md),
-            if (images.isNotEmpty) ...[
-              Row(
-                children: [
-                  for (var i = 0; i < images.length; i++) ...[
-                    if (i > 0) SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: _ServiceImageThumbnail(
-                        key: ValueKey(images[i].id),
-                        imageUrl: images[i].url,
-                        isBusy: _busyImageId == images[i].id,
-                        onTap: _busyImageId != null
-                            ? null
-                            : () => _onImageMenu(images[i]),
-                      ),
-                    ),
-                  ],
-                ],
+            // Committed images first (backend array order, never
+            // re-sorted — "Main" is a per-tile flag, not a position), then
+            // in-progress uploads appended after.
+            final items = [
+              for (final image in images)
+                ServiceImageTile(
+                  data: MediaUploadTileData(
+                    id: image.id,
+                    previewUrl: image.url,
+                    status: MediaUploadTileStatus.success,
+                  ),
+                  // Backend truth, never positional — this is the fix: a
+                  // committed image's "Main" badge must reflect
+                  // `isPrimary`, not array position.
+                  isMain: image.isPrimary,
+                  isBusy: state.busyImageId == image.id,
+                ),
+              for (final item in inProgress)
+                ServiceImageTile(
+                  data: _tileData(item, state),
+                  isMain: false,
+                ),
+            ];
+            final committedById = {
+              for (final image in images) image.id: image,
+            };
+            final inProgressById = {
+              for (final item in inProgress) item.localId: item,
+            };
+
+            return ServiceImagesEditor(
+              items: items,
+              maxImages: kMaxServiceImages,
+              label: 'services.details.images'.tr(),
+              onMenuTap: (id) => _onMenuTap(
+                context,
+                state,
+                id,
+                committedById,
+                inProgressById,
               ),
-              SizedBox(height: AppSpacing.md),
-            ],
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              children: [
-                for (final item in inProgress)
-                  ServiceImageCard(
-                    key: ValueKey(item.localId),
-                    data: _tileData(item),
-                    isMain: false,
-                    onMenuTap: () => _onRemoveInProgress(item),
-                    onRetry: () => _onRetry(item),
-                  ),
-                if (remaining > 0)
-                  ServiceImageAddCard(
-                    onTap: () => _pickImages(context, remaining),
-                  ),
-              ],
-            ),
-          ],
+              onRetry: (id) {
+                final item = inProgressById[id];
+                if (item != null) _onRetry(context, item, state);
+              },
+              onAddTap: () => _pickImages(context, remaining),
+            );
+          },
         );
       },
     );
   }
 
-  bool _isInProgress(MediaUploadItem item) {
-    if (!item.isSuccess) return true;
-    return _attachStatus.containsKey(item.localId);
+  void _onMenuTap(
+    BuildContext context,
+    ServiceImagesState state,
+    String id,
+    Map<String, ProviderServiceImageEntity> committedById,
+    Map<String, MediaUploadItem> inProgressById,
+  ) {
+    // Any image mid-mutation blocks every row's menu, not just the busy
+    // one — matches the prior single-row-at-a-time gate.
+    if (state.busyImageId != null) return;
+    final committed = committedById[id];
+    if (committed != null) {
+      _onImageMenu(context, committed);
+      return;
+    }
+    final item = inProgressById[id];
+    if (item != null) _onRemoveInProgress(context, item);
   }
 
-  MediaUploadTileData _tileData(MediaUploadItem item) {
-    final attachStatus = _attachStatus[item.localId];
+  bool _isInProgress(MediaUploadItem item, ServiceImagesState state) {
+    if (!item.isSuccess) return true;
+    return state.attachStatus.containsKey(item.localId);
+  }
+
+  MediaUploadTileData _tileData(
+    MediaUploadItem item,
+    ServiceImagesState state,
+  ) {
+    final attachStatus = state.attachStatus[item.localId];
     final status = switch (item.status) {
       MediaUploadStatus.pending => MediaUploadTileStatus.pending,
       MediaUploadStatus.uploading => MediaUploadTileStatus.uploading,
       MediaUploadStatus.failure => MediaUploadTileStatus.failure,
       MediaUploadStatus.success => switch (attachStatus) {
-        _AttachStatus.failed => MediaUploadTileStatus.failure,
-        _AttachStatus.attaching || null => MediaUploadTileStatus.success,
+        ServiceImagesAttachStatus.failed => MediaUploadTileStatus.failure,
+        ServiceImagesAttachStatus.attaching ||
+        null => MediaUploadTileStatus.success,
       },
     };
     return MediaUploadTileData(
@@ -164,7 +157,7 @@ class _ManageServiceImagesSectionState
 
   Future<void> _pickImages(BuildContext context, int remaining) async {
     if (!CollectionSizeValidator.isValid(1, maxItems: remaining)) {
-      _showLimitReached();
+      _showLimitReached(context);
       return;
     }
     final result = await AssetPicker.pick(
@@ -175,13 +168,13 @@ class _ManageServiceImagesSectionState
         maxSelection: remaining,
       ),
     );
-    if (!result.hasAssets || !mounted) return;
+    if (!result.hasAssets || !context.mounted) return;
     context.read<MediaUploadBloc>().add(
       MediaUploadAssetsAdded(result.assets),
     );
   }
 
-  void _showLimitReached() {
+  void _showLimitReached(BuildContext context) {
     showAppSnackbar(
       context: context,
       title: 'services.image_limit_reached'.tr(
@@ -192,53 +185,18 @@ class _ManageServiceImagesSectionState
     );
   }
 
-  void _onUploadStateChanged(MediaUploadState state) {
-    final newlySucceeded = [
-      for (final item in state.items)
-        if (item.isSuccess &&
-            item.mediaId != null &&
-            !_attachStatus.containsKey(item.localId))
-          item,
-    ];
-    if (newlySucceeded.isEmpty) return;
-
-    setState(() {
-      for (final item in newlySucceeded) {
-        _attachStatus[item.localId] = _AttachStatus.attaching;
-      }
-    });
-    for (final item in newlySucceeded) {
-      unawaited(_attachImage(item.localId, item.mediaId!));
-    }
-  }
-
-  Future<void> _attachImage(String localId, String mediaId) async {
-    final result = await sl<AddProviderServiceImageUseCase>()(
-      AddProviderServiceImageParams(id: widget.service.id, mediaId: mediaId),
-    ).run();
-    if (!mounted) return;
-    result.fold(
-      (failure) {
-        setState(() => _attachStatus[localId] = _AttachStatus.failed);
-        _showFailure(failure);
-      },
-      (updated) {
-        // Deliberately does NOT dispatch `MediaUploadRemoveRequested` here
-        // — that best-effort deletes the underlying media for locally
-        // picked items, which would delete the file this attach call just
-        // referenced. Dropping `localId` from `_attachStatus` is enough:
-        // `_isInProgress` then treats it as done and hides it from the
-        // in-progress row, while the bloc item itself is left alone.
-        setState(() => _attachStatus.remove(localId));
-        widget.onServiceUpdated(updated);
-      },
-    );
-  }
-
-  void _onRetry(MediaUploadItem item) {
-    if (_attachStatus[item.localId] == _AttachStatus.failed) {
-      setState(() => _attachStatus[item.localId] = _AttachStatus.attaching);
-      unawaited(_attachImage(item.localId, item.mediaId!));
+  void _onRetry(
+    BuildContext context,
+    MediaUploadItem item,
+    ServiceImagesState state,
+  ) {
+    if (state.attachStatus[item.localId] == ServiceImagesAttachStatus.failed) {
+      context.read<ServiceImagesBloc>().add(
+        ServiceImagesAttachRetryRequested(
+          localId: item.localId,
+          mediaId: item.mediaId!,
+        ),
+      );
       return;
     }
     context.read<MediaUploadBloc>().add(
@@ -246,8 +204,15 @@ class _ManageServiceImagesSectionState
     );
   }
 
-  Future<void> _onRemoveInProgress(MediaUploadItem item) async {
-    if (_attachStatus[item.localId] == _AttachStatus.attaching) return;
+  Future<void> _onRemoveInProgress(
+    BuildContext context,
+    MediaUploadItem item,
+  ) async {
+    final isAttaching =
+        context.read<ServiceImagesBloc>().state.attachStatus[item.localId] ==
+        ServiceImagesAttachStatus.attaching;
+    if (isAttaching) return;
+
     final confirmed = await showConfirmationSheet(
       context: context,
       title: 'services.delete_image_confirm_title'.tr(),
@@ -256,14 +221,20 @@ class _ManageServiceImagesSectionState
       cancelLabel: 'common.cancel'.tr(),
       destructive: true,
     );
-    if (!(confirmed ?? false) || !mounted) return;
-    setState(() => _attachStatus.remove(item.localId));
+    if (!(confirmed ?? false) || !context.mounted) return;
+
+    context.read<ServiceImagesBloc>().add(
+      ServiceImagesInProgressRemoved(item.localId),
+    );
     context.read<MediaUploadBloc>().add(
       MediaUploadRemoveRequested(item.localId),
     );
   }
 
-  Future<void> _onImageMenu(ProviderServiceImageEntity image) async {
+  Future<void> _onImageMenu(
+    BuildContext context,
+    ProviderServiceImageEntity image,
+  ) async {
     final action = await SheetNavigator.push<_ImageMenuAction>(
       context,
       _ImageMenuSheet(isMain: image.isPrimary),
@@ -272,29 +243,21 @@ class _ManageServiceImagesSectionState
         padChild: false,
       ),
     );
-    if (!mounted || action == null) return;
+    if (!context.mounted || action == null) return;
     switch (action) {
       case _ImageMenuAction.setMain:
-        await _setPrimary(image);
+        context.read<ServiceImagesBloc>().add(
+          ServiceImagesSetPrimaryRequested(image.id),
+        );
       case _ImageMenuAction.delete:
-        await _deleteImage(image);
+        await _deleteImage(context, image);
     }
   }
 
-  Future<void> _setPrimary(ProviderServiceImageEntity image) async {
-    setState(() => _busyImageId = image.id);
-    final result = await sl<SetPrimaryProviderServiceImageUseCase>()(
-      SetPrimaryProviderServiceImageParams(
-        id: widget.service.id,
-        imageId: image.id,
-      ),
-    ).run();
-    if (!mounted) return;
-    setState(() => _busyImageId = null);
-    result.fold(_showFailure, widget.onServiceUpdated);
-  }
-
-  Future<void> _deleteImage(ProviderServiceImageEntity image) async {
+  Future<void> _deleteImage(
+    BuildContext context,
+    ProviderServiceImageEntity image,
+  ) async {
     final confirmed = await showConfirmationSheet(
       context: context,
       title: 'services.delete_image_confirm_title'.tr(),
@@ -303,79 +266,21 @@ class _ManageServiceImagesSectionState
       cancelLabel: 'common.cancel'.tr(),
       destructive: true,
     );
-    if (!(confirmed ?? false) || !mounted) return;
+    if (!(confirmed ?? false) || !context.mounted) return;
 
-    setState(() => _busyImageId = image.id);
-    final result = await sl<DeleteProviderServiceImageUseCase>()(
-      DeleteProviderServiceImageParams(
-        id: widget.service.id,
-        imageId: image.id,
-      ),
-    ).run();
-    if (!mounted) return;
-    setState(() => _busyImageId = null);
-    result.fold(_showFailure, widget.onServiceUpdated);
+    context.read<ServiceImagesBloc>().add(
+      ServiceImagesDeleteRequested(image.id),
+    );
   }
 
-  void _showFailure(Failure failure) {
-    final display = failureErrorDisplay(failure);
+  void _showFailure(BuildContext context, ServiceImagesState state) {
+    final display = failureErrorDisplay(state.mutationFailure);
     showAppSnackbar(
       context: context,
       title: display.title,
       caption: display.description,
       color: AppSnackbarColor.error,
       layout: AppSnackbarLayout.fullWidth,
-    );
-  }
-}
-
-/// Figma `4715:26510` — equal `flex-1` thumbnails, `80px` tall, `6px`
-/// radius. Tapping opens [_ImageMenuSheet] (set main / delete).
-class _ServiceImageThumbnail extends StatelessWidget {
-  const _ServiceImageThumbnail({
-    required this.imageUrl,
-    required this.isBusy,
-    required this.onTap,
-    super.key,
-  });
-
-  final String imageUrl;
-  final bool isBusy;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(AppDimension.radiusSm);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: radius,
-      child: SizedBox(
-        height: responsiveDimension(80),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            AppNetworkImage(imageUrl, borderRadius: radius),
-            if (isBusy)
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.35),
-                  borderRadius: radius,
-                ),
-                child: const Center(
-                  child: SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
     );
   }
 }

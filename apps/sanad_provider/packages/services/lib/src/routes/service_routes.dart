@@ -24,8 +24,9 @@ abstract final class ServiceRoutes {
 
   static String requestDetailsFor(String id) => '/services/requests/$id';
 
-  /// Edit Service form, nested under [list]. Reached with the full
-  /// `ProviderServiceEntity` via the route `extra`.
+  /// Edit Service form, nested under [list]. The page fetches the full
+  /// service itself via `GET /provider-services/:id` — no `extra` is
+  /// passed or required (same contract as [details]).
   static const String edit = '/services/:id/edit';
 
   static String editFor(String id) => '/services/$id/edit';

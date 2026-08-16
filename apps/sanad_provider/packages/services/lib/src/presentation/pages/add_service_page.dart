@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
 import 'package:media_upload/media_upload.dart';
+import 'package:services/src/domain/constants/service_image_limits.dart';
 import 'package:services/src/domain/usecases/create_provider_service_usecase.dart';
 import 'package:services/src/presentation/bloc/add_service/add_service_bloc.dart';
 import 'package:services/src/presentation/widgets/add_service_form_body.dart';
@@ -24,7 +25,16 @@ class AddServicePage extends StatefulWidget {
 
 class _AddServicePageState extends State<AddServicePage> {
   final _formBodyKey = GlobalKey<AddServiceFormBodyState>();
-  bool _isFormComplete = false;
+  // Ephemeral UI-only state (does the form currently satisfy every
+  // required field) — `ValueNotifier` + `ValueListenableBuilder` instead
+  // of `setState`, per this package's zero-`setState` architecture rule.
+  final ValueNotifier<bool> _isFormComplete = ValueNotifier(false);
+
+  @override
+  void dispose() {
+    _isFormComplete.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,10 +42,7 @@ class _AddServicePageState extends State<AddServicePage> {
       create: (_) => sl<MediaUploadBloc>(
         param1: const MediaUploadConfig(
           maxFileSize: 5 * 1024 * 1024,
-          // Matches `CreateProviderServiceDto.imageIds` backend bound
-          // (minItems: 1, maxItems: 6) — was previously capped at 5,
-          // silently disallowing a valid 6th image.
-          maxFiles: 6,
+          maxFiles: kMaxServiceImages,
           allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
         ),
       ),
@@ -77,10 +84,8 @@ class _AddServicePageState extends State<AddServicePage> {
                           SizedBox(height: AppSpacing.lg),
                           AddServiceFormBody(
                             key: _formBodyKey,
-                            onCompletenessChanged: (complete) {
-                              if (_isFormComplete == complete) return;
-                              setState(() => _isFormComplete = complete);
-                            },
+                            onCompletenessChanged: (complete) =>
+                                _isFormComplete.value = complete,
                             onRequestNewService: _navigateToRequestNewService,
                           ),
                         ],
@@ -93,13 +98,20 @@ class _AddServicePageState extends State<AddServicePage> {
                       vertical: AppSpacing.md,
                     ),
                     child: BlocBuilder<AddServiceBloc, AddServiceState>(
-                      builder: (context, state) => AppButtonPresets.primary(
-                        label: 'services.add_service.create_button'.tr(),
-                        onPressed: _isFormComplete && !state.isSubmitting
-                            ? () => _onCreate(context)
-                            : null,
-                        isLoading: state.isSubmitting,
-                      ),
+                      builder: (context, state) =>
+                          ValueListenableBuilder<bool>(
+                            valueListenable: _isFormComplete,
+                            builder: (context, isFormComplete, _) =>
+                                AppButtonPresets.primary(
+                                  label: 'services.add_service.create_button'
+                                      .tr(),
+                                  onPressed:
+                                      isFormComplete && !state.isSubmitting
+                                      ? () => _onCreate(context)
+                                      : null,
+                                  isLoading: state.isSubmitting,
+                                ),
+                          ),
                     ),
                   ),
                 ],

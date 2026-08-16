@@ -2,11 +2,13 @@ import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
 import 'package:services/src/domain/entities/service_request_entity.dart';
 import 'package:services/src/domain/entities/service_request_status.dart';
-import 'package:services/src/domain/usecases/get_service_request_usecase.dart';
+import 'package:services/src/presentation/bloc/request_details/request_details_bloc.dart';
+import 'package:services/src/presentation/mappers/service_request_status_ui.dart';
 import 'package:services/src/presentation/utils/service_date_format.dart';
 import 'package:shared_ui/shared_ui.dart';
 
@@ -14,43 +16,12 @@ import 'package:shared_ui/shared_ui.dart';
 /// `4715:25178` (rejected), `4715:25265` (approved). Visual state adapts to
 /// [ServiceRequestEntity.status].
 ///
-/// The list row passed via the route `extra` carries the status/dates but
-/// not `description`/`rejectionReason`/`images` — this screen fetches the
-/// full detail via `GET /service-requests/:id` on open.
-class RequestDetailsPage extends StatefulWidget {
-  const RequestDetailsPage({required this.request, super.key});
-
-  final ServiceRequestEntity request;
-
-  @override
-  State<RequestDetailsPage> createState() => _RequestDetailsPageState();
-}
-
-class _RequestDetailsPageState extends State<RequestDetailsPage> {
-  late ServiceRequestEntity _request = widget.request;
-  bool _isLoadingDetail = true;
-  Failure? _detailFailure;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadDetail();
-  }
-
-  Future<void> _loadDetail() async {
-    final result = await sl<GetServiceRequestUseCase>()(_request.id).run();
-    if (!mounted) return;
-    result.fold(
-      (failure) => setState(() {
-        _isLoadingDetail = false;
-        _detailFailure = failure;
-      }),
-      (detail) => setState(() {
-        _isLoadingDetail = false;
-        _request = detail;
-      }),
-    );
-  }
+/// Renders [RequestDetailsBloc] state. The bloc is seeded with the list
+/// row passed via the route `extra` (which carries the status/dates but not
+/// `description`/`rejectionReason`/`images`) and fetches the full detail via
+/// `GET /service-requests/:id` on creation.
+class RequestDetailsPage extends StatelessWidget {
+  const RequestDetailsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -71,35 +42,37 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
               trailing: AppNotificationIcon(hasUnread: true, onTap: () {}),
             ),
             Expanded(
-              child: ListView(
-                padding: EdgeInsets.all(AppSpacing.xl),
-                children: [
-                  Text(
-                    'services.title'.tr(),
-                    style: context.appTypography
-                        .bold(context.appTypography.title2)
-                        .copyWith(color: colors.textPrimary),
-                  ),
-                  SizedBox(height: AppSpacing.lg),
-                  _RequestDetailsCard(request: _request),
-                  SizedBox(height: AppSpacing.lg),
-                  if (_detailFailure != null)
-                    _DetailErrorState(
-                      failure: _detailFailure,
-                      onRetry: () {
-                        setState(() => _isLoadingDetail = true);
-                        _loadDetail();
-                      },
-                    )
-                  else
-                    // Skeletonize the *real* info section, seeded with the
-                    // partial data already known from the list row, while
-                    // the full detail (description/rejection/images) loads.
-                    AppSkeletonizer(
-                      enabled: _isLoadingDetail,
-                      child: _InfoSection(request: _request),
+              child: BlocBuilder<RequestDetailsBloc, RequestDetailsState>(
+                builder: (context, state) => ListView(
+                  padding: EdgeInsets.all(AppSpacing.xl),
+                  children: [
+                    Text(
+                      'services.title'.tr(),
+                      style: context.appTypography
+                          .bold(context.appTypography.title2)
+                          .copyWith(color: colors.textPrimary),
                     ),
-                ],
+                    SizedBox(height: AppSpacing.lg),
+                    _RequestDetailsCard(request: state.request),
+                    SizedBox(height: AppSpacing.lg),
+                    if (state.status == RequestStatus.failure)
+                      _DetailErrorState(
+                        failure: state.failure,
+                        onRetry: () => context
+                            .read<RequestDetailsBloc>()
+                            .add(const RequestDetailsFetchRequested()),
+                      )
+                    else
+                      // Skeletonize the *real* info section, seeded with
+                      // the partial data already known from the list row,
+                      // while the full detail (description/rejection/
+                      // images) loads.
+                      AppSkeletonizer(
+                        enabled: state.isLoading,
+                        child: _InfoSection(request: state.request),
+                      ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -162,8 +135,8 @@ class _RequestDetailsCard extends StatelessWidget {
                 ),
               ),
               AppStatusBadge(
-                label: _statusLabel(request.status),
-                type: _statusType(request.status),
+                label: request.status.badgeLabel,
+                type: request.status.badgeType,
               ),
             ],
           ),
@@ -202,21 +175,6 @@ class _RequestDetailsCard extends StatelessWidget {
       ),
     );
   }
-
-  static String _statusLabel(ServiceRequestStatus status) => switch (status) {
-    ServiceRequestStatus.underReview => 'services.request_status_pending'.tr(),
-    ServiceRequestStatus.approved => 'services.request_status_approved'.tr(),
-    ServiceRequestStatus.rejected => 'services.request_status_rejected'.tr(),
-    ServiceRequestStatus.all => '',
-  };
-
-  static AppStatusBadgeType _statusType(ServiceRequestStatus status) =>
-      switch (status) {
-        ServiceRequestStatus.underReview => AppStatusBadgeType.warning,
-        ServiceRequestStatus.approved => AppStatusBadgeType.success,
-        ServiceRequestStatus.rejected => AppStatusBadgeType.alert,
-        ServiceRequestStatus.all => AppStatusBadgeType.warning,
-      };
 }
 
 class _MetaRow extends StatelessWidget {
@@ -364,15 +322,12 @@ class _InfoSection extends StatelessWidget {
                 scrollDirection: Axis.horizontal,
                 itemCount: request.images.length,
                 separatorBuilder: (_, _) => SizedBox(width: AppSpacing.sm),
-                itemBuilder: (context, index) => ClipRRect(
+                itemBuilder: (context, index) => AppNetworkImage(
+                  request.images[index].url,
+                  width: responsiveDimension(72),
+                  height: responsiveDimension(72),
+                  fit: BoxFit.cover,
                   borderRadius: BorderRadius.circular(AppDimension.radiusSm),
-                  child: Image.network(
-                    request.images[index].url,
-                    width: responsiveDimension(72),
-                    height: responsiveDimension(72),
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                  ),
                 ),
               ),
             ),

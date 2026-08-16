@@ -11,11 +11,33 @@ part 'service_action_event.dart';
 part 'service_action_state.dart';
 
 /// Single-service mutations (delete / activate / deactivate) for the
-/// services dashboard's per-card "more actions" sheet.
+/// services dashboard's per-card "more actions" sheet — and, via
+/// [ServiceExternallyUpdatedEvent], the **single reconciliation hub** for
+/// every other flow that produces a fresh [ProviderServiceEntity]:
 ///
-/// Kept separate from [ServicesListBloc] (which owns the list itself) so the
-/// page can fold a successful mutation back into the list via
-/// `ServiceReplacedInListEvent` / `ServiceRemovedFromListEvent`.
+/// ```text
+/// EditServiceBloc (description) ┐
+/// ServiceImagesBloc (images)    ┼─▶ EditServicePage pops the entity
+/// (nothing changed → pops null) ┘        │
+///                                        ▼
+///              service_action_invokers.confirmAndEditService
+///                                        │ ServiceExternallyUpdatedEvent
+///                                        ▼
+///                                 ServiceActionBloc (this bloc)
+///                                  │                        │
+///                    BlocListener │                        │ BlocListener
+///                 (services_page) ▼                        ▼ (service_details_page)
+///                      ServicesListBloc              ServiceDetailsBloc
+///                (ServiceReplacedInListEvent)  (ServiceDetailsExternallyUpdated)
+/// ```
+///
+/// `ServiceActionBloc` is instantiated once per screen (My Services list,
+/// and separately per Service Details visit) — "single hub" means a single
+/// *event*, not a single bloc instance; each screen's own instance still
+/// reconciles independently. Kept separate from [ServicesListBloc] (which
+/// owns the list itself) precisely so this bridging role stays in one
+/// place instead of every mutation surface reinventing its own
+/// list/detail-sync logic.
 class ServiceActionBloc extends Bloc<ServiceActionEvent, ServiceActionState> {
   ServiceActionBloc({
     required DeleteProviderServiceUseCase deleteProviderServiceUseCase,

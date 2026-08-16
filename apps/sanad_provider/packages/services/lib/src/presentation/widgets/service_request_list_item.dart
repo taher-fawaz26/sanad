@@ -3,6 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:services/src/domain/entities/service_request_entity.dart';
 import 'package:services/src/domain/entities/service_request_status.dart';
+import 'package:services/src/presentation/mappers/service_request_status_ui.dart';
 import 'package:services/src/presentation/utils/service_date_format.dart';
 
 /// A single submitted service-request row — `GET /service-requests`,
@@ -53,8 +54,8 @@ class ServiceRequestListItem extends StatelessWidget {
                   ),
                   SizedBox(width: AppSpacing.sm),
                   AppStatusBadge(
-                    label: _statusLabel(request.status),
-                    type: _statusType(request.status),
+                    label: request.status.badgeLabel,
+                    type: request.status.badgeType,
                     size: AppStatusBadgeSize.dense,
                   ),
                 ],
@@ -97,21 +98,6 @@ class ServiceRequestListItem extends StatelessWidget {
       ),
     );
   }
-
-  static String _statusLabel(ServiceRequestStatus status) => switch (status) {
-    ServiceRequestStatus.underReview => 'services.request_status_pending'.tr(),
-    ServiceRequestStatus.approved => 'services.request_status_approved'.tr(),
-    ServiceRequestStatus.rejected => 'services.request_status_rejected'.tr(),
-    ServiceRequestStatus.all => '',
-  };
-
-  static AppStatusBadgeType _statusType(ServiceRequestStatus status) =>
-      switch (status) {
-        ServiceRequestStatus.underReview => AppStatusBadgeType.warning,
-        ServiceRequestStatus.approved => AppStatusBadgeType.success,
-        ServiceRequestStatus.rejected => AppStatusBadgeType.alert,
-        ServiceRequestStatus.all => AppStatusBadgeType.warning,
-      };
 }
 
 class _DetailRow extends StatelessWidget {

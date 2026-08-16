@@ -7,6 +7,8 @@ import 'package:services/src/data/repositories/catalog_repository_impl.dart';
 import 'package:services/src/data/repositories/categories_repository_impl.dart';
 import 'package:services/src/data/repositories/provider_services_repository_impl.dart';
 import 'package:services/src/data/repositories/service_requests_repository_impl.dart';
+import 'package:services/src/domain/entities/provider_service_entity.dart';
+import 'package:services/src/domain/entities/service_request_entity.dart';
 import 'package:services/src/domain/repositories/catalog_repository.dart';
 import 'package:services/src/domain/repositories/categories_repository.dart';
 import 'package:services/src/domain/repositories/provider_services_repository.dart';
@@ -28,9 +30,12 @@ import 'package:services/src/domain/usecases/set_provider_service_status_usecase
 import 'package:services/src/domain/usecases/update_provider_service_description_usecase.dart';
 import 'package:services/src/presentation/bloc/add_service/add_service_bloc.dart';
 import 'package:services/src/presentation/bloc/edit_service/edit_service_bloc.dart';
+import 'package:services/src/presentation/bloc/request_details/request_details_bloc.dart';
 import 'package:services/src/presentation/bloc/request_new_service/request_new_service_bloc.dart';
 import 'package:services/src/presentation/bloc/service_action/service_action_bloc.dart';
 import 'package:services/src/presentation/bloc/service_analytics/service_analytics_bloc.dart';
+import 'package:services/src/presentation/bloc/service_details/service_details_bloc.dart';
+import 'package:services/src/presentation/bloc/service_images/service_images_bloc.dart';
 import 'package:services/src/presentation/bloc/service_requests_list/service_requests_list_bloc.dart';
 import 'package:services/src/presentation/bloc/services_list/services_list_bloc.dart';
 
@@ -64,11 +69,18 @@ abstract final class ServicesDI {
       ..registerFactory(
         () => RequestNewServiceBloc(
           createServiceRequestUseCase: sl<CreateServiceRequestUseCase>(),
+          getCategoriesUseCase: sl<GetCategoriesUseCase>(),
         ),
       )
       ..registerFactory(
         () => ServiceRequestsListBloc(
           getMyServiceRequestsUseCase: sl<GetMyServiceRequestsUseCase>(),
+        ),
+      )
+      ..registerFactoryParam<RequestDetailsBloc, ServiceRequestEntity, void>(
+        (initialRequest, _) => RequestDetailsBloc(
+          getServiceRequestUseCase: sl<GetServiceRequestUseCase>(),
+          initialRequest: initialRequest,
         ),
       )
       // ─── Catalog (read-only browse) + provider-services (CRUD, status,
@@ -153,12 +165,28 @@ abstract final class ServicesDI {
       ..registerFactory(
         () => AddServiceBloc(
           createProviderServiceUseCase: sl<CreateProviderServiceUseCase>(),
+          browseCatalogUseCase: sl<BrowseCatalogUseCase>(),
         ),
       )
       ..registerFactory(
         () => EditServiceBloc(
           updateProviderServiceDescriptionUseCase:
               sl<UpdateProviderServiceDescriptionUseCase>(),
+        ),
+      )
+      ..registerFactory(
+        () => ServiceDetailsBloc(
+          getProviderServiceUseCase: sl<GetProviderServiceUseCase>(),
+        ),
+      )
+      ..registerFactoryParam<ServiceImagesBloc, ProviderServiceEntity, void>(
+        (initialService, _) => ServiceImagesBloc(
+          addProviderServiceImageUseCase: sl<AddProviderServiceImageUseCase>(),
+          deleteProviderServiceImageUseCase:
+              sl<DeleteProviderServiceImageUseCase>(),
+          setPrimaryProviderServiceImageUseCase:
+              sl<SetPrimaryProviderServiceImageUseCase>(),
+          initialService: initialService,
         ),
       );
   }

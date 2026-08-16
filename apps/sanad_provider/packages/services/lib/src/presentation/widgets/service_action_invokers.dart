@@ -29,9 +29,12 @@ Future<void> confirmAndEditService({
   );
   if (!(confirmed ?? false) || !context.mounted) return;
 
+  // No `extra` — Edit fetches the full service itself by id (see
+  // `EditServicePage`'s doc comment). `service` here is used only for the
+  // confirmation sheet's title/badge and to extract the id, never as the
+  // page's data source.
   final updated = await context.push<ProviderServiceEntity>(
     ServiceRoutes.editFor(service.id),
-    extra: service,
   );
   if (updated != null && context.mounted) {
     context.read<ServiceActionBloc>().add(

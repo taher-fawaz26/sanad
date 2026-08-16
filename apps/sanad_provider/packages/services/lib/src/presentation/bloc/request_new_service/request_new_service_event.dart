@@ -15,3 +15,9 @@ final class RequestNewServiceSubmittedEvent extends RequestNewServiceEvent {
   @override
   List<Object?> get props => [params];
 }
+
+/// Requests the `GET /categories` list for the category picker.
+final class RequestNewServiceCategoriesRequested
+    extends RequestNewServiceEvent {
+  const RequestNewServiceCategoriesRequested();
+}

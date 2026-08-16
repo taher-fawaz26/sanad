@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
 import 'package:media_upload/media_upload.dart';
+import 'package:services/src/domain/constants/service_image_limits.dart';
 import 'package:services/src/domain/usecases/create_service_request_usecase.dart';
 import 'package:services/src/presentation/bloc/request_new_service/request_new_service_bloc.dart';
 import 'package:services/src/presentation/widgets/request_new_service_form_body.dart';
@@ -23,7 +24,16 @@ class RequestNewServicePage extends StatefulWidget {
 
 class _RequestNewServicePageState extends State<RequestNewServicePage> {
   final _formBodyKey = GlobalKey<RequestNewServiceFormBodyState>();
-  bool _isFormComplete = false;
+  // Ephemeral UI-only state (does the form currently satisfy every
+  // required field) — `ValueNotifier` + `ValueListenableBuilder` instead
+  // of `setState`, per this package's zero-`setState` architecture rule.
+  final ValueNotifier<bool> _isFormComplete = ValueNotifier(false);
+
+  @override
+  void dispose() {
+    _isFormComplete.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,8 +42,8 @@ class _RequestNewServicePageState extends State<RequestNewServicePage> {
         param1: const MediaUploadConfig(
           maxFileSize: 5 * 1024 * 1024,
           // "Images are optional (max 6)" per this screen's own doc
-          // comment above — was previously capped at 5.
-          maxFiles: 6,
+          // comment above.
+          maxFiles: kMaxServiceImages,
           allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
         ),
       ),
@@ -80,10 +90,8 @@ class _RequestNewServicePageState extends State<RequestNewServicePage> {
                         SizedBox(height: AppSpacing.lg),
                         RequestNewServiceFormBody(
                           key: _formBodyKey,
-                          onCompletenessChanged: (complete) {
-                            if (_isFormComplete == complete) return;
-                            setState(() => _isFormComplete = complete);
-                          },
+                          onCompletenessChanged: (complete) =>
+                              _isFormComplete.value = complete,
                         ),
                       ],
                     ),
@@ -99,14 +107,23 @@ class _RequestNewServicePageState extends State<RequestNewServicePage> {
                         RequestNewServiceBloc,
                         RequestNewServiceState
                       >(
-                        builder: (context, state) => AppButtonPresets.primary(
-                          label: 'services.request_new_service.submit_button'
-                              .tr(),
-                          onPressed: _isFormComplete && !state.isSubmitting
-                              ? () => _onSubmit(context)
-                              : null,
-                          isLoading: state.isSubmitting,
-                        ),
+                        builder: (context, state) =>
+                            ValueListenableBuilder<bool>(
+                              valueListenable: _isFormComplete,
+                              builder: (context, isFormComplete, _) {
+                                const labelKey =
+                                    'services.request_new_service'
+                                    '.submit_button';
+                                return AppButtonPresets.primary(
+                                  label: labelKey.tr(),
+                                  onPressed:
+                                      isFormComplete && !state.isSubmitting
+                                      ? () => _onSubmit(context)
+                                      : null,
+                                  isLoading: state.isSubmitting,
+                                );
+                              },
+                            ),
                       ),
                 ),
               ],
