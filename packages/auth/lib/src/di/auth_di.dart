@@ -1,4 +1,5 @@
 import 'package:auth/src/auth/auth_status_notifier.dart';
+import 'package:auth/src/authorization/authorization_signal.dart';
 import 'package:auth/src/data/datasources/auth_remote_datasource.dart';
 import 'package:auth/src/data/datasources/google_auth_datasource.dart';
 import 'package:auth/src/data/repositories/auth_repository_impl.dart';
@@ -20,6 +21,7 @@ import 'package:auth/src/session/session_cache.dart';
 import 'package:auth/src/session/session_manager.dart';
 import 'package:auth/src/session/session_repository.dart';
 import 'package:auth/src/session/session_storage.dart';
+import 'package:authorization/authorization.dart';
 import 'package:core/core.dart';
 import 'package:network/network.dart';
 import 'package:storage/storage.dart';
@@ -51,6 +53,13 @@ class AuthDI {
           tokenManager: sl<TokenManager>(),
           authStatusNotifier: sl<AuthStatusNotifier>(),
         ),
+      )
+      // ── Authorization ─────────────────────────────────────────────────────
+      // The AuthorizationReader port (package:authorization) implemented over
+      // the same SessionCache — not a second cache or a new BLoC. See
+      // AuthorizationSignal's doc comment.
+      ..registerLazySingleton<AuthorizationReader>(
+        () => AuthorizationSignal(sl<SessionCache>()),
       )
       // ── Data sources ──────────────────────────────────────────────────────
       ..registerLazySingleton<AuthRemoteDataSource>(

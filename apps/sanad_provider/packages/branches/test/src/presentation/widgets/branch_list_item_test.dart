@@ -7,6 +7,7 @@ import 'package:branches/src/domain/usecases/get_branches_usecase.dart';
 import 'package:branches/src/domain/usecases/update_branch_status_usecase.dart';
 import 'package:branches/src/presentation/bloc/branches/branches_bloc.dart';
 import 'package:branches/src/presentation/widgets/branch_list_item.dart';
+import 'package:branches/src/routes/branch_permissions.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
@@ -15,6 +16,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../../../support/fake_authorization_reader.dart';
 
 // See services/test/.../service_list_item_test.dart for the full root-cause
 // note: no EasyLocalization bootstrap (avoids a real SharedPreferences hang
@@ -107,11 +110,18 @@ void main() {
         updateBranchStatusUseCase: UpdateBranchStatusUseCase(repo),
       );
       semanticsHandle = WidgetsBinding.instance.ensureSemantics();
+      // Full access by default — these tests predate permission gating and
+      // assert on an already-authorized user; see the dedicated
+      // "permission-gated swipe actions" group below for the gated cases.
+      registerFakeAuthorizationReader(
+        permissions: [BranchPermissions.view, BranchPermissions.update],
+      );
     });
 
     tearDown(() {
       semanticsHandle.dispose();
       bloc.close();
+      unregisterFakeAuthorizationReader();
     });
 
     testWidgets(
@@ -259,6 +269,94 @@ void main() {
         await tester.pumpAndSettle();
 
         verifyNever(() => repo.deleteBranch(any()));
+      },
+      timeout: const Timeout(Duration(seconds: 20)),
+    );
+  });
+
+  group('BranchListItem — permission-gated swipe actions', () {
+    late _MockRepo repo;
+    late BranchesBloc bloc;
+    late SemanticsHandle semanticsHandle;
+
+    setUp(() {
+      repo = _MockRepo();
+      bloc = BranchesBloc(
+        getBranchesUseCase: GetBranchesUseCase(repo),
+        deleteBranchUseCase: DeleteBranchUseCase(repo),
+        updateBranchStatusUseCase: UpdateBranchStatusUseCase(repo),
+      );
+      semanticsHandle = WidgetsBinding.instance.ensureSemantics();
+    });
+
+    tearDown(() {
+      semanticsHandle.dispose();
+      bloc.close();
+      unregisterFakeAuthorizationReader();
+    });
+
+    testWidgets(
+      'view-only: Edit is shown (navigation only), Maintenance is hidden, '
+      'Delete stays unconditional',
+      (tester) async {
+        registerFakeAuthorizationReader(permissions: [BranchPermissions.view]);
+        await _pump(tester, bloc: bloc);
+        await _openSwipePane(tester);
+
+        expect(
+          find.bySemanticsLabel('branches.actions.action_edit'),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel('branches.actions.action_set_maintenance'),
+          findsNothing,
+        );
+        expect(
+          find.bySemanticsLabel('branches.actions.action_delete'),
+          findsOneWidget,
+        );
+      },
+      timeout: const Timeout(Duration(seconds: 20)),
+    );
+
+    testWidgets(
+      'no permissions: Edit and Maintenance are both hidden, Delete remains',
+      (tester) async {
+        registerFakeAuthorizationReader();
+        await _pump(tester, bloc: bloc);
+        await _openSwipePane(tester);
+
+        expect(
+          find.bySemanticsLabel('branches.actions.action_edit'),
+          findsNothing,
+        );
+        expect(
+          find.bySemanticsLabel('branches.actions.action_set_maintenance'),
+          findsNothing,
+        );
+        expect(
+          find.bySemanticsLabel('branches.actions.action_delete'),
+          findsOneWidget,
+        );
+      },
+      timeout: const Timeout(Duration(seconds: 20)),
+    );
+
+    testWidgets(
+      'provider:* grants both Edit and Maintenance',
+      (tester) async {
+        registerFakeAuthorizationReader(permissions: ['provider:*']);
+        await _pump(tester, bloc: bloc);
+        await _openSwipePane(tester);
+
+        expect(
+          find.bySemanticsLabel('branches.actions.action_edit'),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel('branches.actions.action_set_maintenance'),
+          findsOneWidget,
+        );
       },
       timeout: const Timeout(Duration(seconds: 20)),
     );

@@ -30,7 +30,7 @@ class FilePickerFileProvider implements FileProvider {
           type: type,
           allowedExtensions: allowedExtensions,
         );
-        platformFiles = result;
+        platformFiles = result?.files ?? const [];
       } else {
         final file = await FilePicker.pickFile(
           type: type,

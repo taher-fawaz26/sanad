@@ -170,6 +170,7 @@ class SessionManager {
       permissions: identity.permissions
           .map((name) => PermissionModel(name: name))
           .toList(),
+      permissionsSyncedAt: DateTime.now(),
     ),
   );
 
@@ -194,6 +195,7 @@ class SessionManager {
         permissions: identity.permissions
             .map((name) => PermissionModel(name: name))
             .toList(),
+        permissionsSyncedAt: DateTime.now(),
       ),
     );
   }
@@ -230,26 +232,6 @@ class SessionManager {
 
   /// `true` for [UserType.worker].
   bool get isWorker => userType == UserType.worker;
-
-  /// `true` iff the signed-in account has [name] in its permission list, or
-  /// the wildcard `"*"` (which the backend uses for admins/full-access).
-  bool hasPermission(String name) {
-    final perms = current()?.permissions;
-    if (perms == null || perms.isEmpty) return false;
-    for (final p in perms) {
-      if (p.name == '*' || p.name == name) return true;
-    }
-    return false;
-  }
-
-  /// `true` iff any of [names] is granted (see [hasPermission] for wildcard
-  /// semantics).
-  bool hasAnyPermission(Iterable<String> names) {
-    for (final n in names) {
-      if (hasPermission(n)) return true;
-    }
-    return false;
-  }
 
   /// The embedded account settings snapshot (provider-owner accounts only).
   AuthAccountSettingsEntity? get accountSettings => current()?.accountSettings;

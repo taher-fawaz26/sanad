@@ -1,3 +1,4 @@
+import 'package:authorization/authorization.dart';
 import 'package:branches/src/data/models/person_initials.dart';
 import 'package:branches/src/domain/entities/branch_availability_mode.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
@@ -12,6 +13,7 @@ import 'package:branches/src/presentation/widgets/branch_info_edit_sheet.dart';
 import 'package:branches/src/presentation/widgets/branch_summary_view.dart';
 import 'package:branches/src/presentation/widgets/contact_edit_sheet.dart';
 import 'package:branches/src/presentation/widgets/working_hours_edit_sheet.dart';
+import 'package:branches/src/routes/branch_permissions.dart';
 import 'package:branches/src/routes/branch_routes.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
@@ -181,37 +183,59 @@ class _BranchDetailsContent extends StatelessWidget {
               onTrailingTap: () => _showMoreActions(context),
             ),
             Expanded(
-              child: BranchSummaryView(
-                data: BranchSummaryData(
-                  title: branch.branchName,
-                  caption: managerCaption ?? branch.displayAddress,
-                  badgeLabel: branch.isAvailable
-                      ? 'branches.status_active'.tr()
-                      : 'branches.status_maintenance'.tr(),
-                  badgeType: branch.isAvailable
-                      ? AppStatusBadgeType.success
-                      : AppStatusBadgeType.warning,
-                  branchTypeLabel: branchTypeLabel(branch.branchType),
-                  position: position,
-                  address: branch.displayAddress,
-                  cityName: branch.city,
-                  phone: branch.branchPhone,
-                  managerName: branch.branchManagerName,
-                  isCustomSchedule:
-                      branch.availabilityMode == BranchAvailabilityMode.custom,
-                  schedule: branch.availability ?? const [],
-                  areaNames: areaNames,
-                  serviceNames: branch.serviceNames ?? const [],
-                  workerInitials: [
-                    for (final worker in branch.workers) worker.initials,
-                  ],
-                ),
-                onOpenMaps: () => _openMaps(context),
-                onEditBranchInfo: () => _openBranchInfoEdit(context),
-                onEditContact: () => _openContactEdit(context),
-                onEditWorkingHours: () => _openWorkingHoursEdit(context),
-                onEditCoverage: () => _openCoverageEdit(context),
-                onEditTeam: () => _openTeamEdit(context),
+              child: ListenableBuilder(
+                listenable: sl<AuthorizationReader>(),
+                builder: (context, _) {
+                  // All five sections gate on the same permission — there is
+                  // no per-section backend distinction — so a single read
+                  // covers them. A `null` callback renders the section
+                  // pencil-free per BranchSummaryView's own contract.
+                  final canUpdate = sl<AuthorizationReader>().can(
+                    BranchPermissions.update,
+                  );
+
+                  return BranchSummaryView(
+                    data: BranchSummaryData(
+                      title: branch.branchName,
+                      caption: managerCaption ?? branch.displayAddress,
+                      badgeLabel: branch.isAvailable
+                          ? 'branches.status_active'.tr()
+                          : 'branches.status_maintenance'.tr(),
+                      badgeType: branch.isAvailable
+                          ? AppStatusBadgeType.success
+                          : AppStatusBadgeType.warning,
+                      branchTypeLabel: branchTypeLabel(branch.branchType),
+                      position: position,
+                      address: branch.displayAddress,
+                      cityName: branch.city,
+                      phone: branch.branchPhone,
+                      managerName: branch.branchManagerName,
+                      isCustomSchedule:
+                          branch.availabilityMode ==
+                          BranchAvailabilityMode.custom,
+                      schedule: branch.availability ?? const [],
+                      areaNames: areaNames,
+                      serviceNames: branch.serviceNames ?? const [],
+                      workerInitials: [
+                        for (final worker in branch.workers) worker.initials,
+                      ],
+                    ),
+                    onOpenMaps: () => _openMaps(context),
+                    onEditBranchInfo: canUpdate
+                        ? () => _openBranchInfoEdit(context)
+                        : null,
+                    onEditContact: canUpdate
+                        ? () => _openContactEdit(context)
+                        : null,
+                    onEditWorkingHours: canUpdate
+                        ? () => _openWorkingHoursEdit(context)
+                        : null,
+                    onEditCoverage: canUpdate
+                        ? () => _openCoverageEdit(context)
+                        : null,
+                    onEditTeam: canUpdate ? () => _openTeamEdit(context) : null,
+                  );
+                },
               ),
             ),
           ],
@@ -393,21 +417,27 @@ class _BranchDetailsContent extends StatelessWidget {
   void _showMoreActions(BuildContext context) {
     final isActive = branch.isAvailable;
     final bloc = context.read<BranchDetailsBloc>();
+    final canUpdate = sl<AuthorizationReader>().can(BranchPermissions.update);
     showAppActionSheet<void>(
       context: context,
       items: [
-        AppActionSheetItem(
-          label: isActive
-              ? 'branches.details.action_set_maintenance'.tr()
-              : 'branches.details.action_set_active'.tr(),
-          leading: Icon(
-            isActive ? Icons.pause_circle_outline : Icons.check_circle_outline,
+        if (canUpdate)
+          AppActionSheetItem(
+            label: isActive
+                ? 'branches.details.action_set_maintenance'.tr()
+                : 'branches.details.action_set_active'.tr(),
+            leading: Icon(
+              isActive
+                  ? Icons.pause_circle_outline
+                  : Icons.check_circle_outline,
+            ),
+            onTap: () {
+              Navigator.of(context).pop();
+              bloc.add(BranchStatusToggleEvent(isAvailable: !isActive));
+            },
           ),
-          onTap: () {
-            Navigator.of(context).pop();
-            bloc.add(BranchStatusToggleEvent(isAvailable: !isActive));
-          },
-        ),
+        // No backend permission for delete yet (same gap as the row swipe
+        // action) — stays unconditional; it is a coming-soon stub regardless.
         AppActionSheetItem(
           label: 'branches.details.action_delete'.tr(),
           leading: const Icon(Icons.delete_outline),

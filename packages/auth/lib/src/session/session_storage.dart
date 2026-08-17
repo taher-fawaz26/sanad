@@ -77,6 +77,7 @@ class SessionStorage {
       permissions: session.permissions,
       profile: session.profile,
       accountSettings: session.accountSettings,
+      permissionsSyncedAt: session.permissionsSyncedAt,
     );
     return asModel.toJson();
   }

@@ -11,6 +11,8 @@ environment:
   flutter: ">=3.19.0"
 
 dependencies:
+  authorization:
+    path: ../authorization
   bloc_concurrency: ^0.3.0
   core:
     path: ../core

@@ -1,9 +1,11 @@
+import 'package:authorization/authorization.dart';
 import 'package:branches/src/domain/entities/branch_availability_mode.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/presentation/bloc/branches/branches_bloc.dart';
 import 'package:branches/src/presentation/widgets/branch_empty_states.dart';
 import 'package:branches/src/presentation/widgets/branch_list_item.dart';
 import 'package:branches/src/presentation/widgets/branch_search_sheet.dart';
+import 'package:branches/src/routes/branch_permissions.dart';
 import 'package:branches/src/routes/branch_routes.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
@@ -188,11 +190,14 @@ class _BranchesTab extends StatelessWidget {
                           horizontal: AppSpacing.xl,
                           vertical: AppSpacing.lg,
                         ),
-                        child: AppButton(
-                          label: 'branches.add_button'.tr(),
-                          icon: const Icon(Icons.add_circle_outline),
-                          iconPosition: AppButtonIconPosition.center,
-                          onPressed: () => _openAddBranch(context),
+                        child: PermissionGate(
+                          permission: BranchPermissions.create,
+                          child: AppButton(
+                            label: 'branches.add_button'.tr(),
+                            icon: const Icon(Icons.add_circle_outline),
+                            iconPosition: AppButtonIconPosition.center,
+                            onPressed: () => _openAddBranch(context),
+                          ),
                         ),
                       ),
                     ),
@@ -305,8 +310,17 @@ class _EmptyState extends StatelessWidget {
       );
     }
     return Center(
-      child: BranchesEmptyState(
-        onAddBranch: () => _openAddBranch(context),
+      child: PermissionBuilder(
+        requirement: const PermissionRequirement.single(
+          BranchPermissions.create,
+        ),
+        builder: (context, allowed) => BranchesEmptyState(
+          // A view-only worker sees "no branches yet" with no action —
+          // this is the read-only-page distinction: the surface itself is
+          // never hidden (branchView already got them here), only the
+          // mutation is.
+          onAddBranch: allowed ? () => _openAddBranch(context) : null,
+        ),
       ),
     );
   }

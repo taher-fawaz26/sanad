@@ -7,6 +7,7 @@ import 'package:branches/src/domain/usecases/update_branch_status_usecase.dart';
 import 'package:branches/src/presentation/bloc/branches/branches_bloc.dart';
 import 'package:branches/src/presentation/pages/add_branch_page.dart';
 import 'package:branches/src/presentation/widgets/branch_list_item.dart';
+import 'package:branches/src/routes/branch_permissions.dart';
 import 'package:branches/src/routes/branch_routes.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
@@ -15,6 +16,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../../../support/fake_authorization_reader.dart';
 
 // See service_list_item_test.dart for the root-cause note on why
 // EasyLocalization isn't bootstrapped in this sandboxed test environment.
@@ -89,11 +92,13 @@ void main() {
       updateBranchStatusUseCase: UpdateBranchStatusUseCase(repo),
     );
     semanticsHandle = WidgetsBinding.instance.ensureSemantics();
+    registerFakeAuthorizationReader(permissions: [BranchPermissions.view]);
   });
 
   tearDown(() {
     semanticsHandle.dispose();
     bloc.close();
+    unregisterFakeAuthorizationReader();
   });
 
   testWidgets(

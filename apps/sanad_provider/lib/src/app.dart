@@ -1,3 +1,4 @@
+import 'package:auth/auth.dart';
 import 'package:core/core.dart';
 import 'package:deep_linking/deep_linking.dart';
 import 'package:design_system/design_system.dart';
@@ -8,6 +9,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
 import 'package:network/network.dart';
+import 'package:sanad_provider/src/lifecycle/permission_resync.dart';
 import 'package:sanad_provider/src/routing/app_routes.dart';
 import 'package:sanad_provider/src/routing/provider_router.dart';
 
@@ -20,10 +22,12 @@ class SanadProviderApp extends StatefulWidget {
   State<SanadProviderApp> createState() => _SanadProviderAppState();
 }
 
-class _SanadProviderAppState extends State<SanadProviderApp> {
+class _SanadProviderAppState extends State<SanadProviderApp>
+    with WidgetsBindingObserver {
   late final GoRouter _router;
   late final ConnectivityController _connectivity;
   late final DeepLinkDispatcher _deepLinkDispatcher;
+  late final PermissionResync _permissionResync;
 
   @override
   void initState() {
@@ -35,10 +39,25 @@ class _SanadProviderAppState extends State<SanadProviderApp> {
       onNavigate: _router.go,
     );
     _deepLinkDispatcher.start().ignore();
+    _permissionResync = PermissionResync(
+      sessionManager: sl<SessionManager>(),
+      getCurrentUserUseCase: sl<GetCurrentUserUseCase>(),
+    );
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Fire-and-forget: a silent background resync, not a user-facing flow.
+      // See PermissionResync's doc comment for why this exists.
+      _permissionResync().ignore();
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _deepLinkDispatcher.stop().ignore();
     _router.dispose();
     super.dispose();

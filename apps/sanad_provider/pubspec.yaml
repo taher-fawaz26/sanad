@@ -18,6 +18,8 @@ dependencies:
     path: ../../packages/account_settings
   auth:
     path: ../../packages/auth
+  authorization:
+    path: ../../packages/authorization
   bloc_concurrency: ^0.3.0
   bottom_nav_bar:
     path: ../../packages/bottom_nav_bar

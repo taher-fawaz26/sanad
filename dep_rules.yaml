@@ -20,6 +20,15 @@ forbidden_edges:
   - from: shared_ui
     to: [auth, otp, contact_verification, media_upload, document_flow, account_settings, branches, workers, services, provider_rbac]
     reason: shared_ui must remain feature-independent
+  - from: authorization
+    to: [design_system, shared_ui, auth, account_settings, provider_rbac, branches, workers, services]
+    reason: >-
+      authorization is a pure evaluation/gating leaf — it must never depend on
+      the packages that implement its port (auth) or consume its public API
+      (features), or that would create a cycle
+  - from: design_system
+    to: authorization
+    reason: design_system is a pure UI foundation and must not depend on the authorization leaf built on top of it
   - from: "*"
     to: [apps/sanad_client, apps/sanad_provider, apps/design_catalog]
     reason: packages must never depend on apps (app-local packages under apps/*/packages/ are fine — only the app roots themselves are forbidden)
@@ -41,7 +50,7 @@ layer_order:
   - tier: 0
     packages: [core, app_assets, config, utilities]
   - tier: 1
-    packages: [design_system, app_logger, localization, shared_ui]
+    packages: [design_system, app_logger, localization, shared_ui, bottom_nav_bar, authorization]
   - tier: 2
     packages:
       - network
@@ -58,7 +67,7 @@ layer_order:
     packages: [maps, asset_picker, sheet_navigation, otp]
   - tier: 4
     packages:
-      [auth, services, workers, document_flow, contact_verification, media_upload]
+      [auth, services, workers, document_flow, contact_verification, media_upload, media]
   - tier: 5
     packages: [account_settings, provider_rbac]
   - tier: 6

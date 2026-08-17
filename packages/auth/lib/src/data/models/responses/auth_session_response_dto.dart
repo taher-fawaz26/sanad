@@ -23,6 +23,7 @@ class AuthSessionResponseModel extends AuthSessionEntity {
     required super.permissions,
     super.profile,
     super.accountSettings,
+    super.permissionsSyncedAt,
   });
 
   factory AuthSessionResponseModel.fromJson(Map<String, dynamic> json) {
@@ -83,6 +84,14 @@ class AuthSessionResponseModel extends AuthSessionEntity {
       profile: profile,
       accountSettings: accountSettings,
       permissions: _parsePermissions(json['permissions']),
+      // Client-only provenance stamp — never present on a backend payload.
+      // Round-trips through Hive (see `toJson`/`SessionStorage`); absent from
+      // every real backend response, including this one, so a session built
+      // straight from the wire (login, invitation-accept, profile
+      // completion) is correctly "unresolved" until the next `/me` sync.
+      permissionsSyncedAt: _parsePermissionsSyncedAt(
+        json['permissionsSyncedAt'],
+      ),
     );
   }
 
@@ -101,7 +110,19 @@ class AuthSessionResponseModel extends AuthSessionEntity {
         .cast<PermissionModel>()
         .map((e) => e.toJson())
         .toList(),
+    if (permissionsSyncedAt != null)
+      'permissionsSyncedAt': permissionsSyncedAt!.toIso8601String(),
   };
+}
+
+/// Parses the client-only `permissionsSyncedAt` provenance stamp written by
+/// `SessionStorage`. Never present on a backend payload. Fails safe: a
+/// missing or malformed value is treated as "unresolved" (`null`) rather
+/// than thrown — an older cached session predating this field must restore
+/// cleanly, not brick the app.
+DateTime? _parsePermissionsSyncedAt(dynamic raw) {
+  if (raw is! String) return null;
+  return DateTime.tryParse(raw);
 }
 
 /// Parses the `permissions` array. Absent defaults to empty; a

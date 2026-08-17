@@ -1,0 +1,26 @@
+name: authorization
+description: >
+  Client-side authorization infrastructure — the single source of truth for
+  evaluating permissions, gating routes, and gating UI across the monorepo.
+  Consumes the effective permission set already carried on the auth session;
+  owns no data layer, cache, or network access of its own.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+
+dependencies:
+  core:
+    path: ../core
+  equatable: ^2.1.0
+  flutter:
+    sdk: flutter
+  meta: ^1.16.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  test: ^1.24.0
+  very_good_analysis: ^9.0.0

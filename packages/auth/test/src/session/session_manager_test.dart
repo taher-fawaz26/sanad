@@ -340,12 +340,18 @@ void main() {
       expect(manager.isUserType(UserType.client), isFalse);
     });
 
-    test('hasPermission wildcard grants everything', () {
-      expect(manager.hasPermission('branch:view'), isTrue);
-      expect(manager.hasPermission('anything'), isTrue);
-    });
+    // Permission *evaluation* (wildcard/exact matching) is no longer a
+    // SessionManager responsibility — see `PermissionSet` in
+    // `package:authorization` for that coverage. SessionManager's job is only
+    // to expose the raw permission list unchanged, which these assert.
+    test(
+      'permissions exposes the wildcard entry from the fixture session',
+      () {
+        expect(manager.permissions, contains(const PermissionModel(name: '*')));
+      },
+    );
 
-    test('hasPermission exact match', () async {
+    test('permissions exposes every granted entry unchanged', () async {
       const scoped = AuthSessionEntity(
         accessToken: 'access-2',
         refreshToken: 'refresh-2',
@@ -362,17 +368,10 @@ void main() {
       when(() => tokenManager.refreshToken).thenReturn('refresh-2');
       await manager.save(scoped);
 
-      expect(manager.hasPermission('branch:view'), isTrue);
-      expect(manager.hasPermission('worker:create'), isTrue);
-      expect(manager.hasPermission('worker:delete'), isFalse);
-      expect(
-        manager.hasAnyPermission(['worker:delete', 'branch:view']),
-        isTrue,
-      );
-      expect(
-        manager.hasAnyPermission(['worker:delete', 'ghost']),
-        isFalse,
-      );
+      expect(manager.permissions, [
+        const PermissionModel(name: 'branch:view'),
+        const PermissionModel(name: 'worker:create'),
+      ]);
     });
 
     test('guard helpers all short-circuit to false when signed out', () async {
@@ -382,7 +381,6 @@ void main() {
       expect(manager.isEmailVerified, isFalse);
       expect(manager.isProfileCompleted, isFalse);
       expect(manager.userType, isNull);
-      expect(manager.hasPermission('branch:view'), isFalse);
       expect(manager.permissions, isEmpty);
       expect(manager.accountSettings, isNull);
       expect(manager.profile, isNull);
@@ -563,8 +561,7 @@ void main() {
         PermissionModel(name: 'branch:view'),
       ]);
 
-      expect(manager.hasPermission('branch:view'), isTrue);
-      expect(manager.hasPermission('worker:create'), isFalse);
+      expect(manager.permissions, [const PermissionModel(name: 'branch:view')]);
     });
 
     test(

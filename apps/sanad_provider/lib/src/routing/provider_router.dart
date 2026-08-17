@@ -1,4 +1,5 @@
 import 'package:auth/auth.dart';
+import 'package:authorization/authorization.dart';
 import 'package:branches/branches.dart';
 import 'package:core/core.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -15,6 +16,7 @@ import 'package:sanad_provider/src/features/requests/requests_page.dart';
 import 'package:sanad_provider/src/routing/app_routes.dart';
 import 'package:sanad_provider/src/routing/provider_capabilities.dart';
 import 'package:sanad_provider/src/routing/provider_navigator.dart';
+import 'package:sanad_provider/src/routing/provider_route_permissions.dart';
 import 'package:sanad_provider/src/routing/shell/main_shell.dart';
 import 'package:services/services.dart';
 import 'package:shared_ui/shared_ui.dart';
@@ -61,10 +63,17 @@ GoRouter buildProviderRouter() {
         route,
   ];
 
+  final authorizationReader = sl<AuthorizationReader>();
+
   return GoRouter(
     navigatorKey: providerRootNavigatorKey,
     initialLocation: AuthRoutes.splash,
-    refreshListenable: authStatus,
+    // Permission changes (e.g. the post-splash /me resync, or an app-resume
+    // resync) must re-run the redirect the same way an auth-status change
+    // does — AuthorizationReader notifies only on a genuine decision change,
+    // so this does not introduce redirect churn. See ProviderRoutePermissions
+    // for why the table itself starts empty.
+    refreshListenable: Listenable.merge([authStatus, authorizationReader]),
     errorBuilder: (context, state) => AppNotFoundPage(
       title: 'common.not_found_title'.tr(),
       description: 'common.not_found_description'.tr(),
@@ -77,6 +86,9 @@ GoRouter buildProviderRouter() {
         location: state.matchedLocation,
         isAuthenticated: authStatus.status == AuthStatus.authenticated,
         canManageOrganization: sl<SessionManager>().canManageOrganization,
+        permissions: authorizationReader.permissions,
+        permissionsResolved: authorizationReader.isResolved,
+        table: providerRoutePermissions,
       );
     },
     routes: [
@@ -181,15 +193,23 @@ Widget buildSettingsTabPage({required bool canManageOrganization}) =>
     : const GeneralSettingsPage(isRootTab: true);
 
 /// Pure redirect decision for [buildProviderRouter] — extracted so the
-/// auth-guard and organization-only-route rules are unit-testable without
-/// standing up GoRouter/DI.
+/// auth-guard, organization-only-route, and permission-route rules are
+/// unit-testable without standing up GoRouter/DI.
 ///
 /// [location] must already be [GoRouterState.matchedLocation]; the splash
 /// route is handled by the caller before this is invoked.
+///
+/// [permissions]/[permissionsResolved]/[table] all default to values that
+/// make this function behave identically to its pre-authorization shape —
+/// an empty [table] never redirects, so every existing call site (and every
+/// test written before permission-aware routing existed) is unaffected.
 String? resolveProviderRedirect({
   required String location,
   required bool isAuthenticated,
   required bool canManageOrganization,
+  PermissionSet permissions = PermissionSet.empty,
+  bool permissionsResolved = false,
+  RouteAuthorizationTable table = RouteAuthorizationTable.empty,
 }) {
   final isProtected =
       AppRoutes.protected.contains(location) ||
@@ -214,6 +234,17 @@ String? resolveProviderRedirect({
       ProviderRbacRoutes.isProtectedRoute(location);
   if (isOrgOnlyRoute && isAuthenticated && !canManageOrganization) {
     return OrganizationSettingsRoutes.hub;
+  }
+
+  // Permission guard — runs last, after auth/persona have already cleared
+  // the request. Fails OPEN on an unresolved snapshot (deep links and a
+  // just-restored cold start must never be bounced on a timing artifact —
+  // see PermissionResync and AuthorizationReader.isResolved) and only denies
+  // a route the snapshot has positively confirmed the user lacks.
+  if (!isAuthenticated || !permissionsResolved) return null;
+  final rule = table.ruleFor(location);
+  if (rule != null && !rule.requires.isSatisfiedBy(permissions)) {
+    return rule.denyRedirect ?? AppRoutes.home;
   }
 
   return null;

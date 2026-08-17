@@ -61,6 +61,7 @@ class AuthSessionEntity extends AuthResponseEntity {
     required this.permissions,
     this.profile,
     this.accountSettings,
+    this.permissionsSyncedAt,
   });
 
   final String accessToken;
@@ -73,12 +74,26 @@ class AuthSessionEntity extends AuthResponseEntity {
   final AuthAccountSettingsEntity? accountSettings;
   final List<PermissionEntity> permissions;
 
+  /// When [permissions] was last populated from a `/me`-sourced identity
+  /// (login, or the post-splash resync) — `null` if this session was ever
+  /// saved by a path that does not call `/me` (e.g. worker-invitation
+  /// acceptance), in which case [permissions] may be an empty placeholder
+  /// rather than a genuine "this user has nothing" result.
+  ///
+  /// This is the provenance flag `AuthorizationReader.isResolved` is built
+  /// on: an authorization consumer must treat a `null` timestamp as
+  /// "unknown", never as a denial. See `packages/authorization`.
+  final DateTime? permissionsSyncedAt;
+
   /// Returns a copy with the given fields replaced.
   ///
   /// Nullable fields ([profile], [accountSettings]) use a sentinel default so
   /// omitting an argument keeps the current value and explicitly passing
   /// `null` clears it — the standard Dart copyWith idiom. Non-nullable
   /// fields simply fall back to their current value when omitted.
+  /// [permissionsSyncedAt] is not sentinel-based: every write path either
+  /// advances it forward (a fresh `/me` fetch) or intentionally leaves it
+  /// untouched — nothing ever needs to explicitly clear it back to `null`.
   AuthSessionEntity copyWith({
     String? accessToken,
     String? refreshToken,
@@ -87,6 +102,7 @@ class AuthSessionEntity extends AuthResponseEntity {
     bool? isProfileCreated,
     UserEntity? user,
     List<PermissionEntity>? permissions,
+    DateTime? permissionsSyncedAt,
     Object? profile = _copyWithSentinel,
     Object? accountSettings = _copyWithSentinel,
   }) {
@@ -98,6 +114,7 @@ class AuthSessionEntity extends AuthResponseEntity {
       isProfileCreated: isProfileCreated ?? this.isProfileCreated,
       user: user ?? this.user,
       permissions: permissions ?? this.permissions,
+      permissionsSyncedAt: permissionsSyncedAt ?? this.permissionsSyncedAt,
       profile: identical(profile, _copyWithSentinel)
           ? this.profile
           : profile as AuthProfileEntity?,
@@ -118,6 +135,7 @@ class AuthSessionEntity extends AuthResponseEntity {
     profile,
     accountSettings,
     permissions,
+    permissionsSyncedAt,
   ];
 }
 
