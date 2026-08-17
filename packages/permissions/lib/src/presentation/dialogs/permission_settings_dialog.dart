@@ -4,6 +4,7 @@ import 'package:permissions/src/domain/enums/permission_type.dart';
 import 'package:permissions/src/presentation/dialogs/permission_dialog.dart';
 import 'package:permissions/src/theme/permission_explanation.dart';
 import 'package:permissions/src/theme/permission_theme.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Shows a bottom-sheet informing the user that the permission was permanently
 /// denied and offering a shortcut to the app's system settings.
@@ -32,9 +33,9 @@ class PermissionSettingsDialog {
           icon: theme.icons.forType(permissionType),
         );
 
-    await showAppBottomSheet<void>(
-      context: context,
-      child: PermissionDialogContent(
+    await SheetNavigator.push<void>(
+      context,
+      PermissionDialogContent(
         explanation: resolved,
         theme: theme,
         primaryLabel:
@@ -46,6 +47,7 @@ class PermissionSettingsDialog {
         secondaryLabel: resolved.cancelLabel ?? theme.texts.cancelButtonLabel,
         secondaryAction: () => Navigator.of(context).pop(),
       ),
+      settings: const SheetRouteSettings(barrierColor: Colors.transparent),
     );
   }
 }

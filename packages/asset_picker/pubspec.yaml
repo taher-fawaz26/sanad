@@ -22,7 +22,14 @@ dependencies:
   # NOTE: file_picker <12 pins win32 ^5, which conflicts with the win32 ^6
   # the existing workspace already requires (geolocator → package_info_plus).
   # The 12.x line is the first to support win32 ^6, so we track it here.
-  file_picker: ">=12.0.0-beta.1 <13.0.0"
+  # Pinned to the stable 12.x release (not a beta range): file_picker 12.0.0
+  # made a breaking API change from its own betas (pickFiles() went from
+  # returning FilePickerResult? to returning List<PlatformFile> directly).
+  # A wide `>=12.0.0-beta.1 <13.0.0` range let different machines resolve
+  # either shape depending on local pub cache state, which is exactly what
+  # caused this package's source to compile against the wrong API on some
+  # machines. Keep this pinned to stable releases only.
+  file_picker: ^12.0.0
   flutter:
     sdk: flutter
   go_router: ^17.3.0

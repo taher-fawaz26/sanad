@@ -4,6 +4,7 @@ import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_ui/shared_ui.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
 import 'package:workers/src/domain/usecases/get_workers_usecase.dart';
 
@@ -22,40 +23,45 @@ Future<SelectWorkerResult?> showSelectWorkerActionSheet({
   required BuildContext context,
   Set<String> initialSelectedIds = const {},
 }) async {
-  final selected = await showAppSelectSheet<WorkerEntity>(
-    context: context,
-    title: 'workers.select_worker.title'.tr(),
-    confirmLabel: 'common.confirm'.tr(),
-    searchHint: 'common.search_hint'.tr(),
-    getId: (w) => w.id,
-    searchFilter: (w, q) =>
-        w.fullName.toLowerCase().contains(q) ||
-        w.role.toLowerCase().contains(q),
-    initialSelectedIds: initialSelectedIds,
-    loadItems: () async {
-      final result = await sl<GetWorkersUseCase>()(
-        const WorkersQuery(limit: 100),
-      ).run();
-      return result.fold((f) => throw f, (paged) => paged.items);
-    },
-    errorTextBuilder: (e) => e is Failure ? e.message : e.toString(),
-    retryLabel: 'common.retry'.tr(),
-    emptyBuilder: (context) => _WorkerEmptyState(),
-    itemBuilder: (context, worker, isSelected, onTap) => AppTableRow(
-      title: worker.fullName,
-      caption: worker.role,
-      leading: AppTableLeading.avatar,
-      leadingAvatar: AppAvatar(
-        initials: worker.initials,
-        backgroundColor: context.appColors.primary,
-        showStatusDot: true,
+  final selected = await SheetNavigator.push<List<WorkerEntity>>(
+    context,
+    AppSelectSheet<WorkerEntity>(
+      confirmLabel: 'common.confirm'.tr(),
+      searchHint: 'common.search_hint'.tr(),
+      getId: (w) => w.id,
+      searchFilter: (w, q) =>
+          w.fullName.toLowerCase().contains(q) ||
+          w.role.toLowerCase().contains(q),
+      initialSelectedIds: initialSelectedIds,
+      loadItems: () async {
+        final result = await sl<GetWorkersUseCase>()(
+          const WorkersQuery(limit: 100),
+        ).run();
+        return result.fold((f) => throw f, (paged) => paged.items);
+      },
+      errorTextBuilder: (e) => e is Failure ? e.message : e.toString(),
+      retryLabel: 'common.retry'.tr(),
+      emptyBuilder: (context) => _WorkerEmptyState(),
+      itemBuilder: (context, worker, isSelected, onTap) => AppTableRow(
+        title: worker.fullName,
+        caption: worker.role,
+        leading: AppTableLeading.avatar,
+        leadingAvatar: AppAvatar(
+          initials: worker.initials,
+          backgroundColor: context.appColors.primary,
+          showStatusDot: true,
+        ),
+        trailing: AppTableTrailing.icon,
+        trailingIcon: AppCheckbox(
+          value: isSelected,
+          onChanged: (_) => onTap(),
+        ),
+        onTap: onTap,
       ),
-      trailing: AppTableTrailing.icon,
-      trailingIcon: AppCheckbox(
-        value: isSelected,
-        onChanged: (_) => onTap(),
-      ),
-      onTap: onTap,
+    ),
+    settings: SheetRouteSettings(
+      title: 'workers.select_worker.title'.tr(),
+      padChild: false,
     ),
   );
   if (selected == null) return null;

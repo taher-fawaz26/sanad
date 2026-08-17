@@ -83,6 +83,25 @@ class _EditWorkingHoursSheetBodyState
         toLabel: 'branches.add_branch.to_label'.tr(),
         confirmLabel: 'branches.add_branch.add_day_button'.tr(),
         cancelLabel: 'common.cancel'.tr(),
+        onPickDay: (context, days, selected, onDaySelected) {
+          SheetNavigator.push<void>(
+            context,
+            AppActionList(
+              items: days
+                  .map(
+                    (day) => AppActionSheetItem(
+                      label: day.label,
+                      onTap: () => onDaySelected(day),
+                    ),
+                  )
+                  .toList(),
+            ),
+            settings: SheetRouteSettings(
+              title: 'branches.add_branch.day_label'.tr(),
+              padChild: false,
+            ),
+          );
+        },
       ),
       settings: SheetRouteSettings(
         title: 'branches.add_branch.add_custom_day_title'.tr(),

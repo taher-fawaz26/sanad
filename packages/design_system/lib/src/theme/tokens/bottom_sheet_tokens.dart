@@ -6,8 +6,10 @@ import 'package:flutter/material.dart';
 
 /// Resolved styling for bottom sheets and backdrops.
 ///
-/// Note: [AppBottomSheet] has **no** dimming barrier (Figma `40:9140`).
-/// Scrim lives on [AppActionSheet] / [OverlayTokens.scrimColor] only.
+/// Note: `SheetNavigation` sheets are scrimmed by default via
+/// [OverlayTokens.scrimColor]; pass `SheetRouteSettings(barrierColor:
+/// Colors.transparent)` for a Figma `40:9140`-style sheet with no dimming
+/// barrier.
 @immutable
 class BottomSheetStyleSpec {
   const BottomSheetStyleSpec({
@@ -61,13 +63,9 @@ abstract final class BottomSheetTokens {
   static const double confirmationInnerGap = 12;
 
   /// Extra top inset below the drag handle before confirmation title text.
-  /// Combined with [AppBottomSheet]'s post-handle gap (`AppSpacing.lg`) this
+  /// Combined with the sheet's post-handle gap (`AppSpacing.lg`) this
   /// totals [confirmationSectionGap].
   static const double confirmationContentTopGap = 8;
-
-  /// Default height fraction for [showAppModalSheet] — the sheet occupies
-  /// this proportion of the screen height.
-  static const double modalHeightFraction = 0.92;
 
   // Views/Backdrops (`40:9149`) — back-sheet peek strip visible above the
   // front sheet. The peek itself is a flattened raster image in Figma (not

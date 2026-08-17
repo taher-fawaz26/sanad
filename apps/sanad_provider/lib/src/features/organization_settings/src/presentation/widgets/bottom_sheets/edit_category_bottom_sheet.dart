@@ -23,8 +23,6 @@ Future<Set<String>?> showEditCategoryBottomSheet({
   required List<CategoryOption> categories,
   Set<String> initialSelectedIds = const {},
 }) {
-  // AppActionSheet renders its own drag handle, padding, and surface — don't
-  // double them up with SheetScaffold's chrome.
   return SheetNavigator.push<Set<String>>(
     context,
     EditCategoryBottomSheet(
@@ -78,43 +76,49 @@ class _EditCategoryBottomSheetState extends State<EditCategoryBottomSheet> {
     final typography = context.appTypography;
     final maxListHeight = MediaQuery.sizeOf(context).height * 0.5;
 
-    return AppActionSheet(
-      showCancel: false,
-      footer: AppButton(
-        label: 'common.save'.tr(),
-        onPressed: _selectedIds.isEmpty ? null : _save,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _DragHandle(color: colors.border),
-          SizedBox(height: AppSpacing.md),
-          _SheetHeader(colors: colors, typography: typography),
-          SizedBox(height: AppSpacing.md),
-          ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxListHeight),
-            child: ListView.separated(
-              shrinkWrap: true,
-              itemCount: widget.categories.length,
-              separatorBuilder: (_, _) => const AppDivider(),
-              itemBuilder: (context, index) {
-                final category = widget.categories[index];
-                final isSelected = _selectedIds.contains(category.id);
-                return AppTableRow(
-                  title: category.name,
-                  trailing: AppTableTrailing.icon,
-                  trailingIcon: AppCheckbox(
-                    value: isSelected,
-                    onChanged: (_) => _toggle(category.id),
-                  ),
-                  onTap: () => _toggle(category.id),
-                );
-              },
-            ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _DragHandle(color: colors.border),
+        SizedBox(height: AppSpacing.md),
+        _SheetHeader(colors: colors, typography: typography),
+        SizedBox(height: AppSpacing.md),
+        ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxListHeight),
+          child: ListView.separated(
+            shrinkWrap: true,
+            itemCount: widget.categories.length,
+            separatorBuilder: (_, _) => const AppDivider(),
+            itemBuilder: (context, index) {
+              final category = widget.categories[index];
+              final isSelected = _selectedIds.contains(category.id);
+              return AppTableRow(
+                title: category.name,
+                trailing: AppTableTrailing.icon,
+                trailingIcon: AppCheckbox(
+                  value: isSelected,
+                  onChanged: (_) => _toggle(category.id),
+                ),
+                onTap: () => _toggle(category.id),
+              );
+            },
           ),
-        ],
-      ),
+        ),
+        const AppDivider(),
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            AppSpacing.sm,
+            AppSpacing.xl,
+            AppSpacing.sm,
+          ),
+          child: AppButton(
+            label: 'common.save'.tr(),
+            onPressed: _selectedIds.isEmpty ? null : _save,
+          ),
+        ),
+      ],
     );
   }
 }

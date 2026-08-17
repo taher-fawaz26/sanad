@@ -5,6 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:services/src/domain/entities/catalog_service_selection.dart';
 import 'package:shared_ui/shared_ui.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Result returned when the user confirms service selection.
 class SelectServiceResult {
@@ -25,29 +26,34 @@ Future<SelectServiceResult?> showSelectServiceActionSheet({
   required Future<List<CatalogServiceSelection>> Function() loadItems,
   Set<String> initialSelectedIds = const {},
 }) async {
-  final selected = await showAppSelectSheet<CatalogServiceSelection>(
-    context: context,
-    title: 'services.select_service.title'.tr(),
-    confirmLabel: 'common.confirm'.tr(),
-    searchHint: 'common.search_hint'.tr(),
-    searchVariant: AppSearchFieldVariant.bordered,
-    getId: (s) => s.id,
-    searchFilter: (s, q) =>
-        s.name.toLowerCase().contains(q) ||
-        s.categoryName.toLowerCase().contains(q),
-    initialSelectedIds: initialSelectedIds,
-    loadItems: loadItems,
-    errorTextBuilder: (e) => e is Failure ? e.message : e.toString(),
-    retryLabel: 'common.retry'.tr(),
-    emptyBuilder: (context) => _ServiceEmptyState(),
-    itemBuilder: (context, service, isSelected, onTap) => AppTableRow(
-      title: service.name,
-      trailing: AppTableTrailing.icon,
-      trailingIcon: AppCheckbox(
-        value: isSelected,
-        onChanged: (_) => onTap(),
+  final selected = await SheetNavigator.push<List<CatalogServiceSelection>>(
+    context,
+    AppSelectSheet<CatalogServiceSelection>(
+      confirmLabel: 'common.confirm'.tr(),
+      searchHint: 'common.search_hint'.tr(),
+      searchVariant: AppSearchFieldVariant.bordered,
+      getId: (s) => s.id,
+      searchFilter: (s, q) =>
+          s.name.toLowerCase().contains(q) ||
+          s.categoryName.toLowerCase().contains(q),
+      initialSelectedIds: initialSelectedIds,
+      loadItems: loadItems,
+      errorTextBuilder: (e) => e is Failure ? e.message : e.toString(),
+      retryLabel: 'common.retry'.tr(),
+      emptyBuilder: (context) => _ServiceEmptyState(),
+      itemBuilder: (context, service, isSelected, onTap) => AppTableRow(
+        title: service.name,
+        trailing: AppTableTrailing.icon,
+        trailingIcon: AppCheckbox(
+          value: isSelected,
+          onChanged: (_) => onTap(),
+        ),
+        onTap: onTap,
       ),
-      onTap: onTap,
+    ),
+    settings: SheetRouteSettings(
+      title: 'services.select_service.title'.tr(),
+      padChild: false,
     ),
   );
   if (selected == null) return null;

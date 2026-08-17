@@ -10,8 +10,8 @@ import 'package:flutter/material.dart';
 /// Renders a "back sheet" peek strip directly above a front sheet surface,
 /// used to hint that a stacked sheet is behind the currently presented one.
 ///
-/// Distinct from [AppBottomSheet] (no peek, no scrim) and [AppActionSheet]
-/// (scrimmed action list).
+/// Distinct from `SheetNavigation`'s own chrome (no peek) and [AppActionList]
+/// (a plain scrimless row list).
 ///
 /// **Documented gap:** the back-sheet peek in Figma is a flattened raster
 /// image (not vector), so its exact fill/shadow cannot be extracted from

@@ -15,6 +15,22 @@ class AppScheduleDayOption {
   final String label;
 }
 
+/// Opens a day picker for [AppAddScheduleDaySheet].
+///
+/// `shared_ui` cannot depend on `sheet_navigation` (lower dependency tier),
+/// so the picker itself is injected — the caller opens whatever sheet it
+/// likes (typically `SheetNavigator.push` with an `AppActionList`) and calls
+/// [onDaySelected] when the user taps a row. Mirrors the side-effect style
+/// used by every other action-list call site: the row's own tap handles
+/// dismissal, [onDaySelected] just updates state.
+typedef ScheduleDayPicker =
+    void Function(
+      BuildContext context,
+      List<AppScheduleDayOption> days,
+      AppScheduleDayOption selectedDay,
+      ValueChanged<AppScheduleDayOption> onDaySelected,
+    );
+
 /// Result of a confirmed [AppAddScheduleDaySheet] submission.
 class AppAddScheduleDayResult {
   const AppAddScheduleDayResult({
@@ -50,6 +66,20 @@ class AppAddScheduleDayResult {
 ///     toLabel: 'To'.tr(),
 ///     confirmLabel: 'Add day'.tr(),
 ///     cancelLabel: 'Cancel'.tr(),
+///     onPickDay: (context, days, selected, onDaySelected) {
+///       SheetNavigator.push<void>(
+///         context,
+///         AppActionList(
+///           items: days
+///               .map((day) => AppActionSheetItem(
+///                     label: day.label,
+///                     onTap: () => onDaySelected(day),
+///                   ))
+///               .toList(),
+///         ),
+///         settings: SheetRouteSettings(title: 'Day'.tr(), padChild: false),
+///       );
+///     },
 ///   ),
 ///   settings: SheetRouteSettings(title: 'Add custom day'.tr()),
 /// );
@@ -62,6 +92,7 @@ class AppAddScheduleDaySheet extends StatefulWidget {
     required this.toLabel,
     required this.confirmLabel,
     required this.cancelLabel,
+    required this.onPickDay,
     this.initialFrom = const TimeOfDay(hour: 10, minute: 0),
     this.initialTo = const TimeOfDay(hour: 14, minute: 0),
     super.key,
@@ -73,6 +104,7 @@ class AppAddScheduleDaySheet extends StatefulWidget {
   final String toLabel;
   final String confirmLabel;
   final String cancelLabel;
+  final ScheduleDayPicker onPickDay;
   final TimeOfDay initialFrom;
   final TimeOfDay initialTo;
 
@@ -143,20 +175,10 @@ class _AppAddScheduleDaySheetState extends State<AppAddScheduleDaySheet> {
     );
   }
 
-  Future<void> _pickDay() async {
-    await showAppActionSheet<void>(
-      context: context,
-      title: widget.dayLabel,
-      cancelLabel: widget.cancelLabel,
-      items: widget.days
-          .map(
-            (day) => AppActionSheetItem(
-              label: day.label,
-              onTap: () => setState(() => _selectedDay = day),
-            ),
-          )
-          .toList(),
-    );
+  void _pickDay() {
+    widget.onPickDay(context, widget.days, _selectedDay, (day) {
+      setState(() => _selectedDay = day);
+    });
   }
 
   Future<void> _pickTime({required bool isFrom}) async {

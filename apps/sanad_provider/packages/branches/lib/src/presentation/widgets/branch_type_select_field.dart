@@ -2,6 +2,7 @@ import 'package:branches/src/domain/entities/branch_type.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Branch type picker backed by [BranchType] enum values.
 class BranchTypeSelectField extends StatelessWidget {
@@ -25,18 +26,22 @@ class BranchTypeSelectField extends StatelessWidget {
   }
 
   Future<void> _openPicker(BuildContext context) async {
-    await showAppActionSheet<void>(
-      context: context,
-      title: 'branches.add_branch.branch_type'.tr(),
-      cancelLabel: 'common.cancel'.tr(),
-      items: BranchType.values
-          .map(
-            (type) => AppActionSheetItem(
-              label: _localizedLabel(type),
-              onTap: () => onTypeSelected(type),
-            ),
-          )
-          .toList(),
+    await SheetNavigator.push<void>(
+      context,
+      AppActionList(
+        items: BranchType.values
+            .map(
+              (type) => AppActionSheetItem(
+                label: _localizedLabel(type),
+                onTap: () => onTypeSelected(type),
+              ),
+            )
+            .toList(),
+      ),
+      settings: SheetRouteSettings(
+        title: 'branches.add_branch.branch_type'.tr(),
+        padChild: false,
+      ),
     );
   }
 

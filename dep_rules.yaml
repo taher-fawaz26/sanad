@@ -63,8 +63,9 @@ layer_order:
       - device
       - deep_linking
       - test_verify
+      - sheet_navigation
   - tier: 3
-    packages: [maps, asset_picker, sheet_navigation, otp]
+    packages: [maps, asset_picker, otp]
   - tier: 4
     packages:
       [auth, services, workers, document_flow, contact_verification, media_upload, media]

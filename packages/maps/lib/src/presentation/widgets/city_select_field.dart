@@ -61,13 +61,16 @@ class CitySelectField extends StatelessWidget {
     final result = await SheetNavigator.push<CityEntity>(
       context,
       _CityPickerSheet(
-        title: pickerTitle,
         searchHint: searchHint,
         emptyLabel: emptyLabel,
         retryLabel: retryLabel,
         localizedName: localizedName,
       ),
-      settings: const SheetRouteSettings(sheetSize: SheetSize.expanded),
+      settings: SheetRouteSettings(
+        sheetSize: SheetSize.expanded,
+        title: pickerTitle,
+        padChild: false,
+      ),
     );
     if (result != null) {
       onCitySelected(result);
@@ -77,14 +80,12 @@ class CitySelectField extends StatelessWidget {
 
 class _CityPickerSheet extends StatefulWidget {
   const _CityPickerSheet({
-    required this.title,
     required this.searchHint,
     required this.emptyLabel,
     required this.retryLabel,
     this.localizedName,
   });
 
-  final String title;
   final String searchHint;
   final String emptyLabel;
   final String retryLabel;
@@ -152,33 +153,29 @@ class _CityPickerSheetState extends State<_CityPickerSheet> {
   Widget build(BuildContext context) {
     final maxHeight = MediaQuery.sizeOf(context).height * 0.6;
 
-    return AppActionSheet(
-      title: widget.title,
-      showCancel: false,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.xl,
-              AppSpacing.sm,
-              AppSpacing.xl,
-              AppSpacing.md,
-            ),
-            child: AppSearchField(
-              controller: _searchController,
-              hint: widget.searchHint,
-              showMicIcon: false,
-              onChanged: (value) => setState(() => _query = value),
-            ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            AppSpacing.sm,
+            AppSpacing.xl,
+            AppSpacing.md,
           ),
-          ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxHeight),
-            child: _buildBody(),
+          child: AppSearchField(
+            controller: _searchController,
+            hint: widget.searchHint,
+            showMicIcon: false,
+            onChanged: (value) => setState(() => _query = value),
           ),
-        ],
-      ),
+        ),
+        ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: _buildBody(),
+        ),
+      ],
     );
   }
 

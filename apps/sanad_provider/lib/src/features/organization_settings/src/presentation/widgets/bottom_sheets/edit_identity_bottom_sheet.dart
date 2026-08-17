@@ -141,15 +141,21 @@ class _BusinessDescriptionField extends StatelessWidget {
       label: 'settings.business_description'.tr(),
       maxLines: 5,
       maxLength: _kBusinessDescriptionMaxLength,
-      validator: (value) =>
-          LengthValidator.isValid(
-            value,
-            maxLength: _kBusinessDescriptionMaxLength,
-          )
-          ? null
-          : 'validation.length_max'.tr(
-              namedArgs: {'max': '$_kBusinessDescriptionMaxLength'},
-            ),
+      validator: (value) {
+        final trimmed = value?.trim() ?? '';
+        if (trimmed.isNotEmpty && !MeaningfulTextValidator.isValid(trimmed)) {
+          return 'validation.meaningless_text'.tr();
+        }
+        if (!LengthValidator.isValid(
+          value,
+          maxLength: _kBusinessDescriptionMaxLength,
+        )) {
+          return 'validation.length_max'.tr(
+            namedArgs: {'max': '$_kBusinessDescriptionMaxLength'},
+          );
+        }
+        return null;
+      },
       aiActionLabel: 'common.enhance_with_ai'.tr(),
       onImproveWithAi: onEnhanceWithAi,
     );

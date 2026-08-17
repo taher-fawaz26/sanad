@@ -1,6 +1,7 @@
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/widgets.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 import 'package:workers/src/domain/entities/worker_type.dart';
 
 /// Worker type picker (Worker / Manager), following `BranchTypeSelectField`.
@@ -34,18 +35,22 @@ class WorkerTypeSelectField extends StatelessWidget {
   }
 
   Future<void> _openPicker(BuildContext context) async {
-    await showAppActionSheet<void>(
-      context: context,
-      title: 'workers.add_worker.type_label'.tr(),
-      cancelLabel: 'common.cancel'.tr(),
-      items: WorkerType.values
-          .map(
-            (type) => AppActionSheetItem(
-              label: _localizedLabel(type),
-              onTap: () => onTypeSelected?.call(type),
-            ),
-          )
-          .toList(),
+    await SheetNavigator.push<void>(
+      context,
+      AppActionList(
+        items: WorkerType.values
+            .map(
+              (type) => AppActionSheetItem(
+                label: _localizedLabel(type),
+                onTap: () => onTypeSelected?.call(type),
+              ),
+            )
+            .toList(),
+      ),
+      settings: SheetRouteSettings(
+        title: 'workers.add_worker.type_label'.tr(),
+        padChild: false,
+      ),
     );
   }
 

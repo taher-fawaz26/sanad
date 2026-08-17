@@ -4,7 +4,7 @@ import 'package:design_system/src/theme/tokens/action_sheet_tokens.dart';
 import 'package:design_system/src/theme/typography/app_typography.dart';
 import 'package:flutter/material.dart';
 
-/// One row in [AppActionSheet].
+/// One row in [AppActionList].
 class AppActionSheetItem {
   const AppActionSheetItem({
     required this.label,
@@ -21,31 +21,18 @@ class AppActionSheetItem {
   final bool isDestructive;
 }
 
-/// Figma `Views / Action Sheets` (`40:9109`).
-class AppActionSheet extends StatelessWidget {
-  const AppActionSheet({
-    super.key,
-    this.title,
-    this.child,
-    this.footer,
-    this.items = const [],
-    this.cancelLabel = 'Cancel',
-    this.onCancel,
-    this.showCancel = true,
-  });
-
-  final String? title;
-
-  /// Optional custom body — rendered after [title], before [items].
-  final Widget? child;
-
-  /// Optional footer slot — e.g. a primary confirm button (`251:7195`).
-  final Widget? footer;
+/// Chrome-free list of tappable action rows — Figma `Views / Action Sheets`
+/// (`40:9109`) reduced to just its item rows.
+///
+/// Pair with `SheetNavigator.push` (settings: `SheetRouteSettings(padChild:
+/// false)`); the surrounding surface, radius, drag handle, and barrier come
+/// from `SheetNavigation`'s own chrome — this widget owns only the rows.
+/// Dismissing without a selection is done via the sheet's barrier/drag, not
+/// a dedicated cancel row.
+class AppActionList extends StatelessWidget {
+  const AppActionList({required this.items, super.key});
 
   final List<AppActionSheetItem> items;
-  final String cancelLabel;
-  final VoidCallback? onCancel;
-  final bool showCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -58,112 +45,37 @@ class AppActionSheet extends StatelessWidget {
       brightness: brightness,
     );
 
-    return SafeArea(
+    return SingleChildScrollView(
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Flexible(
-            child: Container(
-              decoration: BoxDecoration(
-                color: spec.surfaceColor,
-                borderRadius: spec.topRadius,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (title != null) ...[
-                    SizedBox(height: AppSpacing.lg),
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: spec.horizontalPadding,
-                      ),
-                      child: Text(title!, style: spec.titleStyle),
-                    ),
-                    SizedBox(height: AppSpacing.sm),
-                  ],
-                  if (child != null) child!,
-                  if (items.isNotEmpty)
-                    Flexible(
-                      child: SingleChildScrollView(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            for (var i = 0; i < items.length; i++) ...[
-                              if (i > 0 || child != null)
-                                Divider(height: 1, color: spec.dividerColor),
-                              _ActionSheetRow(
-                                item: items[i],
-                                spec: spec,
-                                colors: colors,
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                  if (footer != null) ...[
-                    Divider(height: 1, color: spec.dividerColor),
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(
-                        spec.horizontalPadding,
-                        AppSpacing.sm,
-                        spec.horizontalPadding,
-                        AppSpacing.sm,
-                      ),
-                      child: footer!,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          if (showCancel) ...[
-            SizedBox(height: AppSpacing.sm),
-            Container(
-              decoration: BoxDecoration(
-                color: spec.surfaceColor,
-                borderRadius: spec.topRadius,
-              ),
-              child: _ActionSheetRow(
-                item: AppActionSheetItem(
-                  label: cancelLabel,
-                  onTap: onCancel ?? () => Navigator.of(context).pop(),
-                ),
-                spec: spec,
-                colors: colors,
-                isCancel: true,
-              ),
-            ),
+          for (var i = 0; i < items.length; i++) ...[
+            if (i > 0) Divider(height: 1, color: spec.dividerColor),
+            _ActionListRow(item: items[i], spec: spec, colors: colors),
           ],
-          SizedBox(height: AppSpacing.md),
         ],
       ),
     );
   }
 }
 
-class _ActionSheetRow extends StatelessWidget {
-  const _ActionSheetRow({
+class _ActionListRow extends StatelessWidget {
+  const _ActionListRow({
     required this.item,
     required this.spec,
     required this.colors,
-    this.isCancel = false,
   });
 
   final AppActionSheetItem item;
   final ActionSheetStyleSpec spec;
   final AppColors colors;
-  final bool isCancel;
 
   @override
   Widget build(BuildContext context) {
-    final style = isCancel
-        ? spec.cancelStyle
-        : spec.itemStyle.copyWith(
-            color: item.isDestructive ? colors.error : colors.textPrimary,
-          );
+    final style = spec.itemStyle.copyWith(
+      color: item.isDestructive ? colors.error : colors.textPrimary,
+    );
     final leading = item.leading;
 
     return Material(
@@ -197,44 +109,4 @@ class _ActionSheetRow extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Shows a Figma-styled action sheet.
-Future<T?> showAppActionSheet<T>({
-  required BuildContext context,
-  List<AppActionSheetItem> items = const [],
-  String? title,
-  Widget? child,
-  Widget? footer,
-  String cancelLabel = 'Cancel',
-  VoidCallback? onCancel,
-  bool showCancel = true,
-  bool isScrollControlled = true,
-  bool useRootNavigator = false,
-}) {
-  final colors = context.appColors;
-  final typography = context.appTypography;
-  final brightness = Theme.of(context).brightness;
-  final spec = ActionSheetTokens.resolve(
-    colors: colors,
-    typography: typography,
-    brightness: brightness,
-  );
-
-  return showModalBottomSheet<T>(
-    context: context,
-    isScrollControlled: isScrollControlled,
-    useRootNavigator: useRootNavigator,
-    backgroundColor: Colors.transparent,
-    barrierColor: spec.barrierColor,
-    builder: (context) => AppActionSheet(
-      title: title,
-      child: child,
-      footer: footer,
-      items: items,
-      cancelLabel: cancelLabel,
-      onCancel: onCancel,
-      showCancel: showCancel,
-    ),
-  );
 }

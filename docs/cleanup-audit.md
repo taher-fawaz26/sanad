@@ -49,7 +49,7 @@ The SANAD monorepo has grown to **37 packages** across `apps/sanad_provider`, `a
 | `*_view` state family (`AppEmptyView`, `AppErrorView`, `AppLoadingView`, `AppNoConnectionView`, `AppUnauthorizedView`) | shared_ui/lib/src/states | 0 external refs; superseded by `*_state` family + `AppSkeletonizer` (18 ext) / `AppErrorState` (7 ext) | **INVESTIGATE → REMOVE if confirmed** | MED |
 | `headers/` (`AppProfileHeader`, `AppImageHeader`, `AppSearchHeader`), `effects/` (Blur/Parallax/Stretch/ImageZoom/NavSurfaceTransition) | shared_ui | 0 external + 0 intra refs | **INVESTIGATE → REMOVE if confirmed** | MED |
 | `AppRadioTile`, `AppTabBar`, `AppCalendarDay`, `AppFillRemainingScrollable`, `AppValidationSummary`, `AppDashedBorder`, `MediaUploadDropZone`, `AppSuccessPopoverIllustration`, catalog previews | design_system / shared_ui | 0 external + 0 intra + 0 catalog refs (some possibly superseded by `AppRadio`/`AppDatePicker`) | **INVESTIGATE** per symbol | MED |
-| `AppBottomSheet`/`showAppBottomSheet` vs `AppModalSheet`/`showAppModalSheet` | design_system | two sheet primitives; bottom variant used by only 2 permission dialogs | **INVESTIGATE** consolidation onto modal | MED |
+| `AppBottomSheet`/`showAppBottomSheet` vs `AppModalSheet`/`showAppModalSheet` | design_system | two sheet primitives; bottom variant used by only 2 permission dialogs | **RESOLVED** — both deleted by the app-wide SheetNavigation consolidation; `sheet_navigation` re-tiered 3→2 so `permissions` could adopt `SheetNavigator.push` directly | DONE |
 | `*StyleSpec`/`*Tokens` (0 external) | design_system theme | consumed via `context.appColors`/theme extensions — NOT dead | KEEP | — |
 
 ### D. Duplication hotspots

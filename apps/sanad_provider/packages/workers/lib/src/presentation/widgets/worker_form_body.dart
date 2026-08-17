@@ -151,24 +151,15 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
   /// apostrophes only — no digits or other punctuation (backend rejects with
   /// "...حروف ومسافات وشرطات وفواصل عليا فقط").
   ///
-  /// Deliberately NOT `PersonNameValidator` (core): that validator requires
-  /// ≥2 words, but a worker may legitimately be registered under a single
-  /// name (e.g. "Ahmed"). The backend's `UpdateWorkerDto.name` schema has no
-  /// word-count constraint either — only `minLength`/`maxLength` on a plain
-  /// string — which confirms single-word names are valid product behavior
-  /// here, not an oversight. Do not "fix" this by swapping in
-  /// `PersonNameValidator`.
-  static final RegExp _namePattern = RegExp(
-    r"^[\p{L}\s'-]+$",
-    unicode: true,
-  );
-
+  /// Uses `PersonNameValidator(minWords: 1)`: a worker may legitimately be
+  /// registered under a single name (e.g. "Ahmed"), so the shared 2-word
+  /// default is relaxed here rather than forked into a local regex.
   String? _validateFullName(String? value) {
     if (!RequiredValidator.isValid(value)) {
       return 'validation.required'.tr();
     }
     final trimmed = value!.trim();
-    if (!_namePattern.hasMatch(trimmed)) {
+    if (!PersonNameValidator.isValid(trimmed, minWords: 1)) {
       return 'workers.add_worker.validation_name_format'.tr();
     }
     if (!LengthValidator.isValid(trimmed, minLength: 3, maxLength: 255)) {

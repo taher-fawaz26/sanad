@@ -69,6 +69,11 @@ class IndividualDetailsPage extends HookWidget {
                 if (!RequiredValidator.isValid(value)) {
                   return 'registration.field_required'.tr();
                 }
+                // minWords: 1 — a single-word legal name (common in the
+                // region) is a legitimate registration, not an oversight.
+                if (!PersonNameValidator.isValid(value, minWords: 1)) {
+                  return 'validation.invalid_name'.tr();
+                }
                 if (!LengthValidator.isValid(
                   value,
                   minLength: 3,

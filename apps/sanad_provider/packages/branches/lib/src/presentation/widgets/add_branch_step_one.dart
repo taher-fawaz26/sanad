@@ -188,6 +188,9 @@ class _MainInfoSection extends StatelessWidget {
                   if (!RequiredValidator.isValid(value)) {
                     return 'branches.add_branch.branch_name_required'.tr();
                   }
+                  if (!BusinessNameValidator.isValid(value)) {
+                    return 'validation.invalid_name'.tr();
+                  }
                   if (!LengthValidator.isValid(value, maxLength: 255)) {
                     return 'branches.add_branch.branch_name_max_length_error'
                         .tr(namedArgs: {'max': '255'});

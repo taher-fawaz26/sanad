@@ -184,6 +184,12 @@ as "cancelled", exactly like `showModalBottomSheet`.
 
 ## Migration guide (from `showModalBottomSheet` / `showApp*Sheet`)
 
+`SheetNavigator` is now the **only** sheet-presentation mechanism in the app.
+`showAppBottomSheet`, `showAppModalSheet`, `showAppActionSheet`, and
+`showAppSelectSheet` have all been deleted — the design_system/shared_ui
+widgets they used to wrap (`AppActionList` — formerly `AppActionSheet` —
+and `AppSelectSheet`) are now chrome-free content, pushed directly:
+
 | Old | New |
 |---|---|
 | `showModalBottomSheet<T>(context: context, builder: (_) => Body())` | `SheetNavigator.push<T>(context, const Body())` |
@@ -191,9 +197,13 @@ as "cancelled", exactly like `showModalBottomSheet`.
 | `showAppBottomSheet<T>(context: context, title: 'X', child: Body())` | `SheetNavigator.push<T>(context, Body(), settings: SheetRouteSettings(title: 'X'))` |
 | `showAppBottomSheet<T>(context: context, padChild: false, child: Body())` | `SheetNavigator.push<T>(context, Body(), settings: const SheetRouteSettings(padChild: false))` |
 | `showAppModalSheet<T>(context: context, child: Body())` | `SheetNavigator.push<T>(context, Body(), settings: const SheetRouteSettings(sheetSize: SheetSize.expanded))` |
+| `showAppActionSheet<T>(context: context, title: 'X', items: [...])` | `SheetNavigator.push<T>(context, AppActionList(items: [...]), settings: SheetRouteSettings(title: 'X', padChild: false))` |
+| `showAppSelectSheet<T>(context: context, title: 'X', ...)` | `SheetNavigator.push<List<T>>(context, AppSelectSheet<T>(...), settings: SheetRouteSettings(title: 'X', padChild: false))` |
 
-If `Body` already renders its own full chrome (its own drag handle, its own
-`Material` surface — e.g. it's built on `AppActionSheet`), pass
+`AppActionList` and `AppSelectSheet` own no chrome of their own (no surface,
+no drag handle, no barrier, no detached cancel row) — dismissal without a
+selection is the sheet's barrier/drag, not a dedicated cancel row. If some
+other piece of content still renders its own full chrome, pass
 `settings: const SheetRouteSettings(enableDrag: false, padChild: false)` so
 `SheetScaffold` doesn't draw a second handle/padding on top of it.
 
@@ -209,19 +219,19 @@ sites anyway, it's worth checking whether it can drop the explicit
 instead — but that's a deliberate follow-up, not something this migration did
 automatically.
 
-**Not migrated on purpose:** `packages/permissions` still calls
-`showAppBottomSheet` directly. `permissions` sits at dependency tier 2, below
-`sheet_navigation` (tier 3) — depending on it would create an illegal
-upward edge in `dep_rules.yaml`. `showAppActionSheet`/`showAppSelectSheet`
-call sites were also left as-is: their scrim/footer/search chrome lives
-inside the design_system helper itself, and re-hosting them under
-`SheetScaffold` would double the chrome without adding anything.
+**On the `permissions` tier:** `packages/permissions` now depends on
+`sheet_navigation` directly. `sheet_navigation` was moved from tier 3 to
+tier 2 specifically to unblock this — its own dependencies (`core`,
+`design_system`, `shared_ui`, `go_router`) are all tier ≤ 1, so the move was
+safe and every existing dependent stayed valid.
 
 ## Dos and don'ts
 
 - **Do** use `SheetNavigator.push`/`showSheet` for anything that used to be a
-  `showModalBottomSheet` or `showApp*Sheet` call, unless the target package
-  cannot depend on `sheet_navigation` (see tier note above).
+  `showModalBottomSheet` or `showApp*Sheet` call. If the target package
+  genuinely cannot depend on `sheet_navigation` (lower tier, e.g. `shared_ui`
+  itself), inject the picker as a callback instead — see
+  `AppAddScheduleDaySheet.onPickDay` in `shared_ui` for the pattern.
 - **Do** pass `enableDrag: false` when your content already renders its own
   drag handle — otherwise you'll get two.
 - **Do** reach for `SheetSize.expanded` for long forms (OTP, search, settings)

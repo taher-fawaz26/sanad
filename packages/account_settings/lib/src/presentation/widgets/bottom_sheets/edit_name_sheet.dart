@@ -15,10 +15,7 @@ Future<String?> showEditNameSheet({
   return SheetNavigator.push<String>(
     context,
     _EditNameSheetBody(initialName: initialName),
-    settings: const SheetRouteSettings(
-      enableDrag: false,
-      padChild: false,
-    ),
+    settings: const SheetRouteSettings(enableDrag: false),
   );
 }
 
@@ -53,6 +50,12 @@ class _EditNameSheetBodyState extends State<_EditNameSheetBody> {
       setState(() => _errorText = 'settings.name_required_error'.tr());
       return;
     }
+    // minWords: 1 — a single-word name is a legitimate account owner name,
+    // matching the same allowance used elsewhere in the app (e.g. workers).
+    if (!PersonNameValidator.isValid(trimmed, minWords: 1)) {
+      setState(() => _errorText = 'validation.invalid_name'.tr());
+      return;
+    }
     if (!LengthValidator.isValid(trimmed, minLength: 2, maxLength: 255)) {
       setState(
         () => _errorText = 'validation.length_range'.tr(
@@ -69,42 +72,35 @@ class _EditNameSheetBodyState extends State<_EditNameSheetBody> {
     final colors = context.appColors;
     final typography = context.appTypography;
 
-    return AppActionSheet(
-      showCancel: false,
-      footer: AppButton(
-        label: 'common.save'.tr(),
-        onPressed: _submit,
-      ),
-      child: Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.viewInsetsOf(context).bottom,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'settings.edit_name_title'.tr(),
+          textAlign: TextAlign.center,
+          style: typography.title3.copyWith(
+            color: colors.primary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'settings.edit_name_title'.tr(),
-              textAlign: TextAlign.center,
-              style: typography.title3.copyWith(
-                color: colors.primary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            SizedBox(height: AppSpacing.xxl),
-            AppTextField(
-              label: 'settings.name'.tr(),
-              hint: 'settings.name_hint'.tr(),
-              controller: _controller,
-              autofocus: true,
-              errorText: _errorText,
-              onChanged: (_) {
-                if (_errorText != null) setState(() => _errorText = null);
-              },
-            ),
-          ],
+        SizedBox(height: AppSpacing.xxl),
+        AppTextField(
+          label: 'settings.name'.tr(),
+          hint: 'settings.name_hint'.tr(),
+          controller: _controller,
+          autofocus: true,
+          errorText: _errorText,
+          onChanged: (_) {
+            if (_errorText != null) setState(() => _errorText = null);
+          },
         ),
-      ),
+        SizedBox(height: AppSpacing.xl),
+        AppButton(
+          label: 'common.save'.tr(),
+          onPressed: _submit,
+        ),
+      ],
     );
   }
 }

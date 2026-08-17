@@ -22,8 +22,8 @@ void main() {
     testWidgets('tapping a row immediately pops with that single item', (
       tester,
     ) async {
-      // The modal sheet's content can exceed the default (small) test
-      // surface — use a realistic device-sized surface instead.
+      // The sheet content can exceed the default (small) test surface — use
+      // a realistic device-sized surface instead.
       await tester.binding.setSurfaceSize(const Size(1080, 2400));
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 3.0;
@@ -39,17 +39,22 @@ void main() {
         Builder(
           builder: (context) => ElevatedButton(
             onPressed: () async {
-              result = await showAppSelectSheet<String>(
-                context: context,
-                title: 'Category',
-                searchHint: 'Search',
-                singleSelect: true,
-                getId: (item) => item,
-                searchFilter: (item, query) =>
-                    item.toLowerCase().contains(query),
-                items: const ['Car', 'Home Services'],
-                itemBuilder: (context, item, isSelected, onTap) =>
-                    AppTableRow(title: item, onTap: onTap),
+              result = await Navigator.of(context).push<List<String>>(
+                MaterialPageRoute(
+                  builder: (_) => Scaffold(
+                    body: AppSelectSheet<String>(
+                      confirmLabel: 'Confirm',
+                      searchHint: 'Search',
+                      singleSelect: true,
+                      getId: (item) => item,
+                      searchFilter: (item, query) =>
+                          item.toLowerCase().contains(query),
+                      items: const ['Car', 'Home Services'],
+                      itemBuilder: (context, item, isSelected, onTap) =>
+                          AppTableRow(title: item, onTap: onTap),
+                    ),
+                  ),
+                ),
               );
             },
             child: const Text('Open'),
@@ -62,7 +67,7 @@ void main() {
 
       expect(find.text('Car'), findsOneWidget);
       expect(find.text('Home Services'), findsOneWidget);
-      // No footer confirm button in single-select mode.
+      // No confirm button in single-select mode.
       expect(find.byType(AppButton), findsNothing);
 
       await tester.tap(find.text('Car'));

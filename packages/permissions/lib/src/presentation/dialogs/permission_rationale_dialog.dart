@@ -4,6 +4,7 @@ import 'package:permissions/src/domain/enums/permission_type.dart';
 import 'package:permissions/src/presentation/dialogs/permission_dialog.dart';
 import 'package:permissions/src/theme/permission_explanation.dart';
 import 'package:permissions/src/theme/permission_theme.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Shows a bottom-sheet explaining why the app needs a permission before the
 /// OS prompt is displayed.
@@ -24,9 +25,9 @@ class PermissionRationaleDialog {
   }) async {
     final resolved = explanation ?? theme.explanationFor(permissionType);
 
-    final result = await showAppBottomSheet<bool>(
-      context: context,
-      child: PermissionDialogContent(
+    final result = await SheetNavigator.push<bool>(
+      context,
+      PermissionDialogContent(
         explanation: resolved,
         theme: theme,
         primaryLabel: resolved.allowLabel ?? theme.texts.allowButtonLabel,
@@ -34,6 +35,7 @@ class PermissionRationaleDialog {
         secondaryLabel: resolved.denyLabel ?? theme.texts.denyButtonLabel,
         secondaryAction: () => Navigator.of(context).pop(false),
       ),
+      settings: const SheetRouteSettings(barrierColor: Colors.transparent),
     );
 
     return result ?? false;

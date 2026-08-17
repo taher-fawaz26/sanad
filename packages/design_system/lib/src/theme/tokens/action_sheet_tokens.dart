@@ -5,7 +5,7 @@ import 'package:design_system/src/theme/tokens/overlay_tokens.dart';
 import 'package:design_system/src/theme/typography/app_typography.dart';
 import 'package:flutter/material.dart';
 
-/// Resolved styling for `AppActionSheet`.
+/// Resolved styling for `AppActionList`.
 @immutable
 class ActionSheetStyleSpec {
   const ActionSheetStyleSpec({

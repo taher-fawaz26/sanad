@@ -85,6 +85,9 @@ class _RoleFormPageState extends State<RoleFormPage> {
     if (!RequiredValidator.isValid(value)) {
       return 'validation.required'.tr();
     }
+    if (!BusinessNameValidator.isValid(value)) {
+      return 'validation.invalid_name'.tr();
+    }
     if (!LengthValidator.isValid(value, minLength: 1, maxLength: 100)) {
       return 'validation.length_range'.tr(
         namedArgs: {'min': '1', 'max': '100'},
@@ -100,6 +103,10 @@ class _RoleFormPageState extends State<RoleFormPage> {
   /// enforcing the minimum client-side since an empty value simply means
   /// "not provided".
   String? _validateDescription(String? value) {
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isNotEmpty && !MeaningfulTextValidator.isValid(trimmed)) {
+      return 'validation.meaningless_text'.tr();
+    }
     if (!LengthValidator.isValid(value, maxLength: 255)) {
       return 'validation.length_max'.tr(
         namedArgs: {'max': '255'},

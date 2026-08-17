@@ -193,18 +193,22 @@ class _AssignBranchSheetBodyState extends State<_AssignBranchSheetBody> {
   }
 
   Future<void> _openBranchPicker(List<BranchEntity> branches) async {
-    await showAppActionSheet<void>(
-      context: context,
-      title: 'workers.assign_branch_label'.tr(),
-      cancelLabel: 'common.cancel'.tr(),
-      items: branches
-          .map(
-            (branch) => AppActionSheetItem(
-              label: branch.branchName,
-              onTap: () => setState(() => _selectedBranch = branch),
-            ),
-          )
-          .toList(),
+    await SheetNavigator.push<void>(
+      context,
+      AppActionList(
+        items: branches
+            .map(
+              (branch) => AppActionSheetItem(
+                label: branch.branchName,
+                onTap: () => setState(() => _selectedBranch = branch),
+              ),
+            )
+            .toList(),
+      ),
+      settings: SheetRouteSettings(
+        title: 'workers.assign_branch_label'.tr(),
+        padChild: false,
+      ),
     );
   }
 }

@@ -21,6 +21,7 @@ import 'package:services/src/presentation/widgets/services_empty_state.dart';
 import 'package:services/src/presentation/widgets/services_filter_bar.dart';
 import 'package:services/src/routes/service_routes.dart';
 import 'package:shared_ui/shared_ui.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Provider services screen — Figma `4715:25922` (dashboard) and
 /// `4715:23588` (empty state).
@@ -263,24 +264,28 @@ class _MyServicesContentState extends State<_MyServicesContent> {
     ProviderServiceStatus current,
   ) {
     final bloc = context.read<ServicesListBloc>();
-    showAppActionSheet<void>(
-      context: context,
-      title: 'services.filter_status'.tr(),
-      cancelLabel: 'common.cancel'.tr(),
-      items: [
-        for (final status in const [
-          ProviderServiceStatus.all,
-          ProviderServiceStatus.active,
-          ProviderServiceStatus.inactive,
-        ])
-          AppActionSheetItem(
-            label: _statusFilterLabel(status),
-            onTap: () {
-              if (status == current) return;
-              bloc.add(ServicesListStatusChangedEvent(status));
-            },
-          ),
-      ],
+    SheetNavigator.push<void>(
+      context,
+      AppActionList(
+        items: [
+          for (final status in const [
+            ProviderServiceStatus.all,
+            ProviderServiceStatus.active,
+            ProviderServiceStatus.inactive,
+          ])
+            AppActionSheetItem(
+              label: _statusFilterLabel(status),
+              onTap: () {
+                if (status == current) return;
+                bloc.add(ServicesListStatusChangedEvent(status));
+              },
+            ),
+        ],
+      ),
+      settings: SheetRouteSettings(
+        title: 'services.filter_status'.tr(),
+        padChild: false,
+      ),
     );
   }
 

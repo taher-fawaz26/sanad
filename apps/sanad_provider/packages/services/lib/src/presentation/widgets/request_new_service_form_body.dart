@@ -8,6 +8,7 @@ import 'package:services/src/domain/entities/category_record_entity.dart';
 import 'package:services/src/presentation/bloc/request_new_service/request_new_service_bloc.dart';
 import 'package:services/src/presentation/widgets/add_service_images_field.dart';
 import 'package:shared_ui/shared_ui.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// The Request New Service form's fields.
 ///
@@ -122,19 +123,25 @@ class RequestNewServiceFormBodyState extends State<RequestNewServiceFormBody> {
 
   Future<void> _pickCategory() async {
     final bloc = context.read<RequestNewServiceBloc>();
-    final selected = await showAppSelectSheet<CategoryRecordEntity>(
-      context: context,
-      title: 'services.request_new_service.category_name_label'.tr(),
-      searchHint: 'common.search_hint'.tr(),
-      singleSelect: true,
-      getId: (category) => category.id,
-      searchFilter: (category, query) =>
-          category.name.toLowerCase().contains(query),
-      loadItems: () => _loadCategories(bloc),
-      errorTextBuilder: (e) => e is Failure ? e.message : e.toString(),
-      retryLabel: 'common.retry'.tr(),
-      itemBuilder: (context, category, isSelected, onTap) =>
-          AppTableRow(title: category.name, onTap: onTap),
+    final selected = await SheetNavigator.push<List<CategoryRecordEntity>>(
+      context,
+      AppSelectSheet<CategoryRecordEntity>(
+        confirmLabel: '',
+        searchHint: 'common.search_hint'.tr(),
+        singleSelect: true,
+        getId: (category) => category.id,
+        searchFilter: (category, query) =>
+            category.name.toLowerCase().contains(query),
+        loadItems: () => _loadCategories(bloc),
+        errorTextBuilder: (e) => e is Failure ? e.message : e.toString(),
+        retryLabel: 'common.retry'.tr(),
+        itemBuilder: (context, category, isSelected, onTap) =>
+            AppTableRow(title: category.name, onTap: onTap),
+      ),
+      settings: SheetRouteSettings(
+        title: 'services.request_new_service.category_name_label'.tr(),
+        padChild: false,
+      ),
     );
     if (selected == null || selected.isEmpty) return;
 
@@ -166,6 +173,9 @@ class RequestNewServiceFormBodyState extends State<RequestNewServiceFormBody> {
     if (!RequiredValidator.isValid(value)) {
       return 'services.request_new_service.name_required_error'.tr();
     }
+    if (!BusinessNameValidator.isValid(value)) {
+      return 'validation.invalid_name'.tr();
+    }
     if (!LengthValidator.isValid(value, maxLength: 255)) {
       return 'validation.length_max'.tr(
         namedArgs: {'max': '255'},
@@ -175,6 +185,9 @@ class RequestNewServiceFormBodyState extends State<RequestNewServiceFormBody> {
   }
 
   String? _validateDescription(String? value) {
+    if (!MeaningfulTextValidator.isValid(value)) {
+      return 'validation.meaningless_text'.tr();
+    }
     if (!LengthValidator.isValid(value, maxLength: 500)) {
       return 'validation.length_max'.tr(
         namedArgs: {'max': '500'},

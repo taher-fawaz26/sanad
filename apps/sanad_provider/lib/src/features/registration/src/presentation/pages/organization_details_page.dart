@@ -35,6 +35,9 @@ class OrganizationDetailsPage extends HookWidget {
     String? businessNameValidator(String? value) {
       final requiredError = required(value);
       if (requiredError != null) return requiredError;
+      if (!BusinessNameValidator.isValid(value)) {
+        return 'validation.invalid_name'.tr();
+      }
       if (!LengthValidator.isValid(value, minLength: 3, maxLength: 255)) {
         return 'validation.length_range'.tr(
           namedArgs: {'min': '3', 'max': '255'},

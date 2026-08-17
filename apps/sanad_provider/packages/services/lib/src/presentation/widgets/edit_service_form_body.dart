@@ -90,6 +90,9 @@ class EditServiceFormBodyState extends State<EditServiceFormBody> {
   }
 
   String? _validateDescription(String? value) {
+    if (!MeaningfulTextValidator.isValid(value)) {
+      return 'validation.meaningless_text'.tr();
+    }
     if (!LengthValidator.isValid(value, maxLength: 500)) {
       return 'validation.length_max'.tr(
         namedArgs: {'max': '500'},

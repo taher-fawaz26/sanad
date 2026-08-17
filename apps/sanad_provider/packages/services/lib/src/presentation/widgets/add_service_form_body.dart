@@ -8,6 +8,7 @@ import 'package:services/src/domain/entities/catalog_service_entity.dart';
 import 'package:services/src/presentation/bloc/add_service/add_service_bloc.dart';
 import 'package:services/src/presentation/widgets/add_service_images_field.dart';
 import 'package:shared_ui/shared_ui.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// The Add Service form's fields.
 ///
@@ -151,19 +152,25 @@ class AddServiceFormBodyState extends State<AddServiceFormBody> {
   /// shown to the user; the id is retained internally as `serviceId`.
   Future<void> _pickService() async {
     final bloc = context.read<AddServiceBloc>();
-    final selected = await showAppSelectSheet<CatalogServiceEntity>(
-      context: context,
-      title: 'services.add_service.service_name_label'.tr(),
-      searchHint: 'common.search_hint'.tr(),
-      singleSelect: true,
-      getId: (service) => service.id,
-      searchFilter: (service, query) =>
-          service.name.toLowerCase().contains(query),
-      loadItems: () => _loadCatalog(bloc),
-      errorTextBuilder: (e) => e is Failure ? e.message : e.toString(),
-      retryLabel: 'common.retry'.tr(),
-      itemBuilder: (context, service, isSelected, onTap) =>
-          AppTableRow(title: service.name, onTap: onTap),
+    final selected = await SheetNavigator.push<List<CatalogServiceEntity>>(
+      context,
+      AppSelectSheet<CatalogServiceEntity>(
+        confirmLabel: '',
+        searchHint: 'common.search_hint'.tr(),
+        singleSelect: true,
+        getId: (service) => service.id,
+        searchFilter: (service, query) =>
+            service.name.toLowerCase().contains(query),
+        loadItems: () => _loadCatalog(bloc),
+        errorTextBuilder: (e) => e is Failure ? e.message : e.toString(),
+        retryLabel: 'common.retry'.tr(),
+        itemBuilder: (context, service, isSelected, onTap) =>
+            AppTableRow(title: service.name, onTap: onTap),
+      ),
+      settings: SheetRouteSettings(
+        title: 'services.add_service.service_name_label'.tr(),
+        padChild: false,
+      ),
     );
     if (selected == null || selected.isEmpty) return;
 
@@ -188,6 +195,9 @@ class AddServiceFormBodyState extends State<AddServiceFormBody> {
   }
 
   String? _validateDescription(String? value) {
+    if (!MeaningfulTextValidator.isValid(value)) {
+      return 'validation.meaningless_text'.tr();
+    }
     if (!LengthValidator.isValid(value, maxLength: 500)) {
       return 'validation.length_max'.tr(
         namedArgs: {'max': '500'},

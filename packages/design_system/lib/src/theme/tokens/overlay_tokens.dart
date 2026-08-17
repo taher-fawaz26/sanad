@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 /// Native-chrome / overlay color tokens shared by the overlay component
-/// family — [AppBottomSheet], [AppActionSheet], [AppBackdrop] — and the
-/// shared drag-handle indicator.
+/// family — `SheetNavigation`'s own chrome, [AppActionList], [AppBackdrop]
+/// — and the shared drag-handle indicator.
 ///
 /// Figma defines a distinct "Ink" / "Sky (chrome)" variable collection for
 /// these native-chrome surfaces, separate from the [DarkPalette]/[SkyPalette]
@@ -30,9 +30,10 @@ abstract final class OverlayTokens {
 
   static const double scrimOpacity = 0.7;
 
-  /// Scrim behind [AppActionSheet] / dialogs (`_Partials/Overlay`, `40:8737`).
+  /// Scrim behind [AppActionList] / dialogs (`_Partials/Overlay`, `40:8737`).
   ///
-  /// Do **not** use for [AppBottomSheet] — Figma `Views / Bottom Sheets`
-  /// (`40:9140`) has no dimming barrier.
+  /// Pass `SheetRouteSettings(barrierColor: Colors.transparent)` for a
+  /// Figma `Views / Bottom Sheets` (`40:9140`)-style sheet with no dimming
+  /// barrier.
   static Color scrimColor() => ink900.withValues(alpha: scrimOpacity);
 }

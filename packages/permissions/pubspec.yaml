@@ -21,6 +21,8 @@ dependencies:
     sdk: flutter
   go_router: ^17.3.0
   permission_handler: ^11.3.1
+  sheet_navigation:
+    path: ../sheet_navigation
 
 dev_dependencies:
   flutter_test:

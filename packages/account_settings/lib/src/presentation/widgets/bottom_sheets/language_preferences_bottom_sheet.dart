@@ -14,10 +14,7 @@ Future<String?> showLanguagePreferencesBottomSheet({
   return SheetNavigator.push<String>(
     context,
     LanguagePreferencesBottomSheet(initialLanguageCode: initialLanguageCode),
-    settings: const SheetRouteSettings(
-      enableDrag: false,
-      padChild: false,
-    ),
+    settings: const SheetRouteSettings(enableDrag: false),
   );
 }
 
@@ -59,44 +56,42 @@ class _LanguagePreferencesBottomSheetState
     final colors = context.appColors;
     final typography = context.appTypography;
 
-    return AppActionSheet(
-      showCancel: false,
-      footer: AppButton(
-        label: 'common.save'.tr(),
-        onPressed: _save,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _DragHandle(color: colors.border),
-          SizedBox(height: AppSpacing.md),
-          Text(
-            'settings.section_language_preferences'.tr(),
-            textAlign: TextAlign.center,
-            style: typography.title3.copyWith(
-              color: colors.primary,
-              fontWeight: FontWeight.w600,
-            ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _DragHandle(color: colors.border),
+        SizedBox(height: AppSpacing.md),
+        Text(
+          'settings.section_language_preferences'.tr(),
+          textAlign: TextAlign.center,
+          style: typography.title3.copyWith(
+            color: colors.primary,
+            fontWeight: FontWeight.w600,
           ),
-          SizedBox(height: AppSpacing.md),
-          for (var i = 0; i < _options.length; i++) ...[
-            if (i > 0) const AppDivider(),
-            AppTableRow(
-              title: _options[i].labelKey.tr(),
-              trailing: AppTableTrailing.icon,
-              trailingIcon: AppRadio<String>(
-                value: _options[i].code,
-                groupValue: _selectedCode,
-                onChanged: (value) {
-                  if (value != null) _select(value);
-                },
-              ),
-              onTap: () => _select(_options[i].code),
+        ),
+        SizedBox(height: AppSpacing.md),
+        for (var i = 0; i < _options.length; i++) ...[
+          if (i > 0) const AppDivider(),
+          AppTableRow(
+            title: _options[i].labelKey.tr(),
+            trailing: AppTableTrailing.icon,
+            trailingIcon: AppRadio<String>(
+              value: _options[i].code,
+              groupValue: _selectedCode,
+              onChanged: (value) {
+                if (value != null) _select(value);
+              },
             ),
-          ],
+            onTap: () => _select(_options[i].code),
+          ),
         ],
-      ),
+        SizedBox(height: AppSpacing.xl),
+        AppButton(
+          label: 'common.save'.tr(),
+          onPressed: _save,
+        ),
+      ],
     );
   }
 }

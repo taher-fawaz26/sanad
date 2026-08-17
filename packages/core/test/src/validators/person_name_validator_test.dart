@@ -42,5 +42,23 @@ void main() {
         expect(PersonNameValidator.isValid('   '), isFalse);
       });
     });
+
+    group('isValid with minWords: 1', () {
+      test('accepts a single word name', () {
+        expect(PersonNameValidator.isValid('Ahmed', minWords: 1), isTrue);
+      });
+
+      test('still rejects symbols-only input', () {
+        expect(PersonNameValidator.isValid('@@@', minWords: 1), isFalse);
+      });
+
+      test('still rejects digits', () {
+        expect(PersonNameValidator.isValid('123', minWords: 1), isFalse);
+      });
+
+      test('still accepts a multi-word name', () {
+        expect(PersonNameValidator.isValid('John Smith', minWords: 1), isTrue);
+      });
+    });
   });
 }

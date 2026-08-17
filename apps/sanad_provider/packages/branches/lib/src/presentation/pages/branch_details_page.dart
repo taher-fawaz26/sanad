@@ -24,6 +24,7 @@ import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
 import 'package:maps/maps.dart';
 import 'package:shared_ui/shared_ui.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 import 'package:workers/workers.dart';
 
 /// Realistic mock used only to skeletonize the real details layout via
@@ -418,39 +419,40 @@ class _BranchDetailsContent extends StatelessWidget {
     final isActive = branch.isAvailable;
     final bloc = context.read<BranchDetailsBloc>();
     final canUpdate = sl<AuthorizationReader>().can(BranchPermissions.update);
-    showAppActionSheet<void>(
-      context: context,
-      items: [
-        if (canUpdate)
-          AppActionSheetItem(
-            label: isActive
-                ? 'branches.details.action_set_maintenance'.tr()
-                : 'branches.details.action_set_active'.tr(),
-            leading: Icon(
-              isActive
-                  ? Icons.pause_circle_outline
-                  : Icons.check_circle_outline,
+    SheetNavigator.push<void>(
+      context,
+      AppActionList(
+        items: [
+          if (canUpdate)
+            AppActionSheetItem(
+              label: isActive
+                  ? 'branches.details.action_set_maintenance'.tr()
+                  : 'branches.details.action_set_active'.tr(),
+              leading: Icon(
+                isActive
+                    ? Icons.pause_circle_outline
+                    : Icons.check_circle_outline,
+              ),
+              onTap: () {
+                bloc.add(BranchStatusToggleEvent(isAvailable: !isActive));
+              },
             ),
+          // No backend permission for delete yet (same gap as the row swipe
+          // action) — stays unconditional; it is a coming-soon stub regardless.
+          AppActionSheetItem(
+            label: 'branches.details.action_delete'.tr(),
+            leading: const Icon(Icons.delete_outline),
+            isDestructive: true,
             onTap: () {
-              Navigator.of(context).pop();
-              bloc.add(BranchStatusToggleEvent(isAvailable: !isActive));
+              _showComingSoon(
+                context,
+                'branches.details.delete_coming_soon'.tr(),
+              );
             },
           ),
-        // No backend permission for delete yet (same gap as the row swipe
-        // action) — stays unconditional; it is a coming-soon stub regardless.
-        AppActionSheetItem(
-          label: 'branches.details.action_delete'.tr(),
-          leading: const Icon(Icons.delete_outline),
-          isDestructive: true,
-          onTap: () {
-            Navigator.of(context).pop();
-            _showComingSoon(
-              context,
-              'branches.details.delete_coming_soon'.tr(),
-            );
-          },
-        ),
-      ],
+        ],
+      ),
+      settings: const SheetRouteSettings(padChild: false),
     );
   }
 
