@@ -1,3 +1,4 @@
+import 'package:document_flow/src/domain/entities/document_repair_target.dart';
 import 'package:document_flow/src/domain/entities/document_type.dart';
 import 'package:document_flow/src/domain/entities/extracted_field.dart';
 import 'package:equatable/equatable.dart';
@@ -41,12 +42,28 @@ class ExtractedDocument extends Equatable {
     required this.type,
     required this.fields,
     this.issue = DocumentIssue.none,
+    this.issueDetail,
+    this.repair,
     this.raw = const {},
     this.media = const [],
   });
 
   final DocumentType type;
   final DocumentIssue issue;
+
+  /// A dynamic, already-localized detail message for [issue] (e.g. a backend
+  /// rejection message such as "couldn't read license_number…"). When present
+  /// the review UI shows this in the error banner in place of the static,
+  /// issue-generic copy; when null the static message is used. Always null for
+  /// a cleanly extracted document ([DocumentIssue.none]).
+  final String? issueDetail;
+
+  /// What must be replaced to fix [issue], when it's more than the default
+  /// single-file replace — e.g. a front/back mismatch requiring both sides.
+  /// Null (the common case) means the existing single-file replace action
+  /// applies as-is.
+  final DocumentRepairTarget? repair;
+
   final List<ExtractedField> fields;
   final Map<String, String> raw;
   final List<DocumentMediaRef> media;
@@ -54,7 +71,15 @@ class ExtractedDocument extends Equatable {
   bool get ok => issue == DocumentIssue.none;
 
   @override
-  List<Object?> get props => [type, issue, fields, raw, media];
+  List<Object?> get props => [
+    type,
+    issue,
+    issueDetail,
+    repair,
+    fields,
+    raw,
+    media,
+  ];
 }
 
 /// The combined outcome of an extraction call across every requested document.

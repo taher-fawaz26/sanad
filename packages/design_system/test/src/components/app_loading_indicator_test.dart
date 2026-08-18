@@ -1,8 +1,8 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lottie/lottie.dart';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -23,22 +23,23 @@ Future<void> _pump(WidgetTester tester, Widget child) async {
 
 void main() {
   group('AppLoadingIndicator', () {
-    testWidgets('renders a SpinKitFadingCircle without throwing', (
+    testWidgets('renders a looping Lottie animation without throwing', (
       tester,
     ) async {
       await _pump(tester, const AppLoadingIndicator());
 
       expect(find.byType(AppLoadingIndicator), findsOneWidget);
-      expect(find.byType(SpinKitFadingCircle), findsOneWidget);
+      expect(find.byType(LottieBuilder), findsOneWidget);
     });
 
     testWidgets('respects custom size', (tester) async {
       await _pump(tester, const AppLoadingIndicator(size: 64));
 
-      final spinner = tester.widget<SpinKitFadingCircle>(
-        find.byType(SpinKitFadingCircle),
+      final lottie = tester.widget<LottieBuilder>(
+        find.byType(LottieBuilder),
       );
-      expect(spinner.size, 64.0);
+      expect(lottie.width, 64.0);
+      expect(lottie.height, 64.0);
     });
   });
 }

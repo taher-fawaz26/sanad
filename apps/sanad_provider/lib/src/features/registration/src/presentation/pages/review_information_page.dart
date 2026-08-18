@@ -9,6 +9,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sanad_provider/src/features/registration/src/presentation/widgets/profile_completion_error_dialog.dart';
 import 'package:sanad_provider/src/features/registration/src/presentation/widgets/registration_header.dart';
+import 'package:sanad_provider/src/features/registration/src/presentation/widgets/registration_logo.dart';
+import 'package:sanad_provider/src/features/registration/src/presentation/widgets/registration_sliver_shell.dart';
 import 'package:sanad_provider/src/features/registration/src/presentation/widgets/select_capture_method_sheet.dart';
 import 'package:sanad_provider/src/features/registration/src/routes/registration_routes.dart';
 import 'package:shared_ui/shared_ui.dart';
@@ -36,8 +38,7 @@ class _ReviewInformationPageState extends State<ReviewInformationPage> {
   /// type with a different [FailedStage] — those are not a submit mutation
   /// and must not surface the submit dialog/retry sheet, so they map to
   /// [RequestStatus.initial] (handled elsewhere on this page).
-  RequestStatus _submitStatus(DocumentFlowState state) => switch (state
-      .phase) {
+  RequestStatus _submitStatus(DocumentFlowState state) => switch (state.phase) {
     PhaseSubmitting() => RequestStatus.loading,
     PhaseSuccess() => RequestStatus.success,
     PhaseFailure(stage: FailedStage.submit) => RequestStatus.failure,
@@ -61,6 +62,20 @@ class _ReviewInformationPageState extends State<ReviewInformationPage> {
     if ((retry ?? false) && context.mounted) {
       context.read<DocumentFlowBloc>().add(const SubmitRequested());
     }
+  }
+
+  /// Routes "Replace Document" for the Emirates ID section: a
+  /// [DocumentRepairScope.wholeDocument] issue (e.g. a front/back mismatch)
+  /// needs both sides replaced together, so it opens the dedicated two-sided
+  /// repair page; every other case (including the default `repair == null`)
+  /// keeps the existing single-file replace.
+  void _onReplaceRequested(BuildContext context, ExtractedDocument section) {
+    final repair = section.repair;
+    if (repair != null && repair.scope == DocumentRepairScope.wholeDocument) {
+      context.push(RegistrationRoutes.repairEmiratesId, extra: repair);
+      return;
+    }
+    _replace(context, DocumentType.emiratesIdFront);
   }
 
   Future<void> _replace(BuildContext context, DocumentType type) async {
@@ -122,12 +137,23 @@ class _ReviewInformationPageState extends State<ReviewInformationPage> {
     ExtractedDocument? emiratesId,
     ExtractedDocument? tradeLicence,
   ) {
-    return SingleChildScrollView(
+    final title = 'registration.review_title'.tr();
+    return RegistrationSliverShell(
+      headerBuilder: (context, t) =>
+          RegistrationLogo(collapseProgress: t, collapsedTitle: title),
+      footer: AppButtonPresets.primary(
+        label: 'registration.continue_to_dashboard'.tr(),
+        onPressed: extracted.allOk
+            ? () => context.read<DocumentFlowBloc>().add(
+                const SubmitRequested(),
+              )
+            : null,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           RegistrationHeader(
-            title: 'registration.review_title'.tr(),
+            title: title,
             subtitle: Text('registration.review_subtitle'.tr()),
           ),
           SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
@@ -137,9 +163,10 @@ class _ReviewInformationPageState extends State<ReviewInformationPage> {
               issue: emiratesId.issue,
               fields: _emiratesIdFields(emiratesId.raw),
               replaceLabel: 'registration.replace_document'.tr(),
-              resolveIssueLabels: _resolveIssueLabels,
+              resolveIssueLabels: (issue) =>
+                  _resolveIssueLabels(issue, detail: emiratesId.issueDetail),
               thumbnail: state.documentAt(DocumentType.emiratesIdFront)?.asset,
-              onReplace: () => _replace(context, DocumentType.emiratesIdFront),
+              onReplace: () => _onReplaceRequested(context, emiratesId),
             ),
           if (tradeLicence != null) ...[
             SizedBox(height: responsiveDimension(AppSpacing.xl)),
@@ -148,51 +175,51 @@ class _ReviewInformationPageState extends State<ReviewInformationPage> {
               issue: tradeLicence.issue,
               fields: _tradeLicenceFields(tradeLicence.raw),
               replaceLabel: 'registration.replace_document'.tr(),
-              resolveIssueLabels: _resolveIssueLabels,
+              resolveIssueLabels: (issue) =>
+                  _resolveIssueLabels(issue, detail: tradeLicence.issueDetail),
               thumbnail: state.documentAt(DocumentType.tradeLicense)?.asset,
               onReplace: () => _replace(context, DocumentType.tradeLicense),
             ),
           ],
-          SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-          AppButtonPresets.primary(
-            label: 'registration.continue_to_dashboard'.tr(),
-            onPressed: extracted.allOk
-                ? () => context.read<DocumentFlowBloc>().add(
-                    const SubmitRequested(),
-                  )
-                : null,
-          ),
         ],
       ),
     );
   }
 
-  DocumentIssueLabels _resolveIssueLabels(DocumentIssue issue) =>
-      switch (issue) {
-        DocumentIssue.none => DocumentIssueLabels(
-          badgeLabel: 'registration.extracted_success'.tr(),
-          badgeType: AppStatusBadgeType.success,
-        ),
-        DocumentIssue.imageUnclear => DocumentIssueLabels(
-          badgeLabel: 'registration.image_unclear'.tr(),
-          badgeType: AppStatusBadgeType.warning,
-          bannerTitle: 'registration.image_unclear'.tr(),
-          bannerMessage: 'registration.image_unclear_message'.tr(),
-        ),
-        DocumentIssue.alreadyRegistered => DocumentIssueLabels(
-          badgeLabel: 'registration.emirates_id_already_registered'.tr(),
-          badgeType: AppStatusBadgeType.alert,
-          bannerTitle: 'registration.emirates_id_already_registered'.tr(),
-          bannerMessage: 'registration.emirates_id_already_registered_message'
-              .tr(),
-        ),
-        DocumentIssue.expired => DocumentIssueLabels(
-          badgeLabel: 'registration.expired'.tr(),
-          badgeType: AppStatusBadgeType.alert,
-          bannerTitle: 'registration.expired'.tr(),
-          bannerMessage: 'registration.expired_message'.tr(),
-        ),
-      };
+  /// [detail] is the affected document's [ExtractedDocument.issueDetail] — a
+  /// dynamic, already-localized backend message (e.g. from an
+  /// `EXTRACTION_INCOMPLETE` rejection). When present it replaces the static
+  /// banner copy; when null the issue-generic message is used, so all existing
+  /// states render exactly as before.
+  DocumentIssueLabels _resolveIssueLabels(
+    DocumentIssue issue, {
+    String? detail,
+  }) => switch (issue) {
+    DocumentIssue.none => DocumentIssueLabels(
+      badgeLabel: 'registration.extracted_success'.tr(),
+      badgeType: AppStatusBadgeType.success,
+    ),
+    DocumentIssue.imageUnclear => DocumentIssueLabels(
+      badgeLabel: 'registration.image_unclear'.tr(),
+      badgeType: AppStatusBadgeType.warning,
+      bannerTitle: 'registration.image_unclear'.tr(),
+      bannerMessage: (detail != null && detail.isNotEmpty)
+          ? detail
+          : 'registration.image_unclear_message'.tr(),
+    ),
+    DocumentIssue.alreadyRegistered => DocumentIssueLabels(
+      badgeLabel: 'registration.emirates_id_already_registered'.tr(),
+      badgeType: AppStatusBadgeType.alert,
+      bannerTitle: 'registration.emirates_id_already_registered'.tr(),
+      bannerMessage: 'registration.emirates_id_already_registered_message'.tr(),
+    ),
+    DocumentIssue.expired => DocumentIssueLabels(
+      badgeLabel: 'registration.expired'.tr(),
+      badgeType: AppStatusBadgeType.alert,
+      bannerTitle: 'registration.expired'.tr(),
+      bannerMessage: 'registration.expired_message'.tr(),
+    ),
+  };
 
   List<ExtractedField> _emiratesIdFields(Map<String, String> r) => [
     ExtractedField(

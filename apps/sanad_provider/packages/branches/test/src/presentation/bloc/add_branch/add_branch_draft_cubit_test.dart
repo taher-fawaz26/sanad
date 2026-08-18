@@ -12,7 +12,7 @@ import 'package:services/services.dart';
 import 'package:workers/workers.dart';
 
 void main() {
-  const testCity = CityEntity(id: 'city-1', nameEn: 'Dubai', nameAr: 'دبي');
+  const testCity = CityEntity(id: 'city-1', name: 'Dubai');
   const testManager = BranchManagerEntity(
     id: 'mgr-1',
     fullName: 'Test Manager',
@@ -105,11 +105,7 @@ void main() {
         build: () => cubit,
         seed: () => const AddBranchDraft(selectedCity: testCity),
         act: (c) => c.updateCity(
-          const CityEntity(
-            id: 'city-2',
-            nameEn: 'Abu Dhabi',
-            nameAr: 'أبو ظبي',
-          ),
+          const CityEntity(id: 'city-2', name: 'Abu Dhabi'),
         ),
         expect: () => [
           isA<AddBranchDraft>().having(

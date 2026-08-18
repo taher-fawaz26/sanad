@@ -7,9 +7,7 @@ void main() {
     'id': 'role_1',
     'name': 'branch-manager',
     'displayName': 'Branch Manager',
-    'displayNameAr': 'مدير الفرع',
     'description': 'Manages a branch',
-    'descriptionAr': null,
     'userType': 'companyProvider',
     'isSystem': true,
     'permissions': [
@@ -28,9 +26,7 @@ void main() {
       expect(dto.id, 'role_1');
       expect(dto.name, 'branch-manager');
       expect(dto.displayName, 'Branch Manager');
-      expect(dto.displayNameAr, 'مدير الفرع');
       expect(dto.description, 'Manages a branch');
-      expect(dto.descriptionAr, isNull);
       expect(dto.userType, RolePersonaType.companyProvider);
       expect(dto.isSystem, isTrue);
       expect(dto.permissions, hasLength(1));

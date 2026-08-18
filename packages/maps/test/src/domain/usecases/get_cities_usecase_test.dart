@@ -13,21 +13,19 @@ void main() {
 
   const uaeCountry = CountryEntity(
     id: 'country-ae-id',
-    nameEn: 'United Arab Emirates',
-    nameAr: 'الإمارات العربية المتحدة',
+    name: 'United Arab Emirates',
     code: 'AE',
   );
 
   const otherCountry = CountryEntity(
     id: 'country-other-id',
-    nameEn: 'Other Country',
-    nameAr: 'دولة أخرى',
+    name: 'Other Country',
     code: 'XX',
   );
 
   const cities = [
-    CityEntity(id: 'city-dubai', nameEn: 'Dubai', nameAr: 'دبي'),
-    CityEntity(id: 'city-abudhabi', nameEn: 'Abu Dhabi', nameAr: 'أبوظبي'),
+    CityEntity(id: 'city-dubai', name: 'Dubai'),
+    CityEntity(id: 'city-abudhabi', name: 'Abu Dhabi'),
   ];
 
   setUp(() {

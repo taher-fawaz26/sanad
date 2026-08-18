@@ -7,6 +7,11 @@ import 'package:provider_rbac/src/domain/entities/role_persona_type.dart';
 /// Regression tests pinned to the LIVE `Provider RBAC` Swagger response
 /// shapes (verified against dev-api.trysanad.us). If the backend changes the
 /// envelope or a field, these fail loudly rather than silently mis-parsing.
+///
+/// `displayNameAr`/`descriptionAr` were removed from these responses in the
+/// backend's language-negotiation migration: the language of `displayName`/
+/// `description` now depends on the request's `x-lang`/`Accept-Language`
+/// header instead of a separate Arabic-suffixed field.
 void main() {
   group('GET /provider/roles — PaginatedRolesResponseDto', () {
     // Verbatim shape from the live endpoint.
@@ -16,9 +21,7 @@ void main() {
           'id': 'b79039e4-9618-4019-b94e-793545bfe51b',
           'name': 'branch-manager',
           'displayName': 'Branch Manager',
-          'displayNameAr': 'مدير الفرع',
           'description': 'Manage branches and view workers and services',
-          'descriptionAr': 'إدارة الفروع وعرض العاملين والخدمات',
           'userType': 'worker',
           'isSystem': true,
           'permissions': [
@@ -26,7 +29,6 @@ void main() {
               'id': '5725d361-2e55-4000-a686-188b43cee341',
               'action': 'provider:branch:view',
               'displayName': 'View branches',
-              'displayNameAr': 'عرض الفروع',
               'description': 'View branch lists and details',
               'resource': 'branch',
               'isAdmin': false,
@@ -37,9 +39,7 @@ void main() {
           'id': '6487cbc1-a66f-4b56-b6ce-38dc48754530',
           'name': 'worker-basic',
           'displayName': 'Worker',
-          'displayNameAr': 'عامل',
           'description': 'View assigned branches and services',
-          'descriptionAr': 'عرض الفروع والخدمات المعيّنة',
           'userType': 'worker',
           'isSystem': true,
           'permissions': <dynamic>[],
@@ -67,7 +67,6 @@ void main() {
       final role = parsePage(json, RoleDto.fromJson).items.first.toEntity();
       expect(role.name, 'branch-manager');
       expect(role.displayName, 'Branch Manager');
-      expect(role.displayNameAr, 'مدير الفرع');
       expect(role.userType, RolePersonaType.worker);
       expect(role.isSystem, isTrue);
       expect(role.permissions.single.action, 'provider:branch:view');
@@ -81,7 +80,6 @@ void main() {
         'id': '0f2eb02d-ec53-469a-9808-9720a0b0f2b4',
         'action': 'provider:branch:create',
         'displayName': 'Create branches',
-        'displayNameAr': 'إنشاء الفروع',
         'description': 'Create new branches',
         'resource': 'branch',
         'isAdmin': false,
@@ -90,7 +88,6 @@ void main() {
         'id': 'de350937-c14c-4e77-88a8-fbdf0767e549',
         'action': 'provider:worker:view',
         'displayName': 'View workers',
-        'displayNameAr': 'عرض العاملين',
         'description': 'View worker and invitation details',
         'resource': 'worker',
         'isAdmin': false,
@@ -103,7 +100,6 @@ void main() {
       final first = permissions.first.toEntity();
       expect(first.action, 'provider:branch:create');
       expect(first.resource, 'branch');
-      expect(first.displayNameAr, 'إنشاء الفروع');
       expect(first.isAdmin, isFalse);
     });
 

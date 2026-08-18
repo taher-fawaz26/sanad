@@ -21,9 +21,13 @@ abstract interface class OrganizationSettingsCacheDataSource {
 
 class OrganizationSettingsCacheDataSourceImpl
     implements OrganizationSettingsCacheDataSource {
-  const OrganizationSettingsCacheDataSourceImpl(this._storage);
+  const OrganizationSettingsCacheDataSourceImpl(
+    this._storage, {
+    required String Function() resolveLanguageCode,
+  }) : _resolveLanguageCode = resolveLanguageCode;
 
   final LocalStorage _storage;
+  final String Function() _resolveLanguageCode;
 
   static const _boxName = HiveBoxes.organizationSettings;
 
@@ -77,7 +81,11 @@ class OrganizationSettingsCacheDataSourceImpl
     boxName: _boxName,
   );
 
-  String _profileKey(String userId) => 'profile_$userId';
+  /// Includes the active app language so a locale switch is a cache miss
+  /// instead of serving the previous language's `businessProfile.description`
+  /// (and category names) until the next network refresh.
+  String _profileKey(String userId) =>
+      'profile_${userId}_${_resolveLanguageCode()}';
   String _workingHoursKey(String userId) => 'working_hours_$userId';
 
   /// Hive returns nested maps as `Map<dynamic, dynamic>` (not

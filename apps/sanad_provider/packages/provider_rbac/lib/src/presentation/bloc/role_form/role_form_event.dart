@@ -31,25 +31,15 @@ class SubmitCreateRoleEvent extends RoleFormEvent {
   const SubmitCreateRoleEvent({
     required this.name,
     required this.displayName,
-    this.displayNameAr,
     this.description,
-    this.descriptionAr,
   });
 
   final String name;
   final String displayName;
-  final String? displayNameAr;
   final String? description;
-  final String? descriptionAr;
 
   @override
-  List<Object?> get props => [
-    name,
-    displayName,
-    displayNameAr,
-    description,
-    descriptionAr,
-  ];
+  List<Object?> get props => [name, displayName, description];
 }
 
 class SubmitUpdateRoleEvent extends RoleFormEvent {
@@ -57,25 +47,14 @@ class SubmitUpdateRoleEvent extends RoleFormEvent {
     required this.roleId,
     required this.name,
     required this.displayName,
-    this.displayNameAr,
     this.description,
-    this.descriptionAr,
   });
 
   final String roleId;
   final String name;
   final String displayName;
-  final String? displayNameAr;
   final String? description;
-  final String? descriptionAr;
 
   @override
-  List<Object?> get props => [
-    roleId,
-    name,
-    displayName,
-    displayNameAr,
-    description,
-    descriptionAr,
-  ];
+  List<Object?> get props => [roleId, name, displayName, description];
 }

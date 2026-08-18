@@ -101,6 +101,7 @@ class _AddWorkerPageState extends State<AddWorkerPage> {
           type: formBody.type!,
           email: formBody.email!,
           phone: formBody.phone!,
+          roleIds: formBody.roleIds,
         ),
       ),
     );

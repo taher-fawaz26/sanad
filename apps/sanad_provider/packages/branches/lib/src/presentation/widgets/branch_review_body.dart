@@ -102,7 +102,7 @@ class _BranchReviewBodyState extends State<BranchReviewBody> {
               branchTypeLabel: branchTypeLabel(draft.branchType),
               position: position,
               address: draft.branchAddress,
-              cityName: draft.selectedCity?.nameEn,
+              cityName: draft.selectedCity?.name,
               phone: draft.phone,
               managerName: draft.selectedManager?.fullName,
               isCustomSchedule: draft.scheduleMode == BranchScheduleMode.custom,

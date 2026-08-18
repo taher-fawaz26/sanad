@@ -30,7 +30,7 @@ void main() {
     ),
   ];
 
-  const testCity = CityEntity(id: 'city-1', nameEn: 'Dubai', nameAr: 'دبي');
+  const testCity = CityEntity(id: 'city-1', name: 'Dubai');
   const testManager = BranchManagerEntity(
     id: 'mgr-1',
     fullName: 'Test Manager',
@@ -293,7 +293,6 @@ void main() {
       branchAddress: '123 Main St',
       city: 'Dubai',
       cityId: 'city-1',
-      cityNameAr: 'دبي',
       branchPhone: '+971501234567',
       isAvailable: true,
       availabilityMode: BranchAvailabilityMode.custom,

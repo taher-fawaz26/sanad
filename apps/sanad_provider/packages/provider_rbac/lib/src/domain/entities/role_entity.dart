@@ -11,9 +11,7 @@ class RoleEntity extends Equatable {
     required this.userType,
     required this.isSystem,
     required this.permissions,
-    this.displayNameAr,
     this.description,
-    this.descriptionAr,
   });
 
   final String id;
@@ -21,9 +19,7 @@ class RoleEntity extends Equatable {
   /// e.g. `branch-manager`.
   final String name;
   final String displayName;
-  final String? displayNameAr;
   final String? description;
-  final String? descriptionAr;
   final RolePersonaType userType;
 
   /// System templates are read-only; custom roles belong to the caller's
@@ -36,9 +32,7 @@ class RoleEntity extends Equatable {
     id,
     name,
     displayName,
-    displayNameAr,
     description,
-    descriptionAr,
     userType,
     isSystem,
     permissions,

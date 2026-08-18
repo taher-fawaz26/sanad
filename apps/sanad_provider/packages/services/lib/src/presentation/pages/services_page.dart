@@ -162,7 +162,12 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
                             ),
                           ),
                         ] else ...[
-                          const _DashboardHeader(),
+                          // `_DashboardHeader` used to sit here, above the
+                          // segment — it now lives inside
+                          // `_MyServicesContent`'s collapsing header sliver
+                          // (see the class doc comment) so it scrolls away
+                          // with the rest of the analytics/filter chrome
+                          // instead of staying fixed page-level chrome.
                           // No segmented control at all when the account
                           // isn't an owner: `_ServiceRequestsContent`'s bloc
                           // isn't provided in this case (see
@@ -260,6 +265,80 @@ class _DashboardHeader extends StatelessWidget {
       child: Text(
         'services.dashboard'.tr(),
         style: typography.title3.copyWith(color: colors.textPrimary),
+      ),
+    );
+  }
+}
+
+/// Fixed-height pinned sliver header — keeps [child] (the search field, for
+/// both tabs) visible while the collapsing sliver above it (analytics,
+/// dashboard title, status/type filters, or status chips) scrolls away.
+class _PinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
+  const _PinnedHeaderDelegate({required this.height, required this.child});
+
+  final double height;
+  final Widget child;
+
+  @override
+  double get minExtent => height;
+
+  @override
+  double get maxExtent => height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) => child;
+
+  @override
+  bool shouldRebuild(covariant _PinnedHeaderDelegate oldDelegate) =>
+      oldDelegate.height != height || oldDelegate.child != child;
+}
+
+/// Height of the pinned search header — matches [AppSearchField]'s actual
+/// rendered height (`AppDimension.fieldHeightMd`, not `FieldTokens
+/// .fieldHeight` — a bordered search field is styled from
+/// `SearchBarStyleSpec.height`, a separate, smaller token) plus its
+/// vertical padding. Must be exact: unlike `SliverAppBar.bottom`'s
+/// `PreferredSize` (used by `ProviderBranchesPage`), which tolerates a
+/// mismatch as harmless empty space, `SliverPersistentHeader` hard-asserts
+/// that its child's rendered height matches `minExtent`/`maxExtent`.
+double _searchHeaderHeight() =>
+    AppDimension.fieldHeightMd + (responsiveSpacing(10) * 2);
+
+/// Sliver-native replacement for [AppSkeletonList] for embedding first-page
+/// loading placeholders directly inside a [CustomScrollView] alongside other
+/// slivers — [AppSkeletonList] wraps a plain (non-shrink-wrapped) [ListView],
+/// which cannot be nested inside another scroll view.
+class _SkeletonSliverList extends StatelessWidget {
+  const _SkeletonSliverList({required this.itemBuilder, this.padding});
+
+  /// Number of placeholder rows — matches [AppSkeletonList]'s own default.
+  static const _itemCount = 6;
+
+  final Widget Function(BuildContext context, int index) itemBuilder;
+  final EdgeInsetsGeometry? padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppSkeletonizer.sliver(
+      enabled: true,
+      child: SliverPadding(
+        padding:
+            padding ??
+            EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              0,
+              AppSpacing.xl,
+              AppSpacing.xl,
+            ),
+        sliver: SliverList.separated(
+          itemCount: _itemCount,
+          separatorBuilder: (_, _) => SizedBox(height: AppSpacing.sm),
+          itemBuilder: itemBuilder,
+        ),
       ),
     );
   }
@@ -375,130 +454,149 @@ class _MyServicesContentState extends State<_MyServicesContent> {
     // rarer empty-state transition — see `_ProviderServicesPageState.build`.
     return BlocBuilder<ServicesListBloc, ServicesListState>(
       builder: (context, state) {
-        // Search/filter chrome renders unconditionally — on the very first
-        // load AND on any filter-changed reload, since both set the same
-        // `state.isLoading` flag (there's no separate "reloading" state).
-        // Only the list/cards region below skeletonizes; the search field
-        // and status filter must stay visible and interactive throughout.
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.xl,
-                AppSpacing.md,
-                AppSpacing.xl,
-                0,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (widget.showAnalytics) ...[
-                    const ServiceMetricsSection(),
-                    SizedBox(height: AppSpacing.lg),
-                  ],
-                  ServicesFilterBar(
-                    searchController: _searchController,
-                    onSearchChanged: (query) =>
-                        context.read<ServicesListBloc>().add(
-                          ServicesListSearchChangedEvent(query),
+        // Collapsing-header layout: the Dashboard title, analytics and
+        // status/type filters live in a `SliverToBoxAdapter` (first sliver
+        // below) so they scroll away with the list; the search field is a
+        // pinned `SliverPersistentHeader` so it — and the segmented control
+        // above it, which is the parent page's own fixed chrome — stay
+        // visible while scrolling. Search/filter chrome renders
+        // unconditionally on the very first load AND on any filter-changed
+        // reload (both set the same `state.isLoading` flag); only the
+        // list/cards sliver below skeletonizes.
+        return AppRefreshIndicator(
+          onRefresh: () async => context.read<ServicesListBloc>().add(
+            const ServicesListRefreshEvent(),
+          ),
+          child: AppSwipeActionsGroup(
+            child: CustomScrollView(
+              controller: MainNavScrollController.maybeOf(context),
+              // AppRefreshIndicator needs the child to always accept an
+              // overscroll drag — without this, a short list (few items)
+              // fights the refresh gesture with clamping physics.
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const _DashboardHeader(),
+                      Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          AppSpacing.xl,
+                          AppSpacing.md,
+                          AppSpacing.xl,
+                          AppSpacing.md,
                         ),
-                    statusLabel: state.statusFilter == ProviderServiceStatus.all
-                        ? null
-                        : _statusFilterLabel(state.statusFilter),
-                    onStatusTap: () =>
-                        _showStatusFilterSheet(context, state.statusFilter),
-                    // Type has no backend query param to filter on (see
-                    // ServicesFilterBar's doc comment) — intentionally left
-                    // unwired; the dropdown stays visible but inert.
-                  ),
-                  SizedBox(height: AppSpacing.xl),
-                ],
-              ),
-            ),
-            Expanded(
-              // First-page load or a filter-changed reload: skeletonize
-              // the *real* row widget with mock data (no bespoke skeleton
-              // layout), matching the workers/invitations convention —
-              // scoped to just this region, not the chrome above.
-              child: state.isLoading
-                  ? AppSkeletonList(
-                      padding: EdgeInsets.fromLTRB(
-                        AppSpacing.xl,
-                        0,
-                        AppSpacing.xl,
-                        AppSpacing.xl,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (widget.showAnalytics) ...[
+                              const ServiceMetricsSection(),
+                              SizedBox(height: AppSpacing.lg),
+                            ],
+                            ServicesFilterBar(
+                              showSearch: false,
+                              statusLabel:
+                                  state.statusFilter ==
+                                      ProviderServiceStatus.all
+                                  ? null
+                                  : _statusFilterLabel(state.statusFilter),
+                              onStatusTap: () => _showStatusFilterSheet(
+                                context,
+                                state.statusFilter,
+                              ),
+                              // Type has no backend query param to filter on
+                              // (see ServicesFilterBar's doc comment) —
+                              // intentionally left unwired; the dropdown
+                              // stays visible but inert.
+                            ),
+                          ],
+                        ),
                       ),
-                      itemBuilder: (_, _) =>
-                          ServiceListItem(service: _skeletonService),
-                    )
-                  : AppRefreshIndicator(
-                      onRefresh: () async =>
-                          context.read<ServicesListBloc>().add(
-                            const ServicesListRefreshEvent(),
-                          ),
-                      child: AppSwipeActionsGroup(
-                        child: SanadPagedList<ProviderServiceEntity>(
-                          state: toPagingState(state.pagination),
-                          controller: MainNavScrollController.maybeOf(
-                            context,
-                          ),
-                          // AppRefreshIndicator needs the child to always
-                          // accept an overscroll drag — without this, a
-                          // short list (few items) fights the refresh
-                          // gesture with clamping physics.
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          fetchNextPage: () =>
+                    ],
+                  ),
+                ),
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _PinnedHeaderDelegate(
+                    height: _searchHeaderHeight(),
+                    child: ColoredBox(
+                      color: context.appColors.background,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppSpacing.xl,
+                          vertical: responsiveSpacing(10),
+                        ),
+                        child: AppSearchField(
+                          controller: _searchController,
+                          variant: AppSearchFieldVariant.bordered,
+                          hint: 'services.search_hint'.tr(),
+                          showMicIcon: false,
+                          onChanged: (query) =>
                               context.read<ServicesListBloc>().add(
-                                const ServicesListLoadMoreEvent(),
+                                ServicesListSearchChangedEvent(query),
                               ),
-                          padding: EdgeInsets.fromLTRB(
-                            AppSpacing.xl,
-                            0,
-                            AppSpacing.xl,
-                            AppSpacing.xl,
-                          ),
-                          separatorBuilder: (_, _) =>
-                              SizedBox(height: AppSpacing.md),
-                          itemBuilder: (context, service, index) =>
-                              ServiceListItem(
-                                key: ValueKey(service.id),
-                                service: service,
-                                isOwner: widget.isOwner,
-                                onTap: () => _onServiceTap(context, service),
-                              ),
-                          firstPageErrorIndicatorBuilder: (_) => Center(
-                            child: _ServicesErrorState(
-                              failure: state.failure,
-                              onRetry: () =>
-                                  context.read<ServicesListBloc>().add(
-                                    const ServicesListFetchEvent(),
-                                  ),
-                            ),
-                          ),
-                          newPageErrorIndicatorBuilder: (_) =>
-                              _NextPageErrorRetry(
-                                onRetry: () =>
-                                    context.read<ServicesListBloc>().add(
-                                      const ServicesListLoadMoreEvent(),
-                                    ),
-                              ),
-                          noItemsFoundIndicatorBuilder: (_) => Center(
-                            child: ServicesEmptyState(
-                              // Filter-cleared / search-cleared "no items"
-                              // state renders the same empty layout as the
-                              // page-level empty state above; hide its CTA
-                              // for the same G3 reason.
-                              onAddService: widget.isOwner
-                                  ? onAddService
-                                  : null,
-                            ),
-                          ),
                         ),
                       ),
                     ),
+                  ),
+                ),
+                // First-page load or a filter-changed reload: skeletonize
+                // the *real* row widget with mock data (no bespoke skeleton
+                // layout), matching the workers/invitations convention —
+                // scoped to just this sliver, not the chrome above.
+                if (state.isLoading)
+                  _SkeletonSliverList(
+                    itemBuilder: (_, _) =>
+                        ServiceListItem(service: _skeletonService),
+                  )
+                else
+                  SanadPagedSliverList<ProviderServiceEntity>(
+                    state: toPagingState(state.pagination),
+                    fetchNextPage: () => context.read<ServicesListBloc>().add(
+                      const ServicesListLoadMoreEvent(),
+                    ),
+                    padding: EdgeInsets.fromLTRB(
+                      AppSpacing.xl,
+                      0,
+                      AppSpacing.xl,
+                      AppSpacing.xl,
+                    ),
+                    separatorBuilder: (_, _) =>
+                        SizedBox(height: AppSpacing.md),
+                    itemBuilder: (context, service, index) =>
+                        ServiceListItem(
+                          key: ValueKey(service.id),
+                          service: service,
+                          isOwner: widget.isOwner,
+                          onTap: () => _onServiceTap(context, service),
+                        ),
+                    firstPageErrorIndicatorBuilder: (_) => Center(
+                      child: _ServicesErrorState(
+                        failure: state.failure,
+                        onRetry: () => context.read<ServicesListBloc>().add(
+                          const ServicesListFetchEvent(),
+                        ),
+                      ),
+                    ),
+                    newPageErrorIndicatorBuilder: (_) => _NextPageErrorRetry(
+                      onRetry: () => context.read<ServicesListBloc>().add(
+                        const ServicesListLoadMoreEvent(),
+                      ),
+                    ),
+                    noItemsFoundIndicatorBuilder: (_) => Center(
+                      child: ServicesEmptyState(
+                        // Filter-cleared / search-cleared "no items" state
+                        // renders the same empty layout as the page-level
+                        // empty state above; hide its CTA for the same G3
+                        // reason.
+                        onAddService: widget.isOwner ? onAddService : null,
+                      ),
+                    ),
+                  ),
+              ],
             ),
-          ],
+          ),
         );
       },
     );
@@ -569,39 +667,30 @@ class _ServiceRequestsContentState extends State<_ServiceRequestsContent> {
   Widget build(BuildContext context) {
     return BlocBuilder<ServiceRequestsListBloc, ServiceRequestsListState>(
       builder: (context, state) {
-        // First-page load: skeletonize the *real* row widget with mock data
-        // (no bespoke skeleton layout), matching the My Services tab.
-        if (state.isLoading) {
-          return AppSkeletonList(
-            itemBuilder: (_, _) =>
-                ServiceRequestListItem(request: _skeletonRequest),
-          );
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.xl,
-                AppSpacing.md,
-                AppSpacing.xl,
-                0,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  AppSearchField(
-                    controller: _searchController,
-                    variant: AppSearchFieldVariant.bordered,
-                    hint: 'services.search_hint'.tr(),
-                    showMicIcon: false,
-                    onChanged: (value) => context
-                        .read<ServiceRequestsListBloc>()
-                        .add(ServiceRequestsListSearchChangedEvent(value)),
+        // Collapsing-header layout mirroring `_MyServicesContent`: the
+        // status chips collapse away with the rest of the header, the
+        // search field is a pinned `SliverPersistentHeader`. Chrome renders
+        // unconditionally (see that class's build for why); only the
+        // list/cards sliver below skeletonizes on first load.
+        return AppRefreshIndicator(
+          onRefresh: () async => context.read<ServiceRequestsListBloc>().add(
+            const ServiceRequestsListRefreshEvent(),
+          ),
+          child: CustomScrollView(
+            controller: MainNavScrollController.maybeOf(context),
+            // See the My Services list above — AlwaysScrollable keeps
+            // pull-to-refresh working on short lists.
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.xl,
+                    AppSpacing.md,
+                    AppSpacing.xl,
+                    AppSpacing.sm,
                   ),
-                  SizedBox(height: AppSpacing.md),
-                  SingleChildScrollView(
+                  child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: [
@@ -621,21 +710,44 @@ class _ServiceRequestsContentState extends State<_ServiceRequestsContent> {
                       ],
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
-            Expanded(
-              child: AppRefreshIndicator(
-                onRefresh: () async =>
-                    context.read<ServiceRequestsListBloc>().add(
-                      const ServiceRequestsListRefreshEvent(),
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _PinnedHeaderDelegate(
+                  height: _searchHeaderHeight(),
+                  child: ColoredBox(
+                    color: context.appColors.background,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xl,
+                        vertical: responsiveSpacing(10),
+                      ),
+                      child: AppSearchField(
+                        controller: _searchController,
+                        variant: AppSearchFieldVariant.bordered,
+                        hint: 'services.search_hint'.tr(),
+                        showMicIcon: false,
+                        onChanged: (value) => context
+                            .read<ServiceRequestsListBloc>()
+                            .add(ServiceRequestsListSearchChangedEvent(value)),
+                      ),
                     ),
-                child: SanadPagedList<ServiceRequestEntity>(
+                  ),
+                ),
+              ),
+              // First-page load: skeletonize the *real* row widget with mock
+              // data (no bespoke skeleton layout), matching the My Services
+              // tab.
+              if (state.isLoading)
+                _SkeletonSliverList(
+                  padding: EdgeInsets.all(AppSpacing.xl),
+                  itemBuilder: (_, _) =>
+                      ServiceRequestListItem(request: _skeletonRequest),
+                )
+              else
+                SanadPagedSliverList<ServiceRequestEntity>(
                   state: toPagingState(state.pagination),
-                  controller: MainNavScrollController.maybeOf(context),
-                  // See the My Services list above — AlwaysScrollable keeps
-                  // pull-to-refresh working on short lists.
-                  physics: const AlwaysScrollableScrollPhysics(),
                   fetchNextPage: () =>
                       context.read<ServiceRequestsListBloc>().add(
                         const ServiceRequestsListLoadMoreEvent(),
@@ -668,9 +780,8 @@ class _ServiceRequestsContentState extends State<_ServiceRequestsContent> {
                   noItemsFoundIndicatorBuilder: (_) =>
                       const Center(child: ServiceRequestsEmptyState()),
                 ),
-              ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );
@@ -684,9 +795,9 @@ class _ServiceRequestsContentState extends State<_ServiceRequestsContent> {
   };
 }
 
-/// Compact "load more failed" footer shown by [SanadPagedList] in place of
-/// the next-page loading indicator — keeps already-loaded rows visible
-/// instead of replacing the whole list.
+/// Compact "load more failed" footer shown by [SanadPagedSliverList] in
+/// place of the next-page loading indicator — keeps already-loaded rows
+/// visible instead of replacing the whole list.
 class _NextPageErrorRetry extends StatelessWidget {
   const _NextPageErrorRetry({required this.onRetry});
 

@@ -9,6 +9,12 @@ import 'package:network/src/interceptors/timeout_error_interceptor.dart'
 
 /// Retries connect/send/receive timeouts with exponential backoff + jitter.
 /// Register BEFORE [TimeoutErrorInterceptor] in [Dio.interceptors].
+///
+/// Only retries *idempotent* HTTP methods (GET/HEAD/PUT/DELETE/OPTIONS).
+/// POST/PATCH are never auto-retried on a timeout: the server may have
+/// already received and processed the original attempt (a slow response is
+/// not proof the request failed), so blindly re-firing a create/update risks
+/// silently duplicating it.
 class RetryOnTimeoutInterceptor extends Interceptor {
   RetryOnTimeoutInterceptor({
     required Dio dio,
@@ -40,7 +46,7 @@ class RetryOnTimeoutInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    if (!_isTimeout(err)) {
+    if (!_isTimeout(err) || !_isIdempotent(err.requestOptions.method)) {
       handler.next(err);
       return;
     }
@@ -72,4 +78,15 @@ class RetryOnTimeoutInterceptor extends Interceptor {
       e.type == DioExceptionType.connectionTimeout ||
       e.type == DioExceptionType.sendTimeout ||
       e.type == DioExceptionType.receiveTimeout;
+
+  /// GET/HEAD/PUT/DELETE/OPTIONS are safe to blindly retry — repeating them
+  /// has no additional side effect. POST/PATCH are not: the server may have
+  /// already acted on the original attempt.
+  static bool _isIdempotent(String method) => const {
+    'GET',
+    'HEAD',
+    'PUT',
+    'DELETE',
+    'OPTIONS',
+  }.contains(method.toUpperCase());
 }

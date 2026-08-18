@@ -3,6 +3,7 @@ import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:workers/src/domain/entities/worker_type.dart';
+import 'package:workers/src/presentation/services/worker_invite_roles_field.dart';
 import 'package:workers/src/presentation/widgets/worker_type_select_field.dart';
 
 /// Shared form body for Add Member and Edit Member — both screens are
@@ -69,6 +70,17 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
 
   late WorkerType? type = widget.initialType;
 
+  /// The mandatory baseline role id for [type] plus any additional roles
+  /// picked in the Roles field. Only populated on the Add form — see
+  /// [WorkerFormBody.requireContact].
+  List<String> _roleIds = const [];
+
+  /// `false` until the Roles field resolves a valid mandatory-role
+  /// selection. Existing members (Edit form) never render the field, so it
+  /// starts `true` there — [isComplete] only consults it when
+  /// [WorkerFormBody.requireContact] is set.
+  bool _rolesValid = false;
+
   bool _wasComplete = false;
 
   bool get isTypeValid => type != null;
@@ -76,6 +88,11 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
   /// Phone is valid when contact is optional, or when it normalizes to a
   /// valid UAE number.
   bool get isPhoneValid => !widget.requireContact || phone != null;
+
+  /// Role ids to submit with the invitation — the mandatory baseline role
+  /// for [type] plus any additional roles picked. Empty outside the Add
+  /// form.
+  List<String> get roleIds => _roleIds;
 
   /// All required fields are filled (and contact fields are valid when
   /// [WorkerFormBody.requireContact] is true).
@@ -85,6 +102,7 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
     if (widget.requireContact) {
       if (_validateEmail(emailController.text) != null) return false;
       if (!isPhoneValid) return false;
+      if (!_rolesValid) return false;
     }
     return true;
   }
@@ -271,6 +289,19 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
                 ? 'validation.required'.tr()
                 : null,
           ),
+          if (widget.requireContact && type != null) ...[
+            SizedBox(height: AppSpacing.md),
+            sl<WorkerInviteRolesField>().build(
+              type: type!,
+              onChanged: (selection) {
+                setState(() {
+                  _roleIds = selection.roleIds;
+                  _rolesValid = selection.isValid;
+                });
+                _onFieldChanged();
+              },
+            ),
+          ],
         ],
       ),
     );

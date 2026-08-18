@@ -80,22 +80,44 @@ class DocumentFlowBloc extends Bloc<DocumentFlowEvent, DocumentFlowState> {
       (failure) => emit(
         state.copyWith(
           phase: const PhaseFailure(FailedStage.extraction),
-          failure: flow_failure.ExtractionFailure(
-            messageKey: failure.message,
-            kind: failure is NetworkFailure
-                ? flow_failure.ExtractionFailureKind.network
-                : flow_failure.ExtractionFailureKind.server,
-          ),
+          failure: _toExtractionFailure(failure),
         ),
       ),
       (extracted) => emit(
-        state
-            .copyWith(
-              documents: _withPrefilledDocuments(extracted),
-              extracted: extracted,
-              phase: const PhaseExtracted(),
-            ),
+        state.copyWith(
+          documents: _withPrefilledDocuments(extracted),
+          extracted: extracted,
+          phase: const PhaseExtracted(),
+        ),
       ),
+    );
+  }
+
+  /// Maps a repository [Failure] to a flow `ExtractionFailure`, classifying
+  /// it as `network` (genuine transport failure — show connectivity UI),
+  /// `server` (5xx/unclassified — generic error), or `domain` (the backend
+  /// intentionally rejected the request with a user-facing message — show
+  /// that message, not a connectivity error). The backend `code`/`fields`/
+  /// `requestId` are preserved from `Failure.metadata` rather than dropped.
+  flow_failure.ExtractionFailure _toExtractionFailure(Failure failure) {
+    final kind = switch (failure) {
+      NoInternetFailure() ||
+      TimeoutFailure() ||
+      NetworkFailure() ||
+      SecureConnectionFailure() => flow_failure.ExtractionFailureKind.network,
+      ServerFailure() ||
+      UnknownFailure() => flow_failure.ExtractionFailureKind.server,
+      _ => flow_failure.ExtractionFailureKind.domain,
+    };
+    final metadata = failure.metadata;
+    return flow_failure.ExtractionFailure(
+      messageKey: failure.message,
+      kind: kind,
+      code: metadata?['code']?.toString() ?? failure.code,
+      fields:
+          (metadata?['fields'] as List?)?.map((e) => e.toString()).toList() ??
+          const [],
+      requestId: metadata?['requestId']?.toString(),
     );
   }
 
@@ -139,9 +161,11 @@ class DocumentFlowBloc extends Bloc<DocumentFlowEvent, DocumentFlowState> {
     final current = state.documentAt(event.type);
     if (current == null) return;
 
-    emit(_withDocument(event.type, current.markUploading()).copyWith(
-      failure: null,
-    ));
+    emit(
+      _withDocument(event.type, current.markUploading()).copyWith(
+        failure: null,
+      ),
+    );
 
     final result = await _uploadMedia(
       UploadMediaParams(
@@ -254,12 +278,7 @@ class DocumentFlowBloc extends Bloc<DocumentFlowEvent, DocumentFlowState> {
           emit(
             state.copyWith(
               phase: const PhaseFailure(FailedStage.extraction),
-              failure: flow_failure.ExtractionFailure(
-                messageKey: failure.message,
-                kind: failure is NetworkFailure
-                    ? flow_failure.ExtractionFailureKind.network
-                    : flow_failure.ExtractionFailureKind.server,
-              ),
+              failure: _toExtractionFailure(failure),
             ),
           );
         }

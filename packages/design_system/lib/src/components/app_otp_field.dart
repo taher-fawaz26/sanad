@@ -79,7 +79,8 @@ class _AppOtpFieldState extends State<AppOtpField> {
   TextEditingController get _controller =>
       widget.controller ?? (_ownedController ??= TextEditingController());
 
-  FocusNode get _focusNode => widget.focusNode ?? (_ownedFocusNode ??= FocusNode());
+  FocusNode get _focusNode =>
+      widget.focusNode ?? (_ownedFocusNode ??= FocusNode());
 
   @override
   void initState() {
@@ -178,7 +179,8 @@ class _AppOtpFieldState extends State<AppOtpField> {
         _field = field;
 
         final explicitError = widget.errorText;
-        final resolvedError = (explicitError != null && explicitError.isNotEmpty)
+        final resolvedError =
+            (explicitError != null && explicitError.isNotEmpty)
             ? explicitError
             : field.errorText;
         final hasError =
@@ -207,19 +209,20 @@ class _AppOtpFieldState extends State<AppOtpField> {
                 ],
               ),
             ),
-            if (hasError && resolvedError != null && resolvedError.isNotEmpty)
-              ...[
-                SizedBox(height: AppSpacing.sm),
-                Text(
-                  resolvedError,
-                  textAlign: TextAlign.center,
-                  style: FieldTokens.errorStyle(
-                    typography,
-                    colors,
-                    Theme.of(context).brightness,
-                  ),
+            if (hasError &&
+                resolvedError != null &&
+                resolvedError.isNotEmpty) ...[
+              SizedBox(height: AppSpacing.sm),
+              Text(
+                resolvedError,
+                textAlign: TextAlign.center,
+                style: FieldTokens.errorStyle(
+                  typography,
+                  colors,
+                  Theme.of(context).brightness,
                 ),
-              ],
+              ),
+            ],
           ],
         );
       },
@@ -227,86 +230,109 @@ class _AppOtpFieldState extends State<AppOtpField> {
   }
 
   Widget _buildHiddenInput() {
-    return TextField(
-      controller: _controller,
-      focusNode: _focusNode,
-      enabled: widget.enabled,
-      autofocus: widget.autofocus,
-      keyboardType: TextInputType.number,
-      textInputAction: TextInputAction.done,
-      autofillHints: const [AutofillHints.oneTimeCode],
-      inputFormatters: [
-        FilteringTextInputFormatter.digitsOnly,
-        LengthLimitingTextInputFormatter(widget.length),
-      ],
-      // Invisible — the cells above are the presentation layer.
-      //
-      // `fontSize` is set explicitly rather than inherited: `TextField`
-      // merges the ambient theme text style, and `responsiveFontSize` yields
-      // NaN on a zero-sized first frame (`base * scaleWidth / scaleHeight` →
-      // 0/0, which its clamp cannot catch since NaN comparisons are always
-      // false). A NaN font size reaching the editable trips framework
-      // asserts in `WidgetSpan.extractFromInlineSpan` and `textScaler.scale`.
-      style: const TextStyle(color: Colors.transparent, fontSize: 16, height: 1),
+    // The hidden TextField spans the full row, and any paint from its own
+    // text layout (selection highlight, cursor rect) lands at CHARACTER
+    // positions inside the field, which do NOT align with the visible cell
+    // positions above. Setting a tap-driven `selection` on the controller
+    // would then leak a rounded highlight over the leftmost cells.
+    // Neutralise both paints so the field is truly invisible.
+    return DefaultSelectionStyle(
+      selectionColor: Colors.transparent,
       cursorColor: Colors.transparent,
-      showCursor: false,
-      // Native handles/toolbar would fight the per-cell taps; OTP paste
-      // arrives through the keyboard's autofill suggestion instead.
-      enableInteractiveSelection: false,
-      // `null` (not a blanked-out InputDecoration) so no `InputDecorator` is
-      // built at all. This field is invisible and renders no label, border or
-      // error of its own, and a decorator would inherit the app's
-      // `InputDecorationTheme` — whose `errorStyle` can carry a NaN font size
-      // that crashes `textScaler.scale()` during layout.
-      decoration: null,
-      onSubmitted: widget.onSubmitted,
-    );
-  }
-
-  Widget _buildCells({required bool hasError}) {
-    final gap = AppSpacing.lg;
-    return Center(
-      // `IntrinsicWidth` + `Flexible` cells reproduce the previous layout's
-      // behaviour in both directions: at comfortable widths the row sizes to
-      // its exact content (so cell size and gaps are unchanged), and under a
-      // width too narrow for 6 full cells the cells shrink to fit instead of
-      // overflowing.
-      child: IntrinsicWidth(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            for (var i = 0; i < widget.length; i++)
-              Flexible(
-                child: GestureDetector(
-                  key: otpCellKey(i),
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => _handleCellTap(i),
-                  child: Padding(
-                    // Half a gap on each inner side, so the tap target covers
-                    // the space between cells too — a tap near a boundary
-                    // resolves to whichever digit is visually closer.
-                    padding: EdgeInsets.only(
-                      left: i == 0 ? 0 : gap / 2,
-                      right: i == widget.length - 1 ? 0 : gap / 2,
-                    ),
-                    child: Semantics(
-                      label: 'Digit ${i + 1} of ${widget.length}',
-                      child: _buildCell(i, hasError: hasError),
-                    ),
-                  ),
-                ),
-              ),
-          ],
+      child: TextField(
+        controller: _controller,
+        focusNode: _focusNode,
+        enabled: widget.enabled,
+        autofocus: widget.autofocus,
+        keyboardType: TextInputType.number,
+        textInputAction: TextInputAction.done,
+        autofillHints: const [AutofillHints.oneTimeCode],
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(widget.length),
+        ],
+        // Invisible — the cells above are the presentation layer.
+        //
+        // `fontSize` is set explicitly rather than inherited: `TextField`
+        // merges the ambient theme text style, and `responsiveFontSize` yields
+        // NaN on a zero-sized first frame (`base * scaleWidth / scaleHeight` →
+        // 0/0, which its clamp cannot catch since NaN comparisons are always
+        // false). A NaN font size reaching the editable trips framework
+        // asserts in `WidgetSpan.extractFromInlineSpan` and `textScaler.scale`.
+        style: const TextStyle(
+          color: Colors.transparent,
+          fontSize: 16,
+          height: 1,
         ),
+        cursorColor: Colors.transparent,
+        showCursor: false,
+        // Native handles/toolbar would fight the per-cell taps; OTP paste
+        // arrives through the keyboard's autofill suggestion instead.
+        enableInteractiveSelection: false,
+        // `null` (not a blanked-out InputDecoration) so no `InputDecorator` is
+        // built at all. This field is invisible and renders no label, border or
+        // error of its own, and a decorator would inherit the app's
+        // `InputDecorationTheme` — whose `errorStyle` can carry a NaN font size
+        // that crashes `textScaler.scale()` during layout.
+        decoration: null,
+        onSubmitted: widget.onSubmitted,
       ),
     );
   }
 
-  Widget _buildCell(int index, {required bool hasError}) {
+  Widget _buildCells({required bool hasError}) {
+    final designedCellSize = AppDimension.otpCellSize;
+    final gap = AppSpacing.lg;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Derive one `cellSize` for all six cells from the available width.
+        // Every cell is built from the same value, so first/middle/last are
+        // geometrically identical. When the row fits at its designed size,
+        // that is the size we use; otherwise every cell shrinks by the same
+        // amount, keeping the row balanced.
+        var cellSize = designedCellSize;
+        final gapsTotal = gap * (widget.length - 1);
+        final maxCellFromWidth =
+            (constraints.maxWidth - gapsTotal) / widget.length;
+        if (maxCellFromWidth.isFinite && maxCellFromWidth < designedCellSize) {
+          cellSize = maxCellFromWidth;
+        }
+        return Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var i = 0; i < widget.length; i++) ...[
+                if (i > 0) SizedBox(width: gap),
+                GestureDetector(
+                  key: otpCellKey(i),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _handleCellTap(i),
+                  child: Semantics(
+                    label: 'Digit ${i + 1} of ${widget.length}',
+                    child: _buildCell(
+                      i,
+                      cellSize: cellSize,
+                      hasError: hasError,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCell(
+    int index, {
+    required double cellSize,
+    required bool hasError,
+  }) {
     final colors = context.appColors;
     final typography = context.appTypography;
     final brightness = Theme.of(context).brightness;
-    final cellSize = AppDimension.otpCellSize;
     final defaultWidth = responsiveDimension(FieldTokens.borderWidthDefault);
     final emphasisWidth = responsiveDimension(FieldTokens.borderWidthEmphasis);
 
@@ -329,7 +355,11 @@ class _AppOtpFieldState extends State<AppOtpField> {
     final baseTextStyle = typography.largeNormal.copyWith(
       fontWeight: FontWeight.w500,
       letterSpacing: 0,
-      color: FieldTokens.valueColor(colors, brightness, enabled: widget.enabled),
+      color: FieldTokens.valueColor(
+        colors,
+        brightness,
+        enabled: widget.enabled,
+      ),
     );
     // Filled digits use the primary teal colour.
     final filledTextStyle = baseTextStyle.copyWith(color: colors.primary);
@@ -351,12 +381,13 @@ class _AppOtpFieldState extends State<AppOtpField> {
       borderColor = FieldTokens.borderDefault(colors, brightness);
     }
 
-    final caretHeight = (baseTextStyle.fontSize ?? responsiveDimension(20)) * 1.2;
+    final caretHeight =
+        (baseTextStyle.fontSize ?? responsiveDimension(20)) * 1.2;
     final caret = _OtpCaret(color: colors.primary, height: caretHeight);
 
     return Container(
       width: cellSize,
-      height: cellSize,
+      height: cellSize * 1.5,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: FieldTokens.background(

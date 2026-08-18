@@ -43,9 +43,14 @@ class RoleFormPage extends StatefulWidget {
 
 class _RoleFormPageState extends State<RoleFormPage> {
   final _formKey = GlobalKey<FormState>();
-  // Create: the role name. Edit: the "Modification Title" (UI-only) — both
-  // start empty, so the controller is never seeded from the existing role.
-  final _nameController = TextEditingController();
+  // Create: the role name, starts empty. Edit: the "Modification Title"
+  // (UI-only, never sent — see `_onSubmit`) is seeded with the existing
+  // role's display name, so a user who only wants to change permissions
+  // isn't forced to type something into an unrelated required field just
+  // to satisfy validation.
+  late final _nameController = TextEditingController(
+    text: widget.existingRole?.displayName,
+  );
   late final _descriptionController = TextEditingController(
     text: widget.existingRole?.description,
   );

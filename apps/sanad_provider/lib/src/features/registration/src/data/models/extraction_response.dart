@@ -129,6 +129,158 @@ abstract final class ExtractionResponse {
     );
   }
 
+  /// Builds [ExtractedDocuments] for a **document-domain rejection**: any
+  /// `auth/extract` HTTP 400 whose body is a single business message rather
+  /// than a field-validation array (e.g. `EXTRACTION_INCOMPLETE`, a
+  /// front/back Emirates ID mismatch, an unreadable/unsupported document —
+  /// any backend code meaning "the uploaded document itself is the
+  /// problem"). This is the single, canonical mapping point for that whole
+  /// error class: callers never branch on the specific backend `code`, so a
+  /// new backend code needs no client change to render inline.
+  ///
+  /// The review screen renders the result inline exactly like the
+  /// image-unclear/expired outcomes, instead of a full-screen error.
+  ///
+  /// The affected document is resolved, in priority order, from [fields]
+  /// (backend field names, e.g. `license_number`), then [code], then
+  /// [message] content — each checked against the same token set so a
+  /// mismatch code that names no specific field (e.g. "front and back don't
+  /// match") still routes correctly. When nothing resolves, every document in
+  /// this extraction is flagged so the user can still act. Unaffected
+  /// documents are omitted — the 400 aborts extraction, so no data exists for
+  /// them (mirrors the single-section 409 already-registered case).
+  ///
+  /// Every match always resolves to [DocumentIssue.imageUnclear] — the
+  /// generic "this document needs re-uploading" badge/banner/Replace-Document
+  /// treatment already used for image-unclear — carrying the backend
+  /// [message] as [ExtractedDocument.issueDetail] so the specific reason is
+  /// still shown. This is deliberate: introducing a distinct badge per
+  /// backend code would mean guessing new visual treatment per code, which
+  /// this mapper exists to avoid.
+  static ExtractedDocuments fromDomainRejection({
+    required List<String> fields,
+    required String message,
+    required bool includeTradeLicence,
+    String? code,
+  }) {
+    final all = <DocumentType>[
+      DocumentType.emiratesIdFront,
+      if (includeTradeLicence) DocumentType.tradeLicense,
+    ];
+
+    final targets = _resolveAffectedDocuments(
+      fields: fields,
+      code: code,
+      message: message,
+      known: all,
+    );
+
+    return ExtractedDocuments(
+      sections: [
+        for (final type in all)
+          if (targets.contains(type))
+            ExtractedDocument(
+              type: type,
+              fields: const [],
+              issue: DocumentIssue.imageUnclear,
+              issueDetail: message.isEmpty ? null : message,
+              repair: _repairTargetFor(type, code),
+            ),
+      ],
+    );
+  }
+
+  /// Backend codes meaning a whole multi-part document must be replaced
+  /// together — never inferred from HTTP status or from `fields` merely
+  /// being present, only from an explicit code added here. This is the
+  /// single, centralized policy point: a new whole-document backend code is
+  /// handled by adding it to this set, nothing else.
+  static const _wholeDocumentRepairCodes = {'EXTRACTION_ID_MISMATCH'};
+
+  /// What the user must replace to fix [section]'s issue, or null for the
+  /// default single-file replace. Only the Emirates ID is currently a
+  /// multi-part document (front + back); a whole-document code against any
+  /// other section still resolves to null since there is nothing else to
+  /// group it with.
+  static DocumentRepairTarget? _repairTargetFor(
+    DocumentType section,
+    String? code,
+  ) {
+    if (code == null || !_wholeDocumentRepairCodes.contains(code)) return null;
+    if (section != DocumentType.emiratesIdFront) return null;
+    return const DocumentRepairTarget(
+      parts: [DocumentType.emiratesIdFront, DocumentType.emiratesIdBack],
+      scope: DocumentRepairScope.wholeDocument,
+    );
+  }
+
+  /// Resolves which of [known] documents a rejection concerns. Tries, in
+  /// order, the structured [fields] list, the backend [code], then the
+  /// [message] text — each against the same token set — so a rejection that
+  /// names no specific field (a whole-document mismatch, for instance) still
+  /// routes via its code or message. Falls back to every known document when
+  /// nothing resolves, so the user can still act.
+  static Set<DocumentType> _resolveAffectedDocuments({
+    required List<String> fields,
+    required String? code,
+    required String message,
+    required List<DocumentType> known,
+  }) {
+    final affected = <DocumentType>{};
+    for (final field in fields) {
+      final type = _documentForTokens(field);
+      if (type != null && known.contains(type)) affected.add(type);
+    }
+    if (affected.isEmpty && code != null) {
+      final type = _documentForTokens(code);
+      if (type != null && known.contains(type)) affected.add(type);
+    }
+    if (affected.isEmpty) {
+      final type = _documentForTokens(message);
+      if (type != null && known.contains(type)) affected.add(type);
+    }
+    return affected.isNotEmpty ? affected : known.toSet();
+  }
+
+  /// Maps a backend field name, error code, or message string to the
+  /// document it concerns, or null when it can't be attributed. Token-based
+  /// so snake_case (`license_number`), camelCase (`licenseNumber`),
+  /// SCREAMING_CASE codes (`TRADE_LICENSE_MISMATCH`), and free-text Arabic or
+  /// English messages all resolve the same way.
+  static DocumentType? _documentForTokens(String text) {
+    final t = text.toLowerCase();
+    const tradeTokens = [
+      'license',
+      'licence',
+      'trade',
+      'establishment',
+      'issuance',
+      'unified',
+      'legal',
+      'رخصة',
+      'الرخصة',
+    ];
+    const emiratesTokens = [
+      'emirates',
+      'id_number',
+      'idnumber',
+      'nationality',
+      'birth',
+      'dob',
+      'expiry',
+      'gender',
+      'full_name',
+      'fullname',
+      'إماراتية',
+      'الإماراتية',
+      'الهوية',
+      'بطاقة الهوية',
+    ];
+    if (tradeTokens.any(t.contains)) return DocumentType.tradeLicense;
+    if (emiratesTokens.any(t.contains)) return DocumentType.emiratesIdFront;
+    return null;
+  }
+
   /// Unwraps a `{ data: {...} }` envelope if present; returns the raw map
   /// otherwise (the extraction endpoint sends a flat response).
   static Map<String, dynamic> _unwrap(Map<String, dynamic> json) {

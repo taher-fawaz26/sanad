@@ -68,4 +68,15 @@ void main() {
       await tester.pump();
     },
   );
+
+  testWidgets(
+    'showSearch: false omits the search field but keeps the filter row',
+    (tester) async {
+      await _pump(tester, const ServicesFilterBar(showSearch: false));
+
+      expect(find.byType(AppSearchField), findsNothing);
+      expect(find.text('services.filter_status'), findsOneWidget);
+      expect(find.text('services.filter_type'), findsOneWidget);
+    },
+  );
 }

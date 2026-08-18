@@ -162,9 +162,6 @@ class _MainInfoSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final locale = Localizations.localeOf(context);
-    final isArabic = locale.languageCode == 'ar';
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -224,9 +221,6 @@ class _MainInfoSection extends StatelessWidget {
                     emptyLabel: 'branches.add_branch.city_empty'.tr(),
                     retryLabel: 'common.cancel'.tr(),
                     selectedCity: selectedCity,
-                    localizedName: isArabic
-                        ? (city) => city.nameAr
-                        : (city) => city.nameEn,
                     errorText: showErrors && selectedCity == null
                         ? 'branches.add_branch.city_required'.tr()
                         : null,

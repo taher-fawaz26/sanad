@@ -5,6 +5,7 @@
 /// `design_system` (Design Language / Typography concern).
 library;
 
+export 'src/app_animations.dart';
 export 'src/app_assets.dart';
 export 'src/app_images.dart';
 export 'src/app_navigation_icons.dart';

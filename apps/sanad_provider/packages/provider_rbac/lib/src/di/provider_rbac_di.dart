@@ -16,6 +16,7 @@ import 'package:provider_rbac/src/presentation/bloc/role_action/role_action_bloc
 import 'package:provider_rbac/src/presentation/bloc/role_form/role_form_bloc.dart';
 import 'package:provider_rbac/src/presentation/bloc/roles_list/roles_list_bloc.dart';
 import 'package:provider_rbac/src/presentation/bloc/worker_roles/worker_roles_bloc.dart';
+import 'package:provider_rbac/src/presentation/services/provider_rbac_worker_invite_roles_field.dart';
 import 'package:provider_rbac/src/presentation/services/provider_rbac_worker_role_assigner.dart';
 import 'package:provider_rbac/src/presentation/services/provider_rbac_worker_roles_tab.dart';
 import 'package:workers/workers.dart';
@@ -76,6 +77,11 @@ abstract final class ProviderRbacDI {
       // Renders the roles pane inline as the Workers screen's third tab.
       ..registerLazySingleton<WorkerRolesTabView>(
         () => const ProviderRbacWorkerRolesTab(),
+      )
+      // Implements the mandatory "Roles" field on the Add Member form —
+      // see ProviderRbacWorkerInviteRolesField for details.
+      ..registerLazySingleton<WorkerInviteRolesField>(
+        () => const ProviderRbacWorkerInviteRolesField(),
       );
   }
 }

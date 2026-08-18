@@ -26,6 +26,7 @@ export 'src/extensions/scroll_collapse_extensions.dart';
 export 'src/headers/app_cover_header.dart';
 
 // Loading — app-wide skeleton (reads) + blocking progress (mutations)
+export 'src/loading/app_document_extraction_loader.dart';
 export 'src/loading/app_progress.dart';
 export 'src/loading/app_skeleton_list.dart';
 export 'src/loading/app_skeletonizer.dart';
@@ -34,6 +35,7 @@ export 'src/loading/mutation_listener.dart';
 // Pagination
 export 'src/pagination/paging_state_adapter.dart';
 export 'src/pagination/sanad_paged_list.dart';
+export 'src/pagination/sanad_paged_sliver_list.dart';
 
 // Pages
 export 'src/pages/app_nested_scroll_page.dart';

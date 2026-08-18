@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sanad_provider/src/features/registration/src/di/registration_di.dart';
 import 'package:sanad_provider/src/features/registration/src/presentation/cubit/registration_details_cubit.dart';
+import 'package:sanad_provider/src/features/registration/src/presentation/pages/document_repair_page.dart';
 import 'package:sanad_provider/src/features/registration/src/presentation/pages/extracting_documents_page.dart';
 import 'package:sanad_provider/src/features/registration/src/presentation/pages/identity_verification_page.dart';
 import 'package:sanad_provider/src/features/registration/src/presentation/pages/individual_details_page.dart';
@@ -42,14 +43,13 @@ class RegistrationModule extends FeatureModule {
 
   /// Steps rendered inside the white [AuthScreenShell] card by this module.
   ///
-  /// Identity verification and trade licence are excluded: they self-wrap in
-  /// RegistrationSliverShell (or AuthScreenShell until migrated) so the
-  /// footer can be pinned above the scroll area via a measured overlay.
+  /// Identity verification, trade licence, and review information are
+  /// excluded: they self-wrap in `RegistrationSliverShell` so the footer can
+  /// be pinned above the scroll area via a measured overlay.
   static const Set<String> _authShellSteps = {
     RegistrationRoutes.selectAccountType,
     RegistrationRoutes.organizationDetails,
     RegistrationRoutes.individualDetails,
-    RegistrationRoutes.reviewInformation,
   };
 
   /// Card steps that show a back chevron on the gradient header.
@@ -65,7 +65,6 @@ class RegistrationModule extends FeatureModule {
     RegistrationRoutes.organizationDetails: 'registration.org_details_title',
     RegistrationRoutes.individualDetails:
         'registration.individual_details_title',
-    RegistrationRoutes.reviewInformation: 'registration.review_title',
   };
 
   @override
@@ -138,6 +137,11 @@ class RegistrationModule extends FeatureModule {
         GoRoute(
           path: RegistrationRoutes.tradeLicence,
           builder: (context, state) => const TradeLicencePage(),
+        ),
+        GoRoute(
+          path: RegistrationRoutes.repairEmiratesId,
+          builder: (context, state) =>
+              DocumentRepairPage(target: state.extra! as DocumentRepairTarget),
         ),
         GoRoute(
           path: RegistrationRoutes.extracting,

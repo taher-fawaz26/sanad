@@ -38,6 +38,9 @@ void main() {
   ExtractedDocument id0(ExtractedDocuments r) =>
       r.sectionOf(DocumentType.emiratesIdFront)!;
 
+  ExtractedDocument? id0Nullable(ExtractedDocuments r) =>
+      r.sectionOf(DocumentType.emiratesIdFront);
+
   ExtractedDocument? tl0(ExtractedDocuments r) =>
       r.sectionOf(DocumentType.tradeLicense);
 
@@ -368,6 +371,186 @@ void main() {
         includeTradeLicence: true,
       );
       expect(result.allOk, isFalse);
+    });
+  });
+
+  // ── Document-domain rejections → inline flagged sections ─────────────────────
+  //
+  // This is the single, canonical mapping point for the WHOLE class of
+  // "the uploaded document is the problem" backend rejections — not just
+  // EXTRACTION_INCOMPLETE. Callers never branch on a specific `code`, so a
+  // brand-new backend code (a future OCR/validation failure the client has
+  // never seen) still routes correctly with zero client changes, as covered
+  // below by the "unrecognized code" cases.
+
+  group('ExtractionResponse.fromDomainRejection', () {
+    const incompleteMessage =
+        'لم نتمكن من قراءة الحقول المطلوبة التالية في الرخصة التجارية: '
+        'license_number. يرجى رفع صورة أوضح ثم إعادة الاستخراج.';
+
+    const mismatchMessage =
+        'الوجه الأمامي والخلفي للهوية الإماراتية لا يتطابقان. '
+        'يرجى رفع وجهي البطاقة نفسها ثم إعادة الاستخراج.';
+
+    test(
+      'EXTRACTION_INCOMPLETE + license_number field flags ONLY the trade '
+      'licence card with the backend message, as image-unclear (existing '
+      'recovery UX) — unchanged by the generalization',
+      () {
+        final result = ExtractionResponse.fromDomainRejection(
+          fields: const ['license_number'],
+          code: 'EXTRACTION_INCOMPLETE',
+          message: incompleteMessage,
+          includeTradeLicence: true,
+        );
+        // Only the affected document is present (unaffected omitted).
+        expect(id0Nullable(result), isNull);
+        final tl = tl0(result)!;
+        expect(tl.issue, DocumentIssue.imageUnclear);
+        expect(tl.issueDetail, incompleteMessage);
+        expect(tl.repair, isNull); // single-part — default replace unchanged
+        expect(result.allOk, isFalse);
+      },
+    );
+
+    test('an Emirates ID field flags only the Emirates ID card', () {
+      final result = ExtractionResponse.fromDomainRejection(
+        fields: const ['id_number'],
+        message: 'msg',
+        includeTradeLicence: true,
+      );
+      expect(tl0(result), isNull);
+      final id = id0(result);
+      expect(id.issue, DocumentIssue.imageUnclear);
+      expect(id.issueDetail, 'msg');
+    });
+
+    test('camelCase field names resolve too (licenseNumber → trade)', () {
+      final result = ExtractionResponse.fromDomainRejection(
+        fields: const ['licenseNumber'],
+        message: 'msg',
+        includeTradeLicence: true,
+      );
+      expect(id0Nullable(result), isNull);
+      expect(tl0(result)!.issue, DocumentIssue.imageUnclear);
+    });
+
+    test(
+      'a front/back Emirates ID mismatch — an UNRECOGNIZED code with no '
+      '`fields` — still routes to the Emirates ID card via the message '
+      'text, and is NOT sent to the full-screen error page. Because this '
+      'exact code is unrecognized, repair scope defaults to null '
+      '(single-file replace) — repair scope is a distinct, more '
+      'conservative decision than routing (see the confirmed-code test '
+      'below for the whole-document case)',
+      () {
+        final result = ExtractionResponse.fromDomainRejection(
+          fields: const [],
+          code: 'EMIRATES_ID_SIDE_MISMATCH', // any code the client has
+          // never seen before — the mapper must not need to recognize it.
+          message: mismatchMessage,
+          includeTradeLicence: true,
+        );
+        expect(tl0(result), isNull);
+        final id = id0(result);
+        expect(id.issue, DocumentIssue.imageUnclear);
+        expect(id.issueDetail, mismatchMessage);
+        expect(id.repair, isNull);
+      },
+    );
+
+    test(
+      'EXTRACTION_ID_MISMATCH (the confirmed live backend code) attaches a '
+      'wholeDocument repair target covering both Emirates ID sides — '
+      'Replace Document must open the two-sided repair flow, not a '
+      'single-file picker',
+      () {
+        final result = ExtractionResponse.fromDomainRejection(
+          fields: const ['emiratesIdFrontId', 'emiratesIdBackId'],
+          code: 'EXTRACTION_ID_MISMATCH',
+          message: mismatchMessage,
+          includeTradeLicence: true,
+        );
+        expect(tl0(result), isNull);
+        final id = id0(result);
+        expect(id.issue, DocumentIssue.imageUnclear);
+        expect(id.issueDetail, mismatchMessage);
+        expect(
+          id.repair,
+          const DocumentRepairTarget(
+            parts: [DocumentType.emiratesIdFront, DocumentType.emiratesIdBack],
+            scope: DocumentRepairScope.wholeDocument,
+          ),
+        );
+      },
+    );
+
+    test(
+      'EXTRACTION_ID_MISMATCH against the trade licence section (should '
+      'never happen in practice) still resolves repair to null — only the '
+      'Emirates ID section is a recognized multi-part document',
+      () {
+        // license_number routes this to the trade licence card even though
+        // the code is the Emirates ID mismatch code, to exercise the guard.
+        final result = ExtractionResponse.fromDomainRejection(
+          fields: const ['license_number'],
+          code: 'EXTRACTION_ID_MISMATCH',
+          message: 'msg',
+          includeTradeLicence: true,
+        );
+        expect(id0Nullable(result), isNull);
+        expect(tl0(result)!.repair, isNull);
+      },
+    );
+
+    test(
+      'an unrecognized code alone (no fields, generic message) resolves the '
+      'document via the code text',
+      () {
+        final result = ExtractionResponse.fromDomainRejection(
+          fields: const [],
+          code: 'TRADE_LICENSE_UNREADABLE',
+          message: 'Please try again.',
+          includeTradeLicence: true,
+        );
+        expect(id0Nullable(result), isNull);
+        expect(tl0(result)!.issue, DocumentIssue.imageUnclear);
+      },
+    );
+
+    test(
+      'unmappable fields/code/message fall back to flagging every document '
+      'in the extraction',
+      () {
+        final result = ExtractionResponse.fromDomainRejection(
+          fields: const [],
+          code: 'SOME_UNKNOWN_ERROR',
+          message: 'Please try again.',
+          includeTradeLicence: true,
+        );
+        expect(id0(result).issue, DocumentIssue.imageUnclear);
+        expect(tl0(result)!.issue, DocumentIssue.imageUnclear);
+      },
+    );
+
+    test('a trade-license field never appears when licence is excluded', () {
+      final result = ExtractionResponse.fromDomainRejection(
+        fields: const ['license_number'],
+        message: 'msg',
+        includeTradeLicence: false,
+      );
+      // No trade licence in this extraction → falls back to the only doc.
+      expect(tl0(result), isNull);
+      expect(id0(result).issue, DocumentIssue.imageUnclear);
+    });
+
+    test('empty message leaves issueDetail null (static banner copy used)', () {
+      final result = ExtractionResponse.fromDomainRejection(
+        fields: const ['license_number'],
+        message: '',
+        includeTradeLicence: true,
+      );
+      expect(tl0(result)!.issueDetail, isNull);
     });
   });
 

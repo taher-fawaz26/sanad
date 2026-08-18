@@ -9,18 +9,14 @@ class UpdateRoleParams extends Equatable {
     required this.id,
     this.name,
     this.displayName,
-    this.displayNameAr,
     this.description,
-    this.descriptionAr,
     this.permissionIds,
   });
 
   final String id;
   final String? name;
   final String? displayName;
-  final String? displayNameAr;
   final String? description;
-  final String? descriptionAr;
   final List<String>? permissionIds;
 
   @override
@@ -28,9 +24,7 @@ class UpdateRoleParams extends Equatable {
     id,
     name,
     displayName,
-    displayNameAr,
     description,
-    descriptionAr,
     permissionIds,
   ];
 }
@@ -46,9 +40,7 @@ class UpdateRoleUseCase implements UseCase<RoleEntity, UpdateRoleParams> {
         id: params.id,
         name: params.name,
         displayName: params.displayName,
-        displayNameAr: params.displayNameAr,
         description: params.description,
-        descriptionAr: params.descriptionAr,
         permissionIds: params.permissionIds,
       );
 }

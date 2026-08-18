@@ -228,7 +228,12 @@ class EmailOtpPage extends HookWidget {
                 child: AppOtpField(
                   controller: controller,
                   autofocus: true,
-                  onCompleted: (_) => submit(),
+                  // Verification is intentionally NOT auto-triggered on
+                  // completion (SAN-539). Re-editing a single digit of an
+                  // already-full code would otherwise re-fire the verify call
+                  // on every keystroke, burning OTP attempts and risking the
+                  // rate limit. The user must explicitly tap "Verify".
+                  onSubmitted: (_) => submit(),
                 ),
               ),
               SizedBox(height: responsiveDimension(AppSpacing.xl)),

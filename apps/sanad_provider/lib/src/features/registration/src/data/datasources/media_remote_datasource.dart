@@ -117,13 +117,33 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
         if (tradeLicenseId != null) 'tradeLicenseId': tradeLicenseId,
       };
 
-      final response = await _client.post<dynamic>(
-        MediaApiPaths.extract,
-        data: body,
-        options: Options(
-          headers: {'Authorization': 'Bearer $authorizationToken'},
-        ),
-      );
+      final Response<dynamic> response;
+      try {
+        response = await _client.post<dynamic>(
+          MediaApiPaths.extract,
+          data: body,
+          options: Options(
+            headers: {'Authorization': 'Bearer $authorizationToken'},
+          ),
+        );
+      } on DioException catch (e) {
+        // A document-domain rejection (HTTP 400 with a single business
+        // message — EXTRACTION_INCOMPLETE, a front/back mismatch, an
+        // unreadable/unsupported document, or any future backend code
+        // meaning "the uploaded document is the problem") is a per-document
+        // outcome, not a flow failure: surface it as flagged sections so the
+        // review screen renders it inline (same UX as the image-unclear/
+        // expired outcomes) instead of a full-screen error. Classification is
+        // structural (400 + a string `message`, not a validation array) —
+        // never gated on a specific `code` — so a new backend code is
+        // handled automatically without a client change.
+        final rejection = _documentDomainRejectionOrNull(
+          e,
+          includeTradeLicence: tradeLicenseId != null,
+        );
+        if (rejection != null) return rejection;
+        rethrow;
+      }
 
       final raw = response.data;
       final map = raw is Map<String, dynamic> ? raw : <String, dynamic>{};
@@ -134,6 +154,41 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
     },
     (error, _) => ErrorMapper.mapError(error),
   );
+
+  /// Returns flagged [ExtractedDocuments] when [e] is a **document-domain**
+  /// rejection; null otherwise (so the caller rethrows and the failure is
+  /// mapped normally as a genuine transport/server failure).
+  ///
+  /// Classification is structural, not code-based: HTTP 400 with a body
+  /// whose `message` is a non-empty string is, for this endpoint, always a
+  /// rejection of the *documents themselves* — `auth/extract` has no other
+  /// business rule to reject with, and malformed-request validation (an
+  /// array-shaped `message`, or a missing required id) is already rejected
+  /// client-side before this call is made (see `extract()` in
+  /// `RegistrationDocumentRepository`). This is why NO specific `code` value
+  /// is checked here: whatever code the backend sends for a new document
+  /// problem, this still fires.
+  static ExtractedDocuments? _documentDomainRejectionOrNull(
+    DioException e, {
+    required bool includeTradeLicence,
+  }) {
+    if (e.response?.statusCode != 400) return null;
+    final data = e.response?.data;
+    final map = data is Map ? Map<String, dynamic>.from(data) : null;
+    if (map == null) return null;
+    final message = map['message'];
+    if (message is! String || message.isEmpty) return null;
+
+    final fields =
+        (map['fields'] as List?)?.map((f) => f.toString()).toList() ??
+        const <String>[];
+    return ExtractionResponse.fromDomainRejection(
+      fields: fields,
+      code: map['code']?.toString(),
+      message: message,
+      includeTradeLicence: includeTradeLicence,
+    );
+  }
 
   @override
   TaskEither<Failure, AuthSessionEntity> completeProfile({

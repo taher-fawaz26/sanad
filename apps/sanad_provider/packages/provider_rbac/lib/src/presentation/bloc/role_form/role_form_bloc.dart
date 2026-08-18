@@ -81,9 +81,7 @@ class RoleFormBloc extends Bloc<RoleFormEvent, RoleFormState> {
           CreateRoleParams(
             name: event.name,
             displayName: event.displayName,
-            displayNameAr: event.displayNameAr,
             description: event.description,
-            descriptionAr: event.descriptionAr,
             permissionIds: state.selectedPermissionIds.toList(),
           ),
         )
@@ -117,9 +115,7 @@ class RoleFormBloc extends Bloc<RoleFormEvent, RoleFormState> {
             id: event.roleId,
             name: event.name,
             displayName: event.displayName,
-            displayNameAr: event.displayNameAr,
             description: event.description,
-            descriptionAr: event.descriptionAr,
             permissionIds: state.selectedPermissionIds.toList(),
           ),
         )

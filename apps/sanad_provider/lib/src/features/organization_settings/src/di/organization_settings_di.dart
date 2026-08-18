@@ -1,6 +1,7 @@
 import 'package:auth/auth.dart' show SessionManager;
 import 'package:core/core.dart';
 import 'package:document_flow/document_flow.dart';
+import 'package:localization/localization.dart';
 import 'package:network/network.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/data/datasources/legal_data_remote_datasource.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/data/datasources/media_upload_remote_datasource.dart';
@@ -87,7 +88,10 @@ abstract final class OrganizationSettingsDI {
         ),
       )
       ..registerLazySingleton<OrganizationSettingsCacheDataSource>(
-        () => OrganizationSettingsCacheDataSourceImpl(sl<HiveLocalStorage>()),
+        () => OrganizationSettingsCacheDataSourceImpl(
+          sl<HiveLocalStorage>(),
+          resolveLanguageCode: () => sl<TranslateBloc>().state.languageCode,
+        ),
       )
       ..registerLazySingleton<OrganizationSettingsRepository>(
         () => OrganizationSettingsRepositoryImpl(

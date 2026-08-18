@@ -19,7 +19,6 @@ class CitySelectField extends StatelessWidget {
     required this.retryLabel,
     required this.onCitySelected,
     this.selectedCity,
-    this.localizedName,
     this.errorText,
     super.key,
   });
@@ -35,27 +34,18 @@ class CitySelectField extends StatelessWidget {
   /// Inline error message shown below the field (injected string).
   final String? errorText;
 
-  /// Resolves the display name for a given city. Defaults to [CityEntity.nameEn]
-  /// when null.
-  final String Function(CityEntity city)? localizedName;
-
   final ValueChanged<CityEntity> onCitySelected;
 
   @override
   Widget build(BuildContext context) {
-    final displayName = selectedCity == null ? null : _nameOf(selectedCity!);
-
     return AppSelectField(
       label: label,
-      value: displayName,
+      value: selectedCity?.name,
       hint: hint,
       errorText: errorText,
       onTap: () => _openPicker(context),
     );
   }
-
-  String _nameOf(CityEntity city) =>
-      localizedName != null ? localizedName!(city) : city.nameEn;
 
   Future<void> _openPicker(BuildContext context) async {
     final result = await SheetNavigator.push<CityEntity>(
@@ -64,7 +54,6 @@ class CitySelectField extends StatelessWidget {
         searchHint: searchHint,
         emptyLabel: emptyLabel,
         retryLabel: retryLabel,
-        localizedName: localizedName,
       ),
       settings: SheetRouteSettings(
         sheetSize: SheetSize.expanded,
@@ -83,13 +72,11 @@ class _CityPickerSheet extends StatefulWidget {
     required this.searchHint,
     required this.emptyLabel,
     required this.retryLabel,
-    this.localizedName,
   });
 
   final String searchHint;
   final String emptyLabel;
   final String retryLabel;
-  final String Function(CityEntity city)? localizedName;
 
   @override
   State<_CityPickerSheet> createState() => _CityPickerSheetState();
@@ -140,14 +127,8 @@ class _CityPickerSheetState extends State<_CityPickerSheet> {
   List<CityEntity> get _filtered {
     final q = _query.trim().toLowerCase();
     if (q.isEmpty) return _cities;
-    return _cities.where((c) {
-      return c.nameEn.toLowerCase().contains(q) ||
-          c.nameAr.contains(_query.trim());
-    }).toList();
+    return _cities.where((c) => c.name.toLowerCase().contains(q)).toList();
   }
-
-  String _nameOf(CityEntity city) =>
-      widget.localizedName != null ? widget.localizedName!(city) : city.nameEn;
 
   @override
   Widget build(BuildContext context) {
@@ -233,7 +214,7 @@ class _CityPickerSheetState extends State<_CityPickerSheet> {
       itemBuilder: (context, index) {
         final city = cities[index];
         return AppTableRow(
-          title: _nameOf(city),
+          title: city.name,
           onTap: () => Navigator.of(context).pop(city),
         );
       },

@@ -110,9 +110,6 @@ class _BranchInfoEditSheetState extends State<BranchInfoEditSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final locale = Localizations.localeOf(context);
-    final isArabic = locale.languageCode == 'ar';
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -137,9 +134,6 @@ class _BranchInfoEditSheetState extends State<BranchInfoEditSheet> {
           emptyLabel: 'branches.add_branch.city_empty'.tr(),
           retryLabel: 'common.cancel'.tr(),
           selectedCity: _city,
-          localizedName: isArabic
-              ? (city) => city.nameAr
-              : (city) => city.nameEn,
           onCitySelected: (city) => setState(() => _city = city),
         ),
         SizedBox(height: AppSpacing.xl),

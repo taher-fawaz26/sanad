@@ -74,11 +74,16 @@ Map<String, dynamic> _businessProfileJson() => {
 
 void main() {
   late _FakeLocalStorage storage;
+  late String languageCode;
   late OrganizationSettingsCacheDataSourceImpl cache;
 
   setUp(() {
     storage = _FakeLocalStorage();
-    cache = OrganizationSettingsCacheDataSourceImpl(storage);
+    languageCode = 'en';
+    cache = OrganizationSettingsCacheDataSourceImpl(
+      storage,
+      resolveLanguageCode: () => languageCode,
+    );
   });
 
   group('OrganizationSettingsCacheDataSource profile round-trip', () {
@@ -119,6 +124,30 @@ void main() {
     test('a cache miss (nothing written yet) returns null', () async {
       expect(await cache.readProfile('unknown-user'), isNull);
     });
+
+    test(
+      'a profile cached under one app language is a miss after switching '
+      'language — prevents serving a stale-language description/category '
+      'names until the next network refresh',
+      () async {
+        final response = MeSettingsResponse.fromJson({
+          'businessProfile': _businessProfileJson(),
+        });
+
+        languageCode = 'en';
+        await cache.writeProfile('user-1', response);
+        expect(await cache.readProfile('user-1'), isNotNull);
+
+        languageCode = 'ar';
+        expect(await cache.readProfile('user-1'), isNull);
+
+        await cache.writeProfile('user-1', response);
+        expect(await cache.readProfile('user-1'), isNotNull);
+
+        languageCode = 'en';
+        expect(await cache.readProfile('user-1'), isNotNull);
+      },
+    );
   });
 
   group('OrganizationSettingsCacheDataSource working-hours round-trip', () {

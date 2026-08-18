@@ -9,27 +9,16 @@ class CreateRoleParams extends Equatable {
     required this.name,
     required this.displayName,
     required this.permissionIds,
-    this.displayNameAr,
     this.description,
-    this.descriptionAr,
   });
 
   final String name;
   final String displayName;
-  final String? displayNameAr;
   final String? description;
-  final String? descriptionAr;
   final List<String> permissionIds;
 
   @override
-  List<Object?> get props => [
-    name,
-    displayName,
-    displayNameAr,
-    description,
-    descriptionAr,
-    permissionIds,
-  ];
+  List<Object?> get props => [name, displayName, description, permissionIds];
 }
 
 class CreateRoleUseCase implements UseCase<RoleEntity, CreateRoleParams> {
@@ -42,9 +31,7 @@ class CreateRoleUseCase implements UseCase<RoleEntity, CreateRoleParams> {
       _repository.createRole(
         name: params.name,
         displayName: params.displayName,
-        displayNameAr: params.displayNameAr,
         description: params.description,
-        descriptionAr: params.descriptionAr,
         permissionIds: params.permissionIds,
       );
 }

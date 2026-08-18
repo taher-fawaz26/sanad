@@ -17,6 +17,12 @@ abstract final class RegistrationRoutes {
   /// Shared — Emirates ID identity verification landing + capture flow.
   static const identityVerification = '/signup/identity-verification';
 
+  /// Shared — two-sided Emirates ID repair (front + back), pushed from
+  /// Review Information when an issue's `DocumentRepairTarget` requires the
+  /// whole document replaced together (e.g. a front/back mismatch), rather
+  /// than the default single-file replace.
+  static const repairEmiratesId = '/signup/repair-emirates-id';
+
   /// Organization only — trade licence upload.
   static const tradeLicence = '/signup/trade-licence';
 

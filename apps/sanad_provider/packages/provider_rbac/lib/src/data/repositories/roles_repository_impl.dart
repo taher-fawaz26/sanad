@@ -24,17 +24,13 @@ class RolesRepositoryImpl implements RolesRepository {
     required String name,
     required String displayName,
     required List<String> permissionIds,
-    String? displayNameAr,
     String? description,
-    String? descriptionAr,
   }) => _remoteDataSource
       .createRole(
         CreateRoleDto(
           name: name,
           displayName: displayName,
-          displayNameAr: displayNameAr,
           description: description,
-          descriptionAr: descriptionAr,
           permissionIds: permissionIds,
         ),
       )
@@ -49,9 +45,7 @@ class RolesRepositoryImpl implements RolesRepository {
     required String id,
     String? name,
     String? displayName,
-    String? displayNameAr,
     String? description,
-    String? descriptionAr,
     List<String>? permissionIds,
   }) => _remoteDataSource
       .updateRole(
@@ -59,9 +53,7 @@ class RolesRepositoryImpl implements RolesRepository {
         UpdateRoleDto(
           name: name,
           displayName: displayName,
-          displayNameAr: displayNameAr,
           description: description,
-          descriptionAr: descriptionAr,
           permissionIds: permissionIds,
         ),
       )

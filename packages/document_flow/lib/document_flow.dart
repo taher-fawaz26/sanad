@@ -13,6 +13,7 @@ export 'src/di/document_flow_di.dart';
 export 'src/domain/entities/document_flow_config.dart';
 export 'src/domain/entities/document_flow_context.dart';
 export 'src/domain/entities/document_media.dart';
+export 'src/domain/entities/document_repair_target.dart';
 export 'src/domain/entities/document_type.dart';
 export 'src/domain/entities/document_validation.dart';
 export 'src/domain/entities/extracted_document.dart';

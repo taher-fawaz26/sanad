@@ -16,7 +16,6 @@ class BranchDto {
     required this.availabilityMode,
     this.branchType = BranchType.mainBranch,
     this.cityId,
-    this.cityNameAr,
     this.branchManagerId,
     this.branchManagerName,
     this.lat,
@@ -75,7 +74,7 @@ class BranchDto {
           .where((id) => id.isNotEmpty)
           .toList();
       servingAreaNames = objects
-          .map((e) => e['nameEn'] as String? ?? '')
+          .map((e) => e['name'] as String? ?? '')
           .where((n) => n.isNotEmpty)
           .toList();
       servingAreas = objects
@@ -83,7 +82,7 @@ class BranchDto {
           .map(
             (e) => ServingArea(
               placeId: e['placeId'] as String,
-              name: e['nameEn'] as String? ?? e['nameAr'] as String? ?? '',
+              name: e['name'] as String? ?? '',
               address: '',
               latLng: LatLng(
                 _numericField(e['latitude']) ?? 0,
@@ -116,16 +115,15 @@ class BranchDto {
     }
 
     // --- City ---
-    // API returns city as an object `{ id, nameEn, nameAr, ... }`.
-    // Fall back to a plain string for backward compatibility.
+    // API returns city as an object `{ id, name, ... }`, already localized
+    // per the request's language. Fall back to a plain string for backward
+    // compatibility.
     final cityRaw = json['city'];
     final String city;
     String? cityId;
-    String? cityNameAr;
     if (cityRaw is Map<String, dynamic>) {
-      city = cityRaw['nameEn'] as String? ?? cityRaw['nameAr'] as String? ?? '';
+      city = cityRaw['name'] as String? ?? '';
       cityId = cityRaw['id'] as String?;
-      cityNameAr = cityRaw['nameAr'] as String?;
     } else {
       city = cityRaw as String? ?? '';
     }
@@ -164,7 +162,6 @@ class BranchDto {
       ),
       branchType: BranchType.fromApiString(json['type'] as String?),
       cityId: cityId,
-      cityNameAr: cityNameAr,
       branchManagerId: managerId,
       branchManagerName: managerName,
       lat: _numericField(json['lat']),
@@ -194,7 +191,6 @@ class BranchDto {
   final BranchAvailabilityMode availabilityMode;
   final BranchType branchType;
   final String? cityId;
-  final String? cityNameAr;
   final String? branchManagerId;
   final String? branchManagerName;
   final double? lat;
@@ -221,7 +217,6 @@ class BranchDto {
     availabilityMode: availabilityMode,
     branchType: branchType,
     cityId: cityId,
-    cityNameAr: cityNameAr,
     branchManagerId: branchManagerId,
     branchManagerName: branchManagerName,
     lat: lat,

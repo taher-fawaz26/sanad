@@ -145,6 +145,96 @@ void main() {
     );
 
     blocTest<DocumentFlowBloc, DocumentFlowState>(
+      'extraction domain rejection (e.g. EXTRACTION_INCOMPLETE) preserves '
+      'the backend code/fields/requestId and classifies as domain, not '
+      'network',
+      build: buildBloc,
+      setUp: () {
+        when(() => repository.uploadMedia(any())).thenAnswer(
+          (_) => TaskEither.right(media),
+        );
+        when(() => repository.extract(any())).thenAnswer(
+          (_) => TaskEither.left(
+            const BusinessRuleFailure(
+              message: 'لم نتمكن من قراءة الحقول المطلوبة: license_number.',
+              code: '400',
+              metadata: {
+                'code': 'EXTRACTION_INCOMPLETE',
+                'fields': ['license_number'],
+                'requestId': 'req-123',
+              },
+            ),
+          ),
+        );
+      },
+      act: (bloc) async {
+        bloc
+          ..add(
+            const DocumentPicked(
+              type: DocumentType.emiratesIdFront,
+              asset: asset,
+            ),
+          )
+          ..add(const DocumentUploadRequested(DocumentType.emiratesIdFront));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        bloc.add(const ExtractionRequested());
+      },
+      wait: const Duration(milliseconds: 20),
+      verify: (bloc) {
+        final failure = bloc.state.failure;
+        expect(failure, isA<ExtractionFailure>());
+        final extractionFailure = failure! as ExtractionFailure;
+        expect(extractionFailure.kind, ExtractionFailureKind.domain);
+        expect(extractionFailure.code, 'EXTRACTION_INCOMPLETE');
+        expect(extractionFailure.fields, ['license_number']);
+        expect(extractionFailure.requestId, 'req-123');
+        expect(
+          extractionFailure.messageKey,
+          'لم نتمكن من قراءة الحقول المطلوبة: license_number.',
+        );
+
+        // Media already uploaded before the extraction call must survive a
+        // domain rejection so retry doesn't force a re-upload.
+        expect(
+          bloc.state.uploadedIds[DocumentType.emiratesIdFront],
+          media.id,
+        );
+      },
+    );
+
+    blocTest<DocumentFlowBloc, DocumentFlowState>(
+      'extraction transport failure (no internet) classifies as network',
+      build: buildBloc,
+      setUp: () {
+        when(() => repository.uploadMedia(any())).thenAnswer(
+          (_) => TaskEither.right(media),
+        );
+        when(() => repository.extract(any())).thenAnswer(
+          (_) => TaskEither.left(
+            const NoInternetFailure(message: 'errors.no_internet'),
+          ),
+        );
+      },
+      act: (bloc) async {
+        bloc
+          ..add(
+            const DocumentPicked(
+              type: DocumentType.emiratesIdFront,
+              asset: asset,
+            ),
+          )
+          ..add(const DocumentUploadRequested(DocumentType.emiratesIdFront));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        bloc.add(const ExtractionRequested());
+      },
+      wait: const Duration(milliseconds: 20),
+      verify: (bloc) {
+        final failure = bloc.state.failure! as ExtractionFailure;
+        expect(failure.kind, ExtractionFailureKind.network);
+      },
+    );
+
+    blocTest<DocumentFlowBloc, DocumentFlowState>(
       'full pipeline: upload → extract → submit reaches PhaseSuccess',
       build: buildBloc,
       setUp: () {

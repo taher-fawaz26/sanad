@@ -23,15 +23,13 @@ void main() {
       const dto = CreateRoleDto(
         name: 'x',
         displayName: 'X',
-        displayNameAr: 'س',
         description: 'desc',
-        descriptionAr: 'وصف',
         permissionIds: ['perm_1'],
       );
       final json = dto.toJson();
-      expect(json['displayNameAr'], 'س');
       expect(json['description'], 'desc');
-      expect(json['descriptionAr'], 'وصف');
+      expect(json.containsKey('displayNameAr'), isFalse);
+      expect(json.containsKey('descriptionAr'), isFalse);
     });
   });
 

@@ -8,7 +8,6 @@ class PermissionEntity extends Equatable {
     required this.action,
     required this.displayName,
     required this.resource,
-    this.displayNameAr,
     this.description,
     this.isAdmin = false,
   });
@@ -18,7 +17,6 @@ class PermissionEntity extends Equatable {
   /// e.g. `provider:branch:create`.
   final String action;
   final String displayName;
-  final String? displayNameAr;
   final String? description;
 
   /// e.g. `branch`.
@@ -34,7 +32,6 @@ class PermissionEntity extends Equatable {
     id,
     action,
     displayName,
-    displayNameAr,
     description,
     resource,
     isAdmin,

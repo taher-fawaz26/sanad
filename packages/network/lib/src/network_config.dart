@@ -12,7 +12,6 @@ class NetworkConfig {
     required this.refreshTokenPath,
     this.connectTimeout = const Duration(seconds: 15),
     this.receiveTimeout = const Duration(seconds: 15),
-    this.sendTimeout = const Duration(seconds: 15),
   });
 
   final String baseUrl;
@@ -23,12 +22,15 @@ class NetworkConfig {
 
   final Duration connectTimeout;
   final Duration receiveTimeout;
-  final Duration sendTimeout;
 
+  // No `sendTimeout` — Dio's send-phase timeout fires while the request
+  // body is still uploading and is a known source of false timeouts on
+  // POST/PATCH (the server can finish and return 2xx after Dio has already
+  // aborted the socket). `connectTimeout` + `receiveTimeout` are sufficient
+  // to bound a hung request.
   BaseOptions get dioBaseOptions => BaseOptions(
     baseUrl: baseUrl,
     connectTimeout: connectTimeout,
     receiveTimeout: receiveTimeout,
-    sendTimeout: sendTimeout,
   );
 }

@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
 import 'package:document_flow/document_flow.dart';
@@ -12,8 +10,6 @@ import 'package:sanad_provider/src/features/registration/src/presentation/widget
 import 'package:sanad_provider/src/features/registration/src/routes/registration_routes.dart';
 import 'package:shared_ui/shared_ui.dart';
 
-const _kOrbSize = 180.0;
-
 /// Step 8 — "AI extracting document information" loading step.
 ///
 /// Figma: `AI` (`3125:24217`). Runs the (simulated) extraction on entry and
@@ -25,9 +21,6 @@ class ExtractingDocumentsPage extends HookWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final typography = context.appTypography;
-    final animation = useAnimationController(
-      duration: const Duration(seconds: 3),
-    )..repeat();
 
     useEffect(() {
       context.read<DocumentFlowBloc>().add(const ExtractionRequested());
@@ -44,10 +37,38 @@ class ExtractingDocumentsPage extends HookWidget {
       builder: (context, state) {
         if (state.phase is PhaseFailure &&
             (state.phase as PhaseFailure).stage == FailedStage.extraction) {
+          final failure = state.failure;
+          final extractionFailure = failure is ExtractionFailure
+              ? failure
+              : null;
+          final kind = extractionFailure?.kind ?? ExtractionFailureKind.server;
+
+          // `messageKey` is overloaded: for network/server/missing-context it
+          // is an i18n key (resolve with `.tr()`); for a domain rejection it
+          // is the backend's already-localized, user-facing message, which
+          // must be shown verbatim (running it through `.tr()` logs a spurious
+          // "key not found" warning and is semantically wrong).
+          final (AppErrorStateStyle style, String description) = switch (kind) {
+            ExtractionFailureKind.network => (
+              AppErrorStateStyle.network,
+              'registration.extraction_failed_retry'.tr(),
+            ),
+            ExtractionFailureKind.domain
+                when (extractionFailure?.messageKey.isNotEmpty ?? false) =>
+              (AppErrorStateStyle.generic, extractionFailure!.messageKey),
+            _ => (
+              AppErrorStateStyle.generic,
+              (extractionFailure?.messageKey ??
+                      'registration.extraction_failed_retry')
+                  .tr(),
+            ),
+          };
+
           return Scaffold(
-            body: AppNetworkFailureState(
+            body: AppErrorState(
+              style: style,
               title: 'registration.extraction_failed_title'.tr(),
-              description: 'registration.extraction_failed_retry'.tr(),
+              description: description,
               retryLabel: 'common.retry'.tr(),
               onRetry: () =>
                   context.read<DocumentFlowBloc>().add(const RetryRequested()),
@@ -65,7 +86,7 @@ class ExtractingDocumentsPage extends HookWidget {
                 height: responsiveDimension(52),
               ),
               const Spacer(),
-              _ExtractingOrb(animation: animation, color: colors.primary300),
+              const AppDocumentExtractionLoader(),
               const Spacer(),
               Padding(
                 padding: EdgeInsets.symmetric(
@@ -82,70 +103,6 @@ class ExtractingDocumentsPage extends HookWidget {
               ),
               SizedBox(height: responsiveDimension(AppSpacing.xxxxl)),
             ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-/// A softly pulsing, rotating orb approximating the Figma glass sphere.
-class _ExtractingOrb extends StatelessWidget {
-  const _ExtractingOrb({required this.animation, required this.color});
-
-  final Animation<double> animation;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final size = responsiveDimension(_kOrbSize);
-    return AnimatedBuilder(
-      animation: animation,
-      builder: (context, _) {
-        final pulse = 0.92 + 0.08 * math.sin(animation.value * 2 * math.pi);
-        return Transform.scale(
-          scale: pulse,
-          child: Transform.rotate(
-            angle: animation.value * 2 * math.pi,
-            child: Container(
-              width: size,
-              height: size,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: SweepGradient(
-                  colors: [
-                    color.withValues(alpha: 0.15),
-                    color.withValues(alpha: 0.75),
-                    Colors.white.withValues(alpha: 0.9),
-                    color.withValues(alpha: 0.15),
-                  ],
-                  stops: const [0.0, 0.45, 0.6, 1.0],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.4),
-                    blurRadius: 40,
-                    spreadRadius: 4,
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Container(
-                  width: size * 0.6,
-                  height: size * 0.6,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.black.withValues(alpha: 0.35),
-                    gradient: RadialGradient(
-                      colors: [
-                        Colors.white.withValues(alpha: 0.25),
-                        Colors.black.withValues(alpha: 0.35),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
           ),
         );
       },

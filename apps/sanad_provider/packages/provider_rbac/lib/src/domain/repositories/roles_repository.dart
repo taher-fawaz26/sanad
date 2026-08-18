@@ -10,9 +10,7 @@ abstract interface class RolesRepository {
     required String name,
     required String displayName,
     required List<String> permissionIds,
-    String? displayNameAr,
     String? description,
-    String? descriptionAr,
   });
 
   TaskEither<Failure, RoleEntity> getRole(String id);
@@ -21,9 +19,7 @@ abstract interface class RolesRepository {
     required String id,
     String? name,
     String? displayName,
-    String? displayNameAr,
     String? description,
-    String? descriptionAr,
     List<String>? permissionIds,
   });
 

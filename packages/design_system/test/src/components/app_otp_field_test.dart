@@ -543,4 +543,160 @@ void main() {
       controller.dispose();
     });
   });
+  group('AppOtpField uniform geometry', () {
+    List<Size> _cellSizes(WidgetTester tester) => [
+      for (var i = 0; i < kDefaultOtpLength; i++)
+        tester.getSize(find.byKey(otpCellKey(i))),
+    ];
+
+    List<double> _cellLefts(WidgetTester tester) => [
+      for (var i = 0; i < kDefaultOtpLength; i++)
+        tester.getTopLeft(find.byKey(otpCellKey(i))).dx,
+    ];
+
+    testWidgets('all six cells have identical size, including first and last', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        AppOtpField(controller: TextEditingController(text: '066555')),
+      );
+
+      final sizes = _cellSizes(tester);
+      final expected = sizes.first;
+      for (var i = 1; i < sizes.length; i++) {
+        expect(
+          sizes[i],
+          expected,
+          reason: 'cell $i size ${sizes[i]} differs from cell 0 $expected',
+        );
+      }
+    });
+
+    testWidgets('gaps between consecutive cells are all identical', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        AppOtpField(controller: TextEditingController(text: '066555')),
+      );
+
+      final lefts = _cellLefts(tester);
+      final width = tester.getSize(find.byKey(otpCellKey(0))).width;
+      final gaps = <double>[
+        for (var i = 1; i < lefts.length; i++) lefts[i] - lefts[i - 1] - width,
+      ];
+      final expected = gaps.first;
+      for (var i = 1; i < gaps.length; i++) {
+        expect(
+          gaps[i],
+          closeTo(expected, 0.5),
+          reason: 'gap ${i - 1}->$i (${gaps[i]}) differs from gap 0 ($expected)',
+        );
+      }
+    });
+
+    testWidgets(
+      'tapping the last cell does not change the size or position of the '
+      'first cell (regression: hidden TextField leaked a selection paint over '
+      'cell 0)',
+      (tester) async {
+        final controller = TextEditingController(text: '066555');
+        await _pump(
+          tester,
+          AppOtpField(controller: controller, autofocus: true),
+        );
+
+        final firstBefore = tester.getRect(find.byKey(otpCellKey(0)));
+        final sizesBefore = _cellSizes(tester);
+
+        await _tapCell(tester, 5);
+        // Give the caret animation a moment to settle without hanging.
+        await tester.pump(const Duration(milliseconds: 16));
+
+        expect(tester.getRect(find.byKey(otpCellKey(0))), firstBefore);
+        expect(_cellSizes(tester), sizesBefore);
+      },
+    );
+
+    testWidgets(
+      'the hidden TextField renders no visible selection paint (transparent '
+      'selection color prevents the leak)',
+      (tester) async {
+        await _pump(
+          tester,
+          AppOtpField(
+            controller: TextEditingController(text: '066555'),
+            autofocus: true,
+          ),
+        );
+
+        // The wrapping DefaultSelectionStyle overrides the ambient theme's
+        // selection color for this subtree.
+        final style = tester.widget<DefaultSelectionStyle>(
+          find.ancestor(
+            of: find.byType(EditableText),
+            matching: find.byType(DefaultSelectionStyle),
+          ).first,
+        );
+        expect(style.selectionColor, Colors.transparent);
+        expect(style.cursorColor, Colors.transparent);
+      },
+    );
+
+    testWidgets('cell sizes remain identical across focus/blur transitions', (
+      tester,
+    ) async {
+      final controller = TextEditingController(text: '066555');
+      await _pump(
+        tester,
+        AppOtpField(controller: controller, autofocus: true),
+      );
+      final focusedSizes = _cellSizes(tester);
+
+      // Move focus away.
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pump();
+
+      final blurredSizes = _cellSizes(tester);
+      expect(blurredSizes, focusedSizes);
+    });
+
+    testWidgets(
+      'cell sizes remain identical in the incorrect-code error state',
+      (tester) async {
+        final controller = TextEditingController(text: '066555');
+        await _pump(tester, AppOtpField(controller: controller));
+        final normalSizes = _cellSizes(tester);
+
+        await _pump(
+          tester,
+          AppOtpField(
+            controller: controller,
+            errorText: 'Incorrect verification code',
+          ),
+        );
+        final errorSizes = _cellSizes(tester);
+
+        expect(errorSizes, normalSizes);
+      },
+    );
+
+    testWidgets('cell sizes stay uniform in RTL layouts', (tester) async {
+      await _pump(
+        tester,
+        Directionality(
+          textDirection: TextDirection.rtl,
+          child: AppOtpField(controller: TextEditingController(text: '066555')),
+        ),
+      );
+
+      final sizes = _cellSizes(tester);
+      final expected = sizes.first;
+      for (var i = 1; i < sizes.length; i++) {
+        expect(sizes[i], expected);
+      }
+    });
+  });
+
 }

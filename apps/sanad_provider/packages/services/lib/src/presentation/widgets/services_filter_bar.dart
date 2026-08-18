@@ -20,12 +20,18 @@ import 'package:flutter/material.dart';
 class ServicesFilterBar extends StatelessWidget {
   const ServicesFilterBar({
     super.key,
+    this.showSearch = true,
     this.searchController,
     this.onSearchChanged,
     this.statusLabel,
     this.onStatusTap,
     this.onTypeTap,
   });
+
+  /// Whether to render the search field. `false` when the search field is
+  /// hosted elsewhere instead (e.g. a pinned header above a collapsing
+  /// section that contains just the status/type filter row).
+  final bool showSearch;
 
   final TextEditingController? searchController;
   final ValueChanged<String>? onSearchChanged;
@@ -41,14 +47,16 @@ class ServicesFilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        AppSearchField(
-          controller: searchController,
-          variant: AppSearchFieldVariant.bordered,
-          hint: 'services.search_hint'.tr(),
-          showMicIcon: false,
-          onChanged: onSearchChanged,
-        ),
-        SizedBox(height: AppSpacing.md),
+        if (showSearch) ...[
+          AppSearchField(
+            controller: searchController,
+            variant: AppSearchFieldVariant.bordered,
+            hint: 'services.search_hint'.tr(),
+            showMicIcon: false,
+            onChanged: onSearchChanged,
+          ),
+          SizedBox(height: AppSpacing.md),
+        ],
         Row(
           children: [
             Expanded(

@@ -106,9 +106,7 @@ void main() {
         () => rolesRepository.createRole(
           name: any(named: 'name'),
           displayName: any(named: 'displayName'),
-          displayNameAr: any(named: 'displayNameAr'),
           description: any(named: 'description'),
-          descriptionAr: any(named: 'descriptionAr'),
           permissionIds: any(named: 'permissionIds'),
         ),
       ).thenAnswer(
@@ -155,9 +153,7 @@ void main() {
         () => rolesRepository.createRole(
           name: 'x',
           displayName: 'X',
-          displayNameAr: null,
           description: null,
-          descriptionAr: null,
           permissionIds: ['perm_1'],
         ),
       ).called(1);
@@ -173,9 +169,7 @@ void main() {
         () => rolesRepository.createRole(
           name: any(named: 'name'),
           displayName: any(named: 'displayName'),
-          displayNameAr: any(named: 'displayNameAr'),
           description: any(named: 'description'),
-          descriptionAr: any(named: 'descriptionAr'),
           permissionIds: any(named: 'permissionIds'),
         ),
       ).thenAnswer((_) => TaskEither(() => gate.future.then(Right.new)));
@@ -207,9 +201,7 @@ void main() {
         () => rolesRepository.createRole(
           name: 'x',
           displayName: 'X',
-          displayNameAr: null,
           description: null,
-          descriptionAr: null,
           permissionIds: any(named: 'permissionIds'),
         ),
       ).called(1);

@@ -11,6 +11,7 @@ void main() {
     type: WorkerType.worker,
     email: 'john.doe@example.com',
     phone: '+971501234567',
+    roleIds: ['f490f1ee-6c54-4b01-90e6-d701748f0851'],
   );
 
   group('CreateInvitationDto.toJson — contract', () {
@@ -22,6 +23,7 @@ void main() {
         'phone': '+971501234567',
         'jobTitle': 'Software Engineer',
         'type': 'worker',
+        'roleIds': ['f490f1ee-6c54-4b01-90e6-d701748f0851'],
       });
     });
 
@@ -33,6 +35,7 @@ void main() {
           type: WorkerType.manager,
           email: 'jane@example.com',
           phone: '+971500000000',
+          roleIds: ['branch-manager-role-id'],
         ),
       ).toJson();
       expect(json['type'], 'manager');
@@ -46,9 +49,24 @@ void main() {
           type: WorkerType.worker,
           email: 'john.doe@example.com',
           phone: '+971501234567',
+          roleIds: ['worker-basic-role-id'],
         ),
       ).toJson();
       expect(json.containsKey('jobTitle'), isFalse);
+    });
+
+    test('roleIds is always emitted, even when empty', () {
+      final json = CreateInvitationDto.fromParams(
+        const InviteWorkerParams(
+          fullName: 'John Doe',
+          jobTitle: '',
+          type: WorkerType.worker,
+          email: 'john.doe@example.com',
+          phone: '+971501234567',
+          roleIds: [],
+        ),
+      ).toJson();
+      expect(json['roleIds'], <String>[]);
     });
 
     // Regression: branch is not part of the invitation contract.

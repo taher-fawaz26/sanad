@@ -7,18 +7,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sanad_provider/src/features/registration/src/presentation/widgets/registration_header.dart';
+import 'package:sanad_provider/src/features/registration/src/presentation/widgets/registration_logo.dart';
+import 'package:sanad_provider/src/features/registration/src/presentation/widgets/registration_sliver_shell.dart';
 import 'package:sanad_provider/src/features/registration/src/presentation/widgets/select_capture_method_sheet.dart';
 import 'package:sanad_provider/src/features/registration/src/routes/registration_navigation.dart';
 import 'package:sanad_provider/src/features/registration/src/routes/registration_routes.dart';
-import 'package:shared_ui/shared_ui.dart';
 
 const _kIconSize = 48.0;
 
 /// Step 7 (Organization path only) — trade licence upload.
 ///
 /// Reuses the same [DocumentFlowController] pipeline as Emirates ID.
-/// Wraps itself in [AuthScreenShell] so the back / next actions live in the
-/// pinned footer — always visible above the scrolling upload card.
+/// Self-wraps in [RegistrationSliverShell] so the back / next actions live in
+/// the pinned footer — always visible above the scrolling upload card.
 class TradeLicencePage extends StatelessWidget {
   const TradeLicencePage({super.key});
 
@@ -56,6 +57,7 @@ class TradeLicencePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final title = 'registration.trade_licence_title'.tr();
 
     return BlocListener<DocumentFlowBloc, DocumentFlowState>(
       listenWhen: (previous, current) =>
@@ -69,12 +71,16 @@ class TradeLicencePage extends StatelessWidget {
       child: BlocBuilder<DocumentFlowBloc, DocumentFlowState>(
         builder: (context, state) {
           final tradeLicence = state.documentAt(DocumentType.tradeLicense);
-          return AuthScreenShell(
+          return RegistrationSliverShell(
             onBack: () => RegistrationNavigation.popStep(
               context,
               isOrganization: true,
             ),
-            title: 'registration.trade_licence_title'.tr(),
+            headerBuilder: (context, t) => RegistrationLogo(
+              collapseProgress: t,
+              collapsedTitle: title,
+              reserveLeadingSpace: true,
+            ),
             footer: Row(
               children: [
                 Expanded(
@@ -107,41 +113,38 @@ class TradeLicencePage extends StatelessWidget {
                 ),
               ],
             ),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  AppSvgPicture.asset(
-                    AppSvgs.registrationTradeLicence,
-                    width: responsiveDimension(_kIconSize),
-                    height: responsiveDimension(_kIconSize),
-                    colorFilter: ColorFilter.mode(
-                      colors.textPrimary,
-                      BlendMode.srcIn,
-                    ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AppSvgPicture.asset(
+                  AppSvgs.registrationTradeLicence,
+                  width: responsiveDimension(_kIconSize),
+                  height: responsiveDimension(_kIconSize),
+                  colorFilter: ColorFilter.mode(
+                    colors.textPrimary,
+                    BlendMode.srcIn,
                   ),
-                  SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-                  RegistrationHeader(
-                    title: 'registration.trade_licence_title'.tr(),
-                    subtitle: Text('registration.trade_licence_subtitle'.tr()),
+                ),
+                SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
+                RegistrationHeader(
+                  title: title,
+                  subtitle: Text('registration.trade_licence_subtitle'.tr()),
+                ),
+                SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
+                DocumentUploadCard(
+                  title: 'registration.trade_licence_label'.tr(),
+                  labels: _labels(),
+                  uploadable: tradeLicence,
+                  onUpload: () => _capture(context),
+                  onCancel: () => context.read<DocumentFlowBloc>().add(
+                    const DocumentUploadCancelled(DocumentType.tradeLicense),
                   ),
-                  SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-                  DocumentUploadCard(
-                    title: 'registration.trade_licence_label'.tr(),
-                    labels: _labels(),
-                    uploadable: tradeLicence,
-                    onUpload: () => _capture(context),
-                    onCancel: () => context.read<DocumentFlowBloc>().add(
-                      const DocumentUploadCancelled(DocumentType.tradeLicense),
-                    ),
-                    onReplace: () => _capture(context),
-                    onRemove: () => context.read<DocumentFlowBloc>().add(
-                      const DocumentRemoved(DocumentType.tradeLicense),
-                    ),
+                  onReplace: () => _capture(context),
+                  onRemove: () => context.read<DocumentFlowBloc>().add(
+                    const DocumentRemoved(DocumentType.tradeLicense),
                   ),
-                  SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-                ],
-              ),
+                ),
+              ],
             ),
           );
         },

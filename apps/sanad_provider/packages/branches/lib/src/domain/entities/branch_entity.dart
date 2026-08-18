@@ -16,7 +16,6 @@ class BranchEntity extends Equatable {
     required this.availabilityMode,
     this.branchType = BranchType.mainBranch,
     this.cityId,
-    this.cityNameAr,
     this.branchManagerId,
     this.branchManagerName,
     this.lat,
@@ -51,9 +50,6 @@ class BranchEntity extends Equatable {
 
   /// Backend city identifier (needed to prefill / update the branch's city).
   final String? cityId;
-
-  /// City display name (Arabic), when returned by the API.
-  final String? cityNameAr;
 
   final String? branchManagerId;
   final String? branchManagerName;
@@ -101,7 +97,6 @@ class BranchEntity extends Equatable {
     BranchAvailabilityMode? availabilityMode,
     BranchType? branchType,
     String? cityId,
-    String? cityNameAr,
     String? branchManagerId,
     String? branchManagerName,
     double? lat,
@@ -127,7 +122,6 @@ class BranchEntity extends Equatable {
     availabilityMode: availabilityMode ?? this.availabilityMode,
     branchType: branchType ?? this.branchType,
     cityId: cityId ?? this.cityId,
-    cityNameAr: cityNameAr ?? this.cityNameAr,
     branchManagerId: branchManagerId ?? this.branchManagerId,
     branchManagerName: branchManagerName ?? this.branchManagerName,
     lat: lat ?? this.lat,
@@ -156,7 +150,6 @@ class BranchEntity extends Equatable {
     availabilityMode,
     branchType,
     cityId,
-    cityNameAr,
     branchManagerId,
     branchManagerName,
     lat,

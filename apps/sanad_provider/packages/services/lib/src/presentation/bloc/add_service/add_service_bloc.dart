@@ -1,6 +1,7 @@
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:services/src/domain/entities/catalog_service_entity.dart';
 import 'package:services/src/domain/entities/provider_service_entity.dart';
@@ -32,7 +33,26 @@ class AddServiceBloc extends Bloc<AddServiceEvent, AddServiceState> {
     Emitter<AddServiceState> emit,
   ) async {
     emit(state.copyWith(status: RequestStatus.loading, clearFailure: true));
+    // TEMP DIAGNOSTIC (Create Service timeout investigation) — debug-only,
+    // logs no tokens/body/PII. Remove once the timing-out phase is
+    // confirmed.
+    final stopwatch = kDebugMode ? Stopwatch() : null;
+    stopwatch?.start();
     final result = await _createProviderServiceUseCase(event.params).run();
+    if (kDebugMode) {
+      stopwatch?.stop();
+      result.fold(
+        (failure) => debugPrint(
+          '[CreateService] elapsedMs=${stopwatch?.elapsedMilliseconds} '
+          'failure=${failure.runtimeType} code=${failure.code} '
+          'phase=${failure.metadata?['phase']}',
+        ),
+        (_) => debugPrint(
+          '[CreateService] elapsedMs=${stopwatch?.elapsedMilliseconds} '
+          'success',
+        ),
+      );
+    }
     result.fold(
       (failure) => emit(
         state.copyWith(status: RequestStatus.failure, failure: failure),

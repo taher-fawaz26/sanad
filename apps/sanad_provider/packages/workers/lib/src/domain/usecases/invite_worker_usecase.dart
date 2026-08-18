@@ -11,6 +11,7 @@ class InviteWorkerParams extends Equatable {
     required this.type,
     required this.email,
     required this.phone,
+    required this.roleIds,
   });
 
   final String fullName;
@@ -23,8 +24,14 @@ class InviteWorkerParams extends Equatable {
   /// Required by the backend `CreateInvitationDto` (E.164, `+971…`).
   final String phone;
 
+  /// Role ids granted on acceptance — must include at least the mandatory
+  /// baseline role for [type] (see `RoleAssignmentPolicy` in `provider_rbac`).
+  /// The backend also re-applies that baseline server-side, but the client
+  /// still sends it explicitly so the invite reflects what the admin saw.
+  final List<String> roleIds;
+
   @override
-  List<Object?> get props => [fullName, jobTitle, type, email, phone];
+  List<Object?> get props => [fullName, jobTitle, type, email, phone, roleIds];
 }
 
 class InviteWorkerUseCase implements UseCase<Unit, InviteWorkerParams> {

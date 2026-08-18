@@ -1,16 +1,13 @@
 import 'package:equatable/equatable.dart';
 
 class CityEntity extends Equatable {
-  const CityEntity({
-    required this.id,
-    required this.nameEn,
-    required this.nameAr,
-  });
+  const CityEntity({required this.id, required this.name});
 
   final String id;
-  final String nameEn;
-  final String nameAr;
+
+  /// Already localized by the backend based on the request's language.
+  final String name;
 
   @override
-  List<Object?> get props => [id, nameEn, nameAr];
+  List<Object?> get props => [id, name];
 }

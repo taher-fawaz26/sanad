@@ -15,6 +15,7 @@ export 'src/di/provider_rbac_di.dart';
 export 'src/domain/entities/permission_entity.dart';
 export 'src/domain/entities/role_entity.dart';
 export 'src/domain/entities/role_persona_type.dart';
+export 'src/domain/policies/role_assignment_policy.dart';
 export 'src/domain/repositories/permissions_repository.dart';
 export 'src/domain/repositories/roles_repository.dart';
 export 'src/domain/usecases/assign_worker_roles_usecase.dart';
