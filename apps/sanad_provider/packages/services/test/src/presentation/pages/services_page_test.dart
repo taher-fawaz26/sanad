@@ -26,6 +26,8 @@ import 'package:services/src/presentation/bloc/service_analytics/service_analyti
 import 'package:services/src/presentation/bloc/service_requests_list/service_requests_list_bloc.dart';
 import 'package:services/src/presentation/bloc/services_list/services_list_bloc.dart';
 import 'package:services/src/presentation/pages/services_page.dart';
+import 'package:services/src/presentation/widgets/service_list_item.dart';
+import 'package:services/src/presentation/widgets/service_metrics_section.dart';
 import 'package:services/src/presentation/widgets/services_filter_bar.dart';
 
 // No EasyLocalization bootstrap (avoids a real SharedPreferences hang in this
@@ -159,7 +161,7 @@ void main() {
                 value: serviceRequestsListBloc,
               ),
             ],
-            child: const ProviderServicesPage(),
+            child: const ProviderServicesPage(isOwner: true),
           ),
         ),
       ),
@@ -212,4 +214,123 @@ void main() {
       expect(find.byType(ServicesFilterBar), findsOneWidget);
     },
   );
+
+  group('isOwner: false (RBAC Phase 7C — the reported worker 403 bug)', () {
+    // Deliberately does NOT construct ServiceAnalyticsBloc or
+    // ServiceRequestsListBloc at all — proves the page never reads them
+    // when isOwner is false, matching ServicesModule.shellRoute() not
+    // providing them for a non-owner. If the page tried to read either
+    // one, this test would fail with a "provider not found" error rather
+    // than an assertion mismatch.
+    Future<void> pumpNonOwner(WidgetTester tester) async {
+      await tester.binding.setSurfaceSize(const Size(1080, 2400));
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      when(
+        () => providerServicesRepo.listProviderServices(page: 1, limit: 10),
+      ).thenAnswer((_) => TaskEither.of(_servicesPage()));
+
+      final servicesListBloc = ServicesListBloc(
+        listProviderServicesUseCase: ListProviderServicesUseCase(
+          providerServicesRepo,
+        ),
+      );
+      final serviceActionBloc = ServiceActionBloc(
+        deleteProviderServiceUseCase: DeleteProviderServiceUseCase(
+          providerServicesRepo,
+        ),
+        setProviderServiceStatusUseCase: SetProviderServiceStatusUseCase(
+          providerServicesRepo,
+        ),
+      );
+      addTearDown(() {
+        servicesListBloc.close();
+        serviceActionBloc.close();
+      });
+
+      await tester.pumpWidget(
+        ScreenUtilInit(
+          designSize: const Size(360, 800),
+          minTextAdapt: true,
+          builder: (_, _) => MaterialApp(
+            theme: AppTheme.light(),
+            home: MultiBlocProvider(
+              providers: [
+                BlocProvider<ServicesListBloc>.value(value: servicesListBloc),
+                BlocProvider<ServiceActionBloc>.value(
+                  value: serviceActionBloc,
+                ),
+              ],
+              child: const ProviderServicesPage(isOwner: false),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
+    testWidgets(
+      'renders the services list without ServiceAnalyticsBloc or '
+      'ServiceRequestsListBloc provided anywhere in the tree',
+      (tester) async {
+        await pumpNonOwner(tester);
+
+        expect(find.byType(ServicesFilterBar), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'shows no segmented control — there is nothing to switch to',
+      (tester) async {
+        await pumpNonOwner(tester);
+
+        expect(find.byType(AppSegmentedControl<int>), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'shows no ServiceMetricsSection (the owner-only analytics summary)',
+      (tester) async {
+        await pumpNonOwner(tester);
+
+        expect(find.byType(ServiceMetricsSection), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'shows no Add Service FAB (RBAC Phase 7L — create is owner-only, '
+      'finding G3; the AppFloatingActionButton was previously rendered '
+      'unconditionally, and tapping it bounced non-owners home via the '
+      'route guard — the reveal-then-bounce pattern the plan forbids)',
+      (tester) async {
+        await pumpNonOwner(tester);
+
+        expect(find.byType(AppFloatingActionButton), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'renders row items with isOwner: false — the row still shows the '
+      'service (a manager holding provider-service:view legitimately sees '
+      'it) but its swipe-action list is empty',
+      (tester) async {
+        await pumpNonOwner(tester);
+
+        final rows = find.byType(ServiceListItem);
+        expect(rows, findsOneWidget);
+        expect(
+          (tester.widget<ServiceListItem>(rows)).isOwner,
+          isFalse,
+          reason:
+              'ServiceListItem.isOwner must be false for a non-owner '
+              'page so the Edit / Pause-Resume / Delete swipes are hidden',
+        );
+      },
+    );
+  });
 }

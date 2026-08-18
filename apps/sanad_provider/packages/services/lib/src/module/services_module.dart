@@ -47,19 +47,33 @@ class ServicesModule extends FeatureModule {
   /// The `/services` route tree — embedded as-is inside the provider app's
   /// bottom-nav shell branch so pushes within it (details, edit, add, …)
   /// stay inside the shell and keep the bottom nav bar visible.
-  static GoRoute shellRoute() => GoRoute(
+  ///
+  /// [isOwner] resolves whether the signed-in account may see the two
+  /// owner-only sub-surfaces (performance metrics on My Services, and the
+  /// whole Service Requests tab) — backed by `provider-services/overview`
+  /// and `service-requests`, which the backend 403s for any worker/manager
+  /// token regardless of granted permissions (RBAC Phase 7 finding F1). A
+  /// callback, not a `bool`, so it is read fresh on every navigation to this
+  /// route rather than captured once at router construction — and so
+  /// `services` never needs to depend on `auth` to answer it; the app
+  /// supplies `() => sl<SessionManager>().isProviderOwner`.
+  static GoRoute shellRoute({required bool Function() isOwner}) => GoRoute(
     path: ServiceRoutes.list,
-    builder: (context, state) => MultiBlocProvider(
-      providers: [
-        BlocProvider(create: (_) => sl<ServicesListBloc>()),
-        BlocProvider(create: (_) => sl<ServiceActionBloc>()),
-        BlocProvider(create: (_) => sl<ServiceAnalyticsBloc>()),
-        BlocProvider(create: (_) => sl<ServiceRequestsListBloc>()),
-      ],
-      child: ProviderServicesPage(
-        initialTab: state.extra is int ? state.extra as int : 0,
-      ),
-    ),
+    builder: (context, state) {
+      final owner = isOwner();
+      return MultiBlocProvider(
+        providers: [
+          BlocProvider(create: (_) => sl<ServicesListBloc>()),
+          BlocProvider(create: (_) => sl<ServiceActionBloc>()),
+          if (owner) BlocProvider(create: (_) => sl<ServiceAnalyticsBloc>()),
+          if (owner) BlocProvider(create: (_) => sl<ServiceRequestsListBloc>()),
+        ],
+        child: ProviderServicesPage(
+          initialTab: state.extra is int ? state.extra as int : 0,
+          isOwner: owner,
+        ),
+      );
+    },
     routes: [
       GoRoute(
         path: 'add',
@@ -83,8 +97,9 @@ class ServicesModule extends FeatureModule {
             return const _MissingRouteArgs();
           }
           return BlocProvider(
-            create: (_) => sl<RequestDetailsBloc>(param1: extra)
-              ..add(const RequestDetailsFetchRequested()),
+            create: (_) =>
+                sl<RequestDetailsBloc>(param1: extra)
+                  ..add(const RequestDetailsFetchRequested()),
             child: const RequestDetailsPage(),
           );
         },
@@ -100,11 +115,18 @@ class ServicesModule extends FeatureModule {
             providers: [
               BlocProvider(create: (_) => sl<ServiceActionBloc>()),
               BlocProvider(
-                create: (_) => sl<ServiceDetailsBloc>()
-                  ..add(ServiceDetailsFetchRequested(id)),
+                create: (_) =>
+                    sl<ServiceDetailsBloc>()
+                      ..add(ServiceDetailsFetchRequested(id)),
               ),
             ],
-            child: const ServiceDetailsPage(),
+            // `isOwner` from the same callback the shell route uses —
+            // RBAC Phase 7L gates the "More" (kebab) action-sheet trigger
+            // on it. A non-owner reaching this route is legitimate
+            // (view-only permission gate), but the sheet items are all
+            // owner-only mutations (finding G3), so the kebab itself is
+            // hidden.
+            child: ServiceDetailsPage(isOwner: isOwner()),
           );
         },
         routes: [
@@ -116,8 +138,9 @@ class ServicesModule extends FeatureModule {
                 return const _MissingRouteArgs();
               }
               return BlocProvider(
-                create: (_) => sl<ServiceDetailsBloc>()
-                  ..add(ServiceDetailsFetchRequested(id)),
+                create: (_) =>
+                    sl<ServiceDetailsBloc>()
+                      ..add(ServiceDetailsFetchRequested(id)),
                 child: EditServicePage(serviceId: id),
               );
             },

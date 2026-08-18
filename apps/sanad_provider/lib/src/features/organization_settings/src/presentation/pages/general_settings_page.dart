@@ -482,15 +482,27 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
                             documents: _complianceDocuments(profile),
                           ),
                         ),
-                        const AppSliverGap(sectionSpacing),
-                        AppSliverBox(
-                          child: WorkingHoursSection(
-                            entries: _workingHoursViewEntries(
-                              state.workingHours,
+                        // Owner-only (RBAC Phase 7G) — a worker/manager's
+                        // Settings tab is this same page, and
+                        // `service-provider/working-hours` 403s for them
+                        // (finding F1); the bloc leaves `workingHours` empty
+                        // for a non-owner rather than fetching it, so
+                        // rendering this section would misleadingly read as
+                        // "no hours configured" instead of simply absent.
+                        if (context
+                            .read<OrganizationSettingsBloc>()
+                            .isOwner) ...[
+                          const AppSliverGap(sectionSpacing),
+                          AppSliverBox(
+                            child: WorkingHoursSection(
+                              entries: _workingHoursViewEntries(
+                                state.workingHours,
+                              ),
+                              onEdit: () =>
+                                  _editWorkingHours(state.workingHours),
                             ),
-                            onEdit: () => _editWorkingHours(state.workingHours),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),

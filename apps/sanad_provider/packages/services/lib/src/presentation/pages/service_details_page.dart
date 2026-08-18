@@ -26,7 +26,14 @@ import 'package:shared_ui/shared_ui.dart';
 /// updates from [ServiceActionBloc] (status toggle / delete) so this page
 /// stays purely presentational.
 class ServiceDetailsPage extends StatelessWidget {
-  const ServiceDetailsPage({super.key});
+  const ServiceDetailsPage({required this.isOwner, super.key});
+
+  /// Whether the "More" (kebab) action, whose bottom sheet exposes
+  /// Edit / Pause-Resume / Delete, is rendered. All three sheet items are
+  /// owner-only mutations (`PATCH`/`DELETE` on `provider-services`, no
+  /// permission exists — RBAC Phase 7 finding G3), so the whole kebab is
+  /// hidden for non-owners rather than shown to reveal-then-bounce.
+  final bool isOwner;
 
   /// Realistic mock used only to skeletonize the real layout via
   /// [AppSkeletonizer] — no bespoke skeleton widget.
@@ -96,9 +103,7 @@ class ServiceDetailsPage extends StatelessWidget {
               title: display.title,
               description: display.description,
               retryLabel: failureRetryLabel(),
-              onRetry: display.isRetryable
-                  ? () => _fetch(context)
-                  : null,
+              onRetry: display.isRetryable ? () => _fetch(context) : null,
             ),
           );
         }
@@ -116,7 +121,7 @@ class ServiceDetailsPage extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
           child: _Header(
             service: service,
-            onMoreTap: () => _onMoreTap(context, service),
+            onMoreTap: isOwner ? () => _onMoreTap(context, service) : null,
           ),
         ),
         if (service.status != ProviderServiceStatus.active)
@@ -181,10 +186,14 @@ class ServiceDetailsPage extends StatelessWidget {
 
 /// Figma `5261:44570` — service name, status pill, and more-options button.
 class _Header extends StatelessWidget {
-  const _Header({required this.service, required this.onMoreTap});
+  const _Header({required this.service, this.onMoreTap});
 
   final ProviderServiceEntity service;
-  final VoidCallback onMoreTap;
+
+  /// When `null`, the more-options button is not rendered at all — used
+  /// for the non-owner view (RBAC Phase 7L). See `ServiceDetailsPage`'s
+  /// `isOwner` doc.
+  final VoidCallback? onMoreTap;
 
   @override
   Widget build(BuildContext context) {
@@ -225,24 +234,26 @@ class _Header extends StatelessWidget {
               ],
             ),
           ),
-          SizedBox(width: AppSpacing.md),
-          Material(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(responsiveDimension(9)),
-            child: InkWell(
-              onTap: onMoreTap,
+          if (onMoreTap != null) ...[
+            SizedBox(width: AppSpacing.md),
+            Material(
+              color: colors.surface,
               borderRadius: BorderRadius.circular(responsiveDimension(9)),
-              child: SizedBox(
-                width: responsiveDimension(34),
-                height: responsiveDimension(34),
-                child: Icon(
-                  Icons.more_vert,
-                  size: responsiveDimension(20),
-                  color: colors.textPrimary,
+              child: InkWell(
+                onTap: onMoreTap,
+                borderRadius: BorderRadius.circular(responsiveDimension(9)),
+                child: SizedBox(
+                  width: responsiveDimension(34),
+                  height: responsiveDimension(34),
+                  child: Icon(
+                    Icons.more_vert,
+                    size: responsiveDimension(20),
+                    color: colors.textPrimary,
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );

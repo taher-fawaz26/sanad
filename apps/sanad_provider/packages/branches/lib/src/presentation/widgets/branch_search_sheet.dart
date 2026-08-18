@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:authorization/authorization.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/presentation/bloc/branches/branches_bloc.dart';
 import 'package:branches/src/presentation/widgets/branch_empty_states.dart';
 import 'package:branches/src/presentation/widgets/branch_list_item.dart';
+import 'package:branches/src/routes/branch_permissions.dart';
 import 'package:branches/src/routes/branch_routes.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -38,12 +40,18 @@ class _StartAddBranch extends _SearchSheetResult {
 /// Selecting a branch or the empty-state's "Add Branch" action reports its
 /// result through the sheet's return value — navigation only happens once
 /// the sheet is fully gone.
-Future<void> showBranchSearchSheet(BuildContext context) async {
+Future<void> showBranchSearchSheet(
+  BuildContext context, {
+  bool isOwner = false,
+}) async {
   final bloc = context.read<BranchesBloc>();
 
   final result = await SheetNavigator.push<_SearchSheetResult>(
     context,
-    BlocProvider.value(value: bloc, child: const _BranchSearchSheetBody()),
+    BlocProvider.value(
+      value: bloc,
+      child: _BranchSearchSheetBody(isOwner: isOwner),
+    ),
     settings: const SheetRouteSettings(sheetSize: SheetSize.expanded),
   );
 
@@ -61,7 +69,9 @@ Future<void> showBranchSearchSheet(BuildContext context) async {
 }
 
 class _BranchSearchSheetBody extends StatefulWidget {
-  const _BranchSearchSheetBody();
+  const _BranchSearchSheetBody({required this.isOwner});
+
+  final bool isOwner;
 
   @override
   State<_BranchSearchSheetBody> createState() => _BranchSearchSheetBodyState();
@@ -110,10 +120,25 @@ class _BranchSearchSheetBodyState extends State<_BranchSearchSheetBody> {
                           query: state.searchQuery,
                           onClearSearch: () => Navigator.of(context).pop(),
                         )
-                      : BranchesEmptyState(
-                          onAddBranch: () => Navigator.of(
-                            context,
-                          ).pop(const _StartAddBranch()),
+                      // "Add Branch" is permission-controlled
+                      // (`provider:branch:create`) — this mirrors the main
+                      // page's empty state (`branches_page.dart`'s
+                      // `_EmptyState`), which was already correctly gated;
+                      // this search-sheet variant had been left
+                      // unconditional (RBAC action-authorization sweep
+                      // finding, fixed alongside the Delete-persona
+                      // correction).
+                      : PermissionBuilder(
+                          requirement: const PermissionRequirement.single(
+                            BranchPermissions.create,
+                          ),
+                          builder: (context, canCreate) => BranchesEmptyState(
+                            onAddBranch: canCreate
+                                ? () => Navigator.of(
+                                    context,
+                                  ).pop(const _StartAddBranch())
+                                : null,
+                          ),
                         ),
                 );
               }
@@ -129,6 +154,7 @@ class _BranchSearchSheetBodyState extends State<_BranchSearchSheetBody> {
                   final branch = branches[index];
                   return BranchListItem(
                     branch: branch,
+                    isOwner: widget.isOwner,
                     onTap: () => Navigator.of(context).pop(_ViewBranch(branch)),
                   );
                 },

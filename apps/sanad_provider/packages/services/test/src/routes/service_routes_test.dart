@@ -21,4 +21,32 @@ void main() {
       expect(ServiceRoutes.isProtectedRoute('/home'), isFalse);
     });
   });
+
+  group('ServiceRoutes.isOwnerOnlyRoute (RBAC Phase 7E)', () {
+    test('add, request-new, a request detail, and an edit are owner-only', () {
+      expect(ServiceRoutes.isOwnerOnlyRoute(ServiceRoutes.add), isTrue);
+      expect(ServiceRoutes.isOwnerOnlyRoute(ServiceRoutes.requestNew), isTrue);
+      expect(
+        ServiceRoutes.isOwnerOnlyRoute(ServiceRoutes.requestDetailsFor('r1')),
+        isTrue,
+      );
+      expect(
+        ServiceRoutes.isOwnerOnlyRoute(ServiceRoutes.editFor('svc-1')),
+        isTrue,
+      );
+    });
+
+    test('the list and a service detail are NOT owner-only — '
+        'permission-gated instead', () {
+      expect(ServiceRoutes.isOwnerOnlyRoute(ServiceRoutes.list), isFalse);
+      expect(
+        ServiceRoutes.isOwnerOnlyRoute(ServiceRoutes.detailsFor('svc-1')),
+        isFalse,
+      );
+    });
+
+    test('an unrelated route is not owner-only', () {
+      expect(ServiceRoutes.isOwnerOnlyRoute('/home'), isFalse);
+    });
+  });
 }

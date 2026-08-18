@@ -39,12 +39,21 @@ const _cardRadius = 16.0;
 class WorkerDetailsPage extends StatefulWidget {
   const WorkerDetailsPage({
     required this.workerId,
+    required this.isOwner,
     this.initialWorker,
     super.key,
   });
 
   final String workerId;
   final WorkerEntity? initialWorker;
+
+  /// Whether the signed-in account may see the assigned-roles card and edit
+  /// this worker (RBAC Phase 7H). Both back onto owner-only surfaces:
+  /// `workers/:id/roles` (assumed owner-only, consistent with every other
+  /// RBAC-administration endpoint — no permission exists to delegate role
+  /// assignment) and `PATCH /workers/:id` (no update permission exists at
+  /// all — RBAC Phase 7 finding G3).
+  final bool isOwner;
 
   @override
   State<WorkerDetailsPage> createState() => _WorkerDetailsPageState();
@@ -123,6 +132,7 @@ class _WorkerDetailsPageState extends State<WorkerDetailsPage> {
                 child: switch ((worker, _loading, _failure)) {
                   (final WorkerEntity w, _, _) => _DetailsBody(
                     worker: w,
+                    isOwner: widget.isOwner,
                     onWorkerUpdated: _applyUpdatedWorker,
                   ),
                   (_, true, _) => AppSkeletonizer(
@@ -147,10 +157,12 @@ class _WorkerDetailsPageState extends State<WorkerDetailsPage> {
 class _DetailsBody extends StatelessWidget {
   const _DetailsBody({
     required this.worker,
+    required this.isOwner,
     required this.onWorkerUpdated,
   });
 
   final WorkerEntity worker;
+  final bool isOwner;
   final ValueChanged<WorkerEntity> onWorkerUpdated;
 
   @override
@@ -169,12 +181,21 @@ class _DetailsBody extends StatelessWidget {
                 _ProfileHeader(worker: worker),
                 SizedBox(height: AppSpacing.xxl),
                 _ContactDetailsCard(worker: worker),
-                SizedBox(height: AppSpacing.lg),
-                _AssignedBranchesCard(
-                  worker: worker,
-                  onWorkerUpdated: onWorkerUpdated,
-                ),
-                if (sl.isRegistered<WorkerRoleAssigner>()) ...[
+                // Assigning a worker to branches is owner-only (RBAC Phase
+                // 7M — `PATCH /workers/:id` has no update permission,
+                // finding G3). The whole card is hidden rather than
+                // rendered read-only, matching the audit's "hide unless
+                // isOwner" spec for this row.
+                if (isOwner) ...[
+                  SizedBox(height: AppSpacing.lg),
+                  _AssignedBranchesCard(
+                    worker: worker,
+                    onWorkerUpdated: onWorkerUpdated,
+                  ),
+                ],
+                // RBAC administration is owner-only (RBAC Phase 7H) — no
+                // permission exists to delegate assigning a worker's roles.
+                if (isOwner && sl.isRegistered<WorkerRoleAssigner>()) ...[
                   SizedBox(height: AppSpacing.lg),
                   sl<WorkerRoleAssigner>().buildRolesCard(worker.id),
                 ],
@@ -182,22 +203,27 @@ class _DetailsBody extends StatelessWidget {
             ),
           ),
         ),
-        Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: AppSpacing.xxl,
-            vertical: AppSpacing.sm,
+        // Editing a worker (`PATCH /workers/:id`) is owner-only — no update
+        // permission exists (RBAC Phase 7 finding G3) — so the action is
+        // hidden entirely for a non-owner rather than left visible to
+        // navigate into a route that will bounce them home (RBAC Phase 7E).
+        if (isOwner)
+          Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.xxl,
+              vertical: AppSpacing.sm,
+            ),
+            child: AppButton(
+              label: 'workers.edit_profile'.tr(),
+              onPressed: () async {
+                final updated = await context.push<WorkerEntity>(
+                  WorkerRoutes.editWorkerFor(worker.id),
+                  extra: worker,
+                );
+                if (updated != null) onWorkerUpdated(updated);
+              },
+            ),
           ),
-          child: AppButton(
-            label: 'workers.edit_profile'.tr(),
-            onPressed: () async {
-              final updated = await context.push<WorkerEntity>(
-                WorkerRoutes.editWorkerFor(worker.id),
-                extra: worker,
-              );
-              if (updated != null) onWorkerUpdated(updated);
-            },
-          ),
-        ),
       ],
     );
   }

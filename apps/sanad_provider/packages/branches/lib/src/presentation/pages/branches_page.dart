@@ -34,7 +34,13 @@ final _skeletonBranch = BranchEntity(
 /// Filter chips and branch cards scroll below. "Add Branches" button sits
 /// at the bottom of the scrollable content.
 class ProviderBranchesPage extends StatefulWidget {
-  const ProviderBranchesPage({super.key});
+  const ProviderBranchesPage({required this.isOwner, super.key});
+
+  /// Whether the signed-in account is a provider owner (individual or
+  /// organization) — threaded down to [BranchListItem] to gate the
+  /// Delete swipe, which is persona-controlled (no `provider:branch:
+  /// delete` permission exists — RBAC backend gap G2).
+  final bool isOwner;
 
   @override
   State<ProviderBranchesPage> createState() => _ProviderBranchesPageState();
@@ -51,13 +57,15 @@ class _ProviderBranchesPageState extends State<ProviderBranchesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.appColors.surface,
-      body: const SafeArea(child: _BranchesTab()),
+      body: SafeArea(child: _BranchesTab(isOwner: widget.isOwner)),
     );
   }
 }
 
 class _BranchesTab extends StatelessWidget {
-  const _BranchesTab();
+  const _BranchesTab({required this.isOwner});
+
+  final bool isOwner;
 
   static const double _titleSectionHeight = 60;
   static const double _headerSafetyMargin = 20;
@@ -138,7 +146,10 @@ class _BranchesTab extends StatelessWidget {
                           hint: 'common.search_hint'.tr(),
                           showMicIcon: false,
                           readOnly: true,
-                          onTap: () => showBranchSearchSheet(context),
+                          onTap: () => showBranchSearchSheet(
+                            context,
+                            isOwner: isOwner,
+                          ),
                         ),
                       ),
                     ),
@@ -180,7 +191,10 @@ class _BranchesTab extends StatelessWidget {
                           padding: EdgeInsets.symmetric(
                             horizontal: AppSpacing.xl,
                           ),
-                          child: BranchListItem(branch: branches[index]),
+                          child: BranchListItem(
+                            branch: branches[index],
+                            isOwner: isOwner,
+                          ),
                         ),
                       ),
                     ),

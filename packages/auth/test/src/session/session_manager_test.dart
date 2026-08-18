@@ -508,6 +508,31 @@ void main() {
       expect(manager.isCompany, isTrue);
       expect(manager.isClient, isFalse);
       expect(manager.isWorker, isFalse);
+      expect(manager.isManager, isFalse);
+    });
+
+    test('a manager-userType session is isManager, not isWorker', () async {
+      const managerSession = AuthSessionEntity(
+        accessToken: 'access-1',
+        refreshToken: 'refresh-1',
+        status: AuthSessionStatus.authenticated,
+        isEmailVerified: true,
+        isProfileCreated: true,
+        user: UserModel(
+          id: 'manager-1',
+          email: 'manager@sanad.test',
+          isVerified: true,
+          isActive: true,
+          type: UserType.manager,
+        ),
+        permissions: [],
+      );
+      await manager.save(managerSession);
+
+      expect(manager.isManager, isTrue);
+      expect(manager.isWorker, isFalse);
+      expect(manager.isProvider, isFalse);
+      expect(manager.isCompany, isFalse);
     });
   });
 
@@ -610,6 +635,93 @@ void main() {
       expect(events[0]?.accessToken, 'access-1');
       expect(events[1]?.isEmailVerified, isFalse);
       expect(events[2], isNull);
+    });
+  });
+
+  group('onSessionBoundary (RBAC Phase 7A)', () {
+    late int boundaryCalls;
+    late SessionManager boundaryManager;
+
+    setUp(() {
+      boundaryCalls = 0;
+      boundaryManager = SessionManager(
+        repository: repository,
+        cache: cache,
+        tokenManager: tokenManager,
+        authStatusNotifier: notifier,
+        onSessionBoundary: () => boundaryCalls++,
+      );
+    });
+
+    test('fires on save() — a new session beginning', () async {
+      when(() => tokenManager.accessToken).thenReturn('access-1');
+      when(() => tokenManager.refreshToken).thenReturn('refresh-1');
+
+      await boundaryManager.save(_tSession);
+
+      expect(boundaryCalls, 1);
+    });
+
+    test('fires on clear() — a session ending', () async {
+      when(() => tokenManager.accessToken).thenReturn('access-1');
+      when(() => tokenManager.refreshToken).thenReturn('refresh-1');
+      await boundaryManager.save(_tSession);
+      boundaryCalls = 0; // isolate the clear() call
+
+      await boundaryManager.clear();
+
+      expect(boundaryCalls, 1);
+    });
+
+    test(
+      'does NOT fire on update() — mutating the existing session is not a '
+      'boundary (e.g. a language or profile edit must not tear down feature '
+      'state)',
+      () async {
+        when(() => tokenManager.accessToken).thenReturn('access-1');
+        when(() => tokenManager.refreshToken).thenReturn('refresh-1');
+        await boundaryManager.save(_tSession);
+        boundaryCalls = 0;
+
+        await boundaryManager.update(
+          (s) => s.copyWith(isEmailVerified: false),
+        );
+
+        expect(boundaryCalls, 0);
+      },
+    );
+
+    test('a logout → login transition fires exactly twice, in order', () async {
+      when(() => tokenManager.accessToken).thenReturn('access-1');
+      when(() => tokenManager.refreshToken).thenReturn('refresh-1');
+      final order = <String>[];
+      boundaryManager = SessionManager(
+        repository: repository,
+        cache: cache,
+        tokenManager: tokenManager,
+        authStatusNotifier: notifier,
+        onSessionBoundary: () => order.add('boundary'),
+      );
+
+      await boundaryManager.save(_tSession); // user A signs in
+      await boundaryManager.clear(); // user A signs out
+      await boundaryManager.save(_tSession); // user B signs in
+
+      expect(order, ['boundary', 'boundary', 'boundary']);
+    });
+
+    test('is optional — omitting it is a no-op, not an error', () async {
+      final withoutHook = SessionManager(
+        repository: repository,
+        cache: cache,
+        tokenManager: tokenManager,
+        authStatusNotifier: notifier,
+      );
+      when(() => tokenManager.accessToken).thenReturn('access-1');
+      when(() => tokenManager.refreshToken).thenReturn('refresh-1');
+
+      await expectLater(withoutHook.save(_tSession), completes);
+      await expectLater(withoutHook.clear(), completes);
     });
   });
 }

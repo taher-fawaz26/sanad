@@ -29,7 +29,12 @@ import 'package:storage/storage.dart';
 class AuthDI {
   AuthDI._();
 
-  static void init() {
+  /// [onSessionBoundary] — invoked whenever a session begins or ends (login,
+  /// logout, 401-refresh-failure, account replacement). Kept behind a
+  /// callback so `auth` never depends on `core`'s `ModuleRegistry`; the app
+  /// composition root wires it to `moduleRegistry.disposeAll()` — see
+  /// `AuthModule`'s matching constructor parameter.
+  static void init({void Function()? onSessionBoundary}) {
     sl
       // ── Session layer ─────────────────────────────────────────────────────
       // Owns the full AuthSessionEntity (tokens + user + profile +
@@ -52,6 +57,7 @@ class AuthDI {
           cache: sl<SessionCache>(),
           tokenManager: sl<TokenManager>(),
           authStatusNotifier: sl<AuthStatusNotifier>(),
+          onSessionBoundary: onSessionBoundary,
         ),
       )
       // ── Authorization ─────────────────────────────────────────────────────

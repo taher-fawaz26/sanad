@@ -25,7 +25,14 @@ import 'package:workers/src/routes/worker_routes.dart';
 /// Figma `team` / `team-empty-state` / search sheet (`1526:12186`,
 /// `1526:12093`, `1526:12837`).
 class WorkersPage extends StatefulWidget {
-  const WorkersPage({super.key});
+  const WorkersPage({required this.isOwner, super.key});
+
+  /// Whether the signed-in account may see the Invitations and Roles tabs
+  /// (RBAC Phase 7F) — both back onto backend surfaces (`workers/invitations`,
+  /// `provider/roles`) that 403 for any worker/manager token, so neither
+  /// tab's bloc is even provided by `WorkersModule.route` when this is
+  /// `false`.
+  final bool isOwner;
 
   @override
   State<WorkersPage> createState() => _WorkersPageState();
@@ -44,10 +51,12 @@ class _WorkersPageState extends State<WorkersPage> {
     _workerEffectsSub = context.read<WorkerActionCubit>().effects.listen(
       _onWorkerEffect,
     );
-    _invitationEffectsSub = context
-        .read<InvitationActionCubit>()
-        .effects
-        .listen(_onInvitationEffect);
+    if (widget.isOwner) {
+      _invitationEffectsSub = context
+          .read<InvitationActionCubit>()
+          .effects
+          .listen(_onInvitationEffect);
+    }
   }
 
   @override
@@ -189,34 +198,43 @@ class _WorkersPageState extends State<WorkersPage> {
               onLeadingTap: () => context.pop(),
               trailing: AppNotificationIcon(onTap: () {}),
             ),
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: AppSpacing.sm,
+            // Invitations and Roles are owner-only (RBAC Phase 7F — both
+            // 403 for a worker/manager token regardless of granted
+            // permissions) — with neither tab available, a segmented
+            // control offering only "Team" has nothing to switch between.
+            if (widget.isOwner)
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.sm,
+                ),
+                child: AppSegmentedControl<int>(
+                  items: [
+                    AppSegmentedControlItem(
+                      value: 0,
+                      label: 'workers.tab_team'.tr(),
+                    ),
+                    AppSegmentedControlItem(
+                      value: 1,
+                      label: 'workers.tab_invitations'.tr(),
+                    ),
+                    AppSegmentedControlItem(
+                      value: 2,
+                      label: 'workers.tab_roles'.tr(),
+                    ),
+                  ],
+                  selectedValue: _selectedTab,
+                  onChanged: _onTabChanged,
+                ),
               ),
-              child: AppSegmentedControl<int>(
-                items: [
-                  AppSegmentedControlItem(
-                    value: 0,
-                    label: 'workers.tab_team'.tr(),
-                  ),
-                  AppSegmentedControlItem(
-                    value: 1,
-                    label: 'workers.tab_invitations'.tr(),
-                  ),
-                  AppSegmentedControlItem(
-                    value: 2,
-                    label: 'workers.tab_roles'.tr(),
-                  ),
-                ],
-                selectedValue: _selectedTab,
-                onChanged: _onTabChanged,
-              ),
-            ),
             Expanded(child: _buildTabBody()),
             // The Roles pane owns its own floating "add" action, so the
-            // shared "Add team" footer is hidden there.
-            if (_selectedTab != 2)
+            // shared "Add team" footer is hidden there. Adding a worker
+            // (`/workers/add`) is itself owner-only (RBAC Phase 7E) — no
+            // permission exists for the invite write — so the footer is
+            // hidden entirely for a non-owner rather than left visible to
+            // navigate into a route that will immediately bounce them home.
+            if (widget.isOwner && _selectedTab != 2)
               _FooterButton(onAdd: () => _openAddWorker(context)),
           ],
         ),
@@ -227,14 +245,16 @@ class _WorkersPageState extends State<WorkersPage> {
   Widget _buildTabBody() {
     switch (_selectedTab) {
       case 0:
-        return const _WorkersContent();
+        return _WorkersContent(isOwner: widget.isOwner);
       case 1:
-        return const InvitationsContent();
+        return widget.isOwner
+            ? const InvitationsContent()
+            : const SizedBox.shrink();
       case 2:
         // Roles pane is contributed by `provider_rbac` through the
         // `WorkerRolesTabView` port (DI), keeping `workers` free of a
         // dependency back on `provider_rbac`.
-        return sl.isRegistered<WorkerRolesTabView>()
+        return widget.isOwner && sl.isRegistered<WorkerRolesTabView>()
             ? sl<WorkerRolesTabView>().build()
             : const SizedBox.shrink();
       default:
@@ -244,7 +264,8 @@ class _WorkersPageState extends State<WorkersPage> {
 
   void _onTabChanged(int index) {
     setState(() => _selectedTab = index);
-    if (index == 1 &&
+    if (widget.isOwner &&
+        index == 1 &&
         context.read<InvitationsListBloc>().state.status ==
             RequestStatus.initial) {
       context.read<InvitationsListBloc>().add(
@@ -255,7 +276,9 @@ class _WorkersPageState extends State<WorkersPage> {
 }
 
 class _WorkersContent extends StatelessWidget {
-  const _WorkersContent();
+  const _WorkersContent({required this.isOwner});
+
+  final bool isOwner;
 
   @override
   Widget build(BuildContext context) {
@@ -291,6 +314,7 @@ class _WorkersContent extends StatelessWidget {
                 onTap: () => showWorkerSearchSheet(
                   context,
                   scope: WorkerSearchScope.team,
+                  isOwner: isOwner,
                 ),
               ),
             ),
@@ -313,8 +337,12 @@ class _WorkersContent extends StatelessWidget {
                       bottom: AppSpacing.lg,
                     ),
                     separatorBuilder: (_, _) => SizedBox(height: AppSpacing.sm),
-                    itemBuilder: (context, worker, index) =>
-                        RepaintBoundary(child: WorkerListItem(worker: worker)),
+                    itemBuilder: (context, worker, index) => RepaintBoundary(
+                      child: WorkerListItem(
+                        worker: worker,
+                        isOwner: isOwner,
+                      ),
+                    ),
                     firstPageErrorIndicatorBuilder: (_) => Center(
                       child: WorkerErrorState(
                         failure: state.failure,
@@ -329,7 +357,7 @@ class _WorkersContent extends StatelessWidget {
                       ),
                     ),
                     noItemsFoundIndicatorBuilder: (_) =>
-                        Center(child: _EmptyState()),
+                        Center(child: _EmptyState(isOwner: isOwner)),
                   ),
                 ),
               ),
@@ -376,6 +404,13 @@ class _FooterButton extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.isOwner});
+
+  /// Inviting a worker is owner-only (RBAC Phase 7E — no permission exists
+  /// for the write) — the action is omitted entirely for a non-owner rather
+  /// than left visible to navigate into a route that will bounce them home.
+  final bool isOwner;
+
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -391,9 +426,9 @@ class _EmptyState extends StatelessWidget {
         ),
         title: 'workers.empty_title'.tr(),
         description: 'workers.empty_description'.tr(),
-        actionLabel: 'workers.add_team'.tr(),
-        onAction: () => _openAddWorker(context),
-        actionIcon: const Icon(Icons.add, size: 20),
+        actionLabel: isOwner ? 'workers.add_team'.tr() : null,
+        onAction: isOwner ? () => _openAddWorker(context) : null,
+        actionIcon: isOwner ? const Icon(Icons.add, size: 20) : null,
         actionIconPosition: AppButtonIconPosition.center,
       ),
     );

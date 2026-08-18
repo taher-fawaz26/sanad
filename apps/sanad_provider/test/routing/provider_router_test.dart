@@ -1,3 +1,4 @@
+import 'package:account_settings/account_settings.dart';
 import 'package:auth/auth.dart';
 import 'package:authorization/authorization.dart';
 import 'package:branches/branches.dart';
@@ -118,7 +119,22 @@ void main() {
           OrganizationSettingsRoutes.hub,
         );
       });
+    }
 
+    // Branches and the Workers list are permission-gated, not owner-only —
+    // a genuine org member who isn't the owner (a worker/manager) must still
+    // reach them once past this guard, provided they hold the real
+    // permission (asserted separately by the Branches/Services/Workers
+    // real-rules test groups below; here isProviderOwner is irrelevant —
+    // that's the point).
+    const permissionGatedOrgOnlyRoutes = [
+      BranchRoutes.list,
+      BranchRoutes.add,
+      BranchRoutes.coverage,
+      WorkerRoutes.list,
+    ];
+
+    for (final location in permissionGatedOrgOnlyRoutes) {
       test('organization provider can access $location', () {
         expect(
           resolveProviderRedirect(
@@ -129,7 +145,78 @@ void main() {
           isNull,
         );
       });
+
+      test(
+        'a worker/manager team member reaches $location too (RBAC Phase '
+        '7E fix — this route is permission-gated, not owner-only, so a '
+        'team member must fall through to the permission guard rather '
+        'than be redirected on persona alone)',
+        () {
+          expect(
+            resolveProviderRedirect(
+              location: location,
+              isAuthenticated: true,
+              canManageOrganization: false,
+              isOrganizationTeamMember: true,
+            ),
+            isNull,
+          );
+        },
+      );
     }
+
+    // Provider RBAC is org-only AND owner-only in its entirety (finding F1
+    // — administration is never delegable) — unlike Branches/Workers above,
+    // a team member must NOT reach it even after clearing this guard; only
+    // the owner-only guard's own tests (and the dedicated RBAC group in
+    // Phase 7H) assert that half.
+    const rbacRoutes = [ProviderRbacRoutes.list, ProviderRbacRoutes.add];
+
+    for (final location in rbacRoutes) {
+      test('organization owner can access $location', () {
+        expect(
+          resolveProviderRedirect(
+            location: location,
+            isAuthenticated: true,
+            canManageOrganization: true,
+            isProviderOwner: true,
+          ),
+          isNull,
+        );
+      });
+
+      test(
+        'a worker/manager team member clears this guard but is still '
+        'redirected home by the owner-only guard for $location',
+        () {
+          expect(
+            resolveProviderRedirect(
+              location: location,
+              isAuthenticated: true,
+              canManageOrganization: false,
+              isOrganizationTeamMember: true,
+            ),
+            AppRoutes.home,
+          );
+        },
+      );
+    }
+
+    test(
+      'an individual provider (neither the owner nor a team member) is '
+      'still redirected — isOrganizationTeamMember does not widen access '
+      'beyond actual organization membership',
+      () {
+        expect(
+          resolveProviderRedirect(
+            location: BranchRoutes.list,
+            isAuthenticated: true,
+            canManageOrganization: false,
+          ),
+          OrganizationSettingsRoutes.hub,
+        );
+      },
+    );
 
     test('individual provider is NOT redirected away from the Settings tab '
         '(its builder renders General Settings for them)', () {
@@ -138,6 +225,11 @@ void main() {
           location: OrganizationSettingsRoutes.hub,
           isAuthenticated: true,
           canManageOrganization: false,
+          // Every individual provider IS the owner (see Services test
+          // below for the same rationale) — required after RBAC Phase 7K,
+          // when non-owners hitting /settings are redirected to Account
+          // Settings.
+          isProviderOwner: true,
         ),
         isNull,
       );
@@ -149,10 +241,44 @@ void main() {
           location: OrganizationSettingsRoutes.hub,
           isAuthenticated: true,
           canManageOrganization: true,
+          isProviderOwner: true,
         ),
         isNull,
       );
     });
+
+    test(
+      'a worker/manager team member hitting /settings directly is '
+      'redirected to /settings/account (RBAC Phase 7K) — General Settings '
+      'is owner-only in practice; workers only ever see Account Settings',
+      () {
+        expect(
+          resolveProviderRedirect(
+            location: OrganizationSettingsRoutes.hub,
+            isAuthenticated: true,
+            canManageOrganization: false,
+            isOrganizationTeamMember: true,
+          ),
+          AccountSettingsRoutes.hub,
+        );
+      },
+    );
+
+    test(
+      'unauthenticated wins over the Settings persona redirect — auth guard '
+      'takes precedence, so a non-owner hitting /settings while logged out '
+      'goes to /login, not /settings/account',
+      () {
+        expect(
+          resolveProviderRedirect(
+            location: OrganizationSettingsRoutes.hub,
+            isAuthenticated: false,
+            canManageOrganization: false,
+          ),
+          AuthRoutes.login,
+        );
+      },
+    );
 
     test('individual provider CAN access Services', () {
       for (final location in [
@@ -165,6 +291,12 @@ void main() {
             location: location,
             isAuthenticated: true,
             canManageOrganization: false,
+            // Every individual provider IS the owner — there is no such
+            // thing as a non-owner individual-provider account (only an
+            // organization can have workers/managers) — so this is the
+            // accurate persona for add/request-new, which are owner-only
+            // sub-surfaces as of RBAC Phase 7E (finding G3).
+            isProviderOwner: true,
           ),
           isNull,
           reason: 'Services is not organization-only',
@@ -238,6 +370,111 @@ void main() {
         OrganizationSettingsRoutes.hub,
       );
     });
+  });
+
+  group('resolveProviderRedirect — owner-only guard', () {
+    const ownerOnlyRoutes = {'/owner-surface'};
+
+    test('a provider owner (individual or organization) is allowed', () {
+      expect(
+        resolveProviderRedirect(
+          location: '/owner-surface',
+          isAuthenticated: true,
+          canManageOrganization: false,
+          isProviderOwner: true,
+          ownerOnlyRoutes: ownerOnlyRoutes,
+        ),
+        isNull,
+      );
+    });
+
+    test(
+      'a manager/worker is redirected home, regardless of granted permissions',
+      () {
+        expect(
+          resolveProviderRedirect(
+            location: '/owner-surface',
+            isAuthenticated: true,
+            canManageOrganization: false,
+            ownerOnlyRoutes: ownerOnlyRoutes,
+          ),
+          AppRoutes.home,
+        );
+      },
+    );
+
+    test('unauthenticated wins over the owner-only guard', () {
+      // /home is a genuinely auth-protected route (AppRoutes.protected); see
+      // the equivalent note in the permission-guard group above.
+      expect(
+        resolveProviderRedirect(
+          location: '/home',
+          isAuthenticated: false,
+          canManageOrganization: false,
+          ownerOnlyRoutes: const {'/home'},
+        ),
+        AuthRoutes.login,
+      );
+    });
+
+    test('an unregistered location is unaffected by a non-empty set', () {
+      expect(
+        resolveProviderRedirect(
+          location: '/home',
+          isAuthenticated: true,
+          canManageOrganization: false,
+          ownerOnlyRoutes: ownerOnlyRoutes,
+        ),
+        isNull,
+      );
+    });
+
+    test(
+      'defaults to empty — an unregistered location is unaffected when the '
+      'caller passes nothing',
+      () {
+        expect(
+          resolveProviderRedirect(
+            location: '/owner-surface',
+            isAuthenticated: true,
+            canManageOrganization: false,
+          ),
+          isNull,
+          reason:
+              'ownerOnlyRoutes defaults to empty for this synthetic test '
+              'location — the real call site in provider_router.dart '
+              'populates it (see the legal-documents test below)',
+        );
+      },
+    );
+
+    test(
+      'the real call site gates legal-documents as owner-only (RBAC Phase '
+      '7G) — backed by service-provider/legal-data, which 403s for a '
+      'worker/manager regardless of granted permissions',
+      () {
+        expect(
+          resolveProviderRedirect(
+            location: OrganizationSettingsRoutes.legalDocuments,
+            isAuthenticated: true,
+            canManageOrganization: false,
+            ownerOnlyRoutes: const {OrganizationSettingsRoutes.legalDocuments},
+          ),
+          AppRoutes.home,
+        );
+
+        expect(
+          resolveProviderRedirect(
+            location: OrganizationSettingsRoutes.legalDocuments,
+            isAuthenticated: true,
+            canManageOrganization: false,
+            isProviderOwner: true,
+            ownerOnlyRoutes: const {OrganizationSettingsRoutes.legalDocuments},
+          ),
+          isNull,
+        );
+      },
+    );
   });
 
   group('resolveProviderRedirect — permission guard', () {
@@ -347,6 +584,30 @@ void main() {
         isNull,
       );
     });
+
+    test(
+      'a team member who clears the org-only guard is still denied by the '
+      'permission guard when they lack the real permission (RBAC Phase 7E '
+      '— isOrganizationTeamMember is not a blanket bypass, it only lets a '
+      'team member reach this guard instead of being stopped earlier)',
+      () {
+        const branchGatedTable = RouteAuthorizationTable([
+          RouteRule.exact({BranchRoutes.list}, requires: view),
+        ]);
+
+        expect(
+          resolveProviderRedirect(
+            location: BranchRoutes.list,
+            isAuthenticated: true,
+            canManageOrganization: false,
+            isOrganizationTeamMember: true,
+            permissionsResolved: true,
+            table: branchGatedTable,
+          ),
+          AppRoutes.home,
+        );
+      },
+    );
 
     test(
       'is pure and idempotent — repeat calls with identical inputs agree',
@@ -474,6 +735,139 @@ void main() {
         redirectFor(BranchRoutes.detailsFor('b1'), granted),
         AppRoutes.home,
       );
+    });
+  });
+
+  group('providerRoutePermissions — real Services rules (RBAC Phase 7E)', () {
+    String? redirectFor(
+      String location,
+      Iterable<String> granted, {
+      bool isProviderOwner = false,
+    }) {
+      return resolveProviderRedirect(
+        location: location,
+        isAuthenticated: true,
+        canManageOrganization: false,
+        isProviderOwner: isProviderOwner,
+        permissions: PermissionSet.from(granted),
+        permissionsResolved: true,
+        table: providerRoutePermissions,
+      );
+    }
+
+    test(
+      'the reported worker (view-only) reaches the list and a service '
+      'detail — the exact bug this phase closes',
+      () {
+        final granted = [ServicePermissions.providerServiceView];
+        expect(redirectFor(ServiceRoutes.list, granted), isNull);
+        expect(redirectFor(ServiceRoutes.detailsFor('svc-1'), granted), isNull);
+      },
+    );
+
+    test('without the permission, the list and a detail are denied home', () {
+      expect(redirectFor(ServiceRoutes.list, []), AppRoutes.home);
+      expect(
+        redirectFor(ServiceRoutes.detailsFor('svc-1'), []),
+        AppRoutes.home,
+      );
+    });
+
+    test(
+      'a worker is redirected home from every owner-only sub-surface, even '
+      'holding provider-service:view — no permission grants these (finding '
+      'G3), so the owner-only guard fires before the permission table is '
+      'ever consulted',
+      () {
+        final granted = [ServicePermissions.providerServiceView];
+        expect(redirectFor(ServiceRoutes.add, granted), AppRoutes.home);
+        expect(redirectFor(ServiceRoutes.requestNew, granted), AppRoutes.home);
+        expect(
+          redirectFor(ServiceRoutes.requestDetailsFor('r1'), granted),
+          AppRoutes.home,
+        );
+        expect(
+          redirectFor(ServiceRoutes.editFor('svc-1'), granted),
+          AppRoutes.home,
+        );
+      },
+    );
+
+    test('an owner (provider:*) reaches every Services route', () {
+      const granted = ['provider:*'];
+      for (final location in [
+        ServiceRoutes.list,
+        ServiceRoutes.add,
+        ServiceRoutes.requestNew,
+        ServiceRoutes.requestDetailsFor('r1'),
+        ServiceRoutes.detailsFor('svc-1'),
+        ServiceRoutes.editFor('svc-1'),
+      ]) {
+        expect(
+          redirectFor(location, granted, isProviderOwner: true),
+          isNull,
+          reason: '$location must be reachable by the owner',
+        );
+      }
+    });
+  });
+
+  group('providerRoutePermissions — real Workers rules (RBAC Phase 7E)', () {
+    String? redirectFor(
+      String location,
+      Iterable<String> granted, {
+      bool isProviderOwner = false,
+    }) {
+      return resolveProviderRedirect(
+        location: location,
+        isAuthenticated: true,
+        canManageOrganization: false,
+        isOrganizationTeamMember: true,
+        isProviderOwner: isProviderOwner,
+        permissions: PermissionSet.from(granted),
+        permissionsResolved: true,
+        table: providerRoutePermissions,
+      );
+    }
+
+    test('worker:view reaches the list and a worker detail', () {
+      final granted = [WorkerPermissions.view];
+      expect(redirectFor(WorkerRoutes.list, granted), isNull);
+      expect(redirectFor(WorkerRoutes.detailsFor('w1'), granted), isNull);
+    });
+
+    test('without worker:view, the list and a detail are denied home', () {
+      expect(redirectFor(WorkerRoutes.list, []), AppRoutes.home);
+      expect(redirectFor(WorkerRoutes.detailsFor('w1'), []), AppRoutes.home);
+    });
+
+    test(
+      'a manager holding worker:view is still redirected home from invite '
+      'and edit — owner-only, no permission grants either write',
+      () {
+        final granted = [WorkerPermissions.view];
+        expect(redirectFor(WorkerRoutes.add, granted), AppRoutes.home);
+        expect(
+          redirectFor(WorkerRoutes.editWorkerFor('w1'), granted),
+          AppRoutes.home,
+        );
+      },
+    );
+
+    test('an owner (provider:*) reaches every Workers route', () {
+      const granted = ['provider:*'];
+      for (final location in [
+        WorkerRoutes.list,
+        WorkerRoutes.add,
+        WorkerRoutes.detailsFor('w1'),
+        WorkerRoutes.editWorkerFor('w1'),
+      ]) {
+        expect(
+          redirectFor(location, granted, isProviderOwner: true),
+          isNull,
+          reason: '$location must be reachable by the owner',
+        );
+      }
     });
   });
 

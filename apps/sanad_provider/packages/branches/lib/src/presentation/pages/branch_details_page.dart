@@ -47,9 +47,19 @@ final _skeletonBranch = BranchEntity(
 /// bottom-sheet/section editor. Services stays read-only (see Phase 0 audit
 /// note in the migration plan — the backend currently ignores `serviceIds`).
 class BranchDetailsPage extends StatelessWidget {
-  const BranchDetailsPage({required this.branchId, super.key});
+  const BranchDetailsPage({
+    required this.branchId,
+    required this.isOwner,
+    super.key,
+  });
 
   final String branchId;
+
+  /// Whether the signed-in account is a provider owner (individual or
+  /// organization) — gates the Delete action-sheet item, which is
+  /// persona-controlled (no `provider:branch:delete` permission exists —
+  /// RBAC backend gap G2).
+  final bool isOwner;
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +85,10 @@ class BranchDetailsPage extends StatelessWidget {
           return Scaffold(
             body: AppSkeletonizer(
               enabled: true,
-              child: _BranchDetailsContent(branch: _skeletonBranch),
+              child: _BranchDetailsContent(
+                branch: _skeletonBranch,
+                isOwner: isOwner,
+              ),
             ),
           );
         }
@@ -95,7 +108,7 @@ class BranchDetailsPage extends StatelessWidget {
           return const SizedBox.shrink();
         }
 
-        return _BranchDetailsContent(branch: branch);
+        return _BranchDetailsContent(branch: branch, isOwner: isOwner);
       },
     );
   }
@@ -147,9 +160,10 @@ class _BranchDetailsError extends StatelessWidget {
 }
 
 class _BranchDetailsContent extends StatelessWidget {
-  const _BranchDetailsContent({required this.branch});
+  const _BranchDetailsContent({required this.branch, required this.isOwner});
 
   final BranchEntity branch;
+  final bool isOwner;
 
   @override
   Widget build(BuildContext context) {
@@ -184,17 +198,17 @@ class _BranchDetailsContent extends StatelessWidget {
               onTrailingTap: () => _showMoreActions(context),
             ),
             Expanded(
-              child: ListenableBuilder(
-                listenable: sl<AuthorizationReader>(),
-                builder: (context, _) {
-                  // All five sections gate on the same permission — there is
-                  // no per-section backend distinction — so a single read
-                  // covers them. A `null` callback renders the section
-                  // pencil-free per BranchSummaryView's own contract.
-                  final canUpdate = sl<AuthorizationReader>().can(
-                    BranchPermissions.update,
-                  );
-
+              // All five sections gate on the same permission — there is
+              // no per-section backend distinction — so one `Permission
+              // Builder` covers them (RBAC Phase 7N: no more raw
+              // `AuthorizationReader.can(...)` reads in leaf widgets).
+              // A `null` callback renders the section pencil-free per
+              // `BranchSummaryView`'s own contract.
+              child: PermissionBuilder(
+                requirement: const PermissionRequirement.single(
+                  BranchPermissions.update,
+                ),
+                builder: (context, canUpdate) {
                   return BranchSummaryView(
                     data: BranchSummaryData(
                       title: branch.branchName,
@@ -418,7 +432,11 @@ class _BranchDetailsContent extends StatelessWidget {
   void _showMoreActions(BuildContext context) {
     final isActive = branch.isAvailable;
     final bloc = context.read<BranchDetailsBloc>();
-    final canUpdate = sl<AuthorizationReader>().can(BranchPermissions.update);
+    // Callback-time decision — no reactive rebuild needed once the sheet
+    // opens. `context.can(...)` (RBAC Phase 7O) reads the DI-registered
+    // reader without pulling `sl<AuthorizationReader>()` into a leaf
+    // widget's callback surface.
+    final canUpdate = context.can(BranchPermissions.update);
     SheetNavigator.push<void>(
       context,
       AppActionList(
@@ -437,19 +455,23 @@ class _BranchDetailsContent extends StatelessWidget {
                 bloc.add(BranchStatusToggleEvent(isAvailable: !isActive));
               },
             ),
-          // No backend permission for delete yet (same gap as the row swipe
-          // action) — stays unconditional; it is a coming-soon stub regardless.
-          AppActionSheetItem(
-            label: 'branches.details.action_delete'.tr(),
-            leading: const Icon(Icons.delete_outline),
-            isDestructive: true,
-            onTap: () {
-              _showComingSoon(
-                context,
-                'branches.details.delete_coming_soon'.tr(),
-              );
-            },
-          ),
+          // TODO(G2): no `provider:branch:delete` permission exists yet
+          // (same gap as the row swipe action in `branch_list_item.dart`)
+          // — persona-controlled via `isOwner`, not a proxy on
+          // `branch:update`. Replace with a real permission check once
+          // G2 ships.
+          if (isOwner)
+            AppActionSheetItem(
+              label: 'branches.details.action_delete'.tr(),
+              leading: const Icon(Icons.delete_outline),
+              isDestructive: true,
+              onTap: () {
+                _showComingSoon(
+                  context,
+                  'branches.details.delete_coming_soon'.tr(),
+                );
+              },
+            ),
         ],
       ),
       settings: const SheetRouteSettings(padChild: false),

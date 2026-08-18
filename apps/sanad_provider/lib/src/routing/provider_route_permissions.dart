@@ -1,6 +1,8 @@
 import 'package:authorization/authorization.dart';
 import 'package:branches/branches.dart';
 import 'package:sanad_provider/src/routing/app_routes.dart';
+import 'package:services/services.dart';
+import 'package:workers/workers.dart';
 
 /// The provider app's declarative route → permission-requirement table,
 /// consumed by `resolveProviderRedirect`. Deliberately kept in the app (not
@@ -54,5 +56,45 @@ final RouteAuthorizationTable providerRoutePermissions =
       RouteRule.pattern(
         RegExp(r'^/branches/[^/]+$'),
         requires: const PermissionRequirement.single(BranchPermissions.view),
+      ),
+
+      // Services — RBAC Phase 7E. The owner-only sub-surfaces (add,
+      // request-new, a request detail, editing a service) are gated
+      // separately, by persona, in resolveProviderRedirect's owner-only
+      // guard (see ServiceRoutes.isOwnerOnlyRoute) — no permission exists
+      // for any of those writes (finding G3). Only the read surfaces below
+      // are gated here.
+      const RouteRule.exact(
+        {ServiceRoutes.list},
+        requires: PermissionRequirement.single(
+          ServicePermissions.providerServiceView,
+        ),
+      ),
+      // A service detail is nested under /services/:id, which also matches
+      // /services/add and /services/request-new — both already resolved by
+      // the owner-only guard before this table is ever consulted, so no
+      // rule-ordering hazard exists here the way it does for Branches.
+      RouteRule.pattern(
+        RegExp(r'^/services/[^/]+$'),
+        requires: const PermissionRequirement.single(
+          ServicePermissions.providerServiceView,
+        ),
+      ),
+
+      // Workers — RBAC Phase 7E. Inviting/editing a worker is gated
+      // separately, by persona (see WorkerRoutes.isOwnerOnlyRoute) — no
+      // permission exists for either write.
+      const RouteRule.exact(
+        {WorkerRoutes.list},
+        requires: PermissionRequirement.single(WorkerPermissions.view),
+      ),
+      // /workers/add is a single path segment too, so it also matches this
+      // pattern — same shadowing shape as Branches, resolved the same way:
+      // the owner-only guard already redirects a non-owner away from
+      // /workers/add before this table is ever consulted, and an owner
+      // trivially satisfies WorkerPermissions.view via provider:*.
+      RouteRule.pattern(
+        RegExp(r'^/workers/[^/]+$'),
+        requires: const PermissionRequirement.single(WorkerPermissions.view),
       ),
     ]);

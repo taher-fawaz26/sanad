@@ -29,18 +29,30 @@ import 'package:sheet_navigation/sheet_navigation.dart';
 /// Real backend integration: provider services list
 /// (`GET /provider-services`), overview (`GET /provider-services/overview`),
 /// and the provider's own service requests (`GET /service-requests`).
-/// Expects `ServicesListBloc`, `ServiceActionBloc`, `ServiceAnalyticsBloc`,
-/// and `ServiceRequestsListBloc` above it in the tree (wired by
-/// `ServicesModule`).
+/// Expects `ServicesListBloc` and `ServiceActionBloc` above it in the tree
+/// always; `ServiceAnalyticsBloc` and `ServiceRequestsListBloc` only when
+/// [isOwner] is true — both endpoints 403 for a worker/manager token
+/// regardless of granted permissions, so `ServicesModule.shellRoute()` does
+/// not provide those two blocs at all when [isOwner] is false. Reading
+/// either one here would be a bug, not a fallback case.
 class ProviderServicesPage extends StatefulWidget {
   /// Creates the provider services dashboard / empty-state screen.
   ///
   /// [initialTab] lets the Request-Submitted success popover land directly
   /// on the Service Requests tab (`1`) via `context.go(ServiceRoutes.list,
-  /// extra: 1)`; defaults to My Services (`0`).
-  const ProviderServicesPage({super.key, this.initialTab = 0});
+  /// extra: 1)`; defaults to My Services (`0`) and is ignored when [isOwner]
+  /// is false, since tab `1` does not exist for a non-owner.
+  const ProviderServicesPage({
+    required this.isOwner,
+    super.key,
+    this.initialTab = 0,
+  });
 
   final int initialTab;
+
+  /// Whether the signed-in account may see the owner-only performance
+  /// metrics and Service Requests tab — see the class doc comment.
+  final bool isOwner;
 
   @override
   State<ProviderServicesPage> createState() => _ProviderServicesPageState();
@@ -51,19 +63,21 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
   // `ValueListenableBuilder` instead of `setState`, per this package's
   // zero-`setState` architecture rule.
   late final ValueNotifier<int> _selectedTab = ValueNotifier(
-    widget.initialTab,
+    widget.isOwner ? widget.initialTab : 0,
   );
 
   @override
   void initState() {
     super.initState();
     context.read<ServicesListBloc>().add(const ServicesListFetchEvent());
-    context.read<ServiceAnalyticsBloc>().add(
-      const ServiceAnalyticsFetchEvent(),
-    );
-    context.read<ServiceRequestsListBloc>().add(
-      const ServiceRequestsListFetchEvent(),
-    );
+    if (widget.isOwner) {
+      context.read<ServiceAnalyticsBloc>().add(
+        const ServiceAnalyticsFetchEvent(),
+      );
+      context.read<ServiceRequestsListBloc>().add(
+        const ServiceRequestsListFetchEvent(),
+      );
+    }
   }
 
   @override
@@ -107,7 +121,13 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
                   backgroundColor: showEmpty
                       ? colors.surface
                       : colors.background,
-                  floatingActionButton: showEmpty
+                  // Add Service (`POST /provider-services`) is owner-only
+                  // (RBAC Phase 7 finding G3 — no create permission exists,
+                  // so a persona check is the only correct client gate).
+                  // The route itself already bounces non-owners home, but
+                  // rendering the FAB to bounce on tap violates the plan's
+                  // rule against "reveal-then-bounce" affordances.
+                  floatingActionButton: (showEmpty || !widget.isOwner)
                       ? null
                       : AppFloatingActionButton(
                           onPressed: _onAddService,
@@ -131,35 +151,51 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
                           AppLargeNavBar(title: 'services.title'.tr()),
                           Expanded(
                             child: ServicesEmptyState(
-                              onAddService: _onAddService,
+                              // Non-owners see the empty-state layout too,
+                              // but with the "Add first service" CTA
+                              // omitted — same G3 gate as the FAB above.
+                              // `ServicesEmptyState.onAddService` is
+                              // nullable and hides the button when null.
+                              onAddService: widget.isOwner
+                                  ? _onAddService
+                                  : null,
                             ),
                           ),
                         ] else ...[
                           const _DashboardHeader(),
-                          Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: AppSpacing.lg,
-                              vertical: AppSpacing.sm,
+                          // No segmented control at all when the account
+                          // isn't an owner: `_ServiceRequestsContent`'s bloc
+                          // isn't provided in this case (see
+                          // `ServicesModule.shellRoute`), so there is
+                          // deliberately nothing to switch to.
+                          if (widget.isOwner)
+                            Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: AppSpacing.lg,
+                                vertical: AppSpacing.sm,
+                              ),
+                              child: AppSegmentedControl<int>(
+                                items: [
+                                  AppSegmentedControlItem(
+                                    value: 0,
+                                    label: 'services.tab_my_services'.tr(),
+                                  ),
+                                  AppSegmentedControlItem(
+                                    value: 1,
+                                    label: 'services.tab_service_request'.tr(),
+                                  ),
+                                ],
+                                selectedValue: selectedTab,
+                                onChanged: (index) =>
+                                    _selectedTab.value = index,
+                              ),
                             ),
-                            child: AppSegmentedControl<int>(
-                              items: [
-                                AppSegmentedControlItem(
-                                  value: 0,
-                                  label: 'services.tab_my_services'.tr(),
-                                ),
-                                AppSegmentedControlItem(
-                                  value: 1,
-                                  label: 'services.tab_service_request'.tr(),
-                                ),
-                              ],
-                              selectedValue: selectedTab,
-                              onChanged: (index) => _selectedTab.value = index,
-                            ),
-                          ),
                           Expanded(
                             child: isMyServices
                                 ? _MyServicesContent(
                                     onAddService: _onAddService,
+                                    showAnalytics: widget.isOwner,
+                                    isOwner: widget.isOwner,
                                   )
                                 : const _ServiceRequestsContent(),
                           ),
@@ -230,9 +266,24 @@ class _DashboardHeader extends StatelessWidget {
 }
 
 class _MyServicesContent extends StatefulWidget {
-  const _MyServicesContent({required this.onAddService});
+  const _MyServicesContent({
+    required this.onAddService,
+    required this.showAnalytics,
+    required this.isOwner,
+  });
 
   final VoidCallback onAddService;
+
+  /// Whether to render [ServiceMetricsSection] — `false` when the account
+  /// isn't an owner, since `ServiceAnalyticsBloc` isn't provided in that
+  /// case (see `ServicesModule.shellRoute`) and the section would otherwise
+  /// throw looking it up.
+  final bool showAnalytics;
+
+  /// Whether the row-level swipe actions (Edit / Pause-Resume / Delete)
+  /// and the "load-more empty" state's Add-first-service CTA are shown
+  /// (RBAC Phase 7L — all owner-only mutations per finding G3).
+  final bool isOwner;
 
   @override
   State<_MyServicesContent> createState() => _MyServicesContentState();
@@ -342,8 +393,10 @@ class _MyServicesContentState extends State<_MyServicesContent> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const ServiceMetricsSection(),
-                  SizedBox(height: AppSpacing.lg),
+                  if (widget.showAnalytics) ...[
+                    const ServiceMetricsSection(),
+                    SizedBox(height: AppSpacing.lg),
+                  ],
                   ServicesFilterBar(
                     searchController: _searchController,
                     onSearchChanged: (query) =>
@@ -411,6 +464,7 @@ class _MyServicesContentState extends State<_MyServicesContent> {
                               ServiceListItem(
                                 key: ValueKey(service.id),
                                 service: service,
+                                isOwner: widget.isOwner,
                                 onTap: () => _onServiceTap(context, service),
                               ),
                           firstPageErrorIndicatorBuilder: (_) => Center(
@@ -431,7 +485,13 @@ class _MyServicesContentState extends State<_MyServicesContent> {
                               ),
                           noItemsFoundIndicatorBuilder: (_) => Center(
                             child: ServicesEmptyState(
-                              onAddService: onAddService,
+                              // Filter-cleared / search-cleared "no items"
+                              // state renders the same empty layout as the
+                              // page-level empty state above; hide its CTA
+                              // for the same G3 reason.
+                              onAddService: widget.isOwner
+                                  ? onAddService
+                                  : null,
                             ),
                           ),
                         ),

@@ -19,15 +19,29 @@ const _thumbnailSize = 54.0;
 /// swipe-to-reveal (`AppSwipeActions`) — there is no secondary "more" menu
 /// on this row. All actions call the exact same `ServiceActionBloc` events
 /// via `service_action_invokers.dart`.
+///
+/// The three swipes are ALL owner-only mutations: `PATCH /provider-services/
+/// :id[/status]` and `DELETE /provider-services/:id` (RBAC Phase 7 finding
+/// G3 — no permission exists for any of these writes, so a persona check is
+/// the only correct client gate). When [isOwner] is false, the row still
+/// renders (a manager holding `provider:provider-service:view` legitimately
+/// sees the list) but with no swipe actions attached — matching the plan's
+/// "the app must NOT present controls whose tap immediately bounces" rule.
 class ServiceListItem extends StatelessWidget {
   const ServiceListItem({
     required this.service,
     super.key,
     this.onTap,
+    this.isOwner = true,
   });
 
   final ProviderServiceEntity service;
   final VoidCallback? onTap;
+
+  /// Whether to expose the swipe actions (Edit / Pause-Resume / Delete).
+  /// Defaults to `true` for backwards compatibility with any consumer that
+  /// doesn't yet thread `isOwner` in.
+  final bool isOwner;
 
   bool get _isActive => service.status == ProviderServiceStatus.active;
 
@@ -41,35 +55,40 @@ class ServiceListItem extends StatelessWidget {
 
     return AppSwipeActions(
       groupTag: serviceSwipeGroupTag,
-      actions: [
-        AppSwipeAction(
-          icon: Icons.edit_outlined,
-          semanticLabel: 'services.action_edit'.tr(),
-          onPressed: () => editService(context: context, service: service),
-        ),
-        AppSwipeAction(
-          icon: _isActive
-              ? Icons.pause_circle_outline
-              : Icons.play_circle_outline,
-          semanticLabel: _isActive
-              ? 'services.action_pause'.tr()
-              : 'services.action_resume'.tr(),
-          variant: _isActive
-              ? AppSwipeActionVariant.warning
-              : AppSwipeActionVariant.primary,
-          onPressed: () => confirmAndToggleServiceStatus(
-            context: context,
-            service: service,
-          ),
-        ),
-        AppSwipeAction(
-          svgAsset: AppSvgs.trash,
-          semanticLabel: 'services.action_delete'.tr(),
-          variant: AppSwipeActionVariant.destructive,
-          onPressed: () =>
-              confirmAndDeleteService(context: context, service: service),
-        ),
-      ],
+      actions: isOwner
+          ? [
+              AppSwipeAction(
+                icon: Icons.edit_outlined,
+                semanticLabel: 'services.action_edit'.tr(),
+                onPressed: () =>
+                    editService(context: context, service: service),
+              ),
+              AppSwipeAction(
+                icon: _isActive
+                    ? Icons.pause_circle_outline
+                    : Icons.play_circle_outline,
+                semanticLabel: _isActive
+                    ? 'services.action_pause'.tr()
+                    : 'services.action_resume'.tr(),
+                variant: _isActive
+                    ? AppSwipeActionVariant.warning
+                    : AppSwipeActionVariant.primary,
+                onPressed: () => confirmAndToggleServiceStatus(
+                  context: context,
+                  service: service,
+                ),
+              ),
+              AppSwipeAction(
+                svgAsset: AppSvgs.trash,
+                semanticLabel: 'services.action_delete'.tr(),
+                variant: AppSwipeActionVariant.destructive,
+                onPressed: () => confirmAndDeleteService(
+                  context: context,
+                  service: service,
+                ),
+              ),
+            ]
+          : const [],
       child: Material(
         color: colors.palettes.dark.shade50,
         shape: RoundedRectangleBorder(

@@ -53,6 +53,11 @@ Future<void> _pump(
   required BranchesBloc bloc,
   BranchEntity? branch,
   VoidCallback? onTap,
+  // Full access by default in this file's first group — Delete is
+  // persona-controlled (RBAC backend gap G2), so it needs an explicit
+  // `isOwner` rather than a permission set. The "permission-gated swipe
+  // actions" group below passes this explicitly per scenario.
+  bool isOwner = true,
 }) async {
   await tester.binding.setSurfaceSize(_surfaceSize);
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -69,6 +74,7 @@ Future<void> _pump(
             body: BranchListItem(
               branch: branch ?? _activeBranch,
               onTap: onTap,
+              isOwner: isOwner,
             ),
           ),
         ),
@@ -296,11 +302,14 @@ void main() {
     });
 
     testWidgets(
-      'view-only: Edit is shown (navigation only), Maintenance is hidden, '
-      'Delete stays unconditional',
+      'view-only, non-owner: Edit is shown (navigation only); Maintenance '
+      'AND Delete are hidden — Maintenance requires branch:update (not '
+      'held); Delete is persona-controlled (isOwner: false), never a '
+      'permission proxy (RBAC backend gap G2 — never invent a backend '
+      'permission)',
       (tester) async {
         registerFakeAuthorizationReader(permissions: [BranchPermissions.view]);
-        await _pump(tester, bloc: bloc);
+        await _pump(tester, bloc: bloc, isOwner: false);
         await _openSwipePane(tester);
 
         expect(
@@ -313,17 +322,20 @@ void main() {
         );
         expect(
           find.bySemanticsLabel('branches.actions.action_delete'),
-          findsOneWidget,
+          findsNothing,
+          reason:
+              'Delete is persona-controlled — isOwner: false hides it '
+              'regardless of any permission held',
         );
       },
       timeout: const Timeout(Duration(seconds: 20)),
     );
 
     testWidgets(
-      'no permissions: Edit and Maintenance are both hidden, Delete remains',
+      'no permissions, non-owner: all three swipes are hidden',
       (tester) async {
         registerFakeAuthorizationReader();
-        await _pump(tester, bloc: bloc);
+        await _pump(tester, bloc: bloc, isOwner: false);
         await _openSwipePane(tester);
 
         expect(
@@ -336,6 +348,65 @@ void main() {
         );
         expect(
           find.bySemanticsLabel('branches.actions.action_delete'),
+          findsNothing,
+        );
+      },
+      timeout: const Timeout(Duration(seconds: 20)),
+    );
+
+    testWidgets(
+      'view + update, but NOT owner: Edit and Maintenance render; Delete '
+      'stays hidden — the critical regression case for the persona '
+      'correction. Holding branch:update (e.g. a manager who can toggle '
+      'maintenance) must NOT thereby grant delete authority the backend '
+      'never issued',
+      (tester) async {
+        registerFakeAuthorizationReader(
+          permissions: [BranchPermissions.view, BranchPermissions.update],
+        );
+        await _pump(tester, bloc: bloc, isOwner: false);
+        await _openSwipePane(tester);
+
+        expect(
+          find.bySemanticsLabel('branches.actions.action_edit'),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel('branches.actions.action_set_maintenance'),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel('branches.actions.action_delete'),
+          findsNothing,
+          reason:
+              'branch:update must never imply delete authority — '
+              'Delete is persona-gated, independent of any permission set',
+        );
+      },
+      timeout: const Timeout(Duration(seconds: 20)),
+    );
+
+    testWidgets(
+      'view + update AND isOwner: true — Edit, Maintenance, AND Delete all '
+      'render. Delete renders because of the persona flag, not because of '
+      'any permission held',
+      (tester) async {
+        registerFakeAuthorizationReader(
+          permissions: [BranchPermissions.view, BranchPermissions.update],
+        );
+        await _pump(tester, bloc: bloc);
+        await _openSwipePane(tester);
+
+        expect(
+          find.bySemanticsLabel('branches.actions.action_edit'),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel('branches.actions.action_set_maintenance'),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel('branches.actions.action_delete'),
           findsOneWidget,
         );
       },
@@ -343,7 +414,37 @@ void main() {
     );
 
     testWidgets(
-      'provider:* grants both Edit and Maintenance',
+      'provider:* (permission wildcard) grants Edit and Maintenance, but '
+      'NOT Delete on its own — Delete needs isOwner: true independently, '
+      'proving permissions and persona are evaluated on separate axes',
+      (tester) async {
+        registerFakeAuthorizationReader(permissions: ['provider:*']);
+        await _pump(tester, bloc: bloc, isOwner: false);
+        await _openSwipePane(tester);
+
+        expect(
+          find.bySemanticsLabel('branches.actions.action_edit'),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel('branches.actions.action_set_maintenance'),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel('branches.actions.action_delete'),
+          findsNothing,
+          reason:
+              'a provider:* permission wildcard is a PERMISSION fact; '
+              'isOwner is a separate PERSONA fact this widget never '
+              'derives from the permission set',
+        );
+      },
+      timeout: const Timeout(Duration(seconds: 20)),
+    );
+
+    testWidgets(
+      'provider:* AND isOwner: true — every swipe, including Delete, '
+      'renders (the realistic owner account shape)',
       (tester) async {
         registerFakeAuthorizationReader(permissions: ['provider:*']);
         await _pump(tester, bloc: bloc);
@@ -355,6 +456,10 @@ void main() {
         );
         expect(
           find.bySemanticsLabel('branches.actions.action_set_maintenance'),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel('branches.actions.action_delete'),
           findsOneWidget,
         );
       },

@@ -54,7 +54,14 @@ Future<void> configureDependencies() async {
 
   // ── Feature modules ────────────────────────────────────────────────────────
   moduleRegistry = ModuleRegistry([
-    AuthModule(),
+    AuthModule(
+      // Session-boundary hook: every module's dispose() runs whenever a
+      // session begins or ends, so per-session in-memory state cannot
+      // survive a logout→login transition. Safe to reference
+      // `moduleRegistry` here — this closure only runs long after the
+      // assignment below completes.
+      onSessionBoundary: () => moduleRegistry.disposeAll(),
+    ),
     ContactVerificationModule(),
     AccountSettingsModule(),
   ]);

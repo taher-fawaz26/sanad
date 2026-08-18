@@ -30,6 +30,7 @@ import 'package:sanad_provider/src/features/organization_settings/src/presentati
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/bloc/organization_settings/organization_settings_bloc.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/bloc/provider_completion/provider_completion_bloc.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/bloc/provider_overview/provider_overview_bloc.dart';
+import 'package:sanad_provider/src/routing/provider_capabilities.dart';
 import 'package:services/services.dart';
 import 'package:storage/storage.dart';
 
@@ -151,6 +152,7 @@ abstract final class OrganizationSettingsDI {
           getCategories: sl<GetCategoriesUseCase>(),
           organizationSettingsRepository: sl<OrganizationSettingsRepository>(),
           workingHoursRepository: sl<WorkingHoursRepository>(),
+          isOwner: sl<SessionManager>().isProviderOwner,
         ),
       )
       ..registerFactory(

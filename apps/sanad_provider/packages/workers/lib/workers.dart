@@ -25,6 +25,7 @@ export 'src/domain/usecases/update_worker_status_usecase.dart';
 export 'src/domain/usecases/update_worker_usecase.dart';
 // Module & routes
 export 'src/module/workers_module.dart';
+export 'src/routes/worker_permissions.dart';
 export 'src/routes/worker_routes.dart';
 // Presentation — bloc
 export 'src/presentation/bloc/add_worker/add_worker_bloc.dart';

@@ -124,16 +124,18 @@ void main() {
     ).thenAnswer((_) async {});
   });
 
-  OrganizationSettingsBloc build() => OrganizationSettingsBloc(
-    getOrganizationSettings: getOrganizationSettings,
-    updateServiceProviderSettings: updateServiceProviderSettings,
-    getCompletion: getCompletion,
-    getWorkingHours: getWorkingHours,
-    updateWorkingHours: updateWorkingHours,
-    getCategories: getCategories,
-    organizationSettingsRepository: organizationSettingsRepository,
-    workingHoursRepository: workingHoursRepository,
-  );
+  OrganizationSettingsBloc build({bool isOwner = true}) =>
+      OrganizationSettingsBloc(
+        getOrganizationSettings: getOrganizationSettings,
+        updateServiceProviderSettings: updateServiceProviderSettings,
+        getCompletion: getCompletion,
+        getWorkingHours: getWorkingHours,
+        updateWorkingHours: updateWorkingHours,
+        getCategories: getCategories,
+        organizationSettingsRepository: organizationSettingsRepository,
+        workingHoursRepository: workingHoursRepository,
+        isOwner: isOwner,
+      );
 
   blocTest<OrganizationSettingsBloc, OrganizationSettingsState>(
     'loads organization, working hours, completion, and category catalog '
@@ -152,6 +154,31 @@ void main() {
           .having((state) => state.workingHours, 'workingHours', const [])
           .having((state) => state.completion, 'completion', completion),
     ],
+  );
+
+  blocTest<OrganizationSettingsBloc, OrganizationSettingsState>(
+    'isOwner: false (RBAC Phase 7G) — never calls getCompletion or '
+    'getWorkingHours, the same worker/manager Settings-tab 403 bug already '
+    'fixed for Services and Workers',
+    build: () => build(isOwner: false),
+    act: (bloc) => bloc.add(const OrganizationSettingsLoaded()),
+    expect: () => [
+      isA<OrganizationSettingsState>().having(
+        (state) => state.status,
+        'status',
+        RequestStatus.loading,
+      ),
+      isA<OrganizationSettingsState>()
+          .having((state) => state.status, 'status', RequestStatus.success)
+          .having((state) => state.organization, 'organization', organization)
+          .having((state) => state.workingHours, 'workingHours', const [])
+          .having((state) => state.completion, 'completion', isNull),
+    ],
+    verify: (_) {
+      verifyNever(() => getCompletion(any()));
+      verifyNever(() => getWorkingHours(any()));
+      verifyNever(() => workingHoursRepository.getCachedWorkingHours());
+    },
   );
 
   blocTest<OrganizationSettingsBloc, OrganizationSettingsState>(
@@ -178,6 +205,23 @@ void main() {
           .having((state) => state.organization, 'organization', organization)
           .having((state) => state.completion, 'completion', completion),
     ],
+  );
+
+  blocTest<OrganizationSettingsBloc, OrganizationSettingsState>(
+    'isOwner: false (RBAC Phase 7G) — a cache hit does not read the cached '
+    'working hours either, since a non-owner never wrote any',
+    build: () {
+      when(
+        () => organizationSettingsRepository.getCachedOrganizationSettings(),
+      ).thenAnswer((_) async => organization);
+      return build(isOwner: false);
+    },
+    act: (bloc) => bloc.add(const OrganizationSettingsLoaded()),
+    verify: (_) {
+      verifyNever(() => workingHoursRepository.getCachedWorkingHours());
+      verifyNever(() => getCompletion(any()));
+      verifyNever(() => getWorkingHours(any()));
+    },
   );
 
   blocTest<OrganizationSettingsBloc, OrganizationSettingsState>(

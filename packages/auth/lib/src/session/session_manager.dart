@@ -36,15 +36,22 @@ class SessionManager {
     required SessionCache cache,
     required TokenManager tokenManager,
     required AuthStatusNotifier authStatusNotifier,
+    void Function()? onSessionBoundary,
   }) : _repository = repository,
        _cache = cache,
        _tokenManager = tokenManager,
-       _authStatusNotifier = authStatusNotifier;
+       _authStatusNotifier = authStatusNotifier,
+       _onSessionBoundary = onSessionBoundary;
 
   final SessionRepository _repository;
   final SessionCache _cache;
   final TokenManager _tokenManager;
   final AuthStatusNotifier _authStatusNotifier;
+
+  /// Fired whenever a session begins or ends — see [save] and [clear]. Not
+  /// fired by [update]/[hydrateIdentity], which mutate an *existing* session
+  /// rather than replace the signed-in identity.
+  final void Function()? _onSessionBoundary;
 
   // ── Reactive handle ──────────────────────────────────────────────────────
 
@@ -94,6 +101,7 @@ class SessionManager {
       AuthStatus.authenticated,
       isProfileCompleted: session.isProfileCreated,
     );
+    _onSessionBoundary?.call();
   }
 
   /// Apply a partial mutation to the current session (change-email,
@@ -123,6 +131,7 @@ class SessionManager {
   Future<void> clear() async {
     await _repository.clear();
     _authStatusNotifier.update(AuthStatus.unauthenticated);
+    _onSessionBoundary?.call();
   }
 
   // ── Login-verify / GET-me composition ────────────────────────────────────
@@ -232,6 +241,11 @@ class SessionManager {
 
   /// `true` for [UserType.worker].
   bool get isWorker => userType == UserType.worker;
+
+  /// `true` for [UserType.manager] — a worker whose assigned role grants
+  /// elevated permissions, still a distinct backend `userType` from plain
+  /// [UserType.worker], not a variant of [isCompany]/[isProvider].
+  bool get isManager => userType == UserType.manager;
 
   /// The embedded account settings snapshot (provider-owner accounts only).
   AuthAccountSettingsEntity? get accountSettings => current()?.accountSettings;

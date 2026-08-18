@@ -52,6 +52,7 @@ class OrganizationSettingsBloc
     required GetCategoriesUseCase getCategories,
     required OrganizationSettingsRepository organizationSettingsRepository,
     required WorkingHoursRepository workingHoursRepository,
+    required bool isOwner,
   }) : _getOrganizationSettings = getOrganizationSettings,
        _updateServiceProviderSettings = updateServiceProviderSettings,
        _getCompletion = getCompletion,
@@ -60,6 +61,7 @@ class OrganizationSettingsBloc
        _getCategories = getCategories,
        _organizationSettingsRepository = organizationSettingsRepository,
        _workingHoursRepository = workingHoursRepository,
+       _isOwner = isOwner,
        super(const OrganizationSettingsState()) {
     on<OrganizationSettingsLoaded>(_onLoaded);
     on<OrganizationSettingsRefreshed>(_onLoaded);
@@ -92,6 +94,20 @@ class OrganizationSettingsBloc
   final OrganizationSettingsRepository _organizationSettingsRepository;
   final WorkingHoursRepository _workingHoursRepository;
 
+  /// Whether the signed-in account is a provider owner (individual or
+  /// organization) — [_getCompletion] and [_getWorkingHours] back onto
+  /// `service-provider/completion` and `service-provider/working-hours`,
+  /// both of which 403 for any worker/manager token regardless of granted
+  /// permissions (RBAC Phase 7 finding F1). This page is reached by BOTH
+  /// personas (an individual provider's Settings tab IS this page; a
+  /// worker/manager's Settings tab is too, since neither is
+  /// `canManageOrganization`), so the bloc itself — not just its caller —
+  /// must skip these two fetches for a non-owner (RBAC Phase 7G). Exposed
+  /// read-only so the page can also hide the corresponding UI sections
+  /// (working hours) rather than rendering them misleadingly empty.
+  bool get isOwner => _isOwner;
+  final bool _isOwner;
+
   /// A generously large page size stands in for "the full catalog" — there
   /// is no dedicated "fetch all categories" endpoint, and the category
   /// picker needs the complete list to select from.
@@ -112,8 +128,9 @@ class OrganizationSettingsBloc
       final cachedOrganization = await _organizationSettingsRepository
           .getCachedOrganizationSettings();
       if (cachedOrganization != null) {
-        final cachedWorkingHours = await _workingHoursRepository
-            .getCachedWorkingHours();
+        final cachedWorkingHours = _isOwner
+            ? await _workingHoursRepository.getCachedWorkingHours()
+            : null;
         seededFromCache = true;
         emit(
           state.copyWith(
@@ -129,9 +146,18 @@ class OrganizationSettingsBloc
       emit(state.copyWith(status: RequestStatus.loading, clearFailure: true));
     }
 
+    // Completion and working-hours are owner-only backend surfaces (RBAC
+    // Phase 7 finding F1) — this page is reached by workers/managers too
+    // (their Settings tab lands here exactly like an individual provider's),
+    // so neither fetch fires for a non-owner; both fields simply stay at
+    // their empty defaults rather than 403ing on every settings load.
     final organizationFuture = _getOrganizationSettings(const NoParams()).run();
-    final workingHoursFuture = _getWorkingHours(const NoParams()).run();
-    final completionFuture = _getCompletion(const NoParams()).run();
+    final workingHoursFuture = _isOwner
+        ? _getWorkingHours(const NoParams()).run()
+        : null;
+    final completionFuture = _isOwner
+        ? _getCompletion(const NoParams()).run()
+        : null;
     final categoriesFuture = _getCategories(
       const GetCategoriesParams(limit: _categoryCatalogLimit),
     ).run();
@@ -155,8 +181,11 @@ class OrganizationSettingsBloc
         state.copyWith(
           status: RequestStatus.success,
           organization: organization,
-          workingHours: workingHoursResult.getOrElse((_) => null) ?? const [],
-          completion: completionResult.fold((_) => null, (value) => value),
+          workingHours: workingHoursResult?.getOrElse((_) => null) ?? const [],
+          completion: completionResult?.fold(
+            (_) => null,
+            (value) => value,
+          ),
           categoryCatalog: categoriesResult.fold(
             (_) => const [],
             (paged) => paged.items

@@ -12,6 +12,7 @@ library;
 
 export 'src/domain/permission_requirement.dart';
 export 'src/domain/permission_set.dart';
+export 'src/presentation/context_authorization.dart';
 export 'src/presentation/permission_builder.dart';
 export 'src/presentation/permission_gate.dart';
 export 'src/reader/authorization_reader.dart';

@@ -35,4 +35,19 @@ abstract final class ServiceRoutes {
 
   static bool isProtectedRoute(String location) =>
       protectedRoutes.contains(location);
+
+  /// Whether [location] is one of the Services sub-surfaces the backend
+  /// gates by owner persona rather than by a catalog permission (RBAC Phase
+  /// 7E) — adding a service, requesting a new catalog service, viewing a
+  /// service request, and editing a service. No permission exists for any
+  /// provider-service or service-request write (RBAC Phase 7 finding G3), so
+  /// a persona check is the only correct client gate. [list] and [details]
+  /// are deliberately excluded — those stay permission-gated on
+  /// `ServicePermissions.providerServiceView`, the same as viewing any other
+  /// read-only surface.
+  static bool isOwnerOnlyRoute(String location) =>
+      location == add ||
+      location == requestNew ||
+      location.startsWith('$list/requests/') ||
+      (location.startsWith('$list/') && location.endsWith('/edit'));
 }

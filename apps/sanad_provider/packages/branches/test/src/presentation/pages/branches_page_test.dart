@@ -50,7 +50,11 @@ Future<void> _pump(WidgetTester tester, BranchesBloc bloc) async {
         theme: AppTheme.light(),
         home: BlocProvider<BranchesBloc>.value(
           value: bloc,
-          child: const ProviderBranchesPage(),
+          // isOwner is irrelevant to this file's assertions (Add Branch is
+          // permission-gated on branch:create, not persona) — false is the
+          // fail-closed default; the Delete-persona case is covered by
+          // branch_list_item_test.dart instead.
+          child: const ProviderBranchesPage(isOwner: false),
         ),
       ),
     ),

@@ -29,48 +29,63 @@ class WorkersModule extends FeatureModule {
   @override
   void registerDependencies() => WorkersDI.init();
 
+  // The route tree is contributed via [route], not here — same reasoning as
+  // `ServicesModule`: it needs an `isOwner` callback (for the
+  // Invitations/Roles tabs, RBAC Phase 7F) that the generic
+  // `FeatureModule.routes(ctx)` signature has no way to carry.
   @override
-  List<RouteBase> routes(FeatureRouteContext ctx) => [
-    GoRoute(
-      path: WorkerRoutes.list,
-      builder: (context, state) => MultiBlocProvider(
+  List<RouteBase> routes(FeatureRouteContext ctx) => const [];
+
+  /// The `/workers` route tree. [isOwner] resolves whether the signed-in
+  /// account may see the Invitations and Roles tabs — backed by
+  /// `workers/invitations` and `provider/roles`, both of which the backend
+  /// 403s for any worker/manager token regardless of granted permissions
+  /// (RBAC Phase 7 finding F1). A callback, not a `bool`, so it is read
+  /// fresh on every navigation to this route — matching
+  /// `ServicesModule.shellRoute`'s reasoning exactly.
+  static GoRoute route({required bool Function() isOwner}) => GoRoute(
+    path: WorkerRoutes.list,
+    builder: (context, state) {
+      final owner = isOwner();
+      return MultiBlocProvider(
         providers: [
           BlocProvider(create: (_) => sl<WorkersListBloc>()),
-          BlocProvider(create: (_) => sl<InvitationsListBloc>()),
           BlocProvider(create: (_) => sl<WorkerActionCubit>()),
-          BlocProvider(create: (_) => sl<InvitationActionCubit>()),
+          if (owner) BlocProvider(create: (_) => sl<InvitationsListBloc>()),
+          if (owner) BlocProvider(create: (_) => sl<InvitationActionCubit>()),
         ],
-        child: const WorkersPage(),
+        child: WorkersPage(isOwner: owner),
+      );
+    },
+    routes: [
+      GoRoute(
+        path: 'add',
+        builder: (context, state) => BlocProvider(
+          create: (_) => sl<AddWorkerBloc>(),
+          child: const AddWorkerPage(),
+        ),
       ),
-      routes: [
-        GoRoute(
-          path: 'add',
-          builder: (context, state) => BlocProvider(
-            create: (_) => sl<AddWorkerBloc>(),
-            child: const AddWorkerPage(),
-          ),
+      GoRoute(
+        path: ':id',
+        builder: (context, state) => WorkerDetailsPage(
+          workerId: state.pathParameters['id']!,
+          initialWorker: state.extra as WorkerEntity?,
+          isOwner: isOwner(),
         ),
-        GoRoute(
-          path: ':id',
-          builder: (context, state) => WorkerDetailsPage(
-            workerId: state.pathParameters['id']!,
-            initialWorker: state.extra as WorkerEntity?,
+        routes: [
+          GoRoute(
+            path: 'edit',
+            builder: (context, state) {
+              final worker = state.extra as WorkerEntity?;
+              if (worker == null) return const SizedBox.shrink();
+              return BlocProvider(
+                create: (_) => sl<EditWorkerBloc>(),
+                child: EditWorkerPage(worker: worker),
+              );
+            },
           ),
-          routes: [
-            GoRoute(
-              path: 'edit',
-              builder: (context, state) {
-                final worker = state.extra as WorkerEntity?;
-                if (worker == null) return const SizedBox.shrink();
-                return BlocProvider(
-                  create: (_) => sl<EditWorkerBloc>(),
-                  child: EditWorkerPage(worker: worker),
-                );
-              },
-            ),
-          ],
-        ),
-      ],
-    ),
-  ];
+        ],
+      ),
+    ],
+  );
 }

@@ -8,11 +8,16 @@ import 'package:sanad_provider/src/routing/shell/provider_bottom_nav.dart';
 abstract final class ProviderBottomNavItems {
   ProviderBottomNavItems._();
 
-  /// Permanent bar destinations — Figma `1526:12109`.
+  /// Builds bar destination models for [tabs] — Figma `1526:12109`.
+  ///
+  /// Callers pass the authorization-filtered list (see
+  /// `visibleBottomNavTabs`), not necessarily the full
+  /// [ProviderBottomNavDestination.permanentTabs].
   static List<BottomNavDestination<ProviderBottomNavDestination>> destinations(
     BuildContext context,
+    List<ProviderBottomNavDestination> tabs,
   ) {
-    return ProviderBottomNavDestination.permanentTabs
+    return tabs
         .map(
           (destination) => BottomNavDestination(
             item: destination,

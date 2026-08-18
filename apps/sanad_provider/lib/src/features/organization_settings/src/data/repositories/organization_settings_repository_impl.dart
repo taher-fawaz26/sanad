@@ -14,6 +14,7 @@ import 'package:sanad_provider/src/features/organization_settings/src/domain/ent
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/provider_completion_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/repositories/organization_settings_repository.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/usecases/update_service_provider_settings_params.dart';
+import 'package:sanad_provider/src/routing/provider_capabilities.dart';
 
 class OrganizationSettingsRepositoryImpl
     implements OrganizationSettingsRepository {
@@ -97,8 +98,19 @@ class OrganizationSettingsRepositoryImpl
   /// legal-data endpoint fails (e.g. nothing submitted yet), the settings
   /// page should still render with those two fields simply absent rather
   /// than failing the whole page load.
+  ///
+  /// Also short-circuits to `null` for any non-owner (worker/manager) —
+  /// `GET /service-provider/legal-data` is one of the 8 owner-only backend
+  /// surfaces (RBAC Phase 7 finding F1) and 403s for a worker token
+  /// regardless of granted permissions. The 403 was already swallowed
+  /// here, but the request itself still fired — this is the specific bug
+  /// reported after Phase 7G. See RBAC Phase 7K in the action-authorization
+  /// audit for context.
   TaskEither<Failure, LegalDataResponse?> _fetchLegalDataOrNull() =>
       TaskEither(() async {
+        if (!_sessionManager.isProviderOwner) {
+          return const Right(null);
+        }
         final result = await _legalDataRemote.fetchLegalData().run();
         return result.match(
           (_) => const Right(null),

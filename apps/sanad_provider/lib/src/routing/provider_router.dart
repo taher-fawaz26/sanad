@@ -1,3 +1,4 @@
+import 'package:account_settings/account_settings.dart';
 import 'package:auth/auth.dart';
 import 'package:authorization/authorization.dart';
 import 'package:branches/branches.dart';
@@ -72,7 +73,7 @@ GoRouter buildProviderRouter() {
     // resync) must re-run the redirect the same way an auth-status change
     // does — AuthorizationReader notifies only on a genuine decision change,
     // so this does not introduce redirect churn. See ProviderRoutePermissions
-    // for why the table itself starts empty.
+    // for the real (Branches/Services/Workers) rules the table holds today.
     refreshListenable: Listenable.merge([authStatus, authorizationReader]),
     errorBuilder: (context, state) => AppNotFoundPage(
       title: 'common.not_found_title'.tr(),
@@ -86,15 +87,37 @@ GoRouter buildProviderRouter() {
         location: state.matchedLocation,
         isAuthenticated: authStatus.status == AuthStatus.authenticated,
         canManageOrganization: sl<SessionManager>().canManageOrganization,
+        isProviderOwner: sl<SessionManager>().isProviderOwner,
+        isOrganizationTeamMember: sl<SessionManager>().isOrganizationTeamMember,
         permissions: authorizationReader.permissions,
         permissionsResolved: authorizationReader.isResolved,
         table: providerRoutePermissions,
+        // Backed by `service-provider/legal-data`, owner-only (RBAC Phase
+        // 7G) — unreachable via today's UI for a non-owner (the Compliance
+        // Documents section renders no entries when the fetch 403s, so its
+        // "Update Document" action never appears), but guarded here too in
+        // case of a future deep link or UI change, matching the "deep links
+        // guarded" bar the rest of Phase 7 holds every owner-only route to.
+        ownerOnlyRoutes: const {OrganizationSettingsRoutes.legalDocuments},
       );
     },
     routes: [
       AuthShell.buildShellRoute(
         children: [
           ...moduleRoutes,
+          // Contributed here, not via the generic `moduleRegistry` route
+          // list — `WorkersModule.route` needs an `isOwner` callback (RBAC
+          // Phase 7F) that `FeatureModule.routes(ctx)`'s signature has no
+          // way to carry. Same reasoning as `ServicesModule.shellRoute`.
+          WorkersModule.route(
+            isOwner: () => sl<SessionManager>().isProviderOwner,
+          ),
+          // `BranchesModule.ownerAwareRoutes` needs the same `isOwner`
+          // callback, to gate the persona-controlled Delete swipe/action
+          // (RBAC backend gap G2 — no delete permission exists).
+          ...BranchesModule.ownerAwareRoutes(
+            isOwner: () => sl<SessionManager>().isProviderOwner,
+          ),
           AuthShell.otpRoute(
             onAuthenticated: (context) => context.go(AppRoutes.home),
             onOnboarding: (context, email, onboardingToken) => context.go(
@@ -139,7 +162,11 @@ GoRouter buildProviderRouter() {
                 // tab visit, hiding the bottom nav bar) — the full route
                 // tree, including bloc wiring, lives in
                 // `ServicesModule.shellRoute()`.
-                routes: [ServicesModule.shellRoute()],
+                routes: [
+                  ServicesModule.shellRoute(
+                    isOwner: () => sl<SessionManager>().isProviderOwner,
+                  ),
+                ],
               ),
               StatefulShellBranch(
                 routes: [
@@ -203,13 +230,29 @@ Widget buildSettingsTabPage({required bool canManageOrganization}) =>
 /// make this function behave identically to its pre-authorization shape —
 /// an empty [table] never redirects, so every existing call site (and every
 /// test written before permission-aware routing existed) is unaffected.
+///
+/// [ownerOnlyRoutes] is an explicit, caller-supplied exact-match set — the
+/// real call site passes one entry (RBAC Phase 7G). [isProviderOwner] is not
+/// limited to that one entry, though: the owner-only guard itself also
+/// consults each feature's own `isOwnerOnlyRoute`/`isProtectedRoute`
+/// predicate (RBAC Phase 7E) — see the guard's own comment for the current
+/// route list.
+///
+/// [isOrganizationTeamMember] defaults to `false`, which reproduces the
+/// pre-Phase-7E behaviour for every existing caller (individual providers and
+/// organization owners) — it only changes the outcome for worker/manager
+/// accounts hitting an organization-only route, letting them fall through to
+/// the permission guard below instead of being redirected on persona alone.
 String? resolveProviderRedirect({
   required String location,
   required bool isAuthenticated,
   required bool canManageOrganization,
+  bool isProviderOwner = false,
+  bool isOrganizationTeamMember = false,
   PermissionSet permissions = PermissionSet.empty,
   bool permissionsResolved = false,
   RouteAuthorizationTable table = RouteAuthorizationTable.empty,
+  Set<String> ownerOnlyRoutes = const {},
 }) {
   final isProtected =
       AppRoutes.protected.contains(location) ||
@@ -228,12 +271,73 @@ String? resolveProviderRedirect({
   // individuals). Individual providers hitting an org-only surface are sent to
   // their Settings tab — which keeps the bottom nav visible — rather than the
   // full-screen `/settings/general` child (which has no parent to pop back to).
+  //
+  // `!canManageOrganization` alone is NOT enough here (RBAC Phase 7E fix): it
+  // is `isCompany`, true only for the organization *owner*. A worker or
+  // manager's own `userType` is never `organizationProvider`, so without the
+  // `isOrganizationTeamMember` escape hatch this guard would redirect every
+  // team member to the Settings hub before the permission guard below ever
+  // ran — silently defeating Branches' permission-gated access for workers.
   final isOrgOnlyRoute =
       BranchRoutes.isProtectedRoute(location) ||
       WorkerRoutes.isProtectedRoute(location) ||
       ProviderRbacRoutes.isProtectedRoute(location);
-  if (isOrgOnlyRoute && isAuthenticated && !canManageOrganization) {
+  if (isOrgOnlyRoute &&
+      isAuthenticated &&
+      !canManageOrganization &&
+      !isOrganizationTeamMember) {
     return OrganizationSettingsRoutes.hub;
+  }
+
+  // Settings-tab persona redirect (RBAC Phase 7K).
+  //
+  // `/settings`'s route builder chooses between the org KPI hub (for
+  // canManageOrganization) and GeneralSettingsPage. That default path
+  // mounts `OrganizationSettingsBloc`, which triggers three owner-only
+  // backend surfaces via its repository (`service-provider/completion`,
+  // `service-provider/working-hours`, and — chained inside `_fetchLegalData
+  // OrNull` — `service-provider/legal-data`). Phase 7G gated the first two
+  // in the bloc; 7K gates the third in the repo; but even with all three
+  // gated the *page* still misleads a worker into thinking these are their
+  // settings surfaces. The correct behaviour is: a non-owner sees only
+  // Account Settings — never General Settings and never the KPI hub.
+  //
+  // The Settings bottom-nav tap (which opens the popover menu) is separately
+  // gated in `showSettingsMenuSheet`; this redirect covers the deep-link and
+  // direct-URL cases where someone reaches `/settings` without going through
+  // the menu.
+  if (location == OrganizationSettingsRoutes.hub &&
+      isAuthenticated &&
+      !isProviderOwner) {
+    return AccountSettingsRoutes.hub;
+  }
+
+  // Owner-only surfaces: the backend defines no permission for these at all
+  // (RBAC Phase 7 finding F1) — worker/manager tokens 403 regardless of
+  // their granted permissions, so a persona check is the only correct client
+  // gate. Deliberately isProviderOwner (individual OR organization), not
+  // canManageOrganization/isCompany — an individual provider owner is
+  // authorized for these surfaces too (finding F2).
+  //
+  // [ownerOnlyRoutes] itself is an explicit, caller-supplied set of exact
+  // paths — the real call site below passes exactly one entry today
+  // (`OrganizationSettingsRoutes.legalDocuments`, RBAC Phase 7G). The
+  // feature-declared predicates ORed in below (RBAC Phase 7E) cover the
+  // routes that need owner-only gating via pattern/prefix matching instead
+  // of a literal path: all of provider RBAC (administration is owner-only in
+  // its entirety — finding F1), and the owner-only sub-surfaces within
+  // Workers and Services (inviting/editing a worker, adding a service,
+  // requesting a new catalog service, viewing a service request — RBAC
+  // Phase 7 finding G3: no permission exists for any of these writes).
+  // Each feature's `list`/`details` are deliberately excluded from its
+  // predicate — those stay permission-gated below instead.
+  final isOwnerOnlyRoute =
+      ownerOnlyRoutes.contains(location) ||
+      ProviderRbacRoutes.isProtectedRoute(location) ||
+      WorkerRoutes.isOwnerOnlyRoute(location) ||
+      ServiceRoutes.isOwnerOnlyRoute(location);
+  if (isOwnerOnlyRoute && isAuthenticated && !isProviderOwner) {
+    return AppRoutes.home;
   }
 
   // Permission guard — runs last, after auth/persona have already cleared

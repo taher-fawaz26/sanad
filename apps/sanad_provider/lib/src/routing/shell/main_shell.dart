@@ -1,9 +1,14 @@
+import 'package:auth/auth.dart';
+import 'package:authorization/authorization.dart';
 import 'package:bottom_nav_bar/bottom_nav_bar.dart';
+import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sanad_provider/src/features/organization_settings/organization_settings.dart';
+import 'package:sanad_provider/src/routing/provider_capabilities.dart';
 import 'package:sanad_provider/src/routing/shell/provider_bottom_nav.dart';
 import 'package:sanad_provider/src/routing/shell/provider_bottom_nav_items.dart';
+import 'package:sanad_provider/src/routing/shell/provider_bottom_nav_permissions.dart';
 import 'package:sanad_provider/src/routing/shell/provider_bottom_nav_theme.dart';
 import 'package:shared_ui/shared_ui.dart';
 
@@ -33,25 +38,39 @@ class _MainShellState extends State<MainShell> {
   // Anchors the settings popover to the actual rendered Settings tab tile.
   final GlobalKey _settingsTileKey = GlobalKey();
 
+  late final AuthorizationReader _authorizationReader;
+
   @override
   void initState() {
     super.initState();
     _navVisibility.attach(_scrollController);
+    _authorizationReader = sl<AuthorizationReader>()
+      ..addListener(_onAuthorizationChanged);
   }
 
   @override
   void dispose() {
+    _authorizationReader.removeListener(_onAuthorizationChanged);
     _navVisibility.dispose();
     _scrollController.dispose();
     super.dispose();
   }
+
+  // Tabs are hidden, not just disabled, when their permission is revoked
+  // (RBAC D1) — a role change mid-session must rebuild the bar with the tile
+  // gone, not merely non-interactive.
+  void _onAuthorizationChanged() => setState(() {});
 
   void _goBranch(
     BuildContext context,
     ProviderBottomNavDestination destination,
   ) {
     if (destination.opensSettingsMenu) {
-      showSettingsMenuSheet(context, anchorKey: _settingsTileKey);
+      showSettingsMenuSheet(
+        context,
+        isProviderOwner: sl<SessionManager>().isProviderOwner,
+        anchorKey: _settingsTileKey,
+      );
       return;
     }
 
@@ -64,15 +83,19 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
+    final visibleTabs = visibleBottomNavTabs(_authorizationReader);
+
     final activeDestination =
         ProviderBottomNavDestination.fromShellBranch(
           widget.navigationShell.currentIndex,
         ) ??
         ProviderBottomNavDestination.home;
 
-    // Falls back to Home if a non-permanent-tab branch is ever active, so no
-    // invisible tab appears highlighted.
-    final selectedItem = activeDestination.isPermanentTab
+    // Falls back to Home if the active branch's tab isn't one of today's
+    // visible tabs — either it was never a permanent tab, or its permission
+    // was revoked mid-session (see [_onAuthorizationChanged]) — so no
+    // invisible tab is ever left highlighted.
+    final selectedItem = visibleTabs.contains(activeDestination)
         ? activeDestination
         : ProviderBottomNavDestination.home;
 
@@ -95,7 +118,10 @@ class _MainShellState extends State<MainShell> {
         controller: _navVisibility,
         preferredHeight: barTotalHeight,
         child: BottomNavBar(
-          destinations: ProviderBottomNavItems.destinations(context),
+          destinations: ProviderBottomNavItems.destinations(
+            context,
+            visibleTabs,
+          ),
           selectedItem: selectedItem,
           theme: navTheme,
           destinationKeys: {

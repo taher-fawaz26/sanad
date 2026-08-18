@@ -38,20 +38,28 @@ class _StartAddWorker extends _SearchSheetResult {
 Future<void> showWorkerSearchSheet(
   BuildContext context, {
   required WorkerSearchScope scope,
+  bool isOwner = true,
 }) async {
-  // Grab both blocs — the sheet reads from whichever matches [scope] but the
-  // reset on close always runs against the right one.
+  // Grab blocs. `InvitationsListBloc` is only read when the caller is
+  // opening the invitations-scoped sheet (`scope == invitations`, always
+  // owner-only by construction of `WorkersPage` — that scope is only
+  // reachable from the Invitations tab, which is itself owner-only via
+  // Phase 7F). Reading it unconditionally here previously crashed the
+  // Team-scoped sheet for a non-owner (RBAC Phase 7M), since Phase 7F
+  // stopped providing that bloc for `!isOwner`.
   final workersList = context.read<WorkersListBloc>();
-  final invitationsList = context.read<InvitationsListBloc>();
+  final invitationsList = scope == WorkerSearchScope.invitations
+      ? context.read<InvitationsListBloc>()
+      : null;
 
   final result = await SheetNavigator.push<_SearchSheetResult>(
     context,
     MultiBlocProvider(
       providers: [
         BlocProvider.value(value: workersList),
-        BlocProvider.value(value: invitationsList),
+        if (invitationsList != null) BlocProvider.value(value: invitationsList),
       ],
-      child: _WorkerSearchSheetBody(scope: scope),
+      child: _WorkerSearchSheetBody(scope: scope, isOwner: isOwner),
     ),
     settings: const SheetRouteSettings(sheetSize: SheetSize.expanded),
   );
@@ -64,7 +72,8 @@ Future<void> showWorkerSearchSheet(
         workersList.add(const WorkersListSearchChangedEvent(''));
       }
     case WorkerSearchScope.invitations:
-      if (invitationsList.state.searchQuery.isNotEmpty) {
+      if (invitationsList != null &&
+          invitationsList.state.searchQuery.isNotEmpty) {
         invitationsList.add(const InvitationsListSearchChangedEvent(''));
       }
   }
@@ -86,9 +95,10 @@ Future<void> showWorkerSearchSheet(
 }
 
 class _WorkerSearchSheetBody extends StatefulWidget {
-  const _WorkerSearchSheetBody({required this.scope});
+  const _WorkerSearchSheetBody({required this.scope, required this.isOwner});
 
   final WorkerSearchScope scope;
+  final bool isOwner;
 
   @override
   State<_WorkerSearchSheetBody> createState() => _WorkerSearchSheetBodyState();
@@ -141,6 +151,7 @@ class _WorkerSearchSheetBodyState extends State<_WorkerSearchSheetBody> {
                   builder: (context, state) => _TeamResults(
                     state: state,
                     hasQuery: state.searchQuery.trim().isNotEmpty,
+                    isOwner: widget.isOwner,
                   ),
                 )
               : BlocBuilder<InvitationsListBloc, InvitationsListState>(
@@ -156,10 +167,20 @@ class _WorkerSearchSheetBodyState extends State<_WorkerSearchSheetBody> {
 }
 
 class _TeamResults extends StatelessWidget {
-  const _TeamResults({required this.state, required this.hasQuery});
+  const _TeamResults({
+    required this.state,
+    required this.hasQuery,
+    required this.isOwner,
+  });
 
   final WorkersListState state;
   final bool hasQuery;
+
+  /// Threaded through from `showWorkerSearchSheet` (RBAC Phase 7M) — used
+  /// to hide the "Add worker" empty-state CTA for non-owners (invite is
+  /// owner-only, finding G3) and to strip the row-level swipe actions
+  /// from every result.
+  final bool isOwner;
 
   @override
   Widget build(BuildContext context) {
@@ -184,11 +205,13 @@ class _TeamResults extends StatelessWidget {
                 ),
                 title: 'workers.empty_title'.tr(),
                 description: 'workers.empty_description'.tr(),
-                actionLabel: 'workers.add_team'.tr(),
-                onAction: () => Navigator.of(
-                  context,
-                ).pop(const _StartAddWorker()),
-                actionIcon: const Icon(Icons.add, size: 20),
+                actionLabel: isOwner ? 'workers.add_team'.tr() : null,
+                onAction: isOwner
+                    ? () => Navigator.of(
+                        context,
+                      ).pop(const _StartAddWorker())
+                    : null,
+                actionIcon: isOwner ? const Icon(Icons.add, size: 20) : null,
                 actionIconPosition: AppButtonIconPosition.center,
               ),
       );
@@ -205,6 +228,7 @@ class _TeamResults extends StatelessWidget {
         final worker = workers[index];
         return WorkerListItem(
           worker: worker,
+          isOwner: isOwner,
           onTap: () => Navigator.of(context).pop(_ViewWorker(worker)),
         );
       },

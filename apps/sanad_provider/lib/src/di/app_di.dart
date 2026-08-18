@@ -86,7 +86,14 @@ Future<void> configureDependencies() async {
         placesApiKey: String.fromEnvironment('MAPS_API_KEY'),
       ),
     ),
-    AuthModule(),
+    AuthModule(
+      // Session-boundary hook (RBAC Phase 7A): every module's dispose() runs
+      // whenever a session begins or ends, so per-session in-memory state
+      // cannot survive a logout→login (or owner→worker) transition. Safe to
+      // reference `moduleRegistry` here — this closure only runs long after
+      // the assignment below completes.
+      onSessionBoundary: () => moduleRegistry.disposeAll(),
+    ),
     ContactVerificationModule(),
     AccountSettingsModule(),
     OrganizationSettingsModule(),

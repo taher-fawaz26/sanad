@@ -15,6 +15,13 @@ import 'package:go_router/go_router.dart';
 /// route is composed by each app via `AuthShell.otpRoute` so the app can
 /// wire its own post-verification navigation (dashboard vs onboarding).
 class AuthModule extends FeatureModule {
+  /// [onSessionBoundary] — see [AuthDI.init]. Typically
+  /// `() => moduleRegistry.disposeAll()`, wired by the app composition root.
+  AuthModule({void Function()? onSessionBoundary})
+    : _onSessionBoundary = onSessionBoundary;
+
+  final void Function()? _onSessionBoundary;
+
   @override
   String get name => 'auth';
 
@@ -25,7 +32,8 @@ class AuthModule extends FeatureModule {
   List<String> get dependencies => const [];
 
   @override
-  void registerDependencies() => AuthDI.init();
+  void registerDependencies() =>
+      AuthDI.init(onSessionBoundary: _onSessionBoundary);
 
   /// Rehydrate the persisted session from Hive so the splash screen can
   /// route the user without re-authenticating. Runs after DI registration

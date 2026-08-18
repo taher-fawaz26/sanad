@@ -65,4 +65,5 @@ export 'src/presentation/widgets/service_list_item.dart';
 export 'src/presentation/widgets/service_metrics_section.dart';
 export 'src/presentation/widgets/services_empty_state.dart';
 export 'src/presentation/widgets/services_filter_bar.dart';
+export 'src/routes/service_permissions.dart';
 export 'src/routes/service_routes.dart';

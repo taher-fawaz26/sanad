@@ -5,7 +5,6 @@ import 'package:branches/src/presentation/utils/branch_type_formatter.dart';
 import 'package:branches/src/presentation/widgets/branch_action_invokers.dart';
 import 'package:branches/src/routes/branch_permissions.dart';
 import 'package:branches/src/routes/branch_routes.dart';
-import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -23,13 +22,32 @@ const branchSwipeGroupTag = 'branches';
 /// are exposed only via swipe-to-reveal (`AppSwipeActions`), matching the
 /// Teams/Services/Invitations rows.
 class BranchListItem extends StatelessWidget {
-  const BranchListItem({required this.branch, super.key, this.onTap});
+  const BranchListItem({
+    required this.branch,
+    super.key,
+    this.onTap,
+    this.isOwner = false,
+  });
 
   final BranchEntity branch;
 
   /// Overrides the default "open branch details" navigation — used by the
   /// search sheet to close itself before navigating.
   final VoidCallback? onTap;
+
+  /// Whether the signed-in account is a provider owner (individual or
+  /// organization) — gates the Delete swipe.
+  ///
+  /// Delete is **persona-controlled, not permission-controlled**: the
+  /// backend defines no `provider:branch:delete` permission (gap G2 in
+  /// the RBAC backend-gaps ticket), so there is nothing to evaluate via
+  /// `PermissionBuilder`/`PermissionGate`. Deliberately NOT proxied on
+  /// `provider:branch:update` — a manager holding branch:update (e.g. to
+  /// toggle maintenance) does not thereby gain delete authority; that
+  /// would silently grant a capability the backend never issued. Defaults
+  /// to `false` (fail closed) so a caller that forgets to thread this
+  /// through never over-grants Delete.
+  final bool isOwner;
 
   static Color _avatarColor(AppColors colors, String seed) {
     final palette = <Color>[
@@ -47,24 +65,40 @@ class BranchListItem extends StatelessWidget {
         ? branch.branchName[0].toUpperCase()
         : '?';
 
-    return ListenableBuilder(
-      listenable: sl<AuthorizationReader>(),
-      builder: (context, _) => _buildSwipeRow(context, colors, initial),
+    // Two independent permission decisions — view (edit swipe → navigation
+    // to a read-only-safe details page) and update (maintenance toggle) —
+    // one `PermissionBuilder` per decision so each rebuilds only when its
+    // own outcome flips. Nesting them is trivial here (three swipes, one
+    // row) and keeps the "no raw permission checks in widgets" rule
+    // (RBAC Phase 7N) intact — no inline `AuthorizationReader.can(...)`
+    // reads anywhere in this file.
+    return PermissionBuilder(
+      requirement: const PermissionRequirement.single(BranchPermissions.view),
+      builder: (context, canEdit) => PermissionBuilder(
+        requirement: const PermissionRequirement.single(
+          BranchPermissions.update,
+        ),
+        builder: (context, canToggleMaintenance) => _buildSwipeRow(
+          context,
+          colors,
+          initial,
+          canEdit: canEdit,
+          canToggleMaintenance: canToggleMaintenance,
+        ),
+      ),
     );
   }
 
   Widget _buildSwipeRow(
     BuildContext context,
     AppColors colors,
-    String initial,
-  ) {
-    final reader = sl<AuthorizationReader>();
-    // Edit only navigates to the (read-only-safe) details page, so it is
-    // gated on view — not update. See the migration plan's "the read-only
-    // page distinction" for why.
-    final canEdit = reader.can(BranchPermissions.view);
-    final canToggleMaintenance = reader.can(BranchPermissions.update);
-
+    String initial, {
+    required bool canEdit,
+    required bool canToggleMaintenance,
+  }) {
+    // `isOwner` (the persona flag threaded in via the widget constructor)
+    // is captured by this closure — no extra parameter needed here since
+    // it's already a field on `this`.
     return AppSwipeActions(
       groupTag: branchSwipeGroupTag,
       actions: [
@@ -88,16 +122,24 @@ class BranchListItem extends StatelessWidget {
               branch: branch,
             ),
           ),
-        // Delete has no backend permission yet (gap tracked in the RBAC
-        // migration plan) — stays unconditional; the route itself is still
-        // organization-only via the persona guard.
-        AppSwipeAction(
-          svgAsset: AppSvgs.trashBold,
-          semanticLabel: 'branches.actions.action_delete'.tr(),
-          variant: AppSwipeActionVariant.destructive,
-          onPressed: () =>
-              confirmAndDeleteBranch(context: context, branch: branch),
-        ),
+        // TODO(G2): no `provider:branch:delete` permission exists in the
+        // backend catalog yet — see the backend-gaps ticket. Delete is
+        // therefore **persona-controlled** (owner-only via [isOwner]), not
+        // a proxy on `branch:update`: a manager holding `branch:update`
+        // (e.g. to toggle maintenance) must NOT thereby gain delete
+        // authority — that would silently grant a capability the backend
+        // never issued, exactly the "never invent a backend permission"
+        // rule this feature is built around. Replace this persona check
+        // with a real `PermissionBuilder`/`PermissionGate` on the new
+        // permission constant once G2 ships.
+        if (isOwner)
+          AppSwipeAction(
+            svgAsset: AppSvgs.trashBold,
+            semanticLabel: 'branches.actions.action_delete'.tr(),
+            variant: AppSwipeActionVariant.destructive,
+            onPressed: () =>
+                confirmAndDeleteBranch(context: context, branch: branch),
+          ),
       ],
       child: AppEntityListItem(
         style: AppEntityListItemStyle.compact,

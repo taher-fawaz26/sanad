@@ -29,15 +29,18 @@ class BranchesModule extends FeatureModule {
   @override
   void registerDependencies() => BranchesDI.init();
 
+  // `BranchRoutes.list` and `BranchRoutes.details` are NOT contributed
+  // here — both need an `isOwner` callback (to gate the Delete swipe /
+  // action-sheet item, which is persona-controlled — RBAC backend gap G2)
+  // that the generic `FeatureModule.routes(ctx)` signature has no way to
+  // carry. See `ownerAwareRoutes` below, wired directly in
+  // `provider_router.dart` — same reasoning and pattern as
+  // `ServicesModule.shellRoute`/`WorkersModule.route`. Add and Coverage
+  // need no persona flag (Add is permission-gated on `branch:create`;
+  // Coverage on `any(create, update)`), so they stay in the generic
+  // registration.
   @override
   List<RouteBase> routes(FeatureRouteContext ctx) => [
-    GoRoute(
-      path: BranchRoutes.list,
-      builder: (context, state) => BlocProvider(
-        create: (_) => sl<BranchesBloc>(),
-        child: const ProviderBranchesPage(),
-      ),
-    ),
     GoRoute(
       path: BranchRoutes.add,
       builder: (context, state) => MultiBlocProvider(
@@ -83,6 +86,25 @@ class BranchesModule extends FeatureModule {
         );
       },
     ),
+  ];
+
+  /// `/branches` (list) and `/branches/:id` (details) — contributed
+  /// separately from [routes] because both need [isOwner] to gate the
+  /// Delete swipe / action-sheet item (persona-controlled — RBAC backend
+  /// gap G2). [isOwner] is a callback, not a `bool`, so it is read fresh
+  /// on every navigation — matching `ServicesModule.shellRoute`'s
+  /// reasoning exactly. Wired directly in `provider_router.dart` alongside
+  /// the generic `moduleRoutes` spread.
+  static List<RouteBase> ownerAwareRoutes({
+    required bool Function() isOwner,
+  }) => [
+    GoRoute(
+      path: BranchRoutes.list,
+      builder: (context, state) => BlocProvider(
+        create: (_) => sl<BranchesBloc>(),
+        child: ProviderBranchesPage(isOwner: isOwner()),
+      ),
+    ),
     GoRoute(
       path: BranchRoutes.details,
       builder: (context, state) {
@@ -90,7 +112,7 @@ class BranchesModule extends FeatureModule {
         return BlocProvider(
           create: (_) =>
               sl<BranchDetailsBloc>()..add(BranchDetailsFetchEvent(branchId)),
-          child: BranchDetailsPage(branchId: branchId),
+          child: BranchDetailsPage(branchId: branchId, isOwner: isOwner()),
         );
       },
     ),

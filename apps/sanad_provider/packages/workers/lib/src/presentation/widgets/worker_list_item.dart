@@ -21,14 +21,31 @@ const workerSwipeGroupTag = 'workers';
 /// via swipe-to-reveal (`AppSwipeActions`) — there is no secondary "more"
 /// menu. All actions call the exact same `WorkerActionCubit` methods via
 /// `worker_action_invokers.dart`.
+///
+/// All three swipes are owner-only mutations (`PATCH /workers/:id[/status]`
+/// and `DELETE /workers/:id` — RBAC Phase 7 finding G3, no permission
+/// exists for any of these writes). When [isOwner] is false the row still
+/// renders (a manager holding `worker:view` legitimately sees the list) but
+/// the swipe actions are absent — matching the plan's "the app must NOT
+/// present controls whose tap immediately bounces" rule.
 class WorkerListItem extends StatelessWidget {
-  const WorkerListItem({required this.worker, super.key, this.onTap});
+  const WorkerListItem({
+    required this.worker,
+    super.key,
+    this.onTap,
+    this.isOwner = true,
+  });
 
   final WorkerEntity worker;
 
   /// Overrides default "open worker details" navigation — used by the
   /// search sheet to close itself before navigating.
   final VoidCallback? onTap;
+
+  /// Whether to expose the swipe actions (Edit / Suspend-Unsuspend /
+  /// Delete). Defaults to `true` for backwards compatibility with any
+  /// consumer that doesn't yet thread `isOwner` in.
+  final bool isOwner;
 
   @override
   Widget build(BuildContext context) {
@@ -37,32 +54,34 @@ class WorkerListItem extends StatelessWidget {
 
     return AppSwipeActions(
       groupTag: workerSwipeGroupTag,
-      actions: [
-        AppSwipeAction(
-          svgAsset: AppSvgs.branchEdit,
-          semanticLabel: 'workers.action_edit'.tr(),
-          onPressed: () => _editWorker(context),
-        ),
-        AppSwipeAction(
-          svgAsset: AppSvgs.workerSuspend,
-          semanticLabel: isSuspended
-              ? 'workers.action_unsuspend'.tr()
-              : 'workers.action_suspend'.tr(),
-          variant: AppSwipeActionVariant.warning,
-          onPressed: () => confirmAndChangeWorkerStatus(
-            context: context,
-            worker: worker,
-            isSuspending: !isSuspended,
-          ),
-        ),
-        AppSwipeAction(
-          svgAsset: AppSvgs.trashBold,
-          semanticLabel: 'workers.action_delete'.tr(),
-          variant: AppSwipeActionVariant.destructive,
-          onPressed: () =>
-              confirmAndDeleteWorker(context: context, worker: worker),
-        ),
-      ],
+      actions: isOwner
+          ? [
+              AppSwipeAction(
+                svgAsset: AppSvgs.branchEdit,
+                semanticLabel: 'workers.action_edit'.tr(),
+                onPressed: () => _editWorker(context),
+              ),
+              AppSwipeAction(
+                svgAsset: AppSvgs.workerSuspend,
+                semanticLabel: isSuspended
+                    ? 'workers.action_unsuspend'.tr()
+                    : 'workers.action_suspend'.tr(),
+                variant: AppSwipeActionVariant.warning,
+                onPressed: () => confirmAndChangeWorkerStatus(
+                  context: context,
+                  worker: worker,
+                  isSuspending: !isSuspended,
+                ),
+              ),
+              AppSwipeAction(
+                svgAsset: AppSvgs.trashBold,
+                semanticLabel: 'workers.action_delete'.tr(),
+                variant: AppSwipeActionVariant.destructive,
+                onPressed: () =>
+                    confirmAndDeleteWorker(context: context, worker: worker),
+              ),
+            ]
+          : const [],
       child: AppEntityListItem(
         title: worker.fullName,
         caption: worker.role,
