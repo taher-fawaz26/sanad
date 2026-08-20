@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:design_system/design_system.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 /// One checklist item in [BusinessProgressSection] — a required field the
@@ -77,14 +78,14 @@ class BusinessProgressSection extends StatelessWidget {
                     spacing: 12,
                     children: [
                       Text(
-                        'Business Profile',
+                        'settings.business_progress_title'.tr(),
                         style: typography.regularNone.copyWith(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                       Text(
-                        'Track your progress and complete missing items.',
+                        'settings.business_progress_subtitle'.tr(),
                         style: typography.smallNormal.copyWith(
                           color: colors.textSecondary,
                         ),
@@ -99,8 +100,7 @@ class BusinessProgressSection extends StatelessWidget {
             if (!visibleToCustomers) ...[
               const _HiddenFromCustomersBadge(),
               Text(
-                "Your business won't appear in customer search until all "
-                'required information is completed.',
+                'settings.business_progress_hidden_notice'.tr(),
                 style: typography.smallNormal.copyWith(
                   color: colors.textSecondary,
                   height: 18 / 13,
@@ -127,7 +127,7 @@ class BusinessProgressSection extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'Required Items Completed',
+                  'settings.business_progress_required_completed'.tr(),
                   style: typography.regularNormal.copyWith(
                     color: colors.textSecondary,
                     fontWeight: FontWeight.w500,
@@ -245,16 +245,16 @@ class _HiddenFromCustomersBadge extends StatelessWidget {
         color: _background,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           spacing: 8,
           children: [
-            _Dot(color: _foreground, size: 8),
+            const _Dot(color: _foreground, size: 8),
             Text(
-              'Hidden from Customers',
-              style: TextStyle(
+              'settings.business_progress_hidden_badge'.tr(),
+              style: const TextStyle(
                 color: _foreground,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,

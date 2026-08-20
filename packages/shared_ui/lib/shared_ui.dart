@@ -38,6 +38,7 @@ export 'src/pagination/sanad_paged_list.dart';
 export 'src/pagination/sanad_paged_sliver_list.dart';
 
 // Pages
+export 'src/pages/app_forbidden_page.dart';
 export 'src/pages/app_nested_scroll_page.dart';
 export 'src/pages/app_network_error_page.dart';
 export 'src/pages/app_not_found_page.dart';

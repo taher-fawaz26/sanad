@@ -18,4 +18,12 @@ abstract final class AppAnimations {
   /// SANAD green fading-ring spinner — app-wide `AppLoadingIndicator`.
   static const String appLoadingIndicator =
       '$_base/app_loading_indicator.json';
+
+  /// "404 Not Found" line-art animation, recolored to the SANAD brand teal
+  /// (`MainPalette.shade700`) — used by `AppNotFoundPage`.
+  static const String notFound404 = '$_base/not_found_404.json';
+
+  /// "403 Forbidden" dinosaur-hatching animation, recolored to the SANAD
+  /// palette (brand teal + red danger accents) — used by `AppForbiddenPage`.
+  static const String forbidden403 = '$_base/forbidden_403.json';
 }

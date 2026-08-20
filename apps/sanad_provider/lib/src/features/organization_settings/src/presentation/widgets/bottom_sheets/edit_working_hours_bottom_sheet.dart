@@ -43,9 +43,11 @@ class _EditWorkingHoursSheetBodyState
     _entries = List<WorkingHoursEditEntry>.from(widget.initialEntries);
   }
 
-  void _deleteEntry(String dayId) {
+  void _deleteEntryAt(int index) {
+    // Delete by row index — a day can now have multiple slots (SAN-568),
+    // so filtering by dayId would nuke every split-shift for that day.
     setState(() {
-      _entries = _entries.where((entry) => entry.dayId != dayId).toList();
+      _entries = [..._entries]..removeAt(index);
     });
   }
 
@@ -53,24 +55,13 @@ class _EditWorkingHoursSheetBodyState
       Navigator.of(context).pop(List<WorkingHoursEditEntry>.from(_entries));
 
   Future<void> _openAddDaySheet() async {
-    final existingDays = _entries.map((entry) => entry.dayId).toSet();
-    final availableDays = WorkingHoursDayIds.all
-        .where((day) => !existingDays.contains(day))
-        .toList();
-
-    if (availableDays.isEmpty) {
-      if (!mounted) return;
-      showAppSnackbar(
-        context: context,
-        title: 'branches.add_branch.all_days_added'.tr(),
-      );
-      return;
-    }
-
+    // Do NOT filter out days that already have a slot — users need to be
+    // able to add split shifts on the same day (SAN-568). Multiple entries
+    // per day are collapsed back into WorkingHoursDayEntity.slots on save.
     final result = await SheetNavigator.push<AppAddScheduleDayResult>(
       context,
       AppAddScheduleDaySheet(
-        days: availableDays
+        days: WorkingHoursDayIds.all
             .map(
               (day) => AppScheduleDayOption(
                 id: day,
@@ -150,7 +141,7 @@ class _EditWorkingHoursSheetBodyState
               crossAxisAlignment: CrossAxisAlignment.stretch,
               spacing: AppSpacing.md,
               children: [
-                for (final entry in _entries)
+                for (final (index, entry) in _entries.indexed)
                   AppScheduleDayRow(
                     title: BranchScheduleFormatter.localizedDay(entry.dayId),
                     value: BranchScheduleFormatter.formatSlot(
@@ -159,7 +150,7 @@ class _EditWorkingHoursSheetBodyState
                         to: entry.to,
                       ),
                     ),
-                    onDelete: () => _deleteEntry(entry.dayId),
+                    onDelete: () => _deleteEntryAt(index),
                   ),
                 AppButtonPresets.outline(
                   label: 'settings.add_day'.tr(),

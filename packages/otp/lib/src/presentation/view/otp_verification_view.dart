@@ -118,40 +118,41 @@ class _OtpVerificationViewState<T> extends State<OtpVerificationView<T>> {
                 isLoading: isVerifying,
               ),
               SizedBox(height: AppSpacing.lg),
-              if (state.canResend)
-                Center(
-                  child: Wrap(
-                    alignment: WrapAlignment.center,
-                    children: [
-                      Text(
-                        '${'otp.not_received'.tr()} ',
-                        style: typography.regularNormal.copyWith(
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () => bloc.add(const OtpResendRequested()),
-                        child: Text(
-                          'otp.send_again'.tr(),
+              if (state.phase is! OtpIdle && !isSending)
+                if (state.canResend)
+                  Center(
+                    child: Wrap(
+                      alignment: WrapAlignment.center,
+                      children: [
+                        Text(
+                          '${'otp.not_received'.tr()} ',
                           style: typography.regularNormal.copyWith(
-                            color: colors.primary,
-                            fontWeight: FontWeight.w600,
+                            color: colors.textSecondary,
                           ),
                         ),
+                        GestureDetector(
+                          onTap: () => bloc.add(const OtpResendRequested()),
+                          child: Text(
+                            'otp.send_again'.tr(),
+                            style: typography.regularNormal.copyWith(
+                              color: colors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Center(
+                    child: Text(
+                      _formatSeconds(state.secondsRemaining),
+                      style: typography.regularNormal.copyWith(
+                        color: colors.primary,
+                        fontWeight: FontWeight.w600,
                       ),
-                    ],
-                  ),
-                )
-              else
-                Center(
-                  child: Text(
-                    _formatSeconds(state.secondsRemaining),
-                    style: typography.regularNormal.copyWith(
-                      color: colors.primary,
-                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                ),
             ],
           ),
         );

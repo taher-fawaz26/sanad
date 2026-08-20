@@ -21,6 +21,11 @@ abstract final class AppRoutes {
   /// so the user can pop back and open it again.
   static const String offline = '/offline';
 
+  /// Full-screen 403 page — reachable as an explicit `denyRedirect` target
+  /// for any `RouteRule` that wants a dedicated "Access Denied" screen
+  /// instead of the default bounce-home behavior.
+  static const String forbidden = '/403';
+
   /// Routes that require an authenticated session.
   ///
   /// Feature-owned protected routes are merged in buildProviderRouter.

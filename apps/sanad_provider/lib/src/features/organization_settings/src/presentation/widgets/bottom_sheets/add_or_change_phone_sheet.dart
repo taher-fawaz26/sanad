@@ -59,14 +59,14 @@ class _AddOrChangePhoneSheetBodyState
 
   void _onChanged() => setState(() {});
 
-  bool get _canContinue => UaePhoneValidator.isValid(_controller.text);
+  bool get _canContinue => UaePhoneValidator.isMobile(_controller.text);
 
   /// Shown once the user has typed something non-empty that fails
   /// validation — mirrors the empty-is-not-yet-an-error convention used by
   /// the other sheets in this feature (e.g. the social profile URL field).
   String? get _phoneErrorText {
     final value = _controller.text;
-    if (value.isEmpty || UaePhoneValidator.isValid(value)) return null;
+    if (value.isEmpty || UaePhoneValidator.isMobile(value)) return null;
     return 'settings.phone_number_invalid_error'.tr();
   }
 

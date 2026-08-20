@@ -6,6 +6,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:localization/localization.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/business_profile_status.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/category_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/legal_data_status.dart';
@@ -221,14 +222,17 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
   }
 
   Future<void> _editDescription(String? currentDescription) async {
+    // Prefer the last-attempted text over the persisted description so a
+    // user reopening the sheet after a failed save (SAN-567) doesn't lose
+    // what they typed — the sheet's own TextEditingController was disposed
+    // the moment the sheet popped, so the draft must come from bloc state.
+    final bloc = context.read<OrganizationSettingsBloc>();
     final result = await showEditIdentityBottomSheet(
       context: context,
-      initialDescription: currentDescription,
+      initialDescription: bloc.state.pendingDescription ?? currentDescription,
     );
     if (result == null || !mounted) return;
-    context.read<OrganizationSettingsBloc>().add(
-      OrganizationSettingsDescriptionSaved(result),
-    );
+    bloc.add(OrganizationSettingsDescriptionSaved(result));
   }
 
   Future<void> _editCategories(
@@ -286,14 +290,20 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
     );
     if (result == null || !mounted) return;
 
-    final availability = result
-        .map(
-          (entry) => WorkingHoursDayEntity(
-            day: entry.dayId,
-            slots: [WorkingHoursSlotEntity(from: entry.from, to: entry.to)],
-          ),
-        )
-        .toList();
+    // Group multiple slots per day into a single WorkingHoursDayEntity —
+    // the edit sheet now allows split shifts (SAN-568), and the backend
+    // expects one entry per day with a `slots` list, not duplicate day
+    // records.
+    final slotsByDay = <String, List<WorkingHoursSlotEntity>>{};
+    for (final entry in result) {
+      (slotsByDay[entry.dayId] ??= <WorkingHoursSlotEntity>[]).add(
+        WorkingHoursSlotEntity(from: entry.from, to: entry.to),
+      );
+    }
+    final availability = [
+      for (final MapEntry(key: day, value: slots) in slotsByDay.entries)
+        WorkingHoursDayEntity(day: day, slots: slots),
+    ];
 
     context.read<OrganizationSettingsBloc>().add(
       OrganizationSettingsWorkingHoursSaved(availability),
@@ -335,7 +345,7 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
         if (state.saveFailure != null) {
           showAppErrorSnackbar(
             context: context,
-            title: state.saveFailure!.message,
+            title: state.saveFailure!.localizedMessage(),
           );
         }
       },
@@ -368,7 +378,7 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
                 AppSliverError(
                   title: 'Something went wrong',
                   description:
-                      state.failure?.message ??
+                      state.failure?.localizedMessage() ??
                       'Failed to load your organization settings.',
                   retryLabel: 'Retry',
                   onRetry: () => context.read<OrganizationSettingsBloc>().add(

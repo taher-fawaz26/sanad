@@ -3,6 +3,71 @@ import 'package:test/test.dart';
 
 void main() {
   group('UaePhoneValidator', () {
+    group('isMobile', () {
+      test('accepts local mobile numbers (05XXXXXXXX)', () {
+        expect(UaePhoneValidator.isMobile('0501234567'), isTrue);
+        expect(UaePhoneValidator.isMobile('0551234567'), isTrue);
+      });
+
+      test('accepts national mobile numbers (5XXXXXXXX)', () {
+        expect(UaePhoneValidator.isMobile('501234567'), isTrue);
+        expect(UaePhoneValidator.isMobile('551234567'), isTrue);
+      });
+
+      test('accepts international mobile numbers (9715XXXXXXXX)', () {
+        expect(UaePhoneValidator.isMobile('971501234567'), isTrue);
+        expect(UaePhoneValidator.isMobile('971551234567'), isTrue);
+      });
+
+      test('strips whitespace, dashes, and plus signs before validating', () {
+        expect(UaePhoneValidator.isMobile('+971501234567'), isTrue);
+        expect(UaePhoneValidator.isMobile('050 123 4567'), isTrue);
+        expect(UaePhoneValidator.isMobile('050-123-4567'), isTrue);
+      });
+
+      test('rejects landline numbers', () {
+        expect(UaePhoneValidator.isMobile('021234567'), isFalse);
+        expect(UaePhoneValidator.isMobile('41234567'), isFalse);
+        expect(UaePhoneValidator.isMobile('97141234567'), isFalse);
+      });
+
+      test('rejects null and empty', () {
+        expect(UaePhoneValidator.isMobile(null), isFalse);
+        expect(UaePhoneValidator.isMobile(''), isFalse);
+        expect(UaePhoneValidator.isMobile('   '), isFalse);
+      });
+
+      test('rejects numbers with wrong length', () {
+        expect(UaePhoneValidator.isMobile('050123'), isFalse);
+        expect(UaePhoneValidator.isMobile('05012345678'), isFalse);
+      });
+    });
+
+    group('mobileValidationMessage', () {
+      test('returns null for valid mobile numbers', () {
+        expect(UaePhoneValidator.mobileValidationMessage('0501234567'), isNull);
+      });
+
+      test('returns null for empty input', () {
+        expect(UaePhoneValidator.mobileValidationMessage(null), isNull);
+        expect(UaePhoneValidator.mobileValidationMessage(''), isNull);
+      });
+
+      test('returns error key for landline numbers', () {
+        expect(
+          UaePhoneValidator.mobileValidationMessage('41234567'),
+          equals('validation.form.uae_phone_invalid'),
+        );
+      });
+
+      test('returns error key for invalid numbers', () {
+        expect(
+          UaePhoneValidator.mobileValidationMessage('12345'),
+          equals('validation.form.uae_phone_invalid'),
+        );
+      });
+    });
+
     group('isValid', () {
       test('accepts local mobile numbers (05XXXXXXXX)', () {
         expect(UaePhoneValidator.isValid('0501234567'), isTrue);

@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:shared_ui/src/states/app_empty_state.dart';
 
-/// Full-screen page shown when GoRouter can't match a URL.
+/// Full-screen page shown when the signed-in user lacks permission for the
+/// route/action they reached (403).
 ///
 /// Route-agnostic — takes an [onGoHome] callback rather than a home path so
-/// design_system stays free of app-level route knowledge.
-class AppNotFoundPage extends StatelessWidget {
-  const AppNotFoundPage({
+/// design_system stays free of app-level route knowledge. Mirrors
+/// [AppNotFoundPage]'s structure; only the illustration and copy differ.
+class AppForbiddenPage extends StatelessWidget {
+  const AppForbiddenPage({
     required this.title,
     required this.description,
     required this.homeLabel,
@@ -17,13 +19,13 @@ class AppNotFoundPage extends StatelessWidget {
     super.key,
   });
 
-  /// Localized heading (e.g. "Page not found").
+  /// Localized heading (e.g. "Access Denied").
   final String title;
 
   /// Localized supporting text.
   final String description;
 
-  /// Localized label for the primary CTA (e.g. "Go home").
+  /// Localized label for the primary CTA (e.g. "Back to Dashboard").
   final String homeLabel;
 
   /// Callback invoked when the user taps the primary CTA.
@@ -45,7 +47,7 @@ class AppNotFoundPage extends StatelessWidget {
                   illustration: Semantics(
                     excludeSemantics: true,
                     child: Lottie.asset(
-                      AppAnimations.notFound404,
+                      AppAnimations.forbidden403,
                       package: AppAssets.package,
                       width: size,
                       height: size,

@@ -14,6 +14,15 @@ abstract final class UaePhoneValidator {
   static String _digitsOnly(String value) =>
       value.trim().replaceAll(RegExp(r'[\s\-+]'), '');
 
+  static bool isMobile(String? value) {
+    if (value == null) return false;
+    final cleaned = _digitsOnly(value);
+    if (cleaned.isEmpty) return false;
+    return _mobileLocal.hasMatch(cleaned) ||
+        _mobileNational.hasMatch(cleaned) ||
+        _mobileIntl.hasMatch(cleaned);
+  }
+
   static bool isValid(String? value) {
     if (value == null) return false;
     final cleaned = _digitsOnly(value);
@@ -24,6 +33,12 @@ abstract final class UaePhoneValidator {
         _landlineLocal.hasMatch(cleaned) ||
         _landlineNational.hasMatch(cleaned) ||
         _landlineIntl.hasMatch(cleaned);
+  }
+
+  static String? mobileValidationMessage(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    if (isMobile(value)) return null;
+    return 'validation.form.uae_phone_invalid';
   }
 
   static String? validationMessage(String? value) {

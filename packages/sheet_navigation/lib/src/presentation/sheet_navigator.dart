@@ -15,9 +15,15 @@ abstract final class SheetNavigator {
     Widget child, {
     SheetRouteSettings settings = const SheetRouteSettings(),
   }) {
-    return Navigator.of(context, rootNavigator: true).push<T>(
-      ModalSheetRoute<T>(builder: (_) => child, sheetSettings: settings),
+    final rootNav = Navigator.of(context, rootNavigator: true);
+    final sheetRoute = ModalSheetRoute<T>(
+      builder: (_) => child,
+      sheetSettings: settings,
     );
+
+    _dismissSheetWhenParentPops(context, rootNav, sheetRoute);
+
+    return rootNav.push<T>(sheetRoute);
   }
 
   static Future<T?> replace<T>(
@@ -36,6 +42,38 @@ abstract final class SheetNavigator {
 
   static bool canPop(BuildContext context) {
     return Navigator.of(context, rootNavigator: true).canPop();
+  }
+
+  /// Auto-dismiss [sheetRoute] when the page that opened it is popped.
+  ///
+  /// The sheet lives on the root navigator; the calling page may be on a
+  /// nested navigator (e.g. go_router's ShellRoute). A swipe-back pops the
+  /// nested route but leaves the root-level sheet orphaned. This listener
+  /// bridges the gap.
+  static void _dismissSheetWhenParentPops<T>(
+    BuildContext context,
+    NavigatorState rootNav,
+    ModalSheetRoute<T> sheetRoute,
+  ) {
+    final parentRoute = ModalRoute.of(context);
+    if (parentRoute == null) return;
+
+    late final void Function(AnimationStatus) listener;
+    listener = (status) {
+      if (status != AnimationStatus.reverse) return;
+      parentRoute.animation?.removeStatusListener(listener);
+      if (sheetRoute.isActive && sheetRoute.isCurrent) {
+        rootNav.removeRoute(sheetRoute);
+      }
+    };
+    parentRoute.animation?.addStatusListener(listener);
+
+    // Clean up the listener if the sheet is dismissed normally (user taps
+    // outside, drags down, or pops programmatically) before the parent
+    // route is ever popped.
+    sheetRoute.completed.then((_) {
+      parentRoute.animation?.removeStatusListener(listener);
+    });
   }
 }
 

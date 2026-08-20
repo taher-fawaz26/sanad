@@ -202,11 +202,19 @@ class OrganizationSettingsBloc
   Future<void> _onDescriptionSaved(
     OrganizationSettingsDescriptionSaved event,
     Emitter<OrganizationSettingsState> emit,
-  ) => _patchSettings(
-    emit,
-    UpdateServiceProviderSettingsParams(description: event.description),
-    (organization) => organization.copyWith(description: event.description),
-  );
+  ) async {
+    // Remember the attempted description before firing the PATCH so the edit
+    // sheet can re-seed with it if the save fails (SAN-567) — the sheet's
+    // TextEditingController is disposed as soon as the sheet pops, so the
+    // typed value has to live somewhere the page can read back.
+    emit(state.copyWith(pendingDescription: event.description));
+    await _patchSettings(
+      emit,
+      UpdateServiceProviderSettingsParams(description: event.description),
+      (organization) => organization.copyWith(description: event.description),
+      onSuccessClearPendingDescription: true,
+    );
+  }
 
   Future<void> _onCategoriesSaved(
     OrganizationSettingsCategoriesSaved event,
@@ -243,8 +251,9 @@ class OrganizationSettingsBloc
     Emitter<OrganizationSettingsState> emit,
     UpdateServiceProviderSettingsParams params,
     OrganizationProfileEntity Function(OrganizationProfileEntity organization)
-    merge,
-  ) async {
+    merge, {
+    bool onSuccessClearPendingDescription = false,
+  }) async {
     emit(
       state.copyWith(saveStatus: RequestStatus.loading, clearSaveFailure: true),
     );
@@ -258,7 +267,12 @@ class OrganizationSettingsBloc
       (_) {
         final organization = state.organization;
         if (organization == null) {
-          emit(state.copyWith(saveStatus: RequestStatus.success));
+          emit(
+            state.copyWith(
+              saveStatus: RequestStatus.success,
+              clearPendingDescription: onSuccessClearPendingDescription,
+            ),
+          );
           return;
         }
         final merged = merge(organization);
@@ -266,6 +280,7 @@ class OrganizationSettingsBloc
           state.copyWith(
             saveStatus: RequestStatus.success,
             organization: merged,
+            clearPendingDescription: onSuccessClearPendingDescription,
           ),
         );
         unawaited(

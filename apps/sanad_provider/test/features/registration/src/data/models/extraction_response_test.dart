@@ -264,6 +264,70 @@ void main() {
     });
   });
 
+  // ── Trade licence required-field guard (SAN-570) ─────────────────────────────
+
+  group('trade licence required-field guard', () {
+    test(
+      'block present but no licence number → imageUnclear, not success',
+      () {
+        // OCR read only the trade name + issuance date; the licence number
+        // the backend hard-rejects on is missing. Must NOT report success.
+        final json = {
+          'personalLegalData': canonicalIdMap(),
+          'tradeLicenseLegalData': {
+            'tradeNameEnglish': 'Acme LLC',
+            'issuanceDate': '01/01/2025',
+          },
+        };
+        final result = parse(json, includeTradeLicence: true);
+        expect(tl0(result)!.issue, DocumentIssue.imageUnclear);
+        // allOk gates the "Continue to Dashboard" button — must be blocked.
+        expect(result.allOk, isFalse);
+        // The partially-read fields are still surfaced for the user.
+        expect(tl0(result)!.raw['tradeNameEn'], 'Acme LLC');
+        expect(tl0(result)!.raw['issuanceDate'], '01/01/2025');
+      },
+    );
+
+    test('block with a licence number → clean (none) issue', () {
+      final json = {
+        'personalLegalData': canonicalIdMap(),
+        'tradeLicenseLegalData': canonicalTlMap(),
+      };
+      final result = parse(json, includeTradeLicence: true);
+      expect(tl0(result)!.issue, DocumentIssue.none);
+      expect(result.allOk, isTrue);
+    });
+
+    test(
+      'backend missingFields is authoritative: non-empty → imageUnclear even '
+      'when the licence number itself was read',
+      () {
+        // All fields (incl. licenceNo) present, but the backend still reports
+        // that some required fields could not be read — trust that signal.
+        final tl = {...canonicalTlMap(), 'missingFields': ['legalForm']};
+        final json = {
+          'personalLegalData': canonicalIdMap(),
+          'tradeLicenseLegalData': tl,
+        };
+        final result = parse(json, includeTradeLicence: true);
+        expect(tl0(result)!.issue, DocumentIssue.imageUnclear);
+        expect(result.allOk, isFalse);
+      },
+    );
+
+    test('backend missingFields empty → clean (none) issue', () {
+      final tl = {...canonicalTlMap(), 'missingFields': <String>[]};
+      final json = {
+        'personalLegalData': canonicalIdMap(),
+        'tradeLicenseLegalData': tl,
+      };
+      final result = parse(json, includeTradeLicence: true);
+      expect(tl0(result)!.issue, DocumentIssue.none);
+      expect(result.allOk, isTrue);
+    });
+  });
+
   // ── Trade licence block key aliases ──────────────────────────────────────────
 
   group('trade licence block key aliases', () {

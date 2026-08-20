@@ -25,7 +25,13 @@ abstract final class BranchScheduleFormatter {
   static String formatTime(String time24) {
     final time = _parseTime(time24);
     if (time == null) return time24;
-    return DateFormat.jm().format(
+    // Explicit `h:mm a` pattern (not `DateFormat.jm()`) so the display is
+    // always 12-hour with a locale-appropriate AM/PM marker (AM/PM in en,
+    // ص/م in ar). `DateFormat.jm()` resolves via the current Intl locale,
+    // which on many device configurations picks a 24-hour skeleton — that
+    // mismatched the time picker (which is 12-hour) and produced strings
+    // like "14:00 – 10:00" on the read-only working-hours list (SAN-568).
+    return DateFormat('h:mm a').format(
       DateTime(2000, 1, 1, time.hour, time.minute),
     );
   }

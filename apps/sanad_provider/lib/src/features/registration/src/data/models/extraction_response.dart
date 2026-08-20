@@ -83,49 +83,68 @@ abstract final class ExtractionResponse {
         issue: DocumentIssue.expired,
       );
     }
+    final raw = {
+      // Backend: tradeNameEnglish  |  legacy: tradeNameEn / tradeName
+      'tradeNameEn': _str(
+        m,
+        ['tradeNameEnglish', 'tradeNameEn', 'trade_name_en', 'tradeName'],
+      ),
+      // Backend: tradeNameArabic  |  legacy: tradeNameAr
+      'tradeNameAr': _str(
+        m,
+        ['tradeNameArabic', 'tradeNameAr', 'trade_name_ar'],
+      ),
+      // Backend: licenseNumber  |  legacy: licenceNo / licenseNo
+      'licenceNo': _str(
+        m,
+        [
+          'licenseNumber',
+          'licenceNumber',
+          'licenceNo',
+          'licence_no',
+          'licenseNo',
+        ],
+      ),
+      'licenceType': _str(m, ['licenceType', 'licence_type', 'licenseType']),
+      'establishmentDate': _str(
+        m,
+        ['establishmentDate', 'establishment_date'],
+      ),
+      'issuanceDate': _str(m, ['issuanceDate', 'issuance_date']),
+      'legalForm': _str(m, ['legalForm', 'legal_form']),
+      // Backend: unifiedRegistrationNumber  |  legacy: unifiedRegNo
+      'unifiedRegNo': _str(
+        m,
+        ['unifiedRegistrationNumber', 'unifiedRegNo', 'unified_reg_no'],
+      ),
+      // Backend: unifiedLicenseNumber  |  legacy: unifiedLicenceNo
+      'unifiedLicenceNo': _str(
+        m,
+        ['unifiedLicenseNumber', 'unifiedLicenceNo', 'unified_licence_no'],
+      ),
+    };
+
+    // A non-empty block alone is NOT success. The backend reports, per block,
+    // which required fields OCR could not read via `missingFields` — the
+    // authoritative signal (the same one the organization-settings extract
+    // model consumes). When it's non-empty the extraction is incomplete and
+    // the backend will hard-reject the registration at profile completion
+    // ("we could not read the trade licence number"), so flag the document for
+    // re-upload (generic image-unclear treatment: warning badge + Replace
+    // Document + Continue disabled) instead of falsely reporting "Extracted
+    // successfully" and letting the user walk into a guaranteed failure with no
+    // clear cause (SAN-570). The empty licence number is kept as a defensive
+    // fallback in case an older backend omits `missingFields`. The
+    // partially-read fields are still shown via [raw].
+    final missingFields = _strList(m, ['missingFields', 'missing_fields']);
+    final incomplete =
+        missingFields.isNotEmpty || (raw['licenceNo'] ?? '').isEmpty;
+
     return ExtractedDocument(
       type: DocumentType.tradeLicense,
       fields: const [],
-      raw: {
-        // Backend: tradeNameEnglish  |  legacy: tradeNameEn / tradeName
-        'tradeNameEn': _str(
-          m,
-          ['tradeNameEnglish', 'tradeNameEn', 'trade_name_en', 'tradeName'],
-        ),
-        // Backend: tradeNameArabic  |  legacy: tradeNameAr
-        'tradeNameAr': _str(
-          m,
-          ['tradeNameArabic', 'tradeNameAr', 'trade_name_ar'],
-        ),
-        // Backend: licenseNumber  |  legacy: licenceNo / licenseNo
-        'licenceNo': _str(
-          m,
-          [
-            'licenseNumber',
-            'licenceNumber',
-            'licenceNo',
-            'licence_no',
-            'licenseNo',
-          ],
-        ),
-        'licenceType': _str(m, ['licenceType', 'licence_type', 'licenseType']),
-        'establishmentDate': _str(
-          m,
-          ['establishmentDate', 'establishment_date'],
-        ),
-        'issuanceDate': _str(m, ['issuanceDate', 'issuance_date']),
-        'legalForm': _str(m, ['legalForm', 'legal_form']),
-        // Backend: unifiedRegistrationNumber  |  legacy: unifiedRegNo
-        'unifiedRegNo': _str(
-          m,
-          ['unifiedRegistrationNumber', 'unifiedRegNo', 'unified_reg_no'],
-        ),
-        // Backend: unifiedLicenseNumber  |  legacy: unifiedLicenceNo
-        'unifiedLicenceNo': _str(
-          m,
-          ['unifiedLicenseNumber', 'unifiedLicenceNo', 'unified_licence_no'],
-        ),
-      },
+      issue: incomplete ? DocumentIssue.imageUnclear : DocumentIssue.none,
+      raw: raw,
     );
   }
 
@@ -300,5 +319,21 @@ abstract final class ExtractionResponse {
       if (v is String && v.isNotEmpty) return v;
     }
     return '';
+  }
+
+  /// Reads the first key that holds a list, returning its non-empty string
+  /// elements. Used for the backend's `missingFields` array; tolerant of the
+  /// key being absent (returns empty) or carrying non-string entries.
+  static List<String> _strList(Map<String, dynamic> m, List<String> keys) {
+    for (final key in keys) {
+      final v = m[key];
+      if (v is List) {
+        return v
+            .whereType<String>()
+            .where((e) => e.isNotEmpty)
+            .toList(growable: false);
+      }
+    }
+    return const [];
   }
 }

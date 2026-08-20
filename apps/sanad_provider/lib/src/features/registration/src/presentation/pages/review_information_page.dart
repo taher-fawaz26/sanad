@@ -64,18 +64,22 @@ class _ReviewInformationPageState extends State<ReviewInformationPage> {
     }
   }
 
-  /// Routes "Replace Document" for the Emirates ID section: a
-  /// [DocumentRepairScope.wholeDocument] issue (e.g. a front/back mismatch)
-  /// needs both sides replaced together, so it opens the dedicated two-sided
-  /// repair page; every other case (including the default `repair == null`)
-  /// keeps the existing single-file replace.
+  /// Routes "Replace Document" for a given [section]. A
+  /// [DocumentRepairScope.wholeDocument] issue (e.g. an Emirates ID front/back
+  /// mismatch) needs both sides replaced together, so it opens the dedicated
+  /// two-sided repair page; every other case (including the default
+  /// `repair == null`) does a single-file replace of that same document type.
+  ///
+  /// The replaced type is taken from [ExtractedDocument.type] — never
+  /// hardcoded — so replacing a trade licence re-captures a trade licence, not
+  /// an Emirates ID (SAN-570).
   void _onReplaceRequested(BuildContext context, ExtractedDocument section) {
     final repair = section.repair;
     if (repair != null && repair.scope == DocumentRepairScope.wholeDocument) {
       context.push(RegistrationRoutes.repairEmiratesId, extra: repair);
       return;
     }
-    _replace(context, DocumentType.emiratesIdFront);
+    _replace(context, section.type);
   }
 
   Future<void> _replace(BuildContext context, DocumentType type) async {
@@ -178,7 +182,7 @@ class _ReviewInformationPageState extends State<ReviewInformationPage> {
               resolveIssueLabels: (issue) =>
                   _resolveIssueLabels(issue, detail: tradeLicence.issueDetail),
               thumbnail: state.documentAt(DocumentType.tradeLicense)?.asset,
-              onReplace: () => _replace(context, DocumentType.tradeLicense),
+              onReplace: () => _onReplaceRequested(context, tradeLicence),
             ),
           ],
         ],

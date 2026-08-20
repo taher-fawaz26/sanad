@@ -151,7 +151,17 @@ class _AppOtpFieldState extends State<AppOtpField> {
     if (!widget.enabled) return;
 
     final wasFocused = _focusNode.hasFocus;
-    if (!wasFocused) _focusNode.requestFocus();
+    if (!wasFocused) {
+      _focusNode.requestFocus();
+    } else {
+      // Dismissing the keyboard via the platform's down-chevron does NOT
+      // unfocus the underlying TextField — the FocusNode still reports
+      // hasFocus, so requestFocus() is a no-op and the keyboard stays
+      // hidden when the user taps a cell to resume typing (SAN-569).
+      // Explicitly re-open the input connection so tapping any cell always
+      // brings the keyboard back.
+      SystemChannels.textInput.invokeMethod<void>('TextInput.show');
+    }
 
     void apply() {
       if (!mounted) return;

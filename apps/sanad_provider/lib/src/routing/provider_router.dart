@@ -200,6 +200,15 @@ GoRouter buildProviderRouter() {
           );
         },
       ),
+      GoRoute(
+        path: AppRoutes.forbidden,
+        builder: (context, state) => AppForbiddenPage(
+          title: 'common.forbidden_title'.tr(),
+          description: 'common.forbidden_description'.tr(),
+          homeLabel: 'common.forbidden_home'.tr(),
+          onGoHome: () => context.go(AppRoutes.home),
+        ),
+      ),
     ],
   );
 }

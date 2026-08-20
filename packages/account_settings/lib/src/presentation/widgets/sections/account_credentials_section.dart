@@ -116,6 +116,7 @@ class _AccountCredentialsSectionState extends State<AccountCredentialsSection> {
             label: emailLabel,
             hint: emailLabel,
             controller: _emailController,
+            readOnly: true,
             isRequired: true,
             showVerifiedBadge: _emailAdded && widget.emailVerified,
             trailing: _emailAdded

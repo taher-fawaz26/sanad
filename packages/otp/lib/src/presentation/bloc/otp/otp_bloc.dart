@@ -51,7 +51,9 @@ class OtpBloc<T> extends Bloc<OtpEvent, OtpState<T>> {
     emit(state.copyWith(phase: const OtpSending(), canResend: false));
     final result = await _config.verifier.requestCode().run();
     result.match(
-      (failure) => emit(state.copyWith(phase: OtpFailurePhase(failure))),
+      (failure) => emit(
+        state.copyWith(phase: OtpFailurePhase(failure), canResend: true),
+      ),
       (delivery) {
         emit(
           state.copyWith(

@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 /// Organization profile review/completion status — Figma `Badge`
@@ -38,27 +39,27 @@ class OrganizationStatusBadge extends StatelessWidget {
       OrganizationProfileStatus.incomplete => (
         const Color(0x1FF23838),
         const Color(0xFFD12424),
-        'Incomplete',
+        'settings.business_progress_status_incomplete'.tr(),
       ),
       OrganizationProfileStatus.inReview => (
         const Color(0x1FF5941F),
         const Color(0xFFC77005),
-        'In review',
+        'settings.business_progress_status_in_review'.tr(),
       ),
       OrganizationProfileStatus.published => (
         const Color(0x1F179E59),
         const Color(0xFF0D8547),
-        'Published',
+        'settings.business_progress_status_published'.tr(),
       ),
       OrganizationProfileStatus.expired => (
         const Color(0x1FF23838),
         const Color(0xFFD12424),
-        'Expired',
+        'settings.business_progress_status_expired'.tr(),
       ),
       OrganizationProfileStatus.suspended => (
         const Color(0x1FF23838),
         const Color(0xFFD12424),
-        'Suspended',
+        'settings.business_progress_status_suspended'.tr(),
       ),
     };
 

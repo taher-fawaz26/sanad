@@ -10,6 +10,7 @@ class OrganizationSettingsState extends Equatable {
     this.categoryCatalog = const [],
     this.saveStatus = RequestStatus.initial,
     this.saveFailure,
+    this.pendingDescription,
   });
 
   final RequestStatus status;
@@ -37,6 +38,13 @@ class OrganizationSettingsState extends Equatable {
   final RequestStatus saveStatus;
   final Failure? saveFailure;
 
+  /// Last description the user attempted to save that hasn't yet succeeded.
+  /// Kept across a failed save so the edit sheet can re-seed with the user's
+  /// typed text on retry instead of falling back to the (still-old) persisted
+  /// [OrganizationProfileEntity.description]. Cleared on save success and on
+  /// full page reload.
+  final String? pendingDescription;
+
   OrganizationSettingsState copyWith({
     RequestStatus? status,
     OrganizationProfileEntity? organization,
@@ -48,6 +56,8 @@ class OrganizationSettingsState extends Equatable {
     RequestStatus? saveStatus,
     Failure? saveFailure,
     bool clearSaveFailure = false,
+    String? pendingDescription,
+    bool clearPendingDescription = false,
   }) {
     return OrganizationSettingsState(
       status: status ?? this.status,
@@ -58,6 +68,9 @@ class OrganizationSettingsState extends Equatable {
       categoryCatalog: categoryCatalog ?? this.categoryCatalog,
       saveStatus: saveStatus ?? this.saveStatus,
       saveFailure: clearSaveFailure ? null : (saveFailure ?? this.saveFailure),
+      pendingDescription: clearPendingDescription
+          ? null
+          : (pendingDescription ?? this.pendingDescription),
     );
   }
 
@@ -71,5 +84,6 @@ class OrganizationSettingsState extends Equatable {
     categoryCatalog,
     saveStatus,
     saveFailure,
+    pendingDescription,
   ];
 }
