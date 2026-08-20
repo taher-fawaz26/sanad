@@ -11,6 +11,7 @@ import 'package:sanad_provider/src/features/organization_settings/src/domain/ent
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/provider_completion_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/social_profiles_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/working_hours_day_entity.dart';
+import 'package:sanad_provider/src/features/organization_settings/src/domain/policies/working_hours_policy.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/repositories/organization_settings_repository.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/repositories/working_hours_repository.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/usecases/get_organization_settings_usecase.dart';
@@ -24,6 +25,20 @@ import 'package:services/services.dart'
 
 part 'organization_settings_event.dart';
 part 'organization_settings_state.dart';
+
+/// Stable [BusinessRuleFailure.code] flagging a defensive save-time
+/// working-hours overlap (SAN-573). The page's onFailure handler recognises
+/// this code and formats a localized message using the conflict metadata
+/// stashed on the failure — see `settings.working_hours_overlap_error` in
+/// the translation files.
+const String workingHoursOverlapFailureCode = 'working_hours_overlap';
+
+/// i18n key used as [BusinessRuleFailure.message] for a save-time overlap;
+/// resolved by the page (with day/from/to `namedArgs` taken from
+/// [BusinessRuleFailure.metadata]) rather than by `.localizedMessage()`
+/// since the key needs arguments to be meaningful.
+const String workingHoursOverlapMessageKey =
+    'settings.working_hours_overlap_error';
 
 /// Single source of truth for the entire Organization Settings feature.
 ///
@@ -294,6 +309,39 @@ class OrganizationSettingsBloc
     OrganizationSettingsWorkingHoursSaved event,
     Emitter<OrganizationSettingsState> emit,
   ) async {
+    // Defensive last-line-of-defence overlap check (SAN-573). Normal user
+    // interaction is already blocked by EditWorkingHoursCubit which consults
+    // the same WorkingHoursPolicy at add-time, so reaching here with an
+    // overlap indicates a client bug or a stale draft. If it happens, reject
+    // WITHOUT posting and WITHOUT touching `state.workingHours` — no silent
+    // dedup/delete of the user's data, contra the previous save-only server
+    // error that dropped duplicates on the floor.
+    final conflict = WorkingHoursPolicy.findAvailabilityConflict(
+      event.availability,
+    );
+    if (conflict != null) {
+      // Failure is sealed in `core`, so we reuse BusinessRuleFailure with a
+      // stable code + metadata. The page's onFailure handler recognises the
+      // code and formats a localized message with the conflict details.
+      emit(
+        state.copyWith(
+          saveStatus: RequestStatus.failure,
+          saveFailure: BusinessRuleFailure(
+            message: workingHoursOverlapMessageKey,
+            code: workingHoursOverlapFailureCode,
+            metadata: {
+              'dayId': conflict.day,
+              'from': conflict.first.from,
+              'to': conflict.first.to,
+              'conflictFrom': conflict.second.from,
+              'conflictTo': conflict.second.to,
+            },
+          ),
+        ),
+      );
+      return;
+    }
+
     emit(
       state.copyWith(saveStatus: RequestStatus.loading, clearSaveFailure: true),
     );

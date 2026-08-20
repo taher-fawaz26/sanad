@@ -298,6 +298,13 @@ void main() {
       const OrganizationSettingsDescriptionSaved('new description'),
     ),
     expect: () => [
+      // The draft is stashed as pendingDescription before the PATCH fires,
+      // so a failed save can re-seed the edit sheet (SAN-567).
+      isA<OrganizationSettingsState>().having(
+        (state) => state.pendingDescription,
+        'pendingDescription',
+        'new description',
+      ),
       isA<OrganizationSettingsState>().having(
         (state) => state.saveStatus,
         'saveStatus',
@@ -313,6 +320,11 @@ void main() {
             (state) => state.organization?.description,
             'organization.description',
             'new description',
+          )
+          .having(
+            (state) => state.pendingDescription,
+            'pendingDescription',
+            isNull,
           ),
     ],
     verify: (_) {
@@ -398,6 +410,215 @@ void main() {
   );
 
   blocTest<OrganizationSettingsBloc, OrganizationSettingsState>(
+    'a failed description save surfaces saveFailure and preserves the '
+    'attempted text as pendingDescription (SAN-567) — the organization '
+    'entity is left untouched',
+    build: build,
+    seed: () => OrganizationSettingsState(
+      status: RequestStatus.success,
+      organization: organization,
+    ),
+    setUp: () {
+      when(() => updateServiceProviderSettings(any())).thenAnswer(
+        (_) => TaskEither.left(const NetworkFailure(message: 'errors.timeout')),
+      );
+    },
+    act: (bloc) => bloc.add(
+      const OrganizationSettingsDescriptionSaved('attempted text'),
+    ),
+    expect: () => [
+      isA<OrganizationSettingsState>()
+          .having(
+            (state) => state.pendingDescription,
+            'pendingDescription',
+            'attempted text',
+          )
+          .having(
+            (state) => state.saveStatus,
+            'saveStatus',
+            RequestStatus.initial,
+          ),
+      isA<OrganizationSettingsState>().having(
+        (state) => state.saveStatus,
+        'saveStatus',
+        RequestStatus.loading,
+      ),
+      isA<OrganizationSettingsState>()
+          .having(
+            (state) => state.saveStatus,
+            'saveStatus',
+            RequestStatus.failure,
+          )
+          .having(
+            (state) => state.saveFailure,
+            'saveFailure',
+            isA<NetworkFailure>(),
+          )
+          .having(
+            (state) => state.pendingDescription,
+            'pendingDescription',
+            'attempted text',
+          )
+          .having(
+            (state) => state.organization?.description,
+            'organization.description',
+            organization.description,
+          ),
+    ],
+  );
+
+  blocTest<OrganizationSettingsBloc, OrganizationSettingsState>(
+    'a successful description save clears pendingDescription',
+    build: build,
+    seed: () => OrganizationSettingsState(
+      status: RequestStatus.success,
+      organization: organization,
+      pendingDescription: 'stale draft',
+    ),
+    setUp: () {
+      when(() => updateServiceProviderSettings(any())).thenAnswer(
+        (_) => TaskEither.right(unit),
+      );
+    },
+    act: (bloc) => bloc.add(
+      const OrganizationSettingsDescriptionSaved('new description'),
+    ),
+    expect: () => [
+      isA<OrganizationSettingsState>().having(
+        (state) => state.pendingDescription,
+        'pendingDescription',
+        'new description',
+      ),
+      isA<OrganizationSettingsState>().having(
+        (state) => state.saveStatus,
+        'saveStatus',
+        RequestStatus.loading,
+      ),
+      isA<OrganizationSettingsState>()
+          .having(
+            (state) => state.saveStatus,
+            'saveStatus',
+            RequestStatus.success,
+          )
+          .having(
+            (state) => state.pendingDescription,
+            'pendingDescription',
+            isNull,
+          ),
+    ],
+  );
+
+  blocTest<OrganizationSettingsBloc, OrganizationSettingsState>(
+    'a failed categories save surfaces saveFailure and leaves categories '
+    'unchanged',
+    build: build,
+    seed: () => OrganizationSettingsState(
+      status: RequestStatus.success,
+      organization: organization,
+    ),
+    setUp: () {
+      when(() => updateServiceProviderSettings(any())).thenAnswer(
+        (_) => TaskEither.left(const ServerFailure(message: 'boom')),
+      );
+    },
+    act: (bloc) => bloc.add(
+      const OrganizationSettingsCategoriesSaved([
+        CategoryEntity(id: 'cat-1', name: 'Cleaning'),
+      ]),
+    ),
+    verify: (bloc) {
+      expect(bloc.state.saveStatus, RequestStatus.failure);
+      expect(bloc.state.saveFailure, isA<ServerFailure>());
+      expect(bloc.state.organization?.categories, organization.categories);
+    },
+  );
+
+  blocTest<OrganizationSettingsBloc, OrganizationSettingsState>(
+    'a failed social profiles save surfaces saveFailure and leaves social '
+    'profiles unchanged',
+    build: build,
+    seed: () => OrganizationSettingsState(
+      status: RequestStatus.success,
+      organization: organization,
+    ),
+    setUp: () {
+      when(() => updateServiceProviderSettings(any())).thenAnswer(
+        (_) => TaskEither.left(const ServerFailure(message: 'boom')),
+      );
+    },
+    act: (bloc) => bloc.add(
+      const OrganizationSettingsSocialProfilesSaved(
+        SocialProfilesEntity(x: 'https://x.com/sanad'),
+      ),
+    ),
+    verify: (bloc) {
+      expect(bloc.state.saveStatus, RequestStatus.failure);
+      expect(bloc.state.saveFailure, isA<ServerFailure>());
+      expect(
+        bloc.state.organization?.socialProfiles,
+        organization.socialProfiles,
+      );
+    },
+  );
+
+  blocTest<OrganizationSettingsBloc, OrganizationSettingsState>(
+    'a failed working hours save surfaces saveFailure and leaves '
+    'workingHours unchanged',
+    build: build,
+    seed: () => OrganizationSettingsState(
+      status: RequestStatus.success,
+      organization: organization,
+      workingHours: const [
+        WorkingHoursDayEntity(
+          day: 'Sunday',
+          slots: [WorkingHoursSlotEntity(from: '10:00', to: '16:00')],
+        ),
+      ],
+    ),
+    setUp: () {
+      when(() => updateWorkingHours(any())).thenAnswer(
+        (_) => TaskEither.left(const NetworkFailure(message: 'errors.timeout')),
+      );
+    },
+    act: (bloc) => bloc.add(
+      const OrganizationSettingsWorkingHoursSaved([
+        WorkingHoursDayEntity(
+          day: 'Saturday',
+          slots: [WorkingHoursSlotEntity(from: '09:00', to: '18:00')],
+        ),
+      ]),
+    ),
+    expect: () => [
+      isA<OrganizationSettingsState>().having(
+        (state) => state.saveStatus,
+        'saveStatus',
+        RequestStatus.loading,
+      ),
+      isA<OrganizationSettingsState>()
+          .having(
+            (state) => state.saveStatus,
+            'saveStatus',
+            RequestStatus.failure,
+          )
+          .having(
+            (state) => state.saveFailure,
+            'saveFailure',
+            isA<NetworkFailure>(),
+          )
+          .having(
+            (state) => state.workingHours,
+            'workingHours',
+            const [
+              WorkingHoursDayEntity(
+                day: 'Sunday',
+                slots: [WorkingHoursSlotEntity(from: '10:00', to: '16:00')],
+              ),
+            ],
+          ),
+    ],
+  );
+
+  blocTest<OrganizationSettingsBloc, OrganizationSettingsState>(
     'saving working hours uses the PUT response directly, no re-fetch',
     build: build,
     seed: () => OrganizationSettingsState(
@@ -445,5 +666,46 @@ void main() {
             ],
           ),
     ],
+  );
+
+  blocTest<OrganizationSettingsBloc, OrganizationSettingsState>(
+    'defensive save-time overlap (SAN-573): rejects WITHOUT posting and '
+    'WITHOUT touching state.workingHours (no silent dedup), surfacing a '
+    'BusinessRuleFailure with the overlap code + conflict metadata',
+    build: build,
+    seed: () => OrganizationSettingsState(
+      status: RequestStatus.success,
+      organization: organization,
+      workingHours: const [
+        WorkingHoursDayEntity(
+          day: 'Sunday',
+          slots: [WorkingHoursSlotEntity(from: '10:00', to: '16:00')],
+        ),
+      ],
+    ),
+    act: (bloc) => bloc.add(
+      const OrganizationSettingsWorkingHoursSaved([
+        WorkingHoursDayEntity(
+          day: 'Saturday',
+          slots: [
+            WorkingHoursSlotEntity(from: '09:00', to: '14:00'),
+            WorkingHoursSlotEntity(from: '13:00', to: '15:00'),
+          ],
+        ),
+      ]),
+    ),
+    verify: (bloc) {
+      expect(bloc.state.saveStatus, RequestStatus.failure);
+      expect(bloc.state.saveFailure, isA<BusinessRuleFailure>());
+      expect(
+        bloc.state.saveFailure!.code,
+        workingHoursOverlapFailureCode,
+      );
+      expect(bloc.state.saveFailure!.metadata?['dayId'], 'Saturday');
+      // Existing workingHours state must be preserved (no silent mutation).
+      expect(bloc.state.workingHours.length, 1);
+      expect(bloc.state.workingHours.single.day, 'Sunday');
+      verifyNever(() => updateWorkingHours(any()));
+    },
   );
 }

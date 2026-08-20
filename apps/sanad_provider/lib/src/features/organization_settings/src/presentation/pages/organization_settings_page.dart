@@ -31,6 +31,17 @@ class OrganizationSettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The business name comes from the auth session's provider profile
+    // (BusinessProviderProfileModel — shared shape for individual and
+    // company providers), seeded at login and refreshed by any Session
+    // update. Resolved once here (alongside the other sl<>() DI lookups on
+    // this composition-root widget) so the rendering widget below stays pure
+    // UI — no data access in its own build().
+    final profile = sl<SessionManager>().profile;
+    final businessName = profile is BusinessProviderProfileModel
+        ? profile.businessName
+        : null;
+
     return MultiBlocProvider(
       providers: [
         BlocProvider<ProviderOverviewBloc>(
@@ -43,7 +54,7 @@ class OrganizationSettingsPage extends StatelessWidget {
                 ..add(const ProviderCompletionLoaded()),
         ),
       ],
-      child: const _OrganizationSettingsView(),
+      child: _OrganizationSettingsView(businessName: businessName),
     );
   }
 }
@@ -77,20 +88,16 @@ void _refreshHub(BuildContext context) {
 }
 
 class _OrganizationSettingsView extends StatelessWidget {
-  const _OrganizationSettingsView();
+  const _OrganizationSettingsView({required this.businessName});
+
+  /// Falls back to the generic label until the business has a name on file
+  /// (e.g. fresh onboarding). See [OrganizationSettingsPage.build] for how
+  /// this is resolved.
+  final String? businessName;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    // The business name comes from the auth session's provider profile
-    // (BusinessProviderProfileModel — shared shape for individual and
-    // company providers), seeded at login and refreshed by any Session
-    // update. Falls back to the generic label until the business has a
-    // name on file (e.g. fresh onboarding).
-    final profile = sl<SessionManager>().profile;
-    final businessName = profile is BusinessProviderProfileModel
-        ? profile.businessName
-        : null;
 
     return Scaffold(
       backgroundColor: colors.surface,

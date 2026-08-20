@@ -2,6 +2,8 @@ import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:sanad_provider/src/features/organization_settings/src/presentation/cubit/edit_category_cubit.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// A selectable category option shown inside [EditCategoryBottomSheet].
@@ -38,9 +40,10 @@ Future<Set<String>?> showEditCategoryBottomSheet({
 
 /// Bottom sheet for editing organization category and classification.
 ///
-/// Manages multi-select state internally and pops with the confirmed
-/// [Set<String>] of selected IDs when the user taps Save.
-class EditCategoryBottomSheet extends StatefulWidget {
+/// The multi-select draft lives in [EditCategoryCubit] (widget-scoped, no
+/// external dependencies); this widget only renders it and pops with the
+/// confirmed [Set<String>] of selected IDs when the user taps Save.
+class EditCategoryBottomSheet extends StatelessWidget {
   const EditCategoryBottomSheet({
     required this.categories,
     super.key,
@@ -51,24 +54,18 @@ class EditCategoryBottomSheet extends StatefulWidget {
   final Set<String> initialSelectedIds;
 
   @override
-  State<EditCategoryBottomSheet> createState() =>
-      _EditCategoryBottomSheetState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => EditCategoryCubit(initialSelectedIds: initialSelectedIds),
+      child: _EditCategoryBottomSheetBody(categories: categories),
+    );
+  }
 }
 
-class _EditCategoryBottomSheetState extends State<EditCategoryBottomSheet> {
-  late final Set<String> _selectedIds;
+class _EditCategoryBottomSheetBody extends StatelessWidget {
+  const _EditCategoryBottomSheetBody({required this.categories});
 
-  @override
-  void initState() {
-    super.initState();
-    _selectedIds = Set.from(widget.initialSelectedIds);
-  }
-
-  void _toggle(String id) => setState(() {
-    _selectedIds.contains(id) ? _selectedIds.remove(id) : _selectedIds.add(id);
-  });
-
-  void _save() => Navigator.of(context).pop(Set<String>.from(_selectedIds));
+  final List<CategoryOption> categories;
 
   @override
   Widget build(BuildContext context) {
@@ -86,24 +83,35 @@ class _EditCategoryBottomSheetState extends State<EditCategoryBottomSheet> {
         SizedBox(height: AppSpacing.md),
         ConstrainedBox(
           constraints: BoxConstraints(maxHeight: maxListHeight),
-          child: ListView.separated(
-            shrinkWrap: true,
-            itemCount: widget.categories.length,
-            separatorBuilder: (_, _) => const AppDivider(),
-            itemBuilder: (context, index) {
-              final category = widget.categories[index];
-              final isSelected = _selectedIds.contains(category.id);
-              return AppTableRow(
-                title: category.name,
-                trailing: AppTableTrailing.icon,
-                trailingIcon: AppCheckbox(
-                  value: isSelected,
-                  onChanged: (_) => _toggle(category.id),
+          child:
+              BlocSelector<
+                EditCategoryCubit,
+                EditCategorySelection,
+                Set<String>
+              >(
+                selector: (state) => state.selectedIds,
+                builder: (context, selectedIds) => ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: categories.length,
+                  separatorBuilder: (_, _) => const AppDivider(),
+                  itemBuilder: (context, index) {
+                    final category = categories[index];
+                    final isSelected = selectedIds.contains(category.id);
+                    return AppTableRow(
+                      title: category.name,
+                      trailing: AppTableTrailing.icon,
+                      trailingIcon: AppCheckbox(
+                        value: isSelected,
+                        onChanged: (_) => context
+                            .read<EditCategoryCubit>()
+                            .toggle(category.id),
+                      ),
+                      onTap: () =>
+                          context.read<EditCategoryCubit>().toggle(category.id),
+                    );
+                  },
                 ),
-                onTap: () => _toggle(category.id),
-              );
-            },
-          ),
+              ),
         ),
         const AppDivider(),
         Padding(
@@ -113,9 +121,18 @@ class _EditCategoryBottomSheetState extends State<EditCategoryBottomSheet> {
             AppSpacing.xl,
             AppSpacing.sm,
           ),
-          child: AppButton(
-            label: 'common.save'.tr(),
-            onPressed: _selectedIds.isEmpty ? null : _save,
+          child: BlocSelector<EditCategoryCubit, EditCategorySelection, bool>(
+            selector: (state) => state.selectedIds.isEmpty,
+            builder: (context, isEmpty) => AppButton(
+              label: 'common.save'.tr(),
+              onPressed: isEmpty
+                  ? null
+                  : () => Navigator.of(context).pop(
+                      Set<String>.of(
+                        context.read<EditCategoryCubit>().state.selectedIds,
+                      ),
+                    ),
+            ),
           ),
         ),
       ],

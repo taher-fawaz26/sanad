@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sanad_provider/firebase_options.dart';
 import 'package:sanad_provider/src/app.dart';
@@ -27,6 +28,11 @@ Future<void> _bootstrap() async {
 
   await Future.wait([
     EasyLocalization.ensureInitialized(),
+    // Load intl locale symbols so DateFormat('h:mm a', 'ar') renders
+    // Arabic AM/PM markers (ص/م) rather than falling back to the default
+    // en_US 'AM/PM' symbols on the working-hours list (SAN-573).
+    initializeDateFormatting('ar', null),
+    initializeDateFormatting('en', null),
     () async {
       final appDir = await getApplicationDocumentsDirectory();
       HydratedBloc.storage = await HydratedStorage.build(

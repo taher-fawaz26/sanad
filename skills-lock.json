@@ -1,0 +1,137 @@
+{
+  "version": 1,
+  "skills": {
+    "arabic-rtl-best-practices": {
+      "source": "almubarmij/arabic-ai-skills",
+      "sourceType": "github",
+      "skillPath": "arabic-rtl-best-practices/SKILL.md",
+      "computedHash": "7f40b161ecd6b408c8ace3c0d5b4a164c5d7e099c1c70d28e7cd3a53d0b781d5"
+    },
+    "architecture-auditor": {
+      "source": "robertalvv/flutter-skills",
+      "sourceType": "github",
+      "skillPath": "architecture-auditor/SKILL.md",
+      "computedHash": "1471ba7c1d92b693a7646a240db250c8542bac792089e6c0953d847fef6cd6da"
+    },
+    "atomic-design-system-auditor": {
+      "source": "robertalvv/flutter-skills",
+      "sourceType": "github",
+      "skillPath": "atomic-design-system-auditor/SKILL.md",
+      "computedHash": "2cbbbce3b9c8422438ef66b08f48e993edf32f1b26ec9db0bd301a469644c1f9"
+    },
+    "bloc": {
+      "source": "verygoodopensource/vgv-ai-flutter-plugin",
+      "sourceType": "github",
+      "skillPath": "skills/bloc/SKILL.md",
+      "computedHash": "3416eb089cc4b96b5bf7dcae4a1b79b967f4e2fa582878736ca2a1b1dbad74f1"
+    },
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "skillPath": "skills/find-skills/SKILL.md",
+      "computedHash": "b146008599c31057cef1c145774cea5d5afb30e8f43fa802e47a4b461419aaaf"
+    },
+    "flutter-add-widget-test": {
+      "source": "flutter/agent-plugins",
+      "sourceType": "github",
+      "skillPath": "skills/flutter-add-widget-test/SKILL.md",
+      "computedHash": "c4f263c59cfe331ef42dba2aa81e25142aa4f7284518907c6b847e04502676b0"
+    },
+    "flutter-dart-code-review": {
+      "source": "affaan-m/ecc",
+      "sourceType": "github",
+      "skillPath": "skills/flutter-dart-code-review/SKILL.md",
+      "computedHash": "a5bbf2fda0e54df51e75e9316e8f341a64a1be9473137408f60244b6d0d777b7"
+    },
+    "flutter-dio": {
+      "source": "dhruvanbhalara/skills",
+      "sourceType": "github",
+      "skillPath": "skills/flutter/flutter-dio/SKILL.md",
+      "computedHash": "c67c0a85d05878619aeee0c05020727b70ff9980d7bb0a79b0eb2c68d83db5b4"
+    },
+    "flutter-firebase": {
+      "source": "dhruvanbhalara/skills",
+      "sourceType": "github",
+      "skillPath": "skills/flutter/flutter-firebase/SKILL.md",
+      "computedHash": "afc980580dd1123ff0cd0eaf696b88bd9f0a2bf34a646c7a61437d1823624c90"
+    },
+    "flutter-performance": {
+      "source": "spjoshis/claude-code-plugins",
+      "sourceType": "github",
+      "skillPath": "plugins/flutter-development/skills/flutter-performance/SKILL.md",
+      "computedHash": "db711802645013e8ef85333a8c72ead09ef86a0f7b49661ac9eb0f1fae79f2da"
+    },
+    "flutter-setup-localization": {
+      "source": "flutter/agent-plugins",
+      "sourceType": "github",
+      "skillPath": "skills/flutter-setup-localization/SKILL.md",
+      "computedHash": "671bf254ca8f3172b6bda5287d9e756e9fd5b49165a815f710c5b707ebaa38f8"
+    },
+    "google-maps": {
+      "source": "membranedev/application-skills",
+      "sourceType": "github",
+      "skillPath": "skills/google-maps/SKILL.md",
+      "computedHash": "58ddbabae5bb42ab08384825c04a2f0893680b6bb8cd2168056b442c44271ade"
+    },
+    "layered-architecture": {
+      "source": "verygoodopensource/vgv-ai-flutter-plugin",
+      "sourceType": "github",
+      "skillPath": "skills/layered-architecture/SKILL.md",
+      "computedHash": "94d7f344bc6861180f80579dcd51b52b220751e4bb1f585a0196adc91ae8037d"
+    },
+    "legacy-migration-planner": {
+      "source": "tech-leads-club/agent-skills",
+      "sourceType": "github",
+      "skillPath": "packages/skills-catalog/skills/(architecture)/legacy-migration-planner/SKILL.md",
+      "computedHash": "6490ba8b6821cf2d34e66038e841ccc88ab20866e2317dde9463c74bb34328b8"
+    },
+    "material-3": {
+      "source": "hamen/material-3-skill",
+      "sourceType": "github",
+      "skillPath": "skills/material-3/SKILL.md",
+      "computedHash": "72d56347fae33c9b1763e16d0bffb781da382aa3be316b9252dcd35fd050c6bc"
+    },
+    "melos-manager": {
+      "source": "mono0926/skills",
+      "sourceType": "github",
+      "skillPath": "melos-manager/SKILL.md",
+      "computedHash": "821247e90dd3a21b918f8f90c4da77a24cba252724d25fabbd88b15c38334433"
+    },
+    "openapi-contract": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/integration-validation/openapi-contract/SKILL.md",
+      "computedHash": "c62edc8302e64e931388fc6e8ab7a822dea2af985ebe4ef8d467cb71e29c1669"
+    },
+    "owasp-mobile-security-checker": {
+      "source": "harishwarrior/flutter-claude-skills",
+      "sourceType": "github",
+      "skillPath": "owasp-mobile-security-checker/SKILL.md",
+      "computedHash": "0c3c4075421cce785ca2c411826fea84c88d1f48335607ad4abe13841a54ac92"
+    },
+    "securing-authentication": {
+      "source": "ancoleman/ai-design-components",
+      "sourceType": "github",
+      "skillPath": "skills/securing-authentication/SKILL.md",
+      "computedHash": "679d20d061ad9143e816193bb9c8a0e875b1c61017ca05bce18ace26c197b331"
+    },
+    "state-management-auditor": {
+      "source": "robertalvv/flutter-skills",
+      "sourceType": "github",
+      "skillPath": "state-management-auditor/SKILL.md",
+      "computedHash": "78274327e2b01c6fddc4c860e15512b98fcde3520a72480a73b69e95099276f9"
+    },
+    "using-fastlane-in-flutter-and-ci": {
+      "source": "rodydavis/skills",
+      "sourceType": "github",
+      "skillPath": "skills/fastlane-and-flutter/SKILL.md",
+      "computedHash": "d3090e1b9ff0e1f8392a29d746e39568c1d4d07388e69fae731577041795d10f"
+    },
+    "wcag-accessibility-audit": {
+      "source": "mastepanoski/claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/wcag-accessibility-audit/SKILL.md",
+      "computedHash": "794f471ae3f854ff5184f2b8ef2cbaa31c62feb5fe593d1cf6125c5c56c6ab8e"
+    }
+  }
+}

@@ -1,5 +1,4 @@
-import 'package:branches/branches.dart'
-    show BranchScheduleFormatter, BranchTimeSlotEntity;
+import 'package:branches/branches.dart' show BranchScheduleFormatter;
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -9,18 +8,17 @@ import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/business_profile_status.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/category_entity.dart';
-import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/legal_data_status.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/organization_profile_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/provider_completion_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/social_profiles_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/working_hours_day_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/bloc/organization_settings/organization_settings_bloc.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/legal_documents/document_scope.dart';
+import 'package:sanad_provider/src/features/organization_settings/src/presentation/mappers/organization_settings_view_mappers.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/bottom_sheets/edit_category_bottom_sheet.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/bottom_sheets/edit_identity_bottom_sheet.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/bottom_sheets/edit_social_profiles_bottom_sheet.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/bottom_sheets/edit_working_hours_bottom_sheet.dart';
-import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/components/organization_status_badge.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/header/organization_header.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/sections/business_progress_section.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/sections/category_section.dart';
@@ -84,144 +82,30 @@ class GeneralSettingsPage extends StatelessWidget {
   }
 }
 
-class _GeneralSettingsView extends StatefulWidget {
+class _GeneralSettingsView extends StatelessWidget {
   const _GeneralSettingsView({required this.isRootTab});
 
   final bool isRootTab;
 
-  @override
-  State<_GeneralSettingsView> createState() => _GeneralSettingsViewState();
-}
-
-class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
-  List<BusinessProgressChecklistItem> _progressChecklist(
-    ProviderCompletionEntity? completion,
-  ) {
-    final items = completion?.items ?? const [];
-    return items
-        .map(
-          (item) => BusinessProgressChecklistItem(
-            label: item.label,
-            completed: item.completed,
-          ),
-        )
-        .toList();
-  }
-
-  OrganizationProfileStatus _headerStatus(
-    OrganizationProfileEntity profile,
-    ProviderCompletionEntity? completion,
-  ) {
-    // expired/suspended are backend-driven and take precedence over the
-    // completion-checklist-derived states below — a provider whose profile
-    // lapsed or was suspended needs to see that, not "in review".
-    if (profile.status == BusinessProfileStatus.expired) {
-      return OrganizationProfileStatus.expired;
-    }
-    if (profile.status == BusinessProfileStatus.suspended) {
-      return OrganizationProfileStatus.suspended;
-    }
-    if (profile.isReviewed) return OrganizationProfileStatus.published;
-    if (completion != null && !completion.visibleToCustomers) {
-      return OrganizationProfileStatus.incomplete;
-    }
-    if (completion == null) return OrganizationProfileStatus.incomplete;
-    return OrganizationProfileStatus.inReview;
-  }
-
-  List<ComplianceDocumentEntry> _complianceDocuments(
-    OrganizationProfileEntity profile,
-  ) {
-    final entries = <ComplianceDocumentEntry>[];
-
-    final personal = profile.personalLegalData;
-    if (personal != null) {
-      entries.add(
-        ComplianceDocumentEntry(
-          documentTitle: 'Emirates ID',
-          status: _legalDataStatus(personal.status),
-          licenseNumber: personal.idNumber,
-          expiryDate: _formatIsoDate(personal.expiryDate),
-          countdownText: personal.status == LegalDataStatus.expiringSoon
-              ? _countdownText(personal.expiryDate)
-              : null,
-          onUpdateDocument: () =>
-              _updateLegalDocument(DocumentScope.emiratesId),
-        ),
-      );
-    }
-
-    final tradeLicense = profile.tradeLicenseLegalData;
-    if (tradeLicense != null) {
-      entries.add(
-        ComplianceDocumentEntry(
-          documentTitle: 'Trade License',
-          status: _legalDataStatus(tradeLicense.status),
-          licenseNumber: tradeLicense.licenseNumber,
-          expiryDate: _formatIsoDate(tradeLicense.expiryDate),
-          countdownText: tradeLicense.status == LegalDataStatus.expiringSoon
-              ? _countdownText(tradeLicense.expiryDate)
-              : null,
-          onUpdateDocument: () =>
-              _updateLegalDocument(DocumentScope.tradeLicense),
-        ),
-      );
-    }
-
-    return entries;
-  }
-
-  ComplianceDocumentStatus _legalDataStatus(LegalDataStatus status) =>
-      switch (status) {
-        LegalDataStatus.expired => ComplianceDocumentStatus.expired,
-        LegalDataStatus.expiringSoon => ComplianceDocumentStatus.expiring,
-        LegalDataStatus.verified => ComplianceDocumentStatus.verified,
-      };
-
-  String? _formatIsoDate(String? isoDate) {
-    if (isoDate == null) return null;
-    final date = DateTime.tryParse(isoDate);
-    if (date == null) return isoDate;
-
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return '${date.day} ${months[date.month - 1]} ${date.year}';
-  }
-
-  String? _countdownText(String? isoDate) {
-    final date = DateTime.tryParse(isoDate ?? '');
-    if (date == null) return null;
-
-    final days = date.difference(DateTime.now()).inDays;
-    if (days <= 0) return 'Expires today';
-    return 'In $days days';
-  }
-
-  Future<void> _updateLegalDocument(DocumentScope scope) async {
+  Future<void> _updateLegalDocument(
+    BuildContext context,
+    DocumentScope scope,
+  ) async {
     final refreshed = await context.push<bool>(
       OrganizationSettingsRoutes.legalDocuments,
       extra: scope,
     );
-    if ((refreshed ?? false) && mounted) {
+    if ((refreshed ?? false) && context.mounted) {
       context.read<OrganizationSettingsBloc>().add(
         const OrganizationSettingsRefreshed(),
       );
     }
   }
 
-  Future<void> _editDescription(String? currentDescription) async {
+  Future<void> _editDescription(
+    BuildContext context,
+    String? currentDescription,
+  ) async {
     // Prefer the last-attempted text over the persisted description so a
     // user reopening the sheet after a failed save (SAN-567) doesn't lose
     // what they typed — the sheet's own TextEditingController was disposed
@@ -231,11 +115,12 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
       context: context,
       initialDescription: bloc.state.pendingDescription ?? currentDescription,
     );
-    if (result == null || !mounted) return;
+    if (result == null || !context.mounted) return;
     bloc.add(OrganizationSettingsDescriptionSaved(result));
   }
 
   Future<void> _editCategories(
+    BuildContext context,
     List<CategoryEntity> catalog,
     List<CategoryEntity> selected,
   ) async {
@@ -248,7 +133,7 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
           .toList(),
       initialSelectedIds: selected.map((category) => category.id).toSet(),
     );
-    if (result == null || !mounted) return;
+    if (result == null || !context.mounted) return;
 
     final selectedCategories = catalog
         .where((category) => result.contains(category.id))
@@ -258,12 +143,15 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
     );
   }
 
-  Future<void> _editSocialProfiles(SocialProfilesData current) async {
+  Future<void> _editSocialProfiles(
+    BuildContext context,
+    SocialProfilesData current,
+  ) async {
     final result = await showEditSocialProfilesBottomSheet(
       context: context,
       initial: current,
     );
-    if (result == null || !mounted) return;
+    if (result == null || !context.mounted) return;
     context.read<OrganizationSettingsBloc>().add(
       OrganizationSettingsSocialProfilesSaved(
         SocialProfilesEntity(
@@ -277,7 +165,10 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
     );
   }
 
-  Future<void> _editWorkingHours(List<WorkingHoursDayEntity> current) async {
+  Future<void> _editWorkingHours(
+    BuildContext context,
+    List<WorkingHoursDayEntity> current,
+  ) async {
     final entries = <WorkingHoursEditEntry>[
       for (final day in current)
         for (final slot in day.slots)
@@ -288,40 +179,15 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
       context: context,
       initialEntries: entries,
     );
-    if (result == null || !mounted) return;
+    if (result == null || !context.mounted) return;
 
-    // Group multiple slots per day into a single WorkingHoursDayEntity —
-    // the edit sheet now allows split shifts (SAN-568), and the backend
-    // expects one entry per day with a `slots` list, not duplicate day
-    // records.
-    final slotsByDay = <String, List<WorkingHoursSlotEntity>>{};
-    for (final entry in result) {
-      (slotsByDay[entry.dayId] ??= <WorkingHoursSlotEntity>[]).add(
-        WorkingHoursSlotEntity(from: entry.from, to: entry.to),
-      );
-    }
-    final availability = [
-      for (final MapEntry(key: day, value: slots) in slotsByDay.entries)
-        WorkingHoursDayEntity(day: day, slots: slots),
-    ];
-
+    // The edit sheet allows split shifts (SAN-568) — group() collapses
+    // multiple slots for the same day back into one WorkingHoursDayEntity,
+    // the shape the backend/bloc expect.
     context.read<OrganizationSettingsBloc>().add(
-      OrganizationSettingsWorkingHoursSaved(availability),
+      OrganizationSettingsWorkingHoursSaved(groupWorkingHoursEntries(result)),
     );
   }
-
-  List<WorkingHoursEntry> _workingHoursViewEntries(
-    List<WorkingHoursDayEntity> availability,
-  ) => [
-    for (final day in availability)
-      for (final slot in day.slots)
-        WorkingHoursEntry(
-          dayLabel: BranchScheduleFormatter.localizedDay(day.day),
-          hoursLabel: BranchScheduleFormatter.formatSlot(
-            BranchTimeSlotEntity(from: slot.from, to: slot.to),
-          ),
-        ),
-  ];
 
   void _showComingSoon(BuildContext context) {
     showAppSnackbar(
@@ -342,14 +208,21 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
       status: (state) => state.saveStatus,
       title: (context) => 'settings.saving_title'.tr(),
       onFailure: (context, state) {
-        if (state.saveFailure != null) {
-          showAppErrorSnackbar(
-            context: context,
-            title: state.saveFailure!.localizedMessage(),
-          );
-        }
+        final failure = state.saveFailure;
+        if (failure == null) return;
+        showAppErrorSnackbar(
+          context: context,
+          title: _saveFailureMessage(context, failure),
+        );
       },
       child: BlocBuilder<OrganizationSettingsBloc, OrganizationSettingsState>(
+        buildWhen: (previous, current) =>
+            previous.status != current.status ||
+            previous.organization != current.organization ||
+            previous.failure != current.failure ||
+            previous.workingHours != current.workingHours ||
+            previous.completion != current.completion ||
+            previous.categoryCatalog != current.categoryCatalog,
         builder: (context, state) {
           final isInitialLoad =
               state.organization == null &&
@@ -359,6 +232,8 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
           final profile = state.organization ?? _skeletonProfile;
           final completion =
               state.completion ?? (isInitialLoad ? _skeletonCompletion : null);
+          final localeName = context.locale.toString();
+          final now = DateTime.now();
 
           return AppScrollPage(
             backgroundColor: colors.surface,
@@ -366,8 +241,8 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
               AppSliverAppBar(
                 navBar: AppNavBar(
                   title: 'settings.general_settings'.tr(),
-                  showBackButton: !widget.isRootTab,
-                  onLeadingTap: widget.isRootTab ? null : () => context.pop(),
+                  showBackButton: !isRootTab,
+                  onLeadingTap: isRootTab ? null : () => context.pop(),
                   trailingAction: AppNavBarTrailingAction.icon,
                   trailing: const Icon(Icons.notifications_outlined),
                   onTrailingTap: () => _showComingSoon(context),
@@ -376,11 +251,11 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
               if (state.organization == null &&
                   state.status == RequestStatus.failure)
                 AppSliverError(
-                  title: 'Something went wrong',
+                  title: 'settings.load_error_title'.tr(),
                   description:
                       state.failure?.localizedMessage() ??
-                      'Failed to load your organization settings.',
-                  retryLabel: 'Retry',
+                      'settings.load_error_description'.tr(),
+                  retryLabel: 'common.retry'.tr(),
                   onRetry: () => context.read<OrganizationSettingsBloc>().add(
                     const OrganizationSettingsRefreshed(),
                   ),
@@ -400,7 +275,10 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
                             name: profile.businessName,
                             coverUrl: profile.coverImage?.url,
                             logoUrl: profile.profileImage?.url,
-                            status: _headerStatus(profile, completion),
+                            status: organizationHeaderStatus(
+                              profile,
+                              completion,
+                            ),
                             onMediaUpdated: (slot, url) =>
                                 context.read<OrganizationSettingsBloc>().add(
                                   OrganizationSettingsMediaUpdated(
@@ -425,7 +303,7 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
                           AppSliverBox(
                             child: BusinessProgressSection(
                               completionPercent: completion.percentage.round(),
-                              items: _progressChecklist(completion),
+                              items: businessProgressChecklist(completion),
                               visibleToCustomers: completion.visibleToCustomers,
                               requiredCompleted: completion.requiredCompleted,
                               requiredTotal: completion.requiredTotal,
@@ -435,7 +313,8 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
                           const AppSliverGap(sectionSpacing),
                         AppSliverBox(
                           child: IdentitySection(
-                            onEdit: () => _editDescription(profile.description),
+                            onEdit: () =>
+                                _editDescription(context, profile.description),
                             businessDescription: profile.description,
                           ),
                         ),
@@ -446,6 +325,7 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
                                 .map((category) => category.name)
                                 .toList(),
                             onEdit: () => _editCategories(
+                              context,
                               state.categoryCatalog,
                               profile.categories,
                             ),
@@ -469,6 +349,7 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
                               final social = profile.socialProfiles;
                               return SocialProfilesSection(
                                 onEdit: () => _editSocialProfiles(
+                                  context,
                                   SocialProfilesData(
                                     facebook: social?.facebook,
                                     tiktok: social?.tiktok,
@@ -489,7 +370,19 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
                         const AppSliverGap(sectionSpacing),
                         AppSliverBox(
                           child: ComplianceDocumentsSection(
-                            documents: _complianceDocuments(profile),
+                            documents: complianceDocumentEntries(
+                              profile: profile,
+                              localeName: localeName,
+                              now: now,
+                              onUpdateEmiratesId: () => _updateLegalDocument(
+                                context,
+                                DocumentScope.emiratesId,
+                              ),
+                              onUpdateTradeLicense: () => _updateLegalDocument(
+                                context,
+                                DocumentScope.tradeLicense,
+                              ),
+                            ),
                           ),
                         ),
                         // Owner-only (RBAC Phase 7G) — a worker/manager's
@@ -505,11 +398,14 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
                           const AppSliverGap(sectionSpacing),
                           AppSliverBox(
                             child: WorkingHoursSection(
-                              entries: _workingHoursViewEntries(
+                              groups: workingHoursDayGroups(
+                                state.workingHours,
+                                localeName: localeName,
+                              ),
+                              onEdit: () => _editWorkingHours(
+                                context,
                                 state.workingHours,
                               ),
-                              onEdit: () =>
-                                  _editWorkingHours(state.workingHours),
                             ),
                           ),
                         ],
@@ -523,4 +419,29 @@ class _GeneralSettingsViewState extends State<_GeneralSettingsView> {
       ),
     );
   }
+}
+
+/// Resolves the localized save-error message. Recognises the defensive
+/// save-time working-hours overlap (SAN-573) via
+/// [workingHoursOverlapFailureCode] and formats it using the day/from/to
+/// stashed on the failure metadata; otherwise falls back to the standard
+/// [Failure.localizedMessage] behavior.
+String _saveFailureMessage(BuildContext context, Failure failure) {
+  if (failure.code == workingHoursOverlapFailureCode) {
+    final meta = failure.metadata ?? const <String, dynamic>{};
+    final dayId = meta['dayId'] as String?;
+    final from = meta['from'] as String?;
+    final to = meta['to'] as String?;
+    if (dayId != null && from != null && to != null) {
+      final locale = context.locale.toString();
+      return workingHoursOverlapMessageKey.tr(
+        namedArgs: {
+          'day': BranchScheduleFormatter.localizedDay(dayId),
+          'from': BranchScheduleFormatter.formatTime(from, locale: locale),
+          'to': BranchScheduleFormatter.formatTime(to, locale: locale),
+        },
+      );
+    }
+  }
+  return failure.localizedMessage();
 }

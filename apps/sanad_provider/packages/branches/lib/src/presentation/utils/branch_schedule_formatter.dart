@@ -22,26 +22,41 @@ abstract final class BranchWeekdays {
 abstract final class BranchScheduleFormatter {
   BranchScheduleFormatter._();
 
-  static String formatTime(String time24) {
+  /// Formats a `HH:mm` API time as `h:mm a` in the given [locale].
+  ///
+  /// Explicit `h:mm a` pattern (not `DateFormat.jm()`) so the display is
+  /// always 12-hour with a locale-appropriate AM/PM marker (`AM/PM` in en,
+  /// `ص/م` in ar). `DateFormat.jm()` resolves via the current Intl locale
+  /// skeleton, which on many device configurations picks 24-hour and
+  /// produced strings like `14:00 – 10:00` on the read-only working-hours
+  /// list (SAN-568).
+  ///
+  /// [locale] must be an `intl`-style tag (e.g. `en_US`, `ar`). Pass the
+  /// active app locale from the call site (`context.locale.toString()`) —
+  /// there is no reliable ambient value in tests or before EasyLocalization
+  /// bootstraps, and omitting it silently reverts to English `AM/PM`
+  /// regardless of app language (SAN-573 root cause of "AM/PM shown in
+  /// English on the main list").
+  static String formatTime(String time24, {String? locale}) {
     final time = _parseTime(time24);
     if (time == null) return time24;
-    // Explicit `h:mm a` pattern (not `DateFormat.jm()`) so the display is
-    // always 12-hour with a locale-appropriate AM/PM marker (AM/PM in en,
-    // ص/م in ar). `DateFormat.jm()` resolves via the current Intl locale,
-    // which on many device configurations picks a 24-hour skeleton — that
-    // mismatched the time picker (which is 12-hour) and produced strings
-    // like "14:00 – 10:00" on the read-only working-hours list (SAN-568).
-    return DateFormat('h:mm a').format(
+    return DateFormat('h:mm a', locale).format(
       DateTime(2000, 1, 1, time.hour, time.minute),
     );
   }
 
-  static String formatSlot(BranchTimeSlotEntity slot) =>
-      '${formatTime(slot.from)} – ${formatTime(slot.to)}';
+  static String formatSlot(BranchTimeSlotEntity slot, {String? locale}) =>
+      '${formatTime(slot.from, locale: locale)} – '
+      '${formatTime(slot.to, locale: locale)}';
 
-  static String formatAvailability(BranchAvailabilityEntity availability) {
+  static String formatAvailability(
+    BranchAvailabilityEntity availability, {
+    String? locale,
+  }) {
     if (availability.slots.isEmpty) return '';
-    return availability.slots.map(formatSlot).join(', ');
+    return availability.slots
+        .map((slot) => formatSlot(slot, locale: locale))
+        .join(', ');
   }
 
   static String toApiTime(TimeOfDay time) {
