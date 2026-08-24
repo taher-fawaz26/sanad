@@ -19,13 +19,6 @@ jobs:
           cache: true
       - name: Install Melos
         run: dart pub global activate melos
-      # third_party/font_awesome_flutter is a git-ignored, licensed Pro package
-      # the root pubspec override points at; a clean checkout lacks it, so
-      # bootstrap's `flutter pub get` fails version solving without this step.
-      - name: Restore Font Awesome Pro
-        uses: ./.github/actions/restore-font-awesome
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Bootstrap & Check
         run: |
           melos bootstrap
@@ -46,13 +39,6 @@ jobs:
           cache: true
       - name: Install Melos
         run: dart pub global activate melos
-      # third_party/font_awesome_flutter is a git-ignored, licensed Pro package
-      # the root pubspec override points at; a clean checkout lacks it, so
-      # bootstrap's `flutter pub get` fails version solving without this step.
-      - name: Restore Font Awesome Pro
-        uses: ./.github/actions/restore-font-awesome
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Bootstrap
         run: melos bootstrap
       - name: Build APK
@@ -77,13 +63,6 @@ jobs:
           cache: true
       - name: Install Melos
         run: dart pub global activate melos
-      # third_party/font_awesome_flutter is a git-ignored, licensed Pro package
-      # the root pubspec override points at; a clean checkout lacks it, so
-      # bootstrap's `flutter pub get` fails version solving without this step.
-      - name: Restore Font Awesome Pro
-        uses: ./.github/actions/restore-font-awesome
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Bootstrap
         run: melos bootstrap
       - name: Build APK
@@ -108,13 +87,6 @@ jobs:
           cache: true
       - name: Install Melos
         run: dart pub global activate melos
-      # third_party/font_awesome_flutter is a git-ignored, licensed Pro package
-      # the root pubspec override points at; a clean checkout lacks it, so
-      # bootstrap's `flutter pub get` fails version solving without this step.
-      - name: Restore Font Awesome Pro
-        uses: ./.github/actions/restore-font-awesome
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Bootstrap
         run: melos bootstrap
       - name: Build IPA
@@ -139,13 +111,6 @@ jobs:
           cache: true
       - name: Install Melos
         run: dart pub global activate melos
-      # third_party/font_awesome_flutter is a git-ignored, licensed Pro package
-      # the root pubspec override points at; a clean checkout lacks it, so
-      # bootstrap's `flutter pub get` fails version solving without this step.
-      - name: Restore Font Awesome Pro
-        uses: ./.github/actions/restore-font-awesome
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Bootstrap
         run: melos bootstrap
       - name: Build IPA

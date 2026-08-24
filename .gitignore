@@ -50,11 +50,15 @@ flutter_[0-9][0-9].log
 firebase-debug.log
 
 # Font Awesome Pro is a paid, licensed subscription (trysanad.us account).
-# The vendored/configured font_awesome_flutter copy embeds Pro OTF fonts and
-# icons.json metadata pulled from that account and must never be committed or
-# pushed to any repository, public or private. See third_party/font_awesome_flutter/README.md
-# for how each developer/CI regenerates it locally from their own Pro download.
-third_party/font_awesome_flutter/
+# The configured font_awesome_flutter package is intentionally VENDORED into
+# this PRIVATE repository (tracked in git) so a clean checkout / CI can run
+# `melos bootstrap` with no restore step. Keep this repo private and do NOT
+# redistribute these Pro assets. See third_party/README.md.
+# Track the package, but exclude configurator-/build-only artifacts that are
+# not needed at runtime:
+third_party/font_awesome_flutter/.dart_tool/
+third_party/font_awesome_flutter/example/
+third_party/font_awesome_flutter/lib/fonts/icons.json
 
 # Raw Font Awesome Pro desktop download — never commit under any path.
 **/fontawesome-pro-*/

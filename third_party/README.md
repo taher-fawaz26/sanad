@@ -9,12 +9,18 @@ icon lookup by CSS class string** (`getIconFromCss` / `faIconNameMapping`).
 This is the package's own supported customization mechanism (its
 `util/configurator.sh` tool), not a source fork.
 
-**This directory is git-ignored (`third_party/font_awesome_flutter/`) and
-must never be committed.** It embeds Font Awesome Pro OTF fonts and
-`icons.json` metadata, which are proprietary assets tied to the project's
-paid Font Awesome Pro subscription. Every developer and every CI runner
-regenerates it locally/at build time from their own access to the Pro
-download — see steps below.
+**This directory is intentionally vendored (tracked in git) in this PRIVATE
+repository.** It embeds Font Awesome Pro OTF fonts and generated Dart, which
+are proprietary assets tied to the project's paid Font Awesome Pro
+subscription (trysanad.us account). Vendoring it makes the repo self-contained:
+a clean checkout / CI runs `melos bootstrap` with no restore or regeneration
+step. **Because these are licensed Pro assets, keep this repository private and
+do not redistribute them or make the repo public.** The regeneration steps
+below are retained only for bumping the Pro version.
+
+Only runtime files are tracked. The configurator-only `lib/fonts/icons.json`
+(~110 MB, not a declared asset), the stock `example/` app, and `.dart_tool/`
+are git-ignored (see the root `.gitignore`).
 
 Consumers reference it via `dependency_overrides` (see
 `packages/design_system/pubspec.yaml`), never a normal `pubspec.yaml`
@@ -92,6 +98,7 @@ build of `sanad_provider` must pass `--no-tree-shake-icons`.
 
 ### CI
 
-CI must inject the same Pro assets from a secret store before running
-`flutter pub get` / build, following the same steps above. Do not add the
-Pro assets to any artifact cache or build log.
+No CI step is needed: this package is vendored (tracked in git), so a clean
+checkout already contains it and `melos bootstrap` resolves the
+`dependency_overrides` path directly. There is no restore/download step and no
+release-asset mechanism.

@@ -56,10 +56,10 @@ dev_dependencies:
 # all members), so dependency_overrides can only be declared here at the root
 # — Dart does not honor per-member overrides in this mode. This repoints the
 # font_awesome_flutter dependency already declared in packages/design_system
-# to a local, git-ignored, Pro-enabled configured copy — see
-# third_party/README.md for what it is and how to regenerate it. It is NOT a
-# new dependency: without third_party/font_awesome_flutter present locally,
-# resolution fails, by design (Pro assets are never committed).
+# to the Pro-enabled configured copy vendored (tracked in git) under
+# third_party/font_awesome_flutter — see third_party/README.md for what it is
+# and how to regenerate it. It is NOT a new dependency; because the package is
+# committed, a clean checkout / CI resolves this override with no extra step.
 dependency_overrides:
   font_awesome_flutter:
     path: third_party/font_awesome_flutter
