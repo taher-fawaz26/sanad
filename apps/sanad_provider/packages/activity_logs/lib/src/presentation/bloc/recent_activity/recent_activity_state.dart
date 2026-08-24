@@ -1,0 +1,32 @@
+part of 'recent_activity_cubit.dart';
+
+class RecentActivityState extends Equatable {
+  const RecentActivityState({
+    this.status = RequestStatus.initial,
+    this.items = const [],
+    this.failure,
+  });
+
+  final RequestStatus status;
+  final List<ActivityLogEntry> items;
+  final Failure? failure;
+
+  bool get isLoadingFirstLoad =>
+      status == RequestStatus.loading && items.isEmpty;
+
+  bool get isEmpty => status == RequestStatus.success && items.isEmpty;
+
+  RecentActivityState copyWith({
+    RequestStatus? status,
+    List<ActivityLogEntry>? items,
+    Failure? failure,
+    bool clearFailure = false,
+  }) => RecentActivityState(
+    status: status ?? this.status,
+    items: items ?? this.items,
+    failure: clearFailure ? null : (failure ?? this.failure),
+  );
+
+  @override
+  List<Object?> get props => [status, items, failure];
+}

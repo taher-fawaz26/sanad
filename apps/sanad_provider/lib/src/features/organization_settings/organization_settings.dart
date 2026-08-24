@@ -7,6 +7,7 @@ library;
 
 export 'src/di/organization_settings_di.dart';
 export 'src/domain/entities/organization_media_slot.dart';
+export 'src/domain/entities/provider_completion_entity.dart';
 export 'src/module/organization_settings_module.dart';
 export 'src/presentation/bloc/identity_header/identity_header_bloc.dart';
 export 'src/presentation/bloc/organization_settings/organization_settings_bloc.dart';

@@ -3,6 +3,7 @@ import 'package:core/core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:sanad_provider/src/features/organization_settings/src/data/cache/provider_completion_cache_store.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/provider_completion_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/usecases/get_provider_completion_usecase.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/bloc/provider_completion/provider_completion_bloc.dart';
@@ -11,6 +12,8 @@ class _MockGetCompletion extends Mock implements GetProviderCompletionUseCase {}
 
 void main() {
   late _MockGetCompletion getCompletion;
+  late ProviderCompletionCacheStore cacheStore;
+  var languageCode = 'en';
 
   const completion = ProviderCompletionEntity(
     percentage: 43,
@@ -33,10 +36,15 @@ void main() {
 
   setUp(() {
     getCompletion = _MockGetCompletion();
+    cacheStore = ProviderCompletionCacheStore();
+    languageCode = 'en';
   });
 
-  ProviderCompletionBloc buildBloc() =>
-      ProviderCompletionBloc(getCompletion: getCompletion);
+  ProviderCompletionBloc buildBloc() => ProviderCompletionBloc(
+    getCompletion: getCompletion,
+    cacheStore: cacheStore,
+    resolveLanguageCode: () => languageCode,
+  );
 
   blocTest<ProviderCompletionBloc, ProviderCompletionState>(
     'Loaded: emits loading then success with the completion entity',
@@ -70,25 +78,45 @@ void main() {
   );
 
   blocTest<ProviderCompletionBloc, ProviderCompletionState>(
-    'Refreshed: re-runs the use case and clears a prior failure on success',
+    'Loaded twice within TTL serves the cache and skips the second call',
     setUp: () => when(
       () => getCompletion(any()),
     ).thenAnswer((_) => TaskEither.right(completion)),
     build: buildBloc,
-    seed: () => const ProviderCompletionState(
-      status: RequestStatus.failure,
-      failure: NetworkFailure(message: 'stale'),
-    ),
-    act: (bloc) => bloc.add(const ProviderCompletionRefreshed()),
-    expect: () => [
-      const ProviderCompletionState(status: RequestStatus.loading),
-      const ProviderCompletionState(
-        status: RequestStatus.success,
-        completion: completion,
-      ),
-    ],
-    verify: (bloc) {
-      verify(() => getCompletion(any())).called(1);
+    act: (bloc) async {
+      bloc.add(const ProviderCompletionLoaded());
+      await Future<void>.delayed(Duration.zero);
+      bloc.add(const ProviderCompletionLoaded());
     },
+    verify: (_) => verify(() => getCompletion(any())).called(1),
+  );
+
+  blocTest<ProviderCompletionBloc, ProviderCompletionState>(
+    'Refreshed invalidates the cache and always re-fetches',
+    setUp: () => when(
+      () => getCompletion(any()),
+    ).thenAnswer((_) => TaskEither.right(completion)),
+    build: buildBloc,
+    act: (bloc) async {
+      bloc.add(const ProviderCompletionLoaded());
+      await Future<void>.delayed(Duration.zero);
+      bloc.add(const ProviderCompletionRefreshed());
+    },
+    verify: (_) => verify(() => getCompletion(any())).called(2),
+  );
+
+  blocTest<ProviderCompletionBloc, ProviderCompletionState>(
+    'a different locale is a distinct cache entry (AR never serves EN)',
+    setUp: () => when(
+      () => getCompletion(any()),
+    ).thenAnswer((_) => TaskEither.right(completion)),
+    build: buildBloc,
+    act: (bloc) async {
+      bloc.add(const ProviderCompletionLoaded()); // en
+      await Future<void>.delayed(Duration.zero);
+      languageCode = 'ar';
+      bloc.add(const ProviderCompletionLoaded()); // ar → miss → fetch
+    },
+    verify: (_) => verify(() => getCompletion(any())).called(2),
   );
 }

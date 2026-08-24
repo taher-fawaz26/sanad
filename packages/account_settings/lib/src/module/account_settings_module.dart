@@ -1,7 +1,6 @@
 import 'package:account_settings/src/di/account_settings_di.dart';
 import 'package:account_settings/src/presentation/bloc/account_deletion/account_deletion_bloc.dart';
 import 'package:account_settings/src/presentation/bloc/account_settings/account_settings_bloc.dart';
-import 'package:account_settings/src/presentation/pages/account_deletion_otp_page.dart';
 import 'package:account_settings/src/presentation/pages/account_deletion_page.dart';
 import 'package:account_settings/src/presentation/pages/account_settings_page.dart';
 import 'package:account_settings/src/presentation/pages/deletion_scheduled_page.dart';
@@ -40,13 +39,6 @@ class AccountSettingsModule extends FeatureModule {
       builder: (context, state) => BlocProvider<AccountDeletionBloc>(
         create: (_) => sl<AccountDeletionBloc>(),
         child: const AccountDeletionPage(),
-      ),
-    ),
-    GoRoute(
-      path: AccountSettingsRoutes.deletionOtp,
-      builder: (context, state) => BlocProvider<AccountDeletionBloc>(
-        create: (_) => sl<AccountDeletionBloc>(),
-        child: const AccountDeletionOtpPage(),
       ),
     ),
     GoRoute(

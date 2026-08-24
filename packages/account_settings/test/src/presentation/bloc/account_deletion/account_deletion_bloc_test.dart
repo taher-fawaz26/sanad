@@ -17,7 +17,12 @@ import 'package:account_settings/src/domain/usecases/start_account_deletion_usec
 import 'package:account_settings/src/domain/usecases/verify_deletion_otp_usecase.dart';
 import 'package:account_settings/src/presentation/bloc/account_deletion/account_deletion_bloc.dart';
 import 'package:auth/auth.dart'
-    show AuthIdentity, GetCurrentUserUseCase, SessionManager, UserType;
+    show
+        AuthIdentity,
+        AuthLogoutUseCase,
+        GetCurrentUserUseCase,
+        SessionManager,
+        UserType;
 import 'package:bloc_test/bloc_test.dart';
 import 'package:core/core.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -49,6 +54,8 @@ class _MockGetCurrentUserUseCase extends Mock
     implements GetCurrentUserUseCase {}
 
 class _MockSessionManager extends Mock implements SessionManager {}
+
+class _MockAuthLogoutUseCase extends Mock implements AuthLogoutUseCase {}
 
 const _tFailure = ServerFailure(message: 'server_error');
 
@@ -93,6 +100,7 @@ void main() {
   late _MockCancelDeletionUseCase cancelDeletion;
   late _MockGetCurrentUserUseCase getCurrentUser;
   late _MockSessionManager sessionManager;
+  late _MockAuthLogoutUseCase logout;
 
   setUpAll(() {
     registerFallbackValue(const NoParams());
@@ -117,9 +125,12 @@ void main() {
     cancelDeletion = _MockCancelDeletionUseCase();
     getCurrentUser = _MockGetCurrentUserUseCase();
     sessionManager = _MockSessionManager();
+    logout = _MockAuthLogoutUseCase();
     when(() => sessionManager.hydrateIdentity(any())).thenAnswer(
       (_) async => null,
     );
+    when(() => sessionManager.clear()).thenAnswer((_) async {});
+    when(() => logout(any())).thenAnswer((_) => TaskEither.right(null));
   });
 
   AccountDeletionBloc build() => AccountDeletionBloc(
@@ -132,6 +143,7 @@ void main() {
     cancelDeletion: cancelDeletion,
     getCurrentUser: getCurrentUser,
     sessionManager: sessionManager,
+    logout: logout,
   );
 
   group('eligibility', () {
@@ -325,17 +337,35 @@ void main() {
       },
       act: (bloc) => bloc.add(const AccountDeletionOtpVerified('123456')),
       expect: () => [
-        isA<AccountDeletionState>(),
         isA<AccountDeletionState>().having(
-          (s) => s.activeRequest?.status,
-          'status',
-          AccountDeletionStatus.scheduled,
+          (s) => s.verifyStatus,
+          'verifyStatus',
+          RequestStatus.loading,
         ),
+        isA<AccountDeletionState>()
+            .having(
+              (s) => s.verifyStatus,
+              'verifyStatus',
+              RequestStatus.success,
+            )
+            .having(
+              (s) => s.activeRequest?.status,
+              'status',
+              AccountDeletionStatus.scheduled,
+            ),
       ],
+      verify: (_) {
+        // A successful verify ends the session exactly like a normal
+        // logout — this is a self-service destructive action, the user
+        // must never be left signed into an account scheduled for deletion.
+        verify(() => logout(any())).called(1);
+        verify(() => sessionManager.clear()).called(1);
+      },
     );
 
     blocTest<AccountDeletionBloc, AccountDeletionState>(
-      'verify with an invalid OTP surfaces the failure',
+      'verify with an invalid OTP surfaces the failure on verifyStatus, '
+      'leaving mutationStatus untouched',
       build: () {
         when(
           () => verifyOtp(any()),
@@ -344,13 +374,30 @@ void main() {
       },
       act: (bloc) => bloc.add(const AccountDeletionOtpVerified('000000')),
       expect: () => [
-        isA<AccountDeletionState>(),
         isA<AccountDeletionState>().having(
-          (s) => s.mutationStatus,
-          'mutationStatus',
-          RequestStatus.failure,
+          (s) => s.verifyStatus,
+          'verifyStatus',
+          RequestStatus.loading,
         ),
+        isA<AccountDeletionState>()
+            .having(
+              (s) => s.verifyStatus,
+              'verifyStatus',
+              RequestStatus.failure,
+            )
+            .having((s) => s.verifyFailure, 'verifyFailure', _tFailure)
+            .having(
+              (s) => s.mutationStatus,
+              'mutationStatus',
+              RequestStatus.initial,
+            ),
       ],
+      verify: (_) {
+        // A failed verify must never end the session — the user is still
+        // legitimately signed in and hasn't confirmed deletion.
+        verifyNever(() => logout(any()));
+        verifyNever(() => sessionManager.clear());
+      },
     );
 
     blocTest<AccountDeletionBloc, AccountDeletionState>(

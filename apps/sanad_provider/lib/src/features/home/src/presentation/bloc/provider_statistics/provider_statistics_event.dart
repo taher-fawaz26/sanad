@@ -7,12 +7,13 @@ sealed class ProviderStatisticsEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-/// Initial load.
+/// Initial load — serves fresh cached data without a network call.
 final class ProviderStatisticsLoaded extends ProviderStatisticsEvent {
   const ProviderStatisticsLoaded();
 }
 
-/// Re-fetches the statistic cards (e.g. pull-to-refresh).
+/// Force a re-fetch (pull-to-refresh, return-from-action, or locale change),
+/// bypassing the "fresh cache" short-circuit.
 final class ProviderStatisticsRefreshed extends ProviderStatisticsEvent {
   const ProviderStatisticsRefreshed();
 }

@@ -21,10 +21,12 @@ class ActivityLogCacheStore {
   final Duration staleness;
   final Map<String, _CacheEntry> _entries = {};
 
+  /// [actorId] is `null` for a global (unfiltered) feed — e.g. the Home
+  /// dashboard's Recent Activity preview.
   static String keyFor({
-    required String actorId,
+    required String? actorId,
     required String languageCode,
-  }) => '$actorId|$languageCode';
+  }) => '${actorId ?? '_global'}|$languageCode';
 
   List<ActivityLogEntry>? read(String key) {
     final entry = _entries[key];

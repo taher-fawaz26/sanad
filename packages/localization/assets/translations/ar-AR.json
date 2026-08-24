@@ -908,9 +908,16 @@
     "cascade_documents": "المستندات",
     "cascade_media": "ملفات الوسائط",
     "cascade_branches_unassigned": "الفروع التي ستفقد مديرها",
-    "type_business_name_label": "اكتب \"{businessName}\" للتأكيد",
+    "permanent_erase_title": "سيتم حذف ما يلي نهائيًا:",
+    "type_delete_label": "اكتب \"DELETE\" للتأكيد",
+    "type_delete_error": "اكتب DELETE تمامًا للتأكيد.",
+    "confirm_sheet_title": "هل تريد حذف حسابك؟",
+    "confirm_sheet_description": "سيؤدي هذا إلى إزالة حسابك وجميع البيانات المرتبطة به نهائيًا بعد انتهاء فترة السماح. لا يمكن التراجع عن هذا الإجراء.",
     "otp_title": "تأكيد الحذف",
     "otp_subtitle": "أدخل رمز التحقق المرسل إلى بريدك الإلكتروني لتأكيد حذف الحساب.",
+    "otp_sheet_title": "تأكيد الحذف",
+    "otp_sheet_subtitle": "تم إرسال رمز تحقق إلى بريدك الإلكتروني. أدخل الرمز لتأكيد حذف الحساب.",
+    "otp_confirm_button": "تأكيد الحذف",
     "verifying_title": "جارٍ التحقق...",
     "otp_last_attempt": "هذه محاولتك الأخيرة قبل قفل الرمز.",
     "otp_resend_cooldown": "إعادة الإرسال خلال {seconds} ثانية",
@@ -929,5 +936,17 @@
     "today": "اليوم",
     "yesterday": "أمس",
     "day_time": "{day}، {time}"
+  },
+  "home": {
+    "greeting": "مرحبًا بعودتك، {name}",
+    "greeting_generic": "مرحبًا بعودتك",
+    "setup_title": "اكتمال الإعداد {percent}%",
+    "setup_steps_summary": "{completed} من {total} خطوات",
+    "complete_setup": "إكمال الإعداد",
+    "quick_actions_title": "إجراءات سريعة",
+    "action_add_service": "إضافة خدمة",
+    "action_add_branch": "إضافة فرع",
+    "action_invite_member": "دعوة عضو",
+    "action_new_request": "طلب جديد"
   }
 }

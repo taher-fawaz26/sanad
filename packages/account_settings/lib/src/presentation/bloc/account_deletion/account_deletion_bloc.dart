@@ -8,7 +8,8 @@ import 'package:account_settings/src/domain/usecases/get_deletion_status_usecase
 import 'package:account_settings/src/domain/usecases/resend_deletion_otp_usecase.dart';
 import 'package:account_settings/src/domain/usecases/start_account_deletion_usecase.dart';
 import 'package:account_settings/src/domain/usecases/verify_deletion_otp_usecase.dart';
-import 'package:auth/auth.dart' show GetCurrentUserUseCase, SessionManager;
+import 'package:auth/auth.dart'
+    show AuthLogoutUseCase, GetCurrentUserUseCase, SessionManager;
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
@@ -19,9 +20,11 @@ part 'account_deletion_state.dart';
 
 /// Owns the self-service account deletion & recovery flow.
 ///
-/// `mutationStatus` is shared by start/verify/resend-otp/cancel — each is
-/// only read from the one screen that triggers it (confirmation, OTP,
-/// scheduled), so the four never observe each other's transitions.
+/// `mutationStatus` is shared by start/cancel — each is read from exactly one
+/// screen (confirmation page, scheduled page), so they never overlap. OTP
+/// verification has its own `verifyStatus` because the OTP bottom sheet is
+/// mounted *over* the confirmation page and the two must not observe each
+/// other's transitions. Resend keeps its own `resendStatus`.
 class AccountDeletionBloc
     extends Bloc<AccountDeletionEvent, AccountDeletionState> {
   AccountDeletionBloc({
@@ -34,6 +37,7 @@ class AccountDeletionBloc
     required CancelDeletionUseCase cancelDeletion,
     required GetCurrentUserUseCase getCurrentUser,
     required SessionManager sessionManager,
+    required AuthLogoutUseCase logout,
   }) : _getEligibility = getEligibility,
        _startDeletion = startDeletion,
        _verifyOtp = verifyOtp,
@@ -43,6 +47,7 @@ class AccountDeletionBloc
        _cancelDeletion = cancelDeletion,
        _getCurrentUser = getCurrentUser,
        _sessionManager = sessionManager,
+       _logout = logout,
        super(const AccountDeletionState()) {
     on<AccountDeletionEligibilityRequested>(_onEligibilityRequested);
     on<AccountDeletionStatusRequested>(_onStatusRequested);
@@ -65,6 +70,7 @@ class AccountDeletionBloc
   final CancelDeletionUseCase _cancelDeletion;
   final GetCurrentUserUseCase _getCurrentUser;
   final SessionManager _sessionManager;
+  final AuthLogoutUseCase _logout;
 
   Future<void> _onEligibilityRequested(
     AccountDeletionEligibilityRequested event,
@@ -145,26 +151,36 @@ class AccountDeletionBloc
   ) async {
     emit(
       state.copyWith(
-        mutationStatus: RequestStatus.loading,
-        clearMutationFailure: true,
+        verifyStatus: RequestStatus.loading,
+        clearVerifyFailure: true,
       ),
     );
     final result = await _verifyOtp(
       VerifyDeletionOtpParams(otp: event.otp),
     ).run();
-    result.fold(
-      (failure) => emit(
+    await result.match(
+      (failure) async => emit(
         state.copyWith(
-          mutationStatus: RequestStatus.failure,
-          mutationFailure: failure,
+          verifyStatus: RequestStatus.failure,
+          verifyFailure: failure,
         ),
       ),
-      (request) => emit(
-        state.copyWith(
-          mutationStatus: RequestStatus.success,
-          activeRequest: request,
-        ),
-      ),
+      (request) async {
+        // Deletion is now scheduled — end the session exactly like a normal
+        // logout (AuthBloc._logout): the backend logout call is best-effort,
+        // local session is wiped unconditionally so the user is never left
+        // signed into an account that's scheduled for deletion. Emitted
+        // after the session is cleared so the OTP sheet only reacts once
+        // there's nothing left to navigate away from.
+        await _logout(const NoParams()).run();
+        await _sessionManager.clear();
+        emit(
+          state.copyWith(
+            verifyStatus: RequestStatus.success,
+            activeRequest: request,
+          ),
+        );
+      },
     );
   }
 

@@ -908,9 +908,16 @@
     "cascade_documents": "Documents",
     "cascade_media": "Media files",
     "cascade_branches_unassigned": "Branches losing their manager",
-    "type_business_name_label": "Type \"{businessName}\" to confirm",
+    "permanent_erase_title": "The following will be permanently erased:",
+    "type_delete_label": "Type \"DELETE\" to confirm",
+    "type_delete_error": "Type DELETE exactly to confirm.",
+    "confirm_sheet_title": "Delete your account?",
+    "confirm_sheet_description": "This permanently removes your account and all related data after the grace period. This can't be undone.",
     "otp_title": "Verify Deletion",
     "otp_subtitle": "Enter the verification code sent to your email to confirm account deletion.",
+    "otp_sheet_title": "Confirm Deletion",
+    "otp_sheet_subtitle": "A verification code has been sent to your email. Enter the code to confirm account deletion.",
+    "otp_confirm_button": "Confirm Deletion",
     "verifying_title": "Verifying…",
     "otp_last_attempt": "This is your last attempt before the code is locked.",
     "otp_resend_cooldown": "Resend in {seconds}s",
@@ -929,5 +936,17 @@
     "today": "Today",
     "yesterday": "Yesterday",
     "day_time": "{day}, {time}"
+  },
+  "home": {
+    "greeting": "Welcome back, {name}",
+    "greeting_generic": "Welcome back",
+    "setup_title": "{percent}% Setup Complete",
+    "setup_steps_summary": "{completed} of {total} steps",
+    "complete_setup": "Complete Setup",
+    "quick_actions_title": "Quick Actions",
+    "action_add_service": "Add Service",
+    "action_add_branch": "Add Branch",
+    "action_invite_member": "Invite Member",
+    "action_new_request": "New Request"
   }
 }

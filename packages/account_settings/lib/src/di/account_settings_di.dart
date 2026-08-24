@@ -15,7 +15,8 @@ import 'package:account_settings/src/domain/usecases/update_account_settings_use
 import 'package:account_settings/src/domain/usecases/verify_deletion_otp_usecase.dart';
 import 'package:account_settings/src/presentation/bloc/account_deletion/account_deletion_bloc.dart';
 import 'package:account_settings/src/presentation/bloc/account_settings/account_settings_bloc.dart';
-import 'package:auth/auth.dart' show GetCurrentUserUseCase, SessionManager;
+import 'package:auth/auth.dart'
+    show AuthLogoutUseCase, GetCurrentUserUseCase, SessionManager;
 import 'package:core/core.dart';
 import 'package:network/network.dart';
 
@@ -92,6 +93,7 @@ abstract final class AccountSettingsDI {
           cancelDeletion: sl<CancelDeletionUseCase>(),
           getCurrentUser: sl<GetCurrentUserUseCase>(),
           sessionManager: sl<SessionManager>(),
+          logout: sl<AuthLogoutUseCase>(),
         ),
       );
   }

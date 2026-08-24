@@ -222,7 +222,8 @@ abstract final class AppSvgs {
   // ── Asset picker action sheet (`2947:14236`) ───────────────────────────────
 
   /// Cloud upload — asset picker "Upload file" row (`2947:14240`).
-  static const String assetPickerUploadFile = '$_base/asset_picker_upload_file.svg';
+  static const String assetPickerUploadFile =
+      '$_base/asset_picker_upload_file.svg';
 
   /// Scan viewfinder — asset picker "Scan or capture" row (`2947:14241`).
   static const String assetPickerScanCapture =
@@ -258,4 +259,21 @@ abstract final class AppSvgs {
 
   /// Upward trend line — "Grow Your Business" stage icon.
   static const String trendingUp = '$_base/trending_up.svg';
+
+  // ── Home dashboard Quick Actions (Figma `6755:26003`) ──────────────────────
+
+  /// Plus-in-circle — Home "Add Service" quick action (Figma `6801:6764`).
+  static const String homeActionAddService =
+      '$_base/home_action_add_service.svg';
+
+  /// Git-branch — Home "Add Branch" quick action (Figma `6801:6767`).
+  static const String homeActionAddBranch = '$_base/home_action_add_branch.svg';
+
+  /// User-with-plus — Home "Invite Member" quick action (Figma `6801:6772`).
+  static const String homeActionInviteMember =
+      '$_base/home_action_invite_member.svg';
+
+  /// Git-pull-request — Home "New Request" quick action (Figma `6801:6776`).
+  static const String homeActionNewRequest =
+      '$_base/home_action_new_request.svg';
 }

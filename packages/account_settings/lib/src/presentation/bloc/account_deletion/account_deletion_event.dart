@@ -30,6 +30,11 @@ class AccountDeletionOtpVerified extends AccountDeletionEvent {
 
   @override
   List<Object?> get props => [otp];
+
+  // The OTP must never reach the logs. `AppBlocObserver` logs `$event`, which
+  // would otherwise stringify [otp] via Equatable — mask it here.
+  @override
+  String toString() => 'AccountDeletionOtpVerified(***)';
 }
 
 class AccountDeletionOtpResendRequested extends AccountDeletionEvent {

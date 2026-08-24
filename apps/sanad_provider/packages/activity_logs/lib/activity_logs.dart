@@ -1,8 +1,9 @@
 /// Activity Logs — domain, data, presentation, and DI for the
 /// `GET /activity-logs` backend feature.
 ///
-/// The only current UI consumer is `WorkerRecentActivitySection` on Worker
-/// Details, but the domain/data layers support the full backend filter
+/// UI consumers: `WorkerRecentActivitySection` (actor-filtered, Worker
+/// Details) and `HomeRecentActivitySection` (global latest-5, Home
+/// dashboard). The domain/data layers support the full backend filter
 /// surface (actor, subject, action, date range, pagination) for future
 /// reuse — a full Activity screen, subject/actor history, etc.
 library;
@@ -20,6 +21,8 @@ export 'src/domain/repositories/activity_log_repository.dart';
 // Domain — use case (also exports ActivityLogQuery)
 export 'src/domain/usecases/get_activity_logs_usecase.dart';
 // Presentation — bloc
+export 'src/presentation/bloc/recent_activity/recent_activity_cubit.dart';
 export 'src/presentation/bloc/worker_activity/worker_activity_cubit.dart';
 // Presentation — widgets
+export 'src/presentation/widgets/home_recent_activity_section.dart';
 export 'src/presentation/widgets/worker_recent_activity_section.dart';

@@ -1,5 +1,7 @@
 import 'package:core/core.dart';
+import 'package:localization/localization.dart';
 import 'package:network/network.dart';
+import 'package:sanad_provider/src/features/home/src/data/cache/provider_statistics_cache_store.dart';
 import 'package:sanad_provider/src/features/home/src/data/datasources/provider_statistics_remote_datasource.dart';
 import 'package:sanad_provider/src/features/home/src/data/repositories/provider_statistics_repository_impl.dart';
 import 'package:sanad_provider/src/features/home/src/domain/repositories/provider_statistics_repository.dart';
@@ -24,9 +26,12 @@ abstract final class HomeDI {
       ..registerLazySingleton(
         () => GetProviderStatisticsUseCase(sl<ProviderStatisticsRepository>()),
       )
+      ..registerLazySingleton(ProviderStatisticsCacheStore.new)
       ..registerFactory(
         () => ProviderStatisticsBloc(
           getStatistics: sl<GetProviderStatisticsUseCase>(),
+          cacheStore: sl<ProviderStatisticsCacheStore>(),
+          resolveLanguageCode: () => sl<TranslateBloc>().state.languageCode,
         ),
       );
   }

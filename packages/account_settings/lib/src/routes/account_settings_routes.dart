@@ -5,11 +5,10 @@ abstract final class AccountSettingsRoutes {
   /// Account settings hub — Figma settings menu → Account settings.
   static const String hub = '/settings/account';
 
-  /// Delete-account entry point — eligibility → confirmation.
+  /// Delete-account entry point — eligibility → confirmation. OTP is presented
+  /// as a bottom-sheet modal over this page (see `showDeletionOtpSheet`), not
+  /// as a separate route.
   static const String deletion = '/settings/account/deletion';
-
-  /// Delete-account OTP verification.
-  static const String deletionOtp = '/settings/account/deletion/otp';
 
   /// Scheduled-deletion status — shown after OTP verification and again on
   /// resuming an already-scheduled request.
@@ -20,7 +19,6 @@ abstract final class AccountSettingsRoutes {
   static const Set<String> protectedRoutes = {
     hub,
     deletion,
-    deletionOtp,
     deletionScheduled,
   };
 }

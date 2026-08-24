@@ -305,6 +305,7 @@ class _DeleteAccountRow extends StatelessWidget {
                 AppSvgs.trashBold,
                 width: 24,
                 height: 24,
+                colorFilter: ColorFilter.mode(colors.error, BlendMode.srcIn),
               ),
               SizedBox(width: AppSpacing.md),
               Expanded(

@@ -3,6 +3,7 @@ import 'package:core/core.dart';
 import 'package:document_flow/document_flow.dart';
 import 'package:localization/localization.dart';
 import 'package:network/network.dart';
+import 'package:sanad_provider/src/features/organization_settings/src/data/cache/provider_completion_cache_store.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/data/datasources/legal_data_remote_datasource.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/data/datasources/media_upload_remote_datasource.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/data/datasources/organization_media_remote_datasource.dart';
@@ -164,9 +165,12 @@ abstract final class OrganizationSettingsDI {
           getOverview: sl<GetProviderOverviewUseCase>(),
         ),
       )
+      ..registerLazySingleton(ProviderCompletionCacheStore.new)
       ..registerFactory(
         () => ProviderCompletionBloc(
           getCompletion: sl<GetProviderCompletionUseCase>(),
+          cacheStore: sl<ProviderCompletionCacheStore>(),
+          resolveLanguageCode: () => sl<TranslateBloc>().state.languageCode,
         ),
       )
       ..registerLazySingleton<DocumentFlowRepository>(

@@ -9,6 +9,8 @@ class AccountDeletionState extends Equatable {
     this.activeRequest,
     this.mutationStatus = RequestStatus.initial,
     this.mutationFailure,
+    this.verifyStatus = RequestStatus.initial,
+    this.verifyFailure,
     this.resendStatus = RequestStatus.initial,
     this.resendInfoStatus = RequestStatus.initial,
     this.resendInfo,
@@ -23,10 +25,16 @@ class AccountDeletionState extends Equatable {
   final RequestStatus activeRequestStatus;
   final AccountDeletionRequest? activeRequest;
 
-  /// Shared by start / verify-otp / cancel — each is read from exactly one
-  /// screen (confirmation, OTP, scheduled), so they never overlap.
+  /// Shared by start / cancel — each is read from exactly one screen
+  /// (confirmation page, scheduled page), so they never overlap. Verify has
+  /// its own [verifyStatus] because the OTP sheet is mounted *over* the
+  /// confirmation page, so the two must not observe each other's transitions.
   final RequestStatus mutationStatus;
   final Failure? mutationFailure;
+
+  /// OTP verification status — owned by the deletion OTP bottom sheet.
+  final RequestStatus verifyStatus;
+  final Failure? verifyFailure;
 
   /// Resend-otp has its own status so the OTP screen can distinguish "resend
   /// in flight" from "verify in flight" (both live on the same page).
@@ -48,6 +56,9 @@ class AccountDeletionState extends Equatable {
     RequestStatus? mutationStatus,
     Failure? mutationFailure,
     bool clearMutationFailure = false,
+    RequestStatus? verifyStatus,
+    Failure? verifyFailure,
+    bool clearVerifyFailure = false,
     RequestStatus? resendStatus,
     RequestStatus? resendInfoStatus,
     DeletionResendInfo? resendInfo,
@@ -66,6 +77,10 @@ class AccountDeletionState extends Equatable {
       mutationFailure: clearMutationFailure
           ? null
           : (mutationFailure ?? this.mutationFailure),
+      verifyStatus: verifyStatus ?? this.verifyStatus,
+      verifyFailure: clearVerifyFailure
+          ? null
+          : (verifyFailure ?? this.verifyFailure),
       resendStatus: resendStatus ?? this.resendStatus,
       resendInfoStatus: resendInfoStatus ?? this.resendInfoStatus,
       resendInfo: resendInfo ?? this.resendInfo,
@@ -81,6 +96,8 @@ class AccountDeletionState extends Equatable {
     activeRequest,
     mutationStatus,
     mutationFailure,
+    verifyStatus,
+    verifyFailure,
     resendStatus,
     resendInfoStatus,
     resendInfo,

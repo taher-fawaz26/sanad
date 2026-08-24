@@ -20,6 +20,10 @@ class OtpCodeChanged extends OtpEvent {
 
   @override
   List<Object?> get props => [code];
+
+  // Keep the code out of logs — `AppBlocObserver` stringifies events.
+  @override
+  String toString() => 'OtpCodeChanged(***)';
 }
 
 /// Submit the current code — fired by the Verify button or, when
@@ -33,6 +37,10 @@ class OtpSubmitted extends OtpEvent {
 
   @override
   List<Object?> get props => [code];
+
+  // Keep the code out of logs — `AppBlocObserver` stringifies events.
+  @override
+  String toString() => 'OtpSubmitted(***)';
 }
 
 class OtpResendRequested extends OtpEvent {

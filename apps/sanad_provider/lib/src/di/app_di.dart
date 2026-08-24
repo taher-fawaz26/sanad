@@ -75,8 +75,8 @@ Future<void> configureDependencies() async {
   // ── Media upload (shared multipart-upload pipeline; no FeatureModule) ────
   MediaUploadDI.init();
 
-  // ── Activity Logs (GET /activity-logs; only current consumer is Worker
-  // Details' "Recent Activity" section, which owns its own bloc — no
+  // ── Activity Logs (GET /activity-logs; consumers are Worker Details' and
+  // Home's "Recent Activity" sections, each owning its own bloc — no
   // routes, so no FeatureModule needed) ────────────────────────────────────
   ActivityLogsDI.init();
 

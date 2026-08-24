@@ -10,7 +10,6 @@ import 'package:sanad_provider/src/features/organization_settings/src/domain/ent
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/category_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/me_media_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/organization_profile_entity.dart';
-import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/provider_completion_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/social_profiles_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/working_hours_day_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/repositories/organization_settings_repository.dart';
