@@ -39,6 +39,13 @@ jobs:
           cache: true
       - name: Install Melos
         run: dart pub global activate melos 7.0.0
+      # third_party/font_awesome_flutter is a git-ignored, licensed Pro package
+      # the root pubspec override points at; a clean checkout lacks it, so
+      # bootstrap's `flutter pub get` fails version solving without this step.
+      - name: Restore Font Awesome Pro
+        uses: ./.github/actions/restore-font-awesome
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Bootstrap
         run: melos bootstrap
       - name: ${{ matrix.task.name }}
@@ -59,6 +66,13 @@ jobs:
         run: sudo apt-get install -y lcov
       - name: Install Melos
         run: dart pub global activate melos 7.0.0
+      # third_party/font_awesome_flutter is a git-ignored, licensed Pro package
+      # the root pubspec override points at; a clean checkout lacks it, so
+      # bootstrap's `flutter pub get` fails version solving without this step.
+      - name: Restore Font Awesome Pro
+        uses: ./.github/actions/restore-font-awesome
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Bootstrap
         run: melos bootstrap
       - name: Run tests with coverage
