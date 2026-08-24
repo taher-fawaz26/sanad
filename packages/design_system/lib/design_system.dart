@@ -1,6 +1,15 @@
 /// Sanad Design System — theme, colors, typography, tokens, and UI components.
 library;
 
+// Re-exported so a feature can hold/thread a `SlidableController` (e.g. into
+// `AppSwipeActionHint`/`AppSwipeActions.controller`) without depending on
+// `flutter_slidable` directly. Deliberately narrow — `Slidable`/`ActionPane`/
+// `SlidableAction` stay internal to `AppSwipeActions`.
+export 'package:flutter_slidable/flutter_slidable.dart' show SlidableController;
+// Re-exported so consumers can build `FaIcon`s from a `BackendIconResolver`
+// result without adding their own `font_awesome_flutter` dependency.
+export 'package:font_awesome_flutter/font_awesome_flutter.dart';
+
 // Theme BLoC — ThemeBloc, ThemeState, ThemeEvent, AppThemeMode
 export 'src/blocs/theme/theme_bloc.dart';
 // Components
@@ -53,6 +62,7 @@ export 'src/components/app_slider.dart';
 export 'src/components/app_snackbar.dart';
 export 'src/components/app_status_badge.dart';
 export 'src/components/app_stepper.dart';
+export 'src/components/app_swipe_action_hint.dart';
 export 'src/components/app_swipe_actions.dart';
 export 'src/components/app_switch.dart';
 export 'src/components/app_table_cell.dart';
@@ -62,6 +72,8 @@ export 'src/components/app_verified_badge.dart';
 // Dimensions & spacing
 export 'src/dimensions/app_radius.dart';
 export 'src/dimensions/responsive_dimension.dart';
+// Icons
+export 'src/icons/backend_icon_resolver.dart';
 export 'src/spacing/responsive_spacing.dart';
 // Theme
 export 'src/theme/app_font.dart';

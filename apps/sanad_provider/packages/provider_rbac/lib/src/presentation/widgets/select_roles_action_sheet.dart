@@ -3,6 +3,7 @@ import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:provider_rbac/src/domain/entities/role_entity.dart';
+import 'package:provider_rbac/src/presentation/utils/role_display_name.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 
@@ -34,7 +35,7 @@ Future<List<RoleEntity>?> showSelectRolesActionSheet({
     itemBuilder: (context, role, isSelected, onTap) {
       final isLocked = role.id == mandatoryRoleId;
       return AppTableRow(
-        title: role.displayName,
+        title: role.localizedDisplayName(),
         trailing: AppTableTrailing.icon,
         trailingIcon: isLocked
             ? Icon(

@@ -19,6 +19,7 @@ class CitySelectField extends StatelessWidget {
     required this.retryLabel,
     required this.onCitySelected,
     this.selectedCity,
+    this.isRequired = false,
     this.errorText,
     super.key,
   });
@@ -31,6 +32,9 @@ class CitySelectField extends StatelessWidget {
   final String retryLabel;
   final CityEntity? selectedCity;
 
+  /// When `true`, appends a red `*` after the label.
+  final bool isRequired;
+
   /// Inline error message shown below the field (injected string).
   final String? errorText;
 
@@ -42,6 +46,7 @@ class CitySelectField extends StatelessWidget {
       label: label,
       value: selectedCity?.name,
       hint: hint,
+      isRequired: isRequired,
       errorText: errorText,
       onTap: () => _openPicker(context),
     );

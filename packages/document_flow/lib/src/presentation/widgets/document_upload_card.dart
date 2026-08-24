@@ -23,6 +23,7 @@ class DocumentUploadCardLabels {
     required this.removeDocument,
     required this.upload,
     required this.retryUpload,
+    required this.checkingDocument,
   });
 
   final String chooseUpload;
@@ -33,6 +34,10 @@ class DocumentUploadCardLabels {
   final String removeDocument;
   final String upload;
   final String retryUpload;
+
+  /// Shown while a local pre-upload document-type check (scanner/OCR) is
+  /// running, before any bytes are transferred.
+  final String checkingDocument;
 }
 
 /// A single document slot: title header, empty / uploading / filled / failed
@@ -77,10 +82,12 @@ class DocumentUploadCard extends StatelessWidget {
 
   bool get _uploading => uploadable?.isUploading ?? false;
 
+  bool get _validating => uploadable?.isValidating ?? false;
+
   bool get _failed => uploadable?.status.isFailed ?? false;
 
   bool get _localPending =>
-      _hasLocalAsset && !_uploaded && !_uploading && !_failed;
+      _hasLocalAsset && !_uploaded && !_uploading && !_validating && !_failed;
 
   @override
   Widget build(BuildContext context) {
@@ -135,7 +142,12 @@ class DocumentUploadCard extends StatelessWidget {
             ),
             child: Column(
               children: [
-                if (_uploading && uploadable != null)
+                if (_validating && uploadable != null)
+                  _ValidatingDropzone(
+                    uploadable: uploadable!,
+                    checkingLabel: labels.checkingDocument,
+                  )
+                else if (_uploading && uploadable != null)
                   _UploadingDropzone(
                     uploadable: uploadable!,
                     uploadingLabel: labels.uploading,
@@ -147,7 +159,10 @@ class DocumentUploadCard extends StatelessWidget {
                     uploadFailedLabel: labels.uploadFailed,
                   )
                 else if (_hasLocalAsset && uploadable != null)
-                  _FilledPreview(asset: uploadable!.asset)
+                  _FilledPreview(
+                    asset: uploadable!.asset,
+                    remoteUrl: uploadable!.remoteUrl,
+                  )
                 else
                   _EmptyDropzone(
                     chooseUploadLabel: labels.chooseUpload,
@@ -179,7 +194,7 @@ class DocumentUploadCard extends StatelessWidget {
                 ] else
                   AppButton(
                     label: _failed ? labels.retryUpload : labels.upload,
-                    onPressed: _uploading ? null : onUpload,
+                    onPressed: (_uploading || _validating) ? null : onUpload,
                     icon: AppSvgPicture.asset(
                       AppSvgs.cloudUpload,
                       width: responsiveDimension(ButtonTokens.iconSize),
@@ -415,6 +430,67 @@ class _UploadingDropzone extends StatelessWidget {
   }
 }
 
+/// Shown while a local pre-upload document-type check (scanner/OCR) is
+/// running for a freshly captured asset, before any bytes are transferred.
+///
+/// Intentionally simpler than [_UploadingDropzone] — there is no measurable
+/// progress and no cancel affordance (the check is local and short-lived).
+class _ValidatingDropzone extends StatelessWidget {
+  const _ValidatingDropzone({
+    required this.uploadable,
+    required this.checkingLabel,
+  });
+
+  final UploadableAsset uploadable;
+  final String checkingLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final typography = context.appTypography;
+    final radius = AppRadius.md;
+    final asset = uploadable.asset;
+
+    return SizedBox(
+      height: responsiveDimension(_kDropzoneHeight),
+      width: double.infinity,
+      child: CustomPaint(
+        painter: DashedBorderPainter(color: colors.border, radius: radius),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.gray50,
+            borderRadius: BorderRadius.circular(radius),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const AppLoadingIndicator(size: _kLoaderSize),
+              SizedBox(height: responsiveDimension(AppSpacing.md)),
+              Text(
+                asset.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: typography.smallNormal.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: colors.textPrimary,
+                ),
+              ),
+              SizedBox(height: responsiveDimension(AppSpacing.xs)),
+              Text(
+                checkingLabel,
+                textAlign: TextAlign.center,
+                style: typography.tinyNormal.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _FailedDropzone extends StatelessWidget {
   const _FailedDropzone({
     required this.uploadable,
@@ -467,9 +543,24 @@ class _FailedDropzone extends StatelessWidget {
 }
 
 class _FilledPreview extends StatelessWidget {
-  const _FilledPreview({required this.asset});
+  const _FilledPreview({required this.asset, this.remoteUrl});
 
   final PickedAsset asset;
+
+  /// The backend-hosted URL for this slot, when it was prefilled from an
+  /// already-stored document rather than picked on this device — see
+  /// [DocumentPreview.remoteUrl].
+  final String? remoteUrl;
+
+  /// A prefilled slot (a renewal flow resuming with an already-stored
+  /// document) never picked a real file on this device, so `asset.size` is a
+  /// placeholder `0` rather than a real measurement — showing "0 KB" would
+  /// misrepresent it as an empty file. The backend never reports a stored
+  /// document's byte size at all (see `LegalDataMediaResponseDto`), so there
+  /// is no real value to show instead; the size line is hidden entirely for
+  /// this case rather than fabricating one.
+  bool get _isPrefilledOnly =>
+      remoteUrl != null && !asset.hasBytes && asset.path.isEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -494,7 +585,7 @@ class _FilledPreview extends StatelessWidget {
               child: SizedBox(
                 height: responsiveDimension(148),
                 child: isImage
-                    ? DocumentPreview(asset: asset)
+                    ? DocumentPreview(asset: asset, remoteUrl: remoteUrl)
                     : ColoredBox(
                         color: colors.gray100,
                         child: Center(
@@ -517,13 +608,15 @@ class _FilledPreview extends StatelessWidget {
                 color: colors.textPrimary,
               ),
             ),
-            SizedBox(height: responsiveDimension(AppSpacing.xs)),
-            Text(
-              _formatSize(asset),
-              style: typography.tinyNormal.copyWith(
-                color: colors.textSecondary,
+            if (!_isPrefilledOnly) ...[
+              SizedBox(height: responsiveDimension(AppSpacing.xs)),
+              Text(
+                _formatSize(asset),
+                style: typography.tinyNormal.copyWith(
+                  color: colors.textSecondary,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),

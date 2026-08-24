@@ -20,9 +20,13 @@ import 'package:services/src/presentation/bloc/request_new_service/request_new_s
 import 'package:services/src/presentation/pages/add_service_page.dart';
 import 'package:services/src/presentation/pages/request_new_service_page.dart';
 import 'package:shared_ui/shared_ui.dart';
+import 'package:text_optimization/text_optimization.dart';
 
 class _MockMediaUploadRepository extends Mock
     implements MediaUploadRepository {}
+
+class _MockTextOptimizationRepository extends Mock
+    implements TextOptimizationRepository {}
 
 class _FakeGetCategoriesUseCase implements GetCategoriesUseCase {
   const _FakeGetCategoriesUseCase();
@@ -91,6 +95,30 @@ Future<void> _pumpRouter(WidgetTester tester) async {
     tester.view.resetDevicePixelRatio();
   });
 
+  // The description field's AppEnhanceWithAiButton (from
+  // AiEnhanceDescriptionField) runs a perpetual rainbow-border animation
+  // that never settles on its own, which would hang pumpAndSettle() —
+  // disabling animations makes the widget stop its controller (it checks
+  // MediaQuery.disableAnimationsOf). Same convention as
+  // add_service_form_body_test.dart's `_pump`.
+  tester.platformDispatcher.accessibilityFeaturesTestValue =
+      const FakeAccessibilityFeatures(disableAnimations: true);
+  addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+
+  // EasyLocalization isn't bootstrapped in this harness, so `.tr()` falls
+  // back to the raw key ('common.enhance_with_ai') — longer than any real
+  // translation, which overflows AppEnhanceWithAiButton's fixed-width
+  // (160px) pill. That's a byproduct of the untranslated test key, not a
+  // real layout bug in the widget under test.
+  final originalOnError = FlutterError.onError;
+  FlutterError.onError = (details) {
+    if (details.exception.toString().contains('A RenderFlex overflowed')) {
+      return;
+    }
+    originalOnError?.call(details);
+  };
+  addTearDown(() => FlutterError.onError = originalOnError);
+
   // AddServicePage calls context.push(ServiceRoutes.requestNew) =
   // '/services/request-new', an absolute path, so the test router must
   // register that same real path (flat, since nesting under a bare
@@ -142,6 +170,7 @@ void main() {
         () => AddServiceBloc(
           createProviderServiceUseCase: _MockCreateProviderServiceUseCase(),
           browseCatalogUseCase: const _FakeBrowseCatalogUseCase(),
+          getCategoriesUseCase: sl<GetCategoriesUseCase>(),
         ),
       )
       ..registerFactory<RequestNewServiceBloc>(
@@ -149,7 +178,19 @@ void main() {
           createServiceRequestUseCase: _MockCreateServiceRequestUseCase(),
           getCategoriesUseCase: const _FakeGetCategoriesUseCase(),
         ),
-      );
+      )
+      // Both pages' description fields resolve a `TextOptimizationCubit`
+      // from `sl` (SAN-578) — never tapped here, but the widget still needs
+      // one registered to build.
+      ..registerFactory<TextOptimizationCubit>(() {
+        final textOptimizationRepository = _MockTextOptimizationRepository();
+        when(
+          () => textOptimizationRepository.optimize(any()),
+        ).thenAnswer((_) => TaskEither.right(''));
+        return TextOptimizationCubit(
+          OptimizeTextUseCase(textOptimizationRepository),
+        );
+      });
   });
 
   tearDownAll(() {
@@ -157,7 +198,8 @@ void main() {
       ..unregister<MediaUploadBloc>()
       ..unregister<GetCategoriesUseCase>()
       ..unregister<AddServiceBloc>()
-      ..unregister<RequestNewServiceBloc>();
+      ..unregister<RequestNewServiceBloc>()
+      ..unregister<TextOptimizationCubit>();
   });
 
   testWidgets(

@@ -1,12 +1,12 @@
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
 import 'package:branches/src/domain/entities/branch_availability_mode.dart';
+import 'package:branches/src/domain/entities/branch_schedule_mode.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_cubit.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_state.dart';
 import 'package:branches/src/presentation/utils/branch_maps_launcher.dart';
 import 'package:branches/src/presentation/utils/branch_summary_section_matcher.dart';
 import 'package:branches/src/presentation/widgets/branch_info_edit_sheet.dart';
-import 'package:branches/src/presentation/widgets/branch_schedule_section.dart';
 import 'package:branches/src/presentation/widgets/branch_summary_view.dart';
 import 'package:branches/src/presentation/widgets/contact_edit_sheet.dart';
 import 'package:branches/src/presentation/widgets/working_hours_edit_sheet.dart';
@@ -95,7 +95,11 @@ class _BranchReviewBodyState extends State<BranchReviewBody> {
 
           return BranchSummaryView(
             data: BranchSummaryData(
-              title: 'branches.company_name'.tr(),
+              // The card title is the branch's own name, matching
+              // BranchDetailsPage's `title: branch.branchName` — this is a
+              // pre-submit preview of that same branch, not the umbrella
+              // company/organization.
+              title: draft.branchName,
               caption: branchTypeLabel(draft.branchType),
               badgeLabel: 'branches.status_active'.tr(),
               badgeType: AppStatusBadgeType.success,

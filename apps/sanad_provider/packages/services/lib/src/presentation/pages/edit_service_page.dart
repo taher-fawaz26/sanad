@@ -44,15 +44,26 @@ class EditServicePage extends StatefulWidget {
 
 class _EditServicePageState extends State<EditServicePage> {
   final _contentKey = GlobalKey<_EditServiceContentState>();
+  final _hasUnsavedInput = ValueNotifier<bool>(false);
+
+  @override
+  void dispose() {
+    _hasUnsavedInput.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-        _onBackPressed(context);
-      },
+    return ValueListenableBuilder<bool>(
+      valueListenable: _hasUnsavedInput,
+      builder: (context, hasUnsaved, scaffold) => PopScope(
+        canPop: !hasUnsaved,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          _onBackPressed(context);
+        },
+        child: scaffold!,
+      ),
       child: Scaffold(
         backgroundColor: context.appColors.surface,
         body: SafeArea(
@@ -105,7 +116,7 @@ class _EditServicePageState extends State<EditServicePage> {
             BlocProvider(
               create: (_) => sl<MediaUploadBloc>(
                 param1: const MediaUploadConfig(
-                  maxFileSize: 5 * 1024 * 1024,
+                  maxFileSize: FileSizePolicy.maxBytes,
                   maxFiles: kMaxServiceImages,
                   allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
                 ),
@@ -115,7 +126,11 @@ class _EditServicePageState extends State<EditServicePage> {
               create: (_) => sl<ServiceImagesBloc>(param1: service),
             ),
           ],
-          child: _EditServiceContent(key: _contentKey, service: service),
+          child: _EditServiceContent(
+            key: _contentKey,
+            service: service,
+            onUnsavedChanged: (unsaved) => _hasUnsavedInput.value = unsaved,
+          ),
         );
       },
     );
@@ -230,9 +245,14 @@ class _EditServiceSkeleton extends StatelessWidget {
 }
 
 class _EditServiceContent extends StatefulWidget {
-  const _EditServiceContent({required this.service, super.key});
+  const _EditServiceContent({
+    required this.service,
+    required this.onUnsavedChanged,
+    super.key,
+  });
 
   final ProviderServiceEntity service;
+  final ValueChanged<bool> onUnsavedChanged;
 
   @override
   State<_EditServiceContent> createState() => _EditServiceContentState();
@@ -272,6 +292,7 @@ class _EditServiceContentState extends State<_EditServiceContent> {
                     service: widget.service,
                     onCompletenessChanged: (complete) =>
                         _isFormComplete.value = complete,
+                    onUnsavedChanged: widget.onUnsavedChanged,
                   ),
                   SizedBox(height: AppSpacing.xl),
                   const ManageServiceImagesSection(),

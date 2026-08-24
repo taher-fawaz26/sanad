@@ -54,6 +54,12 @@ final _projectManager = _role(
   isSystem: false,
   displayName: 'Project Manager',
 );
+final _senior = _role(
+  id: 'c2',
+  name: 'senior',
+  isSystem: false,
+  displayName: 'Senior',
+);
 
 Future<void> _pump(
   WidgetTester tester, {
@@ -107,10 +113,10 @@ void main() {
     when(() => repository.getRoles(any())).thenAnswer(
       (_) => TaskEither.of(
         core.Page(
-          items: [_workerBasic, _branchManager, _projectManager],
+          items: [_workerBasic, _branchManager, _projectManager, _senior],
           meta: const PageMeta(
-            totalItems: 3,
-            itemCount: 3,
+            totalItems: 4,
+            itemCount: 4,
             itemsPerPage: 100,
             totalPages: 1,
             currentPage: 1,
@@ -120,117 +126,206 @@ void main() {
     );
   });
 
-  testWidgets('resolves and locks the mandatory role once the catalog loads', (
-    tester,
-  ) async {
-    await _pump(
-      tester,
-      type: WorkerType.worker,
-      onChanged: emitted.add,
-      getRolesUseCase: getRolesUseCase,
-    );
-    await tester.pumpAndSettle();
-
-    expect(emitted.last.roleIds, [_workerBasic.id]);
-    expect(emitted.last.isValid, isTrue);
-    expect(find.text('Worker'), findsOneWidget);
-    expect(find.byIcon(Icons.lock_outline), findsOneWidget);
-  });
-
-  testWidgets('adding an additional role via the sheet updates the selection', (
-    tester,
-  ) async {
-    await _pump(
-      tester,
-      type: WorkerType.worker,
-      onChanged: emitted.add,
-      getRolesUseCase: getRolesUseCase,
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byType(AppSelectField));
-    await tester.pumpAndSettle();
-
-    // Mandatory role row shows a lock badge, not a checkbox — it cannot be
-    // toggled from the sheet. (The field behind the sheet also renders its
-    // own lock badge on the mandatory chip, so at least one — not
-    // necessarily exactly one — is expected here.)
-    expect(find.byIcon(Icons.lock_outline), findsWidgets);
-
-    final projectManagerCheckbox = find.descendant(
-      of: find.ancestor(
-        of: find.text('Project Manager'),
-        matching: find.byType(AppTableRow),
-      ),
-      matching: find.byType(AppCheckbox),
-    );
-    await tester.tap(projectManagerCheckbox);
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('common.confirm'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Project Manager'), findsOneWidget);
-    expect(
-      emitted.last.roleIds,
-      containsAll([_workerBasic.id, _projectManager.id]),
-    );
-    expect(emitted.last.roleIds.length, 2);
-  });
-
-  testWidgets('searching the sheet filters the role list', (tester) async {
-    await _pump(
-      tester,
-      type: WorkerType.worker,
-      onChanged: emitted.add,
-      getRolesUseCase: getRolesUseCase,
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byType(AppSelectField));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Project Manager'), findsOneWidget);
-    // "Worker" appears twice: the sheet's own list row, plus the mandatory
-    // chip on the field mounted underneath the sheet route.
-    expect(find.text('Worker'), findsNWidgets(2));
-
-    await tester.enterText(find.byType(TextField), 'project');
-    await tester.pumpAndSettle();
-
-    expect(find.text('Project Manager'), findsOneWidget);
-    // Only the field's underlying chip remains — the sheet's "Worker" row
-    // is filtered out by the search query.
-    expect(find.text('Worker'), findsOneWidget);
-  });
-
-  testWidgets(
-    'removing an additional role via its chip updates the selection',
-    (tester) async {
+  group('Worker', () {
+    testWidgets('shows only the locked Worker role', (tester) async {
       await _pump(
         tester,
         type: WorkerType.worker,
         onChanged: emitted.add,
         getRolesUseCase: getRolesUseCase,
-        initialRoleIds: [_workerBasic.id, _projectManager.id],
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Project Manager'), findsOneWidget);
-      expect(emitted.last.roleIds, contains(_projectManager.id));
+      expect(emitted.last.roleIds, [_workerBasic.id]);
+      expect(emitted.last.isValid, isTrue);
+      // Worker is a system role, now localized via RoleLocalizedDisplayName
+      // — the raw i18n key renders here since this file doesn't bootstrap
+      // EasyLocalization (SAN-592).
+      expect(
+        find.text('provider_rbac.system_role_worker'),
+        findsOneWidget,
+      );
+      expect(find.byIcon(Icons.lock_outline), findsOneWidget);
+      // No removable ("x") chip for the mandatory role.
+      expect(find.byIcon(Icons.close), findsNothing);
+    });
+
+    testWidgets('the roles trigger is disabled — no picker to open', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        type: WorkerType.worker,
+        onChanged: emitted.add,
+        getRolesUseCase: getRolesUseCase,
+      );
+      await tester.pumpAndSettle();
+
+      final field = tester.widget<AppSelectField>(find.byType(AppSelectField));
+      expect(field.enabled, isFalse);
+
+      await tester.tap(find.byType(AppSelectField));
+      await tester.pumpAndSettle();
+
+      // Tapping a disabled trigger must not open the roles sheet.
+      expect(find.text('common.confirm'), findsNothing);
+      expect(find.byType(AppTableRow), findsNothing);
+    });
+
+    testWidgets(
+      'a pre-selected custom role never survives normalization on load',
+      (tester) async {
+        await _pump(
+          tester,
+          type: WorkerType.worker,
+          onChanged: emitted.add,
+          getRolesUseCase: getRolesUseCase,
+          initialRoleIds: [_workerBasic.id, _projectManager.id],
+        );
+        await tester.pumpAndSettle();
+
+        expect(emitted.last.roleIds, [_workerBasic.id]);
+        expect(find.text('Project Manager'), findsNothing);
+      },
+    );
+  });
+
+  group('Manager', () {
+    testWidgets('shows the locked Manager role', (tester) async {
+      await _pump(
+        tester,
+        type: WorkerType.manager,
+        onChanged: emitted.add,
+        getRolesUseCase: getRolesUseCase,
+      );
+      await tester.pumpAndSettle();
+
+      expect(emitted.last.roleIds, [_branchManager.id]);
+      expect(emitted.last.isValid, isTrue);
+      // Branch Manager is a system role, now localized via
+      // RoleLocalizedDisplayName — the raw i18n key renders here since
+      // this file doesn't bootstrap EasyLocalization (SAN-592).
+      expect(
+        find.text('provider_rbac.system_role_branch_manager'),
+        findsOneWidget,
+      );
+      expect(find.byIcon(Icons.lock_outline), findsOneWidget);
+    });
+
+    testWidgets('can add multiple custom roles via the sheet', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        type: WorkerType.manager,
+        onChanged: emitted.add,
+        getRolesUseCase: getRolesUseCase,
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(AppSelectField));
+      await tester.pumpAndSettle();
+
+      for (final label in ['Project Manager', 'Senior']) {
+        final checkbox = find.descendant(
+          of: find.ancestor(
+            of: find.text(label),
+            matching: find.byType(AppTableRow),
+          ),
+          matching: find.byType(AppCheckbox),
+        );
+        await tester.tap(checkbox);
+        await tester.pumpAndSettle();
+      }
+
+      await tester.tap(find.text('common.confirm'));
+      await tester.pumpAndSettle();
+
+      expect(
+        emitted.last.roleIds,
+        containsAll([_branchManager.id, _projectManager.id, _senior.id]),
+      );
+      expect(emitted.last.roleIds.length, 3);
+    });
+
+    testWidgets('the Worker system role is never offered in the sheet', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        type: WorkerType.manager,
+        onChanged: emitted.add,
+        getRolesUseCase: getRolesUseCase,
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(AppSelectField));
+      await tester.pumpAndSettle();
+
+      // Only the field's own locked chip renders "Worker" — the sheet
+      // itself has no row for the worker-basic system role.
+      expect(find.text('Worker'), findsNothing);
+    });
+
+    testWidgets(
+      'a pre-selected worker-basic role is dropped, custom roles kept',
+      (tester) async {
+        await _pump(
+          tester,
+          type: WorkerType.manager,
+          onChanged: emitted.add,
+          getRolesUseCase: getRolesUseCase,
+          initialRoleIds: [
+            _workerBasic.id,
+            _branchManager.id,
+            _projectManager.id,
+          ],
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          emitted.last.roleIds,
+          containsAll([_branchManager.id, _projectManager.id]),
+        );
+        expect(emitted.last.roleIds, isNot(contains(_workerBasic.id)));
+        expect(emitted.last.roleIds.length, 2);
+      },
+    );
+
+    testWidgets('the mandatory role cannot be removed via its chip', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        type: WorkerType.manager,
+        onChanged: emitted.add,
+        getRolesUseCase: getRolesUseCase,
+        initialRoleIds: [_branchManager.id, _projectManager.id],
+      );
+      await tester.pumpAndSettle();
+
+      // Only the custom role's chip is removable — one close icon, not two.
+      expect(find.byIcon(Icons.close), findsOneWidget);
 
       await tester.tap(find.byIcon(Icons.close));
       await tester.pumpAndSettle();
 
+      // Branch Manager is a system role, now localized via
+      // RoleLocalizedDisplayName — the raw i18n key renders here since
+      // this file doesn't bootstrap EasyLocalization (SAN-592).
+      expect(
+        find.text('provider_rbac.system_role_branch_manager'),
+        findsOneWidget,
+      );
       expect(find.text('Project Manager'), findsNothing);
-      expect(emitted.last.roleIds, [_workerBasic.id]);
-    },
-  );
+      expect(emitted.last.roleIds, [_branchManager.id]);
+    });
+  });
 
-  testWidgets(
-    'changing type from Worker to Manager swaps the baseline and keeps '
-    'additional roles',
-    (tester) async {
+  group('type change', () {
+    testWidgets('Worker -> Manager swaps the baseline, no custom to carry', (
+      tester,
+    ) async {
       final key = GlobalKey();
       await _pump(
         tester,
@@ -238,10 +333,9 @@ void main() {
         type: WorkerType.worker,
         onChanged: emitted.add,
         getRolesUseCase: getRolesUseCase,
-        initialRoleIds: [_projectManager.id],
       );
       await tester.pumpAndSettle();
-      expect(emitted.last.roleIds, containsAll([_workerBasic.id, _projectManager.id]));
+      expect(emitted.last.roleIds, [_workerBasic.id]);
 
       await _pump(
         tester,
@@ -249,12 +343,43 @@ void main() {
         type: WorkerType.manager,
         onChanged: emitted.add,
         getRolesUseCase: getRolesUseCase,
-        initialRoleIds: [_projectManager.id],
       );
       await tester.pumpAndSettle();
 
-      expect(emitted.last.roleIds, containsAll([_branchManager.id, _projectManager.id]));
+      expect(emitted.last.roleIds, [_branchManager.id]);
       expect(emitted.last.roleIds, isNot(contains(_workerBasic.id)));
-    },
-  );
+    });
+
+    testWidgets(
+      'Manager -> Worker removes the baseline and every custom role',
+      (tester) async {
+        final key = GlobalKey();
+        await _pump(
+          tester,
+          key: key,
+          type: WorkerType.manager,
+          onChanged: emitted.add,
+          getRolesUseCase: getRolesUseCase,
+          initialRoleIds: [_branchManager.id, _projectManager.id, _senior.id],
+        );
+        await tester.pumpAndSettle();
+        expect(
+          emitted.last.roleIds,
+          containsAll([_branchManager.id, _projectManager.id, _senior.id]),
+        );
+
+        await _pump(
+          tester,
+          key: key,
+          type: WorkerType.worker,
+          onChanged: emitted.add,
+          getRolesUseCase: getRolesUseCase,
+          initialRoleIds: [_branchManager.id, _projectManager.id, _senior.id],
+        );
+        await tester.pumpAndSettle();
+
+        expect(emitted.last.roleIds, [_workerBasic.id]);
+      },
+    );
+  });
 }

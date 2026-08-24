@@ -208,5 +208,46 @@ void main() {
         expect(button.isLoading, isTrue);
       },
     );
+
+    // Regression (SAN-578): the AI button used to float via `Positioned`
+    // inside a `Stack` shared with the text field, at a fixed offset from
+    // the *field's* bottom edge rather than the *text's*. Since the field
+    // renders at a fixed height regardless of content (`minLines ==
+    // maxLines`), filling several lines pushed the typed text right up to
+    // where the button sat, overlapping it. The button is now laid out as a
+    // normal flow sibling below the field, so it never overlaps regardless
+    // of how many lines are filled.
+    testWidgets(
+      'the AI action never overlaps the text field, even when every line '
+      'is filled',
+      (tester) async {
+        final controller = TextEditingController();
+        addTearDown(controller.dispose);
+
+        await _pump(
+          tester,
+          AppDescriptionField(
+            label: 'Description',
+            controller: controller,
+            maxLines: 5,
+            aiActionLabel: 'Enhance',
+            onImproveWithAi: () {},
+          ),
+        );
+
+        await tester.enterText(
+          find.byType(TextField),
+          List.generate(5, (i) => 'line $i').join('\n'),
+        );
+        await tester.pump();
+
+        final fieldBottom = tester.getBottomLeft(find.byType(AppTextField)).dy;
+        final buttonTop = tester
+            .getTopLeft(find.byType(AppEnhanceWithAiButton))
+            .dy;
+
+        expect(buttonTop, greaterThanOrEqualTo(fieldBottom));
+      },
+    );
   });
 }

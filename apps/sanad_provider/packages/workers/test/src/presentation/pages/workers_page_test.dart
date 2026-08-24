@@ -1,4 +1,5 @@
 import 'package:core/core.dart' as core show Page;
+import 'package:core/core.dart' show PageMeta, StorageKeys;
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -6,6 +7,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:storage/storage.dart' show HiveBoxes;
+import 'package:workers/src/domain/entities/worker_entity.dart';
+import 'package:workers/src/domain/entities/worker_status.dart';
 import 'package:workers/src/domain/repositories/worker_repository.dart';
 import 'package:workers/src/domain/usecases/cancel_invitation_usecase.dart';
 import 'package:workers/src/domain/usecases/delete_invitation_usecase.dart';
@@ -19,6 +23,9 @@ import 'package:workers/src/presentation/bloc/invitations_list/invitations_list_
 import 'package:workers/src/presentation/bloc/worker_action/worker_action_cubit.dart';
 import 'package:workers/src/presentation/bloc/workers_list/workers_list_bloc.dart';
 import 'package:workers/src/presentation/pages/workers_page.dart';
+import 'package:workers/src/presentation/widgets/worker_list_item.dart';
+
+import '../../../support/fake_hive_local_storage.dart';
 
 // No EasyLocalization bootstrap (avoids a real SharedPreferences hang in this
 // sandboxed test environment) — `.tr()` calls fall back to the raw key.
@@ -37,7 +44,13 @@ void main() {
     when(
       () => repo.getWorkers(any()),
     ).thenAnswer((_) => TaskEither.of(const core.Page.empty()));
+    // Default: hint already seen — these tests aren't about the swipe hint,
+    // so this keeps it from ever arming here. The dedicated "swipe
+    // discoverability hint" group below overrides this per scenario.
+    registerFakeHiveLocalStorage(hintSeen: true);
   });
+
+  tearDown(unregisterFakeHiveLocalStorage);
 
   Future<void> pump(WidgetTester tester, {required bool isOwner}) async {
     await tester.binding.setSurfaceSize(const Size(1080, 2400));
@@ -156,6 +169,108 @@ void main() {
           await pump(tester, isOwner: false);
 
           expect(find.text('workers.add_team'), findsNothing);
+        },
+      );
+    },
+  );
+
+  group(
+    'swipe discoverability hint (Team tab) — wiring & persistence',
+    () {
+      // The animation/timing/cancellation mechanics themselves are covered
+      // by the shared driver's own suite
+      // (design_system/test/src/components/app_swipe_action_hint_test.dart)
+      // — these tests only verify this page wires it correctly.
+
+      const worker = WorkerEntity(
+        id: 'w-1',
+        fullName: 'Sam Worker',
+        role: 'worker',
+        initials: 'SW',
+        status: WorkerStatus.active,
+      );
+
+      core.Page<WorkerEntity> onePage() => const core.Page<WorkerEntity>(
+        items: [worker],
+        meta: PageMeta(
+          totalItems: 1,
+          itemCount: 1,
+          itemsPerPage: 10,
+          totalPages: 1,
+          currentPage: 1,
+        ),
+      );
+
+      testWidgets(
+        'unseen: the first row is wrapped in the shared AppSwipeActionHint '
+        'driver',
+        (tester) async {
+          registerFakeHiveLocalStorage();
+          when(
+            () => repo.getWorkers(any()),
+          ).thenAnswer((_) => TaskEither.of(onePage()));
+
+          await pump(tester, isOwner: true);
+          await tester.pump();
+
+          expect(find.byType(AppSwipeActionHint), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'already seen: no AppSwipeActionHint is mounted — the row renders '
+        'as a plain WorkerListItem',
+        (tester) async {
+          registerFakeHiveLocalStorage(hintSeen: true);
+          when(
+            () => repo.getWorkers(any()),
+          ).thenAnswer((_) => TaskEither.of(onePage()));
+
+          await pump(tester, isOwner: true);
+          await tester.pump();
+
+          expect(find.byType(AppSwipeActionHint), findsNothing);
+          expect(find.byType(WorkerListItem), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'a real swipe on the row cancels the hint and persists it as seen',
+        (tester) async {
+          final storage = registerFakeHiveLocalStorage();
+          when(
+            () => repo.getWorkers(any()),
+          ).thenAnswer((_) => TaskEither.of(onePage()));
+
+          await pump(tester, isOwner: true);
+          await tester.pump();
+          expect(find.byType(AppSwipeActionHint), findsOneWidget);
+
+          await tester.drag(find.text('Sam Worker'), const Offset(-300, 0));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 300));
+
+          verify(
+            () => storage.save(
+              key: StorageKeys.workersSwipeHintSeen,
+              value: true,
+              boxName: HiveBoxes.defaultBox,
+            ),
+          ).called(1);
+        },
+      );
+
+      testWidgets(
+        'an empty Team list makes the hint self-abort without throwing',
+        (tester) async {
+          registerFakeHiveLocalStorage();
+          // Outer setUp already stubs an empty page.
+
+          await pump(tester, isOwner: true);
+          await tester.pump(const Duration(milliseconds: 50));
+
+          expect(tester.takeException(), isNull);
+          expect(find.byType(AppSwipeActionHint), findsNothing);
         },
       );
     },

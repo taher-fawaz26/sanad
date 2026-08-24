@@ -65,12 +65,12 @@ layer_order:
       - test_verify
       - sheet_navigation
   - tier: 3
-    packages: [maps, asset_picker, otp]
+    packages: [maps, asset_picker, otp, text_optimization]
   - tier: 4
     packages:
-      [auth, services, workers, document_flow, contact_verification, media_upload, media]
+      [auth, services, workers, document_flow, contact_verification, media_upload, media, activity_logs]
   - tier: 5
-    packages: [account_settings, provider_rbac]
+    packages: [account_settings, provider_rbac, document_validation]
   - tier: 6
     packages: [branches]
   # invitation, registration, and organization_settings are no longer separate

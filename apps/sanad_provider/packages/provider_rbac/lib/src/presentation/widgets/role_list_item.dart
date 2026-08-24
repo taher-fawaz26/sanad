@@ -3,6 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:provider_rbac/src/domain/entities/role_entity.dart';
 import 'package:provider_rbac/src/domain/entities/role_persona_type.dart';
+import 'package:provider_rbac/src/presentation/utils/role_display_name.dart';
 
 /// A single role card in the roles list — Figma `Role Card` (`5494:22710`).
 ///
@@ -45,7 +46,7 @@ class RoleCard extends StatelessWidget {
                   runSpacing: AppSpacing.xs,
                   children: [
                     Text(
-                      role.displayName,
+                      role.localizedDisplayName(),
                       style: typography.regularNormal.copyWith(
                         color: colors.textPrimary,
                         fontWeight: FontWeight.w600,

@@ -8,6 +8,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
 import 'package:workers/src/domain/entities/worker_status.dart';
+import 'package:workers/src/domain/entities/worker_type.dart';
 import 'package:workers/src/domain/repositories/worker_repository.dart';
 import 'package:workers/src/domain/usecases/get_workers_usecase.dart';
 import 'package:workers/src/presentation/bloc/workers_list/workers_list_bloc.dart';
@@ -252,6 +253,325 @@ void main() {
         expect(bloc.state.page, 1);
       },
     );
+
+    group('status/type filters (server-side, SAN)', () {
+      blocTest<WorkersListBloc, WorkersListState>(
+        'status All -> Active sends status=active and resets to page 1',
+        setUp: () {
+          when(() => repo.getWorkers(const WorkersQuery())).thenAnswer(
+            (_) => TaskEither.of(
+              _page(['1', '2'], currentPage: 3, totalPages: 3),
+            ),
+          );
+          when(
+            () => repo.getWorkers(
+              const WorkersQuery(status: WorkerStatus.active),
+            ),
+          ).thenAnswer(
+            (_) => TaskEither.of(_page(['9'], currentPage: 1, totalPages: 1)),
+          );
+        },
+        build: buildBloc,
+        act: (bloc) async {
+          bloc.add(WorkersListFetchEvent());
+          await Future<void>.delayed(Duration.zero);
+          bloc.add(
+            const WorkersListStatusChangedEvent(WorkerStatus.active),
+          );
+        },
+        wait: const Duration(milliseconds: 10),
+        verify: (bloc) {
+          verify(
+            () => repo.getWorkers(
+              const WorkersQuery(status: WorkerStatus.active),
+            ),
+          ).called(1);
+          expect(bloc.state.workers.map((w) => w.id), ['9']);
+          expect(bloc.state.page, 1);
+          expect(bloc.state.statusFilter, WorkerStatus.active);
+        },
+      );
+
+      blocTest<WorkersListBloc, WorkersListState>(
+        'status Inactive sends status=inactive',
+        setUp: () =>
+            when(
+              () => repo.getWorkers(
+                const WorkersQuery(status: WorkerStatus.inactive),
+              ),
+            ).thenAnswer(
+              (_) => TaskEither.of(_page(['1'], currentPage: 1, totalPages: 1)),
+            ),
+        build: buildBloc,
+        act: (bloc) => bloc.add(
+          const WorkersListStatusChangedEvent(WorkerStatus.inactive),
+        ),
+        verify: (bloc) {
+          verify(
+            () => repo.getWorkers(
+              const WorkersQuery(status: WorkerStatus.inactive),
+            ),
+          ).called(1);
+        },
+      );
+
+      blocTest<WorkersListBloc, WorkersListState>(
+        'setting status back to null (All) omits the status param',
+        setUp: () {
+          when(
+            () => repo.getWorkers(
+              const WorkersQuery(status: WorkerStatus.active),
+            ),
+          ).thenAnswer(
+            (_) => TaskEither.of(_page(['1'], currentPage: 1, totalPages: 1)),
+          );
+          when(() => repo.getWorkers(const WorkersQuery())).thenAnswer(
+            (_) =>
+                TaskEither.of(_page(['1', '2'], currentPage: 1, totalPages: 1)),
+          );
+        },
+        build: buildBloc,
+        act: (bloc) {
+          bloc
+            ..add(const WorkersListStatusChangedEvent(WorkerStatus.active))
+            ..add(const WorkersListStatusChangedEvent(null));
+        },
+        verify: (bloc) {
+          verify(() => repo.getWorkers(const WorkersQuery())).called(1);
+          expect(bloc.state.statusFilter, isNull);
+        },
+      );
+
+      blocTest<WorkersListBloc, WorkersListState>(
+        'type Manager sends type=manager',
+        setUp: () =>
+            when(
+              () =>
+                  repo.getWorkers(const WorkersQuery(type: WorkerType.manager)),
+            ).thenAnswer(
+              (_) => TaskEither.of(_page(['1'], currentPage: 1, totalPages: 1)),
+            ),
+        build: buildBloc,
+        act: (bloc) =>
+            bloc.add(const WorkersListTypeChangedEvent(WorkerType.manager)),
+        verify: (bloc) {
+          verify(
+            () => repo.getWorkers(const WorkersQuery(type: WorkerType.manager)),
+          ).called(1);
+          expect(bloc.state.typeFilter, WorkerType.manager);
+        },
+      );
+
+      blocTest<WorkersListBloc, WorkersListState>(
+        'type Worker sends type=worker',
+        setUp: () =>
+            when(
+              () =>
+                  repo.getWorkers(const WorkersQuery(type: WorkerType.worker)),
+            ).thenAnswer(
+              (_) => TaskEither.of(_page(['1'], currentPage: 1, totalPages: 1)),
+            ),
+        build: buildBloc,
+        act: (bloc) =>
+            bloc.add(const WorkersListTypeChangedEvent(WorkerType.worker)),
+        verify: (bloc) {
+          verify(
+            () => repo.getWorkers(const WorkersQuery(type: WorkerType.worker)),
+          ).called(1);
+        },
+      );
+
+      // Status and Type are dispatched on separate `on<T>()` registrations,
+      // so — unlike two keystrokes of the same search event, which
+      // `restartable()` collapses — tapping Status then Type fires two
+      // independent, concurrently-processed fetches. These tests await
+      // between dispatches to match how a real user actually filters
+      // (one tap, see it apply, then a second tap) and stub every
+      // intermediate query the bloc genuinely sends along the way.
+      blocTest<WorkersListBloc, WorkersListState>(
+        'Active + Manager combine into a single request with both params',
+        setUp: () {
+          when(
+            () => repo.getWorkers(
+              const WorkersQuery(status: WorkerStatus.active),
+            ),
+          ).thenAnswer(
+            (_) => TaskEither.of(_page(['1'], currentPage: 1, totalPages: 1)),
+          );
+          when(
+            () => repo.getWorkers(
+              const WorkersQuery(
+                status: WorkerStatus.active,
+                type: WorkerType.manager,
+              ),
+            ),
+          ).thenAnswer(
+            (_) => TaskEither.of(_page(['2'], currentPage: 1, totalPages: 1)),
+          );
+        },
+        build: buildBloc,
+        act: (bloc) async {
+          bloc.add(const WorkersListStatusChangedEvent(WorkerStatus.active));
+          await Future<void>.delayed(Duration.zero);
+          bloc.add(const WorkersListTypeChangedEvent(WorkerType.manager));
+        },
+        verify: (bloc) {
+          verify(
+            () => repo.getWorkers(
+              const WorkersQuery(
+                status: WorkerStatus.active,
+                type: WorkerType.manager,
+              ),
+            ),
+          ).called(1);
+          expect(bloc.state.workers.map((w) => w.id), ['2']);
+        },
+      );
+
+      blocTest<WorkersListBloc, WorkersListState>(
+        'Inactive + Worker combine into a single request with both params',
+        setUp: () {
+          when(
+            () => repo.getWorkers(
+              const WorkersQuery(status: WorkerStatus.inactive),
+            ),
+          ).thenAnswer(
+            (_) => TaskEither.of(_page(['1'], currentPage: 1, totalPages: 1)),
+          );
+          when(
+            () => repo.getWorkers(
+              const WorkersQuery(
+                status: WorkerStatus.inactive,
+                type: WorkerType.worker,
+              ),
+            ),
+          ).thenAnswer(
+            (_) => TaskEither.of(_page(['2'], currentPage: 1, totalPages: 1)),
+          );
+        },
+        build: buildBloc,
+        act: (bloc) async {
+          bloc.add(const WorkersListStatusChangedEvent(WorkerStatus.inactive));
+          await Future<void>.delayed(Duration.zero);
+          bloc.add(const WorkersListTypeChangedEvent(WorkerType.worker));
+        },
+        verify: (bloc) {
+          verify(
+            () => repo.getWorkers(
+              const WorkersQuery(
+                status: WorkerStatus.inactive,
+                type: WorkerType.worker,
+              ),
+            ),
+          ).called(1);
+          expect(bloc.state.workers.map((w) => w.id), ['2']);
+        },
+      );
+
+      blocTest<WorkersListBloc, WorkersListState>(
+        'search + status + type all combine into one request',
+        setUp: () {
+          when(
+            () => repo.getWorkers(
+              const WorkersQuery(status: WorkerStatus.active),
+            ),
+          ).thenAnswer(
+            (_) => TaskEither.of(_page(['1'], currentPage: 1, totalPages: 1)),
+          );
+          when(
+            () => repo.getWorkers(
+              const WorkersQuery(
+                status: WorkerStatus.active,
+                type: WorkerType.manager,
+              ),
+            ),
+          ).thenAnswer(
+            (_) => TaskEither.of(_page(['2'], currentPage: 1, totalPages: 1)),
+          );
+          when(
+            () => repo.getWorkers(
+              const WorkersQuery(
+                search: 'Mohamed',
+                status: WorkerStatus.active,
+                type: WorkerType.manager,
+              ),
+            ),
+          ).thenAnswer(
+            (_) => TaskEither.of(_page(['3'], currentPage: 1, totalPages: 1)),
+          );
+        },
+        build: buildBloc,
+        act: (bloc) async {
+          bloc.add(const WorkersListStatusChangedEvent(WorkerStatus.active));
+          await Future<void>.delayed(Duration.zero);
+          bloc.add(const WorkersListTypeChangedEvent(WorkerType.manager));
+          await Future<void>.delayed(Duration.zero);
+          bloc.add(const WorkersListSearchChangedEvent('Mohamed'));
+        },
+        wait: const Duration(milliseconds: 400),
+        verify: (bloc) {
+          verify(
+            () => repo.getWorkers(
+              const WorkersQuery(
+                search: 'Mohamed',
+                status: WorkerStatus.active,
+                type: WorkerType.manager,
+              ),
+            ),
+          ).called(1);
+          expect(bloc.state.workers.map((w) => w.id), ['3']);
+        },
+      );
+
+      blocTest<WorkersListBloc, WorkersListState>(
+        'clearing both filters restores an unfiltered request',
+        setUp: () {
+          when(
+            () => repo.getWorkers(
+              const WorkersQuery(status: WorkerStatus.active),
+            ),
+          ).thenAnswer(
+            (_) => TaskEither.of(_page(['1'], currentPage: 1, totalPages: 1)),
+          );
+          when(
+            () => repo.getWorkers(
+              const WorkersQuery(
+                status: WorkerStatus.active,
+                type: WorkerType.manager,
+              ),
+            ),
+          ).thenAnswer(
+            (_) => TaskEither.of(_page(['2'], currentPage: 1, totalPages: 1)),
+          );
+          when(
+            () => repo.getWorkers(const WorkersQuery(type: WorkerType.manager)),
+          ).thenAnswer(
+            (_) => TaskEither.of(_page(['3'], currentPage: 1, totalPages: 1)),
+          );
+          when(() => repo.getWorkers(const WorkersQuery())).thenAnswer(
+            (_) => TaskEither.of(
+              _page(['1', '2', '3'], currentPage: 1, totalPages: 1),
+            ),
+          );
+        },
+        build: buildBloc,
+        act: (bloc) async {
+          bloc.add(const WorkersListStatusChangedEvent(WorkerStatus.active));
+          await Future<void>.delayed(Duration.zero);
+          bloc.add(const WorkersListTypeChangedEvent(WorkerType.manager));
+          await Future<void>.delayed(Duration.zero);
+          bloc.add(const WorkersListStatusChangedEvent(null));
+          await Future<void>.delayed(Duration.zero);
+          bloc.add(const WorkersListTypeChangedEvent(null));
+        },
+        verify: (bloc) {
+          verify(() => repo.getWorkers(const WorkersQuery())).called(1);
+          expect(bloc.state.workers.map((w) => w.id), ['1', '2', '3']);
+          expect(bloc.state.statusFilter, isNull);
+          expect(bloc.state.typeFilter, isNull);
+        },
+      );
+    });
 
     blocTest<WorkersListBloc, WorkersListState>(
       'replacing a worker in the list updates it in place',

@@ -1,4 +1,5 @@
 import 'package:asset_picker/asset_picker.dart';
+import 'package:core/core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:media_upload/media_upload.dart';
 
@@ -79,6 +80,78 @@ void main() {
       );
 
       expect(failure, isNull);
+    });
+
+    group('global FileSizePolicy clamp', () {
+      test(
+        'rejects a file over the global maximum even when maxFileSize is '
+        'unset — a bloc built without one must not accept an unbounded '
+        'file',
+        () {
+          final failure = MediaUploadValidator.validateAsset(
+            asset: _asset(size: FileSizePolicy.maxBytes + 1),
+            config: const MediaUploadConfig(),
+            currentCount: 0,
+          );
+
+          expect(failure, isA<FileTooLargeFailure>());
+        },
+      );
+
+      test(
+        'accepts a file exactly at the global maximum when maxFileSize is '
+        'unset',
+        () {
+          final failure = MediaUploadValidator.validateAsset(
+            asset: _asset(size: FileSizePolicy.maxBytes),
+            config: const MediaUploadConfig(),
+            currentCount: 0,
+          );
+
+          expect(failure, isNull);
+        },
+      );
+
+      test(
+        'clamps a configured limit looser than the global maximum down to '
+        'it — a feature-specific rule may never exceed the global cap',
+        () {
+          final failure = MediaUploadValidator.validateAsset(
+            asset: _asset(size: FileSizePolicy.maxBytes + 1),
+            config: const MediaUploadConfig(maxFileSize: 10 * 1024 * 1024),
+            currentCount: 0,
+          );
+
+          expect(
+            failure,
+            isA<FileTooLargeFailure>().having(
+              (f) => f.maxFileSize,
+              'maxFileSize',
+              FileSizePolicy.maxBytes,
+            ),
+          );
+        },
+      );
+
+      test(
+        'preserves a configured limit stricter than the global maximum',
+        () {
+          final failure = MediaUploadValidator.validateAsset(
+            asset: _asset(size: 2 * 1024 * 1024),
+            config: const MediaUploadConfig(maxFileSize: 1024 * 1024),
+            currentCount: 0,
+          );
+
+          expect(
+            failure,
+            isA<FileTooLargeFailure>().having(
+              (f) => f.maxFileSize,
+              'maxFileSize',
+              1024 * 1024,
+            ),
+          );
+        },
+      );
     });
   });
 

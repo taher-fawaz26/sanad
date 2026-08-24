@@ -1,13 +1,15 @@
+import 'package:document_flow/document_flow.dart' show IdVerification;
 import 'package:equatable/equatable.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/legal_data_status.dart';
 
-/// A freshly-extracted (not yet persisted) Emirates ID read — returned by
-/// `POST service-provider/legal-data/extract` (`NationalIdExtractionDto`).
+/// A freshly-extracted (not yet persisted) Emirates ID read — returned bare
+/// by `POST service-provider/legal-data/emirates-id/extract`
+/// (`NationalIdExtractionDto`).
 ///
 /// Deliberately distinct from [PersonalLegalDataEntity]: this is a
 /// preview/extraction result, not a saved record, so it carries no
-/// `id`/`createdAt`/`updatedAt`/media — and it adds [missingFields], which
-/// the persisted record never has.
+/// `id`/`createdAt`/`updatedAt`/media — and it adds [missingFields] and
+/// [idVerification], which the persisted record never has.
 class PersonalLegalDataExtractionEntity extends Equatable {
   const PersonalLegalDataExtractionEntity({
     required this.status,
@@ -19,6 +21,7 @@ class PersonalLegalDataExtractionEntity extends Equatable {
     this.dateOfBirth,
     this.expiryDate,
     this.gender,
+    this.idVerification,
   });
 
   final String? fullNameEnglish;
@@ -40,6 +43,9 @@ class PersonalLegalDataExtractionEntity extends Equatable {
   /// `id_number`). Not persisted.
   final List<String> missingFields;
 
+  /// The extractor's front/back comparison. Not persisted.
+  final IdVerification? idVerification;
+
   @override
   List<Object?> get props => [
     fullNameEnglish,
@@ -51,5 +57,6 @@ class PersonalLegalDataExtractionEntity extends Equatable {
     gender,
     status,
     missingFields,
+    idVerification,
   ];
 }

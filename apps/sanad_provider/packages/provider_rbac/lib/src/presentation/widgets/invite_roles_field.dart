@@ -7,6 +7,7 @@ import 'package:provider_rbac/src/domain/entities/role_entity.dart';
 import 'package:provider_rbac/src/domain/policies/role_assignment_policy.dart';
 import 'package:provider_rbac/src/domain/usecases/get_roles_usecase.dart';
 import 'package:provider_rbac/src/domain/usecases/roles_query.dart';
+import 'package:provider_rbac/src/presentation/utils/role_display_name.dart';
 import 'package:provider_rbac/src/presentation/widgets/select_roles_action_sheet.dart';
 import 'package:workers/workers.dart';
 
@@ -76,7 +77,8 @@ class _InviteRolesFieldState extends State<InviteRolesField> {
       _failure = null;
     });
 
-    final result = await widget.getRolesUseCase(const RolesQuery(limit: 100))
+    final result = await widget
+        .getRolesUseCase(const RolesQuery(limit: 100))
         .run();
     if (!mounted) return;
 
@@ -130,9 +132,17 @@ class _InviteRolesFieldState extends State<InviteRolesField> {
       widget.type,
       _catalog,
     );
+    // Never offer the other type's system role (or, for Worker, any custom
+    // role) as a pick — restrict the sheet's universe to the mandatory
+    // baseline plus whatever RoleAssignmentPolicy says is assignable for
+    // this type, rather than the full unfiltered catalog.
+    final pickerItems = [
+      if (required != null) required,
+      ...RoleAssignmentPolicy.assignableAdditionalRoles(widget.type, _catalog),
+    ];
     final result = await showSelectRolesActionSheet(
       context: context,
-      loadItems: () async => _catalog,
+      loadItems: () async => pickerItems,
       initialSelectedIds: _selected.map((role) => role.id).toSet(),
       mandatoryRoleId: required?.id,
     );
@@ -157,6 +167,16 @@ class _InviteRolesFieldState extends State<InviteRolesField> {
     );
     final isLoading = _catalogStatus == RequestStatus.loading;
     final hasFailed = _catalogStatus == RequestStatus.failure;
+    // Worker never has additional roles to pick — once the catalog is
+    // loaded, disable the trigger instead of opening a sheet with nothing
+    // but the already-visible locked role in it.
+    final hasAssignableRoles =
+        isLoading ||
+        hasFailed ||
+        RoleAssignmentPolicy.assignableAdditionalRoles(
+          widget.type,
+          _catalog,
+        ).isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -165,7 +185,7 @@ class _InviteRolesFieldState extends State<InviteRolesField> {
           label: 'workers.add_worker.roles_label'.tr(),
           hint: 'workers.add_worker.roles_hint'.tr(),
           isRequired: true,
-          enabled: !isLoading && !hasFailed,
+          enabled: !isLoading && !hasFailed && hasAssignableRoles,
           onTap: _openSheet,
         ),
         if (isLoading) ...[
@@ -195,14 +215,14 @@ class _InviteRolesFieldState extends State<InviteRolesField> {
               for (final role in _selected)
                 RoleAssignmentPolicy.isMandatory(role, widget.type)
                     ? AppChip(
-                        label: role.displayName,
+                        label: role.localizedDisplayName(),
                         selected: true,
                         tone: AppChipTone.softNeutral,
                         icon: const Icon(Icons.lock_outline, size: 14),
                         iconPosition: AppChipIconPosition.left,
                       )
                     : AppChip(
-                        label: role.displayName,
+                        label: role.localizedDisplayName(),
                         selected: true,
                         tone: AppChipTone.softSuccess,
                         icon: const Icon(Icons.close, size: 14),
@@ -217,7 +237,7 @@ class _InviteRolesFieldState extends State<InviteRolesField> {
           AppAlert(
             type: AppAlertType.warning,
             message: 'workers.add_worker.role_locked_hint'.tr(
-              namedArgs: {'role': required.displayName},
+              namedArgs: {'role': required.localizedDisplayName()},
             ),
           ),
         ],

@@ -59,20 +59,41 @@ abstract final class SheetNavigator {
     if (parentRoute == null) return;
 
     late final void Function(AnimationStatus) listener;
-    listener = (status) {
-      if (status != AnimationStatus.reverse) return;
-      parentRoute.animation?.removeStatusListener(listener);
-      if (sheetRoute.isActive && sheetRoute.isCurrent) {
+    var listenerRemoved = false;
+
+    void removeListener() {
+      if (!listenerRemoved) {
+        listenerRemoved = true;
+        parentRoute.animation?.removeStatusListener(listener);
+      }
+    }
+
+    void tryDismiss() {
+      if (sheetRoute.isActive) {
         rootNav.removeRoute(sheetRoute);
       }
+    }
+
+    listener = (status) {
+      if (status != AnimationStatus.reverse) return;
+      removeListener();
+      tryDismiss();
     };
     parentRoute.animation?.addStatusListener(listener);
 
-    // Clean up the listener if the sheet is dismissed normally (user taps
-    // outside, drags down, or pops programmatically) before the parent
-    // route is ever popped.
+    // Fallback: go_router may declaratively remove the parent page
+    // without a reverse animation (e.g. replacing the route stack).
+    // `completed` fires once the parent route is disposed regardless
+    // of how it was removed (SAN-564).
+    parentRoute.completed.then((_) {
+      removeListener();
+      tryDismiss();
+    });
+
+    // Clean up if the sheet is dismissed normally (user taps outside,
+    // drags down, or pops programmatically) before the parent is popped.
     sheetRoute.completed.then((_) {
-      parentRoute.animation?.removeStatusListener(listener);
+      removeListener();
     });
   }
 }

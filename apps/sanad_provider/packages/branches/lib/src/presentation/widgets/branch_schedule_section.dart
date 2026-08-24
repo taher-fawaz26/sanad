@@ -1,23 +1,34 @@
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
-import 'package:branches/src/domain/entities/branch_time_slot_entity.dart';
+import 'package:branches/src/domain/entities/branch_schedule_mode.dart';
+import 'package:branches/src/domain/entities/branch_weekdays.dart';
+import 'package:branches/src/domain/policies/branch_schedule_policy.dart';
+import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_state.dart';
 import 'package:branches/src/presentation/utils/branch_schedule_formatter.dart';
-import 'package:branches/src/presentation/widgets/branch_schedule_day_row.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 
-enum BranchScheduleMode { company, custom }
-
-/// Working-hours section — company read-only list or editable custom schedule.
+/// Working-hours section — company read-only list or editable custom
+/// schedule.
+///
+/// Multi-slot days render via the shared [AppWeeklyScheduleDayCard] (one
+/// container per day holding every slot) instead of a single truncating
+/// row. Adding a slot for a day that already has one or more slots merges
+/// into that day's existing group through [onAddSlot]
+/// (`BranchSchedulePolicy.upsertSlot` — the same shared policy
+/// organization_settings' working-hours edit sheet uses) — the day picker
+/// never excludes an already-used day.
 class BranchScheduleSection extends StatelessWidget {
   const BranchScheduleSection({
     required this.mode,
     required this.companySchedule,
     required this.customSchedule,
     required this.onModeChanged,
-    required this.onCustomScheduleChanged,
+    required this.onAddSlot,
+    required this.onRemoveSlot,
+    this.rejection,
     super.key,
   });
 
@@ -25,13 +36,29 @@ class BranchScheduleSection extends StatelessWidget {
   final List<BranchAvailabilityEntity> companySchedule;
   final List<BranchAvailabilityEntity> customSchedule;
   final ValueChanged<BranchScheduleMode> onModeChanged;
-  final ValueChanged<List<BranchAvailabilityEntity>> onCustomScheduleChanged;
+
+  /// Attempts to add a `[from, to)` slot to `dayId`'s custom schedule (see
+  /// [BranchSchedulePolicy.upsertSlot]). The caller owns the actual
+  /// persistence/state change; this widget only triggers the attempt and
+  /// renders [rejection] when it fails.
+  final SlotValidation Function(String dayId, String from, String to)
+  onAddSlot;
+
+  /// Deletes exactly one slot — `dayId`'s slot at its own chronological
+  /// `slotIndex` — never the whole day unless it was the last slot.
+  final void Function(String dayId, int slotIndex) onRemoveSlot;
+
+  /// Most recent add-slot rejection, if any — renders an inline localized
+  /// error below the "Add a day" button (mirrors organization_settings'
+  /// working-hours rejection banner, including its i18n keys).
+  final ScheduleSlotRejection? rejection;
 
   @override
   Widget build(BuildContext context) {
     final schedule = mode == BranchScheduleMode.company
         ? companySchedule
         : customSchedule;
+    final localeName = context.locale.toString();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -54,17 +81,27 @@ class BranchScheduleSection extends StatelessWidget {
         ),
         if (schedule.isNotEmpty) ...[
           SizedBox(height: AppSpacing.md),
-          ...schedule.map(
-            (entry) => Padding(
+          for (final entry in schedule)
+            Padding(
               padding: EdgeInsets.only(bottom: AppSpacing.sm),
-              child: BranchScheduleDayRow(
-                availability: entry,
-                onDelete: mode == BranchScheduleMode.custom
-                    ? () => _deleteDay(entry.day)
-                    : null,
+              child: AppWeeklyScheduleDayCard(
+                group: AppWeeklyScheduleDayGroup(
+                  dayLabel: BranchScheduleFormatter.localizedDay(entry.day),
+                  slots: [
+                    for (final (index, slot) in entry.slots.indexed)
+                      AppWeeklyScheduleSlotRow(
+                        hoursLabel: BranchScheduleFormatter.formatSlot(
+                          slot,
+                          locale: localeName,
+                        ),
+                        onDelete: mode == BranchScheduleMode.custom
+                            ? () => onRemoveSlot(entry.day, index)
+                            : null,
+                      ),
+                  ],
+                ),
               ),
             ),
-          ),
         ],
         if (mode == BranchScheduleMode.custom) ...[
           SizedBox(height: AppSpacing.xs),
@@ -78,35 +115,24 @@ class BranchScheduleSection extends StatelessWidget {
               onPressed: () => _openAddDaySheet(context),
             ),
           ),
+          if (rejection != null) ...[
+            SizedBox(height: AppSpacing.xs),
+            _RejectionText(rejection: rejection!, locale: localeName),
+          ],
         ],
       ],
     );
   }
 
-  void _deleteDay(String day) {
-    onCustomScheduleChanged(
-      customSchedule.where((entry) => entry.day != day).toList(),
-    );
-  }
-
   Future<void> _openAddDaySheet(BuildContext context) async {
-    final existingDays = customSchedule.map((entry) => entry.day).toSet();
-    final availableDays = BranchWeekdays.all
-        .where((day) => !existingDays.contains(day))
-        .toList();
-
-    if (availableDays.isEmpty) {
-      showAppSnackbar(
-        context: context,
-        title: 'branches.add_branch.all_days_added'.tr(),
-      );
-      return;
-    }
-
+    // Every weekday stays selectable — adding a slot for a day that
+    // already has one or more slots is a merge (onAddSlot upserts into
+    // that day's existing group via BranchSchedulePolicy), not a duplicate
+    // day entry.
     final result = await SheetNavigator.push<AppAddScheduleDayResult>(
       context,
       AppAddScheduleDaySheet(
-        days: availableDays
+        days: BranchWeekdays.all
             .map(
               (day) => AppScheduleDayOption(
                 id: day,
@@ -145,15 +171,59 @@ class BranchScheduleSection extends StatelessWidget {
     );
 
     if (result == null) return;
+    // Consults BranchSchedulePolicy — the same source of truth used at
+    // save time — and immediately merges/re-sorts the schedule. On
+    // rejection nothing changes here; the caller stashes [rejection] so it
+    // renders below the "Add a day" button.
+    onAddSlot(result.day, result.from, result.to);
+  }
+}
 
-    onCustomScheduleChanged([
-      ...customSchedule,
-      BranchAvailabilityEntity(
-        day: result.day,
-        slots: [
-          BranchTimeSlotEntity(from: result.from, to: result.to),
-        ],
-      ),
-    ]);
+/// Localized inline error for a rejected add-slot attempt — reuses
+/// organization_settings' exact working-hours rejection copy (same i18n
+/// keys) so both flows show byte-identical messaging.
+class _RejectionText extends StatelessWidget {
+  const _RejectionText({required this.rejection, required this.locale});
+
+  final ScheduleSlotRejection rejection;
+  final String locale;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final typography = context.appTypography;
+    return Text(
+      _message(),
+      style: typography.smallNormal.copyWith(color: colors.error),
+      textAlign: TextAlign.start,
+    );
+  }
+
+  String _message() {
+    switch (rejection.reason) {
+      case SlotValidationReason.overlapsExisting:
+        final conflict = rejection.conflict;
+        if (conflict == null) {
+          return 'settings.working_hours_invalid_times_error'.tr();
+        }
+        return 'settings.working_hours_overlap_error'.tr(
+          namedArgs: {
+            'day': BranchScheduleFormatter.localizedDay(rejection.dayId),
+            'from': BranchScheduleFormatter.formatTime(
+              conflict.from,
+              locale: locale,
+            ),
+            'to': BranchScheduleFormatter.formatTime(
+              conflict.to,
+              locale: locale,
+            ),
+          },
+        );
+      case SlotValidationReason.endBeforeOrEqualStart:
+      case SlotValidationReason.malformed:
+        return 'settings.working_hours_invalid_times_error'.tr();
+      case SlotValidationReason.valid:
+        return '';
+    }
   }
 }

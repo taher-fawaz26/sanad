@@ -11,7 +11,7 @@ import 'package:provider_rbac/provider_rbac.dart';
 import 'package:sanad_provider/src/features/organization_settings/organization_settings.dart';
 import 'package:sanad_provider/src/features/registration/registration.dart';
 import 'package:sanad_provider/src/di/app_di.dart';
-import 'package:sanad_provider/src/features/home/home_page.dart';
+import 'package:sanad_provider/src/features/home/home.dart';
 import 'package:sanad_provider/src/features/messages/messages_page.dart';
 import 'package:sanad_provider/src/features/requests/requests_page.dart';
 import 'package:sanad_provider/src/routing/app_routes.dart';
@@ -111,6 +111,9 @@ GoRouter buildProviderRouter() {
           // way to carry. Same reasoning as `ServicesModule.shellRoute`.
           WorkersModule.route(
             isOwner: () => sl<SessionManager>().isProviderOwner,
+            canViewTeamActivity: () =>
+                sl<SessionManager>().isProviderOwner ||
+                sl<SessionManager>().isManager,
           ),
           // `BranchesModule.ownerAwareRoutes` needs the same `isOwner`
           // callback, to gate the persona-controlled Delete swipe/action

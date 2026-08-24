@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:branches/src/domain/entities/branch_availability_mode.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/domain/repositories/branch_repository.dart';
@@ -58,6 +60,7 @@ Future<void> _pump(
   // `isOwner` rather than a permission set. The "permission-gated swipe
   // actions" group below passes this explicitly per scenario.
   bool isOwner = true,
+  SlidableController? hintController,
 }) async {
   await tester.binding.setSurfaceSize(_surfaceSize);
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -75,6 +78,7 @@ Future<void> _pump(
               branch: branch ?? _activeBranch,
               onTap: onTap,
               isOwner: isOwner,
+              hintController: hintController,
             ),
           ),
         ),
@@ -275,6 +279,57 @@ void main() {
         await tester.pumpAndSettle();
 
         verifyNever(() => repo.deleteBranch(any()));
+      },
+      timeout: const Timeout(Duration(seconds: 20)),
+    );
+  });
+
+  group('BranchListItem — swipe discoverability hint controller', () {
+    late _MockRepo repo;
+    late BranchesBloc bloc;
+    late SemanticsHandle semanticsHandle;
+
+    setUp(() {
+      repo = _MockRepo();
+      bloc = BranchesBloc(
+        getBranchesUseCase: GetBranchesUseCase(repo),
+        deleteBranchUseCase: DeleteBranchUseCase(repo),
+        updateBranchStatusUseCase: UpdateBranchStatusUseCase(repo),
+      );
+      semanticsHandle = WidgetsBinding.instance.ensureSemantics();
+      registerFakeAuthorizationReader(
+        permissions: [BranchPermissions.view, BranchPermissions.update],
+      );
+    });
+
+    tearDown(() {
+      semanticsHandle.dispose();
+      bloc.close();
+      unregisterFakeAuthorizationReader();
+    });
+
+    testWidgets(
+      'an externally-supplied controller drives the real swipe pane — '
+      'proves `AppSwipeActionHint` animates the actual `AppSwipeActions` '
+      'row, not a separate fake',
+      (tester) async {
+        final controller = SlidableController(const TestVSync());
+        addTearDown(controller.dispose);
+
+        await _pump(tester, bloc: bloc, hintController: controller);
+
+        expect(
+          find.bySemanticsLabel('branches.actions.action_edit'),
+          findsNothing,
+        );
+
+        unawaited(controller.openEndActionPane());
+        await tester.pumpAndSettle();
+
+        expect(
+          find.bySemanticsLabel('branches.actions.action_edit'),
+          findsOneWidget,
+        );
       },
       timeout: const Timeout(Duration(seconds: 20)),
     );

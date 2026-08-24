@@ -60,7 +60,15 @@ class GoogleAuthDataSourceImpl implements GoogleAuthDataSource {
               message: 'errors.google_sign_in_cancelled',
             );
           }
-          return NetworkFailure(message: error.toString());
+          // Anything else here is a native/SDK-level failure — e.g. a
+          // `PlatformException` from google_sign_in (a mismatched SHA-1 or
+          // OAuth client surfaces as `ApiException: 10`) or a
+          // `FirebaseAuthException`. That text is developer-facing, not
+          // something to show a user, so it's collapsed to one generic,
+          // localized key rather than echoed via `error.toString()`.
+          return const NetworkFailure(
+            message: 'errors.google_sign_in_failed',
+          );
         },
       );
 

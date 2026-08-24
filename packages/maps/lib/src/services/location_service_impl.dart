@@ -57,6 +57,18 @@ class LocationServiceImpl implements LocationService {
   }
 
   @override
+  Future<LocationPermissionStatus> requestPermission() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return LocationPermissionStatus.serviceDisabled;
+
+    final result = await _permissionService.request(
+      PermissionType.locationWhenInUse,
+    );
+
+    return _toLocationPermissionStatus(result);
+  }
+
+  @override
   Future<bool> openAppSettings() => _permissionService.openSettings();
 
   LocationPermissionStatus _toLocationPermissionStatus(

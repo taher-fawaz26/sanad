@@ -3,7 +3,7 @@ import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:services/src/domain/entities/provider_service_entity.dart';
-import 'package:shared_ui/shared_ui.dart';
+import 'package:text_optimization/text_optimization.dart';
 
 /// The Edit Service form's fields — prefilled from the [service] being
 /// edited.
@@ -17,6 +17,7 @@ class EditServiceFormBody extends StatefulWidget {
   const EditServiceFormBody({
     required this.service,
     required this.onCompletenessChanged,
+    this.onUnsavedChanged,
     super.key,
   });
 
@@ -24,6 +25,10 @@ class EditServiceFormBody extends StatefulWidget {
 
   /// Called whenever every required field becomes filled/emptied.
   final ValueChanged<bool> onCompletenessChanged;
+
+  /// Called whenever the form's unsaved-input state changes (i.e. the
+  /// description differs from its original value).
+  final ValueChanged<bool>? onUnsavedChanged;
 
   @override
   State<EditServiceFormBody> createState() => EditServiceFormBodyState();
@@ -36,6 +41,7 @@ class EditServiceFormBodyState extends State<EditServiceFormBody> {
     text: widget.service.description ?? '',
   );
   bool _wasComplete = false;
+  bool _wasUnsaved = false;
 
   /// Read by `EditServicePage` on submit.
   String get description => _descriptionController.text.trim();
@@ -73,16 +79,18 @@ class EditServiceFormBodyState extends State<EditServiceFormBody> {
           onTap: null,
         ),
         SizedBox(height: AppSpacing.lg),
-        AppDescriptionField(
+        AiEnhanceDescriptionField(
           label: 'services.add_service.description_label'.tr(),
           isRequired: true,
           hint: 'services.add_service.description_hint'.tr(),
           controller: _descriptionController,
-          maxLines: 5,
           maxLength: 500,
           validator: _validateDescription,
           autovalidateMode: AutovalidateMode.onUserInteraction,
-          onChanged: (_) => _reportCompleteness(),
+          onChanged: (_) {
+            _reportCompleteness();
+            _reportUnsavedState();
+          },
           aiActionLabel: 'common.enhance_with_ai'.tr(),
         ),
       ],
@@ -108,5 +116,12 @@ class EditServiceFormBodyState extends State<EditServiceFormBody> {
     if (isComplete == _wasComplete) return;
     _wasComplete = isComplete;
     widget.onCompletenessChanged(isComplete);
+  }
+
+  void _reportUnsavedState() {
+    final unsaved = hasUnsavedInput;
+    if (unsaved == _wasUnsaved) return;
+    _wasUnsaved = unsaved;
+    widget.onUnsavedChanged?.call(unsaved);
   }
 }

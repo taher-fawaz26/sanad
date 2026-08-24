@@ -71,6 +71,23 @@ class AddBranchWizardCubit extends Cubit<AddBranchWizardState> {
     emit(state.copyWith(currentStep: step));
   }
 
+  /// Moves back exactly one step (the nav-bar back action). No-op on step 1.
+  ///
+  /// Never touches [AddBranchDraftCubit] — draft data is preserved
+  /// automatically. Leaving step 2 backward clears [coverageAccessDenied] so
+  /// re-entering it re-evaluates permission from scratch.
+  void goBack() {
+    if (state.currentStep <= 1) return;
+    emit(
+      state.copyWith(
+        currentStep: state.currentStep - 1,
+        coverageAccessDenied: state.currentStep == 2
+            ? false
+            : state.coverageAccessDenied,
+      ),
+    );
+  }
+
   void showStepOneErrors() => emit(state.copyWith(showStepOneErrors: true));
 
   void setCoverageAccessDenied({required bool denied}) {

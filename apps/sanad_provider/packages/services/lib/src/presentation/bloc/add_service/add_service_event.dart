@@ -16,7 +16,20 @@ final class AddServiceSubmittedEvent extends AddServiceEvent {
   List<Object?> get props => [params];
 }
 
-/// Requests the `GET /services` catalog for the service-name picker.
+/// Requests the `GET /categories` list for the category picker (SAN-577:
+/// the first step of the Category → Service dependency).
+final class AddServiceCategoriesRequested extends AddServiceEvent {
+  const AddServiceCategoriesRequested();
+}
+
+/// Requests the `GET /services?categoryId=` catalog, scoped to
+/// [categoryId], for the service picker — only reachable once a category
+/// has been chosen (SAN-577).
 final class AddServiceCatalogRequested extends AddServiceEvent {
-  const AddServiceCatalogRequested();
+  const AddServiceCatalogRequested(this.categoryId);
+
+  final String categoryId;
+
+  @override
+  List<Object?> get props => [categoryId];
 }

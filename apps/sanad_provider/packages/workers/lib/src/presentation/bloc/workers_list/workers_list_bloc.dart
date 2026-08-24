@@ -4,6 +4,8 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
+import 'package:workers/src/domain/entities/worker_status.dart';
+import 'package:workers/src/domain/entities/worker_type.dart';
 import 'package:workers/src/domain/usecases/get_workers_usecase.dart';
 
 part 'workers_list_event.dart';
@@ -43,6 +45,14 @@ class WorkersListBloc extends Bloc<WorkersListEvent, WorkersListState>
       _onSearchChanged,
       transformer: restartable(),
     );
+    on<WorkersListStatusChangedEvent>(
+      _onStatusChanged,
+      transformer: restartable(),
+    );
+    on<WorkersListTypeChangedEvent>(
+      _onTypeChanged,
+      transformer: restartable(),
+    );
     on<WorkerReplacedInListEvent>(_onReplaced);
     on<WorkerRemovedFromListEvent>(_onRemoved);
   }
@@ -55,6 +65,32 @@ class WorkersListBloc extends Bloc<WorkersListEvent, WorkersListState>
   ) async {
     emit(state.copyWith(searchQuery: event.query));
     await Future<void>.delayed(_searchDebounce);
+    await onQueryChanged(emit);
+  }
+
+  Future<void> _onStatusChanged(
+    WorkersListStatusChangedEvent event,
+    Emitter<WorkersListState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        statusFilter: event.status,
+        clearStatusFilter: event.status == null,
+      ),
+    );
+    await onQueryChanged(emit);
+  }
+
+  Future<void> _onTypeChanged(
+    WorkersListTypeChangedEvent event,
+    Emitter<WorkersListState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        typeFilter: event.type,
+        clearTypeFilter: event.type == null,
+      ),
+    );
     await onQueryChanged(emit);
   }
 
@@ -90,6 +126,8 @@ class WorkersListBloc extends Bloc<WorkersListEvent, WorkersListState>
   WorkersQuery buildQuery({required int page}) => WorkersQuery(
     page: page,
     search: state.searchQuery.trim().isEmpty ? null : state.searchQuery.trim(),
+    status: state.statusFilter,
+    type: state.typeFilter,
   );
 
   @override

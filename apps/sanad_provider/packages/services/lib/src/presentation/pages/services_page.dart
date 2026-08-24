@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -22,6 +24,7 @@ import 'package:services/src/presentation/widgets/services_filter_bar.dart';
 import 'package:services/src/routes/service_routes.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
+import 'package:storage/storage.dart';
 
 /// Provider services screen — Figma `4715:25922` (dashboard) and
 /// `4715:23588` (empty state).
@@ -86,12 +89,23 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
     super.dispose();
   }
 
-  /// Whether the empty-state layout (swapped background, hidden FAB, no
-  /// segmented control) should show for the current tab/state combination.
+  /// Whether the full onboarding empty-state layout (swapped background,
+  /// hidden FAB, no segmented control/search bar) should show for the
+  /// current tab/state combination.
+  ///
+  /// Only true when the provider genuinely has zero services — an active
+  /// search query or status filter narrowing the *current* page to zero
+  /// results must NOT trigger this (SAN-580): that's a "no results found"
+  /// case, handled in-list by `noItemsFoundIndicatorBuilder` below, which
+  /// keeps the search bar/segmented control visible and gives the user a
+  /// way back (clear search / change filter) instead of hiding them.
   bool _showEmpty(ServicesListState state, int selectedTab) =>
       selectedTab == 0 &&
       state.status == RequestStatus.success &&
-      state.services.isEmpty;
+      state.services.isEmpty &&
+      state.searchQuery.trim().isEmpty &&
+      state.statusFilter == ProviderServiceStatus.all &&
+      state.selectedCategoryId == null;
 
   @override
   Widget build(BuildContext context) {
@@ -121,6 +135,13 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
                   backgroundColor: showEmpty
                       ? colors.surface
                       : colors.background,
+                  // The pinned search field sits near the top of the sliver
+                  // list, never under the keyboard, so there's nothing here
+                  // that needs the body to shrink for it. Left at the
+                  // default (true), Scaffold's built-in FAB-follows-keyboard
+                  // behavior lifts the FAB by the keyboard's height on focus
+                  // — landing it mid-list instead of "anchored" (SAN-580).
+                  resizeToAvoidBottomInset: false,
                   // Add Service (`POST /provider-services`) is owner-only
                   // (RBAC Phase 7 finding G3 — no create permission exists,
                   // so a persona check is the only correct client gate).
@@ -198,7 +219,6 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
                           Expanded(
                             child: isMyServices
                                 ? _MyServicesContent(
-                                    onAddService: _onAddService,
                                     showAnalytics: widget.isOwner,
                                     isOwner: widget.isOwner,
                                   )
@@ -346,12 +366,9 @@ class _SkeletonSliverList extends StatelessWidget {
 
 class _MyServicesContent extends StatefulWidget {
   const _MyServicesContent({
-    required this.onAddService,
     required this.showAnalytics,
     required this.isOwner,
   });
-
-  final VoidCallback onAddService;
 
   /// Whether to render [ServiceMetricsSection] — `false` when the account
   /// isn't an owner, since `ServiceAnalyticsBloc` isn't provided in that
@@ -359,9 +376,8 @@ class _MyServicesContent extends StatefulWidget {
   /// throw looking it up.
   final bool showAnalytics;
 
-  /// Whether the row-level swipe actions (Edit / Pause-Resume / Delete)
-  /// and the "load-more empty" state's Add-first-service CTA are shown
-  /// (RBAC Phase 7L — all owner-only mutations per finding G3).
+  /// Whether the row-level swipe actions (Edit / Pause-Resume / Delete) are
+  /// shown (RBAC Phase 7L — all owner-only mutations per finding G3).
   final bool isOwner;
 
   @override
@@ -372,6 +388,54 @@ class _MyServicesContentState extends State<_MyServicesContent> {
   late final _searchController = TextEditingController(
     text: context.read<ServicesListBloc>().state.searchQuery,
   );
+
+  /// `null` while the Hive read is in flight — the hint never arms until
+  /// this resolves, so it can't briefly play before we know it's been seen.
+  bool? _hintSeen;
+
+  /// One-shot latch: once the hint has fired (played or been cancelled), row
+  /// 0 renders as a plain `ServiceListItem` on every later build (filter
+  /// change, refresh) instead of re-wrapping it in `AppSwipeActionHint`.
+  bool _hintAttempted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadHintSeen());
+  }
+
+  Future<void> _loadHintSeen() async {
+    final seen =
+        await sl<HiveLocalStorage>().load(
+              key: StorageKeys.servicesSwipeHintSeen,
+              boxName: HiveBoxes.defaultBox,
+            )
+            as bool? ??
+        false;
+    if (!mounted) return;
+    setState(() => _hintSeen = seen);
+  }
+
+  /// Only the first row, and only once — [_hintSeen] resolves to `false`
+  /// (never shown before) and [_hintAttempted] hasn't already latched from
+  /// this row having played or been cancelled.
+  bool _showSwipeHintFor(int index) =>
+      index == 0 && _hintSeen == false && !_hintAttempted;
+
+  void _markHintShown() {
+    if (!mounted) return;
+    setState(() {
+      _hintSeen = true;
+      _hintAttempted = true;
+    });
+    unawaited(
+      sl<HiveLocalStorage>().save(
+        key: StorageKeys.servicesSwipeHintSeen,
+        value: true,
+        boxName: HiveBoxes.defaultBox,
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -426,6 +490,53 @@ class _MyServicesContentState extends State<_MyServicesContent> {
         ProviderServiceStatus.inactive => 'services.status_inactive'.tr(),
       };
 
+  /// Options come from [ServicesListState.categoryOptions] — the categories
+  /// present in the currently-loaded `provider-services` page, not a
+  /// separate categories catalog (see the class doc comment on
+  /// `ServicesListBloc`).
+  void _showCategoryFilterSheet(
+    BuildContext context,
+    List<CategoryRefEntity> categories,
+    String? selectedCategoryId,
+  ) {
+    final bloc = context.read<ServicesListBloc>();
+    SheetNavigator.push<void>(
+      context,
+      AppActionList(
+        items: [
+          AppActionSheetItem(
+            label: 'services.requests_filter_all'.tr(),
+            onTap: () {
+              if (selectedCategoryId == null) return;
+              bloc.add(const ServicesListCategoryChangedEvent(null));
+            },
+          ),
+          for (final category in categories)
+            AppActionSheetItem(
+              label: category.name,
+              onTap: () {
+                if (category.id == selectedCategoryId) return;
+                bloc.add(ServicesListCategoryChangedEvent(category.id));
+              },
+            ),
+        ],
+      ),
+      settings: SheetRouteSettings(
+        title: 'services.filter_category'.tr(),
+        padChild: false,
+      ),
+    );
+  }
+
+  static String? _categoryFilterLabel(ServicesListState state) {
+    final selectedId = state.selectedCategoryId;
+    if (selectedId == null) return null;
+    for (final category in state.categoryOptions) {
+      if (category.id == selectedId) return category.name;
+    }
+    return null;
+  }
+
   /// Realistic mock used only to skeletonize the real row via
   /// [AppSkeletonizer] — no bespoke skeleton widget.
   static final _skeletonService = ProviderServiceEntity(
@@ -446,8 +557,6 @@ class _MyServicesContentState extends State<_MyServicesContent> {
 
   @override
   Widget build(BuildContext context) {
-    final onAddService = widget.onAddService;
-
     // Own `BlocBuilder` (rather than receiving state via a constructor
     // param) so this content rebuilds on every `ServicesListBloc` emit
     // independent of the parent page's chrome, which only rebuilds on the
@@ -505,10 +614,12 @@ class _MyServicesContentState extends State<_MyServicesContent> {
                                 context,
                                 state.statusFilter,
                               ),
-                              // Type has no backend query param to filter on
-                              // (see ServicesFilterBar's doc comment) —
-                              // intentionally left unwired; the dropdown
-                              // stays visible but inert.
+                              categoryLabel: _categoryFilterLabel(state),
+                              onCategoryTap: () => _showCategoryFilterSheet(
+                                context,
+                                state.categoryOptions,
+                                state.selectedCategoryId,
+                              ),
                             ),
                           ],
                         ),
@@ -552,7 +663,16 @@ class _MyServicesContentState extends State<_MyServicesContent> {
                   )
                 else
                   SanadPagedSliverList<ProviderServiceEntity>(
-                    state: toPagingState(state.pagination),
+                    // Category is a client-side filter over the already
+                    // -loaded page — swap in `filteredServices` here rather
+                    // than in the BLoC's own `pagination`, so `hasMore` /
+                    // `loadingMore` / load-more dispatch above keep driving
+                    // off the real, unfiltered accumulated state.
+                    state: toPagingState(
+                      state.pagination.copyWith(
+                        items: state.filteredServices,
+                      ),
+                    ),
                     fetchNextPage: () => context.read<ServicesListBloc>().add(
                       const ServicesListLoadMoreEvent(),
                     ),
@@ -565,12 +685,24 @@ class _MyServicesContentState extends State<_MyServicesContent> {
                     separatorBuilder: (_, _) =>
                         SizedBox(height: AppSpacing.md),
                     itemBuilder: (context, service, index) =>
-                        ServiceListItem(
-                          key: ValueKey(service.id),
-                          service: service,
-                          isOwner: widget.isOwner,
-                          onTap: () => _onServiceTap(context, service),
-                        ),
+                        _showSwipeHintFor(index)
+                        ? AppSwipeActionHint(
+                            enabled: true,
+                            onShown: _markHintShown,
+                            builder: (context, controller) => ServiceListItem(
+                              key: ValueKey(service.id),
+                              service: service,
+                              isOwner: widget.isOwner,
+                              onTap: () => _onServiceTap(context, service),
+                              hintController: controller,
+                            ),
+                          )
+                        : ServiceListItem(
+                            key: ValueKey(service.id),
+                            service: service,
+                            isOwner: widget.isOwner,
+                            onTap: () => _onServiceTap(context, service),
+                          ),
                     firstPageErrorIndicatorBuilder: (_) => Center(
                       child: _ServicesErrorState(
                         failure: state.failure,
@@ -584,14 +716,34 @@ class _MyServicesContentState extends State<_MyServicesContent> {
                         const ServicesListLoadMoreEvent(),
                       ),
                     ),
+                    // Reached only when a search query, status filter, or
+                    // category filter is active and narrows the current page
+                    // to zero results — `_showEmpty` above owns the true
+                    // "provider has zero services at all" case, so there is
+                    // always at least one real service here and the
+                    // onboarding "Add first service" CTA never belongs
+                    // (SAN-580).
                     noItemsFoundIndicatorBuilder: (_) => Center(
-                      child: ServicesEmptyState(
-                        // Filter-cleared / search-cleared "no items" state
-                        // renders the same empty layout as the page-level
-                        // empty state above; hide its CTA for the same G3
-                        // reason.
-                        onAddService: widget.isOwner ? onAddService : null,
-                      ),
+                      child: state.searchQuery.trim().isNotEmpty
+                          ? ServicesSearchEmptyState(
+                              query: state.searchQuery,
+                              onClearSearch: () {
+                                _searchController.clear();
+                                context.read<ServicesListBloc>().add(
+                                  const ServicesListSearchChangedEvent(''),
+                                );
+                              },
+                            )
+                          : state.selectedCategoryId != null
+                          ? ServicesCategoryEmptyState(
+                              onClearCategory: () =>
+                                  context.read<ServicesListBloc>().add(
+                                    const ServicesListCategoryChangedEvent(
+                                      null,
+                                    ),
+                                  ),
+                            )
+                          : const ServicesEmptyState(),
                     ),
                   ),
               ],

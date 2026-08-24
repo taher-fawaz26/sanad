@@ -35,3 +35,12 @@ class DocumentRepairTarget extends Equatable {
   @override
   List<Object?> get props => [parts, scope];
 }
+
+/// The standard whole-document repair target for a front/back Emirates ID
+/// mismatch — every feature that surfaces `DocumentIssue.idMismatch`
+/// (onboarding, renewal) needs the same two-sided replace, so this is the
+/// single shared definition rather than each feature re-declaring it.
+const emiratesIdMismatchRepairTarget = DocumentRepairTarget(
+  parts: [DocumentType.emiratesIdFront, DocumentType.emiratesIdBack],
+  scope: DocumentRepairScope.wholeDocument,
+);

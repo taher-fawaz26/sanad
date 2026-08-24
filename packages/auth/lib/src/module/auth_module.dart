@@ -1,6 +1,7 @@
 import 'package:auth/src/di/auth_di.dart';
 import 'package:auth/src/domain/enums/auth_flow_intent.dart';
 import 'package:auth/src/presentation/pages/auth_page.dart';
+import 'package:auth/src/presentation/pages/scheduled_for_deletion_page.dart';
 import 'package:auth/src/presentation/pages/splash_page.dart';
 import 'package:auth/src/presentation/pages/suspended_page.dart';
 import 'package:auth/src/routes/auth_routes.dart';
@@ -75,6 +76,12 @@ class AuthModule extends FeatureModule {
       GoRoute(
         path: AuthRoutes.suspended,
         builder: (context, state) => SuspendedPage(
+          onLoggedOut: () => context.go(AuthRoutes.login),
+        ),
+      ),
+      GoRoute(
+        path: AuthRoutes.scheduledForDeletion,
+        builder: (context, state) => ScheduledForDeletionPage(
           onLoggedOut: () => context.go(AuthRoutes.login),
         ),
       ),

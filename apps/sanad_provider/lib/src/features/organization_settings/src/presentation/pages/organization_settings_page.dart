@@ -90,9 +90,9 @@ void _refreshHub(BuildContext context) {
 class _OrganizationSettingsView extends StatelessWidget {
   const _OrganizationSettingsView({required this.businessName});
 
-  /// Falls back to the generic label until the business has a name on file
-  /// (e.g. fresh onboarding). See [OrganizationSettingsPage.build] for how
-  /// this is resolved.
+  /// `null` until the business has a name on file (e.g. fresh onboarding) —
+  /// the nav bar omits the title rather than showing a placeholder company
+  /// name. See [OrganizationSettingsPage.build] for how this is resolved.
   final String? businessName;
 
   @override
@@ -102,7 +102,7 @@ class _OrganizationSettingsView extends StatelessWidget {
     return Scaffold(
       backgroundColor: colors.surface,
       appBar: AppNavBar(
-        title: businessName ?? 'branches.company_name'.tr(),
+        title: businessName ?? '',
         trailingAction: AppNavBarTrailingAction.icon,
         trailing: AppNotificationIcon(
           hasUnread: true,

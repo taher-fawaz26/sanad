@@ -1,0 +1,43 @@
+name: document_validation
+description: >-
+  Client-side, pre-upload document-type gate for `document_flow` — answers
+  only "is this the requested document type?" via on-device text
+  recognition (Emirates ID) and OCR (Trade License). The only package that
+  imports those third-party SDKs.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+  flutter: ">=3.19.0"
+
+dependencies:
+  asset_picker:
+    path: ../asset_picker
+  core:
+    path: ../core
+  document_flow:
+    path: ../document_flow
+  flutter:
+    sdk: flutter
+  flutter_tesseract_ocr: ^0.4.31
+  # Pinned to the exact version `document_camera_frame` (used by the
+  # existing in-app document scanner in `asset_picker`) already resolves in
+  # this workspace — see this package's README for why `eid_scanner` was
+  # rejected (its `camera`/ML-Kit pins conflict with the scanner already in
+  # production use).
+  google_mlkit_text_recognition: 0.15.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  mocktail: ^1.0.4
+  testing:
+    path: ../testing
+  very_good_analysis: ^9.0.0
+
+flutter:
+  assets:
+    - assets/tessdata/
+    - assets/tessdata_config.json

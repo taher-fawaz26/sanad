@@ -40,6 +40,39 @@ class ComplianceDocumentsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final labels = ComplianceDocumentCardLabels(
+      companyName: 'settings.legal_documents.compliance_card.company_name_label'
+          .tr(),
+      licenseNumber:
+          'settings.legal_documents.compliance_card.license_number_label'.tr(),
+      updateDocument:
+          'settings.legal_documents.compliance_card.update_document_action'
+              .tr(),
+      expiryDate: 'settings.legal_documents.compliance_card.expiry_date_label'
+          .tr(),
+      underReviewSince:
+          'settings.legal_documents.compliance_card.under_review_since_label'
+              .tr(),
+      rejectedOn: 'settings.legal_documents.compliance_card.rejected_on_label'
+          .tr(),
+      expiredOn: 'settings.legal_documents.compliance_card.expired_on_label'
+          .tr(),
+      expiringSoon:
+          'settings.legal_documents.compliance_card.status_expiring_soon'.tr(),
+      expired: 'settings.legal_documents.compliance_card.status_expired'.tr(),
+      underReview:
+          'settings.legal_documents.compliance_card.status_under_review'.tr(),
+      rejected: 'settings.legal_documents.compliance_card.status_rejected'.tr(),
+      alertExpiring: 'settings.legal_documents.compliance_card.alert_expiring'
+          .tr(),
+      alertExpired: 'settings.legal_documents.compliance_card.alert_expired'
+          .tr(),
+      alertUnderReview:
+          'settings.legal_documents.compliance_card.alert_under_review'.tr(),
+      alertRejected: 'settings.legal_documents.compliance_card.alert_rejected'
+          .tr(),
+    );
+
     return AppSectionCard(
       title: 'settings.section_compliance'.tr(),
       child: Column(
@@ -51,6 +84,7 @@ class ComplianceDocumentsSection extends StatelessWidget {
             AppComplianceDocumentCard(
               documentTitle: documents[index].documentTitle,
               status: documents[index].status,
+              labels: labels,
               companyName: documents[index].companyName,
               licenseNumber: documents[index].licenseNumber,
               expiryDate: documents[index].expiryDate,

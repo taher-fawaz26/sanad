@@ -1,4 +1,5 @@
 import 'package:asset_picker/src/domain/enums/asset_type.dart';
+import 'package:asset_picker/src/infrastructure/scanner/document_scanner_config.dart';
 import 'package:equatable/equatable.dart';
 
 /// Fully declarative configuration for a single pick operation.
@@ -42,6 +43,7 @@ class AssetPickerOptions extends Equatable {
     this.imageQuality = 85,
     this.loadBytes = false,
     this.requireBothSides = false,
+    this.scannerConfig,
   }) : assert(maxSelection >= 1, 'maxSelection must be at least 1'),
        assert(
          imageQuality >= 0 && imageQuality <= 100,
@@ -71,7 +73,10 @@ class AssetPickerOptions extends Equatable {
   /// Ignored when [allowMultiple] is `false` (treated as 1).
   final int maxSelection;
 
-  /// Maximum size, in bytes, of any single asset. `null` means unlimited.
+  /// Maximum size, in bytes, of any single asset. `null` defers to the
+  /// app-wide `FileSizePolicy` maximum — `DefaultAssetValidator` clamps
+  /// whatever is set here against that global ceiling, so this can tighten
+  /// it but never loosen it beyond the global maximum.
   final int? maxFileSize;
 
   /// Explicit allow-list of bare extensions (no leading dot, case-insensitive).
@@ -139,6 +144,12 @@ class AssetPickerOptions extends Equatable {
   /// (e.g. [DocumentCameraFrameScannerProvider]). When `true`, the scanner
   /// returns two [PickedAsset]s — front first, back second.
   final bool requireBothSides;
+
+  /// Per-call override for the scanner presentation (title, side labels,
+  /// instructions). When non-null, the scanner provider uses this instead of
+  /// its app-wide singleton config — so each capture action can show
+  /// document-type-specific copy without changing the global registration.
+  final DocumentScannerConfig? scannerConfig;
 
   /// The effective maximum number of assets, collapsing [allowMultiple] and
   /// [maxSelection] into a single value.
@@ -208,6 +219,7 @@ class AssetPickerOptions extends Equatable {
     int? imageQuality,
     bool? loadBytes,
     bool? requireBothSides,
+    DocumentScannerConfig? scannerConfig,
   }) {
     return AssetPickerOptions(
       allowCamera: allowCamera ?? this.allowCamera,
@@ -235,6 +247,7 @@ class AssetPickerOptions extends Equatable {
       imageQuality: imageQuality ?? this.imageQuality,
       loadBytes: loadBytes ?? this.loadBytes,
       requireBothSides: requireBothSides ?? this.requireBothSides,
+      scannerConfig: scannerConfig ?? this.scannerConfig,
     );
   }
 
@@ -265,5 +278,6 @@ class AssetPickerOptions extends Equatable {
     imageQuality,
     loadBytes,
     requireBothSides,
+    scannerConfig,
   ];
 }

@@ -2,6 +2,8 @@ import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
+import 'package:workers/src/domain/entities/worker_type.dart';
+import 'package:workers/src/presentation/utils/worker_type_localization.dart';
 
 /// Bordered worker row — Figma add-branch workers list (`972:9117`).
 ///
@@ -62,7 +64,9 @@ class WorkerListCard extends StatelessWidget {
                   Text(
                     (worker.jobTitle?.trim().isNotEmpty ?? false)
                         ? worker.jobTitle!.trim()
-                        : worker.role,
+                        : WorkerType.fromApiString(
+                            worker.role,
+                          ).localizedLabel(),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: typography.smallNone.copyWith(

@@ -16,6 +16,8 @@ environment:
 dependencies:
   asset_picker:
     path: ../asset_picker
+  core:
+    path: ../core
   design_system:
     path: ../design_system
   easy_localization: ^3.0.8

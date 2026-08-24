@@ -52,6 +52,36 @@ void main() {
       final map = baseRequest.copyWith(servingAreaPlaceIds: const []).toMap();
       expect(map.containsKey('servingAreaPlaceIds'), isFalse);
     });
+
+    test('includes branchManagerId when a manager is assigned', () {
+      final map = baseRequest.toMap();
+      expect(map['branchManagerId'], 'mgr-1');
+    });
+
+    test(
+      'omits branchManagerId key entirely when null, never sends a null '
+      'value — the Swagger spec lists branchManagerId as optional, but the '
+      'backend actually rejects a null value at runtime (400 '
+      '"branchManagerId must be a UUID"); the UI now requires a manager '
+      'before submission, so this path is a defensive fallback, not a '
+      'supported request shape',
+      () {
+        const noManagerRequest = CreateBranchRequest(
+          branchName: 'Downtown Branch',
+          branchType: BranchType.mainBranch,
+          branchAddress: 'Building 5, Sheikh Zayed Road',
+          cityId: 'city-1',
+          branchPhone: '+971501234567',
+          lat: 25.2048,
+          lng: 55.2708,
+          radiusKm: 5,
+          workerIds: ['w1'],
+        );
+
+        final map = noManagerRequest.toMap();
+        expect(map.containsKey('branchManagerId'), isFalse);
+      },
+    );
   });
 }
 

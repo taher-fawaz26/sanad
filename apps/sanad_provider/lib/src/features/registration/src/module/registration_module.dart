@@ -103,6 +103,7 @@ class RegistrationModule extends FeatureModule {
                 fetchDocuments: sl<FetchDocumentsUseCase>(
                   instanceName: registrationDocumentFlowInstance,
                 ),
+                validator: sl<DocumentTypeValidator>(),
               ),
             ),
           ],

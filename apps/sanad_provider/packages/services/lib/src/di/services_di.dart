@@ -166,6 +166,7 @@ abstract final class ServicesDI {
         () => AddServiceBloc(
           createProviderServiceUseCase: sl<CreateProviderServiceUseCase>(),
           browseCatalogUseCase: sl<BrowseCatalogUseCase>(),
+          getCategoriesUseCase: sl<GetCategoriesUseCase>(),
         ),
       )
       ..registerFactory(

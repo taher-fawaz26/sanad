@@ -101,8 +101,15 @@ class _AppTextFieldState extends State<AppTextField> {
     final brightness = Theme.of(context).brightness;
 
     return FormField<String>(
+      // Prefer the controller's live text over the FormField's own tracked
+      // `value`: that internal value only updates via the `TextField`'s
+      // `onChanged` → `field.didChange` bridge below, so it goes stale
+      // whenever something sets `controller.text` programmatically (e.g. an
+      // "Enhance with AI" action replacing the field's contents) — the next
+      // `Form.validate()` would otherwise validate the text the field had
+      // *before* that replacement.
       validator: (value) {
-        final resolved = value ?? widget.controller?.text ?? '';
+        final resolved = widget.controller?.text ?? value ?? '';
         return widget.validator?.call(resolved);
       },
       initialValue: widget.controller?.text ?? '',

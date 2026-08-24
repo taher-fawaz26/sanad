@@ -42,15 +42,6 @@ class AuthResendInfoRequestedEvent extends AuthEvent {
 
 class AuthLogoutEvent extends AuthEvent {}
 
-class AuthDeleteAccountEvent extends AuthEvent {
-  const AuthDeleteAccountEvent(this.userSub);
-
-  final String userSub;
-
-  @override
-  List<Object?> get props => [userSub];
-}
-
 class AuthCheckSignInStatusEvent extends AuthEvent {}
 
 /// Google sign-in under the given [intent].

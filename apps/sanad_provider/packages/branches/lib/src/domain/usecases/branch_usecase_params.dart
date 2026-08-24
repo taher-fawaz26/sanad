@@ -26,6 +26,14 @@ class GetBranchParams extends Equatable {
 ///
 /// All fields required by [CreateBranchDto] are non-nullable here.
 /// [workerIds] must be non-empty (OpenAPI minItems: 1).
+///
+/// [branchManagerId] is typed nullable purely as a defensive fallback at
+/// this layer — the published Swagger spec lists it as optional, but
+/// `POST /api/v1/branches` actually rejects a null value at runtime
+/// (`400 "branchManagerId must be a UUID"`), a backend contract
+/// inconsistency. The Add Branch UI (`AddBranchDraft.isStepOneComplete`)
+/// requires a manager before submission is reachable, so this should never
+/// actually be null in practice.
 class CreateBranchParams extends Equatable {
   const CreateBranchParams({
     required this.branchName,
@@ -33,11 +41,11 @@ class CreateBranchParams extends Equatable {
     required this.branchAddress,
     required this.cityId,
     required this.branchPhone,
-    required this.branchManagerId,
     required this.lat,
     required this.lng,
     required this.radiusKm,
     required this.workerIds,
+    this.branchManagerId,
     this.googleMapsLink,
     this.socialMediaLink,
     this.availabilityMode = BranchAvailabilityMode.coreHours,
@@ -51,7 +59,7 @@ class CreateBranchParams extends Equatable {
   final String branchAddress;
   final String cityId;
   final String branchPhone;
-  final String branchManagerId;
+  final String? branchManagerId;
   final double lat;
   final double lng;
   final double radiusKm;

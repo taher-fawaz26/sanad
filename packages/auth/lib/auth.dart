@@ -25,7 +25,6 @@ export 'src/domain/enums/auth_session_status.dart';
 export 'src/domain/enums/user_type.dart';
 export 'src/domain/repositories/auth_repository.dart';
 export 'src/domain/usecases/check_signin_status_usecase.dart';
-export 'src/domain/usecases/delete_account_usecase.dart';
 export 'src/domain/usecases/get_current_user_usecase.dart';
 export 'src/domain/usecases/get_resend_info_usecase.dart';
 export 'src/domain/usecases/logout_usecase.dart';

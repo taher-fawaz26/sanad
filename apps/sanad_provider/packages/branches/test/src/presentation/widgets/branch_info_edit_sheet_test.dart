@@ -134,4 +134,62 @@ void main() {
       },
     );
   });
+
+  group(
+    'BranchInfoEditSheet — free-text branch names (no character '
+    'whitelist)',
+    () {
+      for (final name in [
+        'Dubai Marina Branch',
+        'A1 @ Downtown - Main Office',
+        '24/7 Home Services (Branch #2)',
+        'فرع دبي الرئيسي',
+        'مركز الخدمة #2',
+        'فرع أبو ظبي / الرئيسي',
+      ]) {
+        testWidgets('"$name" is accepted and enables Save', (tester) async {
+          await pump(tester);
+
+          await tester.enterText(nameField(), name);
+          await tester.pump();
+
+          expect(find.text('validation.invalid_name'), findsNothing);
+          expect(saveButton(tester).onPressed, isNotNull);
+        });
+      }
+
+      for (final name in [
+        '123456',
+        '666666',
+        '@@@@@@',
+        '###---###',
+        '......',
+      ]) {
+        testWidgets('"$name" (no letters) is rejected', (tester) async {
+          await pump(tester);
+
+          await tester.enterText(nameField(), name);
+          await tester.pump();
+
+          expect(find.text('validation.invalid_name'), findsOneWidget);
+          expect(saveButton(tester).onPressed, isNull);
+        });
+      }
+
+      testWidgets('whitespace-only is rejected as required, not invalid', (
+        tester,
+      ) async {
+        await pump(tester);
+
+        await tester.enterText(nameField(), '     ');
+        await tester.pump();
+
+        expect(
+          find.text('branches.add_branch.branch_name_required'),
+          findsOneWidget,
+        );
+        expect(saveButton(tester).onPressed, isNull);
+      });
+    },
+  );
 }

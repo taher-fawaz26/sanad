@@ -223,6 +223,36 @@ void main() {
       expect(bodyKey.currentState!.isPhoneValid, isTrue);
       expect(bodyKey.currentState!.phone, '+971501234567');
     });
+
+    testWidgets(
+      'a landline-shaped 8-digit number is rejected — mobile only '
+      '(SAN-596: previously accepted client-side, only rejected by the '
+      'backend after a failed save attempt)',
+      (tester) async {
+        final bodyKey = GlobalKey<WorkerFormBodyState>();
+        await _pump(tester, formKey: formKey, bodyKey: bodyKey);
+
+        await tester.enterText(find.byType(TextField).at(2), '50000000');
+        await validate(tester);
+
+        expect(find.text('validation.form.uae_phone_invalid'), findsOneWidget);
+        expect(bodyKey.currentState!.isPhoneValid, isFalse);
+      },
+    );
+
+    testWidgets(
+      'a structurally-valid mobile number (e.g. 599999999) passes format '
+      'validation — distinguishing a real from a placeholder-looking '
+      'number is backend/OTP-owned, not a client format check',
+      (tester) async {
+        await _pump(tester, formKey: formKey);
+
+        await tester.enterText(find.byType(TextField).at(2), '599999999');
+        await validate(tester);
+
+        expect(find.text('validation.form.uae_phone_invalid'), findsNothing);
+      },
+    );
   });
 
   group('job title', () {
@@ -273,5 +303,93 @@ void main() {
         findsWidgets,
       );
     });
+  });
+
+  group('live validation (SAN-593) — before any submit attempt', () {
+    // showValidationErrors stays false throughout this group and validate()
+    // (formKey.currentState!.validate()) is never called — every error
+    // below must appear purely from AutovalidateMode.onUserInteraction on
+    // the individual field, proving feedback no longer waits for a failed
+    // submit/Invite attempt.
+
+    testWidgets(
+      'full name: a symbols-only string ("@@@@@@@") shows the format '
+      'error immediately as the user types',
+      (tester) async {
+        await _pump(tester, formKey: formKey, showValidationErrors: false);
+
+        await tester.enterText(find.byType(TextField).at(0), '@@@@@@@');
+        await tester.pump();
+
+        expect(
+          find.text('workers.add_worker.validation_name_format'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'email: a symbols-only string ("@@@@@@@@@@@") shows the email-format '
+      'error immediately as the user types',
+      (tester) async {
+        await _pump(tester, formKey: formKey, showValidationErrors: false);
+
+        await tester.enterText(find.byType(TextField).at(1), '@@@@@@@@@@@');
+        await tester.pump();
+
+        expect(
+          find.text('workers.add_worker.validation_email'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'phone: a landline-shaped 8-digit number shows the format error '
+      'immediately as the user types',
+      (tester) async {
+        await _pump(tester, formKey: formKey, showValidationErrors: false);
+
+        await tester.enterText(find.byType(TextField).at(2), '50000000');
+        await tester.pump();
+
+        expect(find.text('validation.form.uae_phone_invalid'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'job title: an over-length value shows the length error immediately '
+      'as the user types',
+      (tester) async {
+        await _pump(tester, formKey: formKey, showValidationErrors: false);
+
+        await tester.enterText(find.byType(TextField).at(3), 'A' * 256);
+        await tester.pump();
+
+        expect(find.text('validation.length_max'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'a valid name typed after an invalid one clears the live error, '
+      'still with no submit attempt',
+      (tester) async {
+        await _pump(tester, formKey: formKey, showValidationErrors: false);
+
+        await tester.enterText(find.byType(TextField).at(0), '@@@@@@@');
+        await tester.pump();
+        expect(
+          find.text('workers.add_worker.validation_name_format'),
+          findsOneWidget,
+        );
+
+        await tester.enterText(find.byType(TextField).at(0), 'Ahmed Ali');
+        await tester.pump();
+        expect(
+          find.text('workers.add_worker.validation_name_format'),
+          findsNothing,
+        );
+      },
+    );
   });
 }

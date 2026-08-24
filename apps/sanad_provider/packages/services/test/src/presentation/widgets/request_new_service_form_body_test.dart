@@ -14,9 +14,29 @@ import 'package:services/src/domain/usecases/create_service_request_usecase.dart
 import 'package:services/src/domain/usecases/get_categories_usecase.dart';
 import 'package:services/src/presentation/bloc/request_new_service/request_new_service_bloc.dart';
 import 'package:services/src/presentation/widgets/request_new_service_form_body.dart';
+import 'package:text_optimization/text_optimization.dart';
 
 class _MockMediaUploadRepository extends Mock
     implements MediaUploadRepository {}
+
+class _MockTextOptimizationRepository extends Mock
+    implements TextOptimizationRepository {}
+
+/// `RequestNewServiceFormBody`'s description field resolves a
+/// `TextOptimizationCubit` from `sl` (SAN-578) — these tests never tap
+/// "Enhance with AI", but the widget still needs one registered to build.
+void _registerTextOptimizationCubit() {
+  final repository = _MockTextOptimizationRepository();
+  when(
+    () => repository.optimize(any()),
+  ).thenAnswer((_) => TaskEither.right(''));
+  if (sl.isRegistered<TextOptimizationCubit>()) {
+    sl.unregister<TextOptimizationCubit>();
+  }
+  sl.registerFactory<TextOptimizationCubit>(
+    () => TextOptimizationCubit(OptimizeTextUseCase(repository)),
+  );
+}
 
 /// Never invoked by these tests — this widget only ever dispatches
 /// [RequestNewServiceCategoriesRequested]; submission is
@@ -113,6 +133,13 @@ Future<void> _pump(
   addTearDown(() {
     mediaBloc.close();
     requestNewServiceBloc.close();
+  });
+
+  _registerTextOptimizationCubit();
+  addTearDown(() {
+    if (sl.isRegistered<TextOptimizationCubit>()) {
+      sl.unregister<TextOptimizationCubit>();
+    }
   });
 
   await tester.pumpWidget(

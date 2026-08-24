@@ -7,7 +7,10 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
 import 'package:workers/src/domain/entities/worker_status.dart';
+import 'package:workers/src/domain/entities/worker_type.dart';
 import 'package:workers/src/presentation/bloc/workers_list/workers_list_bloc.dart';
+import 'package:workers/src/presentation/pages/worker_details_page.dart';
+import 'package:workers/src/presentation/utils/worker_type_localization.dart';
 import 'package:workers/src/presentation/widgets/worker_action_invokers.dart';
 import 'package:workers/src/routes/worker_routes.dart';
 
@@ -34,6 +37,7 @@ class WorkerListItem extends StatelessWidget {
     super.key,
     this.onTap,
     this.isOwner = true,
+    this.hintController,
   });
 
   final WorkerEntity worker;
@@ -47,6 +51,12 @@ class WorkerListItem extends StatelessWidget {
   /// consumer that doesn't yet thread `isOwner` in.
   final bool isOwner;
 
+  /// Externally-driven controller for the first-time swipe discoverability
+  /// hint (`AppSwipeActionHint`). Only ever supplied for the one row the
+  /// hint targets — every other row leaves this null and keeps
+  /// `AppSwipeActions`'s default self-owned controller.
+  final SlidableController? hintController;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
@@ -54,6 +64,7 @@ class WorkerListItem extends StatelessWidget {
 
     return AppSwipeActions(
       groupTag: workerSwipeGroupTag,
+      controller: hintController,
       actions: isOwner
           ? [
               AppSwipeAction(
@@ -84,7 +95,7 @@ class WorkerListItem extends StatelessWidget {
           : const [],
       child: AppEntityListItem(
         title: worker.fullName,
-        caption: worker.role,
+        caption: WorkerType.fromApiString(worker.role).localizedLabel(),
         leading: AppAvatar(
           image:
               worker.profilePicUrl != null && worker.profilePicUrl!.isNotEmpty
@@ -111,11 +122,18 @@ class WorkerListItem extends StatelessWidget {
 
   Future<void> _openDetails(BuildContext context) async {
     final bloc = context.read<WorkersListBloc>();
-    final updated = await context.push<WorkerEntity>(
+    final result = await context.push<Object>(
       WorkerRoutes.detailsFor(worker.id),
       extra: worker,
     );
-    if (updated != null) bloc.add(WorkerReplacedInListEvent(updated));
+    switch (result) {
+      case final WorkerEntity updated:
+        bloc.add(WorkerReplacedInListEvent(updated));
+      case WorkerDeletedResult(:final workerId):
+        bloc.add(WorkerRemovedFromListEvent(workerId));
+      default:
+        break;
+    }
   }
 
   AppStatusBadge _statusBadge(WorkerStatus status) => switch (status) {

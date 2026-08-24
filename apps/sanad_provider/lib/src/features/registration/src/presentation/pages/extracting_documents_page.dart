@@ -1,12 +1,10 @@
-import 'package:app_assets/app_assets.dart';
-import 'package:design_system/design_system.dart';
 import 'package:document_flow/document_flow.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sanad_provider/src/features/registration/src/presentation/widgets/registration_scan_chrome.dart';
+import 'package:sanad_provider/src/features/registration/src/presentation/widgets/registration_extracting_view.dart';
 import 'package:sanad_provider/src/features/registration/src/routes/registration_routes.dart';
 import 'package:shared_ui/shared_ui.dart';
 
@@ -19,9 +17,6 @@ class ExtractingDocumentsPage extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final typography = context.appTypography;
-
     useEffect(() {
       context.read<DocumentFlowBloc>().add(const ExtractionRequested());
       return null;
@@ -76,35 +71,7 @@ class ExtractingDocumentsPage extends HookWidget {
           );
         }
 
-        return RegistrationGradientScaffold(
-          child: Column(
-            children: [
-              SizedBox(height: responsiveDimension(AppSpacing.xxxxl)),
-              AppSvgPicture.asset(
-                AppSvgs.sanadLogo,
-                width: responsiveDimension(160),
-                height: responsiveDimension(52),
-              ),
-              const Spacer(),
-              const AppDocumentExtractionLoader(),
-              const Spacer(),
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: responsiveDimension(AppSpacing.xl),
-                ),
-                child: Text(
-                  'registration.extracting'.tr(),
-                  textAlign: TextAlign.center,
-                  style: typography.regularNormal.copyWith(
-                    color: colors.white,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              SizedBox(height: responsiveDimension(AppSpacing.xxxxl)),
-            ],
-          ),
-        );
+        return const RegistrationExtractingView();
       },
     );
   }

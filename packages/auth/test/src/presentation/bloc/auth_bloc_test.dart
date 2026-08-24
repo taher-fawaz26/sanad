@@ -12,7 +12,6 @@ import 'package:auth/src/domain/enums/auth_flow_intent.dart';
 import 'package:auth/src/domain/enums/auth_session_status.dart';
 import 'package:auth/src/domain/enums/user_type.dart';
 import 'package:auth/src/domain/usecases/check_signin_status_usecase.dart';
-import 'package:auth/src/domain/usecases/delete_account_usecase.dart';
 import 'package:auth/src/domain/usecases/get_current_user_usecase.dart';
 import 'package:auth/src/domain/usecases/get_resend_info_usecase.dart';
 import 'package:auth/src/domain/usecases/logout_usecase.dart';
@@ -43,8 +42,6 @@ class _MockResendOtpUseCase extends Mock implements ResendOtpUseCase {}
 class _MockGetResendInfoUseCase extends Mock implements GetResendInfoUseCase {}
 
 class _MockLogoutUseCase extends Mock implements AuthLogoutUseCase {}
-
-class _MockDeleteAccountUseCase extends Mock implements DeleteAccountUseCase {}
 
 class _MockSessionManager extends Mock implements SessionManager {}
 
@@ -89,7 +86,6 @@ void main() {
   late _MockResendOtpUseCase resendOtpUseCase;
   late _MockGetResendInfoUseCase getResendInfoUseCase;
   late _MockLogoutUseCase logoutUseCase;
-  late _MockDeleteAccountUseCase deleteAccountUseCase;
   late _MockSessionManager sessionManager;
   late _MockCheckSignInStatusUseCase checkSignInStatusUseCase;
   late _MockSocialSignupUseCase socialSignupUseCase;
@@ -103,7 +99,6 @@ void main() {
     resendOtpUseCase: resendOtpUseCase,
     getResendInfoUseCase: getResendInfoUseCase,
     logoutUseCase: logoutUseCase,
-    deleteAccountUseCase: deleteAccountUseCase,
     sessionManager: sessionManager,
     checkSignInStatusUseCase: checkSignInStatusUseCase,
     authStatusNotifier: authStatusNotifier,
@@ -114,7 +109,6 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(const RequestEmailOtpParams(email: ''));
-    registerFallbackValue(const DeleteAccountParams(userSub: ''));
     registerFallbackValue(const NoParams());
     registerFallbackValue(_FakeAuthSession());
     registerFallbackValue(_tIdentity);
@@ -126,7 +120,6 @@ void main() {
     resendOtpUseCase = _MockResendOtpUseCase();
     getResendInfoUseCase = _MockGetResendInfoUseCase();
     logoutUseCase = _MockLogoutUseCase();
-    deleteAccountUseCase = _MockDeleteAccountUseCase();
     sessionManager = _MockSessionManager();
     checkSignInStatusUseCase = _MockCheckSignInStatusUseCase();
     socialSignupUseCase = _MockSocialSignupUseCase();
@@ -406,72 +399,6 @@ void main() {
       );
     });
 
-    // ── DeleteAccount ─────────────────────────────────────────────────────
-
-    group('AuthDeleteAccountEvent', () {
-      blocTest<AuthBloc, AuthState>(
-        'emits [failure(user:null)] immediately when no user is in state',
-        build: buildBloc,
-        act: (bloc) => bloc.add(const AuthDeleteAccountEvent('sub-123')),
-        expect: () => [
-          isA<AuthDeleteAccountFailureState>().having(
-            (s) => s.user,
-            'user',
-            null,
-          ),
-        ],
-      );
-
-      blocTest<AuthBloc, AuthState>(
-        'emits [loading, logout success] when account deletion succeeds',
-        build: () {
-          when(
-            () => deleteAccountUseCase(any()),
-          ).thenReturn(TaskEither<Failure, void>.right(null));
-          return buildBloc();
-        },
-        seed: () => const AuthAuthenticatedState(_tUser),
-        act: (bloc) => bloc.add(const AuthDeleteAccountEvent('sub-123')),
-        expect: () => [
-          isA<AuthDeleteAccountLoadingState>().having(
-            (s) => s.user,
-            'user',
-            _tUser,
-          ),
-          isA<AuthLogoutSuccessState>(),
-        ],
-        verify: (_) {
-          verify(() => sessionManager.clear()).called(1);
-        },
-      );
-
-      blocTest<AuthBloc, AuthState>(
-        'emits [loading, failure] when account deletion API fails',
-        build: () {
-          when(
-            () => deleteAccountUseCase(any()),
-          ).thenReturn(TaskEither.left(_tFailure));
-          return buildBloc();
-        },
-        seed: () => const AuthAuthenticatedState(_tUser),
-        act: (bloc) => bloc.add(const AuthDeleteAccountEvent('sub-123')),
-        expect: () => [
-          isA<AuthDeleteAccountLoadingState>().having(
-            (s) => s.user,
-            'user',
-            _tUser,
-          ),
-          isA<AuthDeleteAccountFailureState>()
-              .having((s) => s.user, 'user', _tUser)
-              .having(
-                (s) => s.failure.message,
-                'failure.message',
-                'server_error',
-              ),
-        ],
-      );
-    });
-
     // ── Google Sign-In ─────────────────────────────────────────────────────
 
     group('AuthGoogleSignInEvent', () {
@@ -559,6 +486,26 @@ void main() {
         expect: () => [
           isA<AuthGoogleSignInLoadingState>(),
           isA<AuthSuspendedState>(),
+        ],
+      );
+
+      blocTest<AuthBloc, AuthState>(
+        'signIn + SCHEDULED_FOR_DELETION emits AuthScheduledForDeletionState',
+        build: () {
+          when(() => socialLoginUseCase(any())).thenReturn(
+            TaskEither.right(
+              const LoginResult(
+                status: AuthAccountStatus.scheduledForDeletion,
+              ),
+            ),
+          );
+          return buildBloc();
+        },
+        act: (bloc) =>
+            bloc.add(const AuthGoogleSignInEvent(AuthFlowIntent.signIn)),
+        expect: () => [
+          isA<AuthGoogleSignInLoadingState>(),
+          isA<AuthScheduledForDeletionState>(),
         ],
       );
 

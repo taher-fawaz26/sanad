@@ -48,3 +48,13 @@ flutter_[0-9][0-9].log
 
 # stray Firebase CLI debug logs
 firebase-debug.log
+
+# Font Awesome Pro is a paid, licensed subscription (trysanad.us account).
+# The vendored/configured font_awesome_flutter copy embeds Pro OTF fonts and
+# icons.json metadata pulled from that account and must never be committed or
+# pushed to any repository, public or private. See third_party/font_awesome_flutter/README.md
+# for how each developer/CI regenerates it locally from their own Pro download.
+third_party/font_awesome_flutter/
+
+# Raw Font Awesome Pro desktop download — never commit under any path.
+**/fontawesome-pro-*/

@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:auth/auth.dart';
 import 'package:authorization/authorization.dart';
 import 'package:branches/src/domain/entities/branch_availability_mode.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
@@ -15,6 +18,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
 import 'package:shared_ui/shared_ui.dart';
+import 'package:storage/storage.dart';
 
 /// Realistic mock used only to skeletonize the real row via
 /// [AppSkeletonizer] — no bespoke skeleton widget.
@@ -55,20 +59,91 @@ class _ProviderBranchesPageState extends State<ProviderBranchesPage> {
 
   @override
   Widget build(BuildContext context) {
+    // The business name comes from the auth session's provider profile
+    // (BusinessProviderProfileModel — shared shape for individual and
+    // company providers), the same authoritative source
+    // OrganizationSettingsPage resolves it from — never a localized string.
+    final profile = sl<SessionManager>().profile;
+    final businessName = profile is BusinessProviderProfileModel
+        ? profile.businessName
+        : null;
+
     return Scaffold(
       backgroundColor: context.appColors.surface,
-      body: SafeArea(child: _BranchesTab(isOwner: widget.isOwner)),
+      body: SafeArea(
+        child: _BranchesTab(
+          isOwner: widget.isOwner,
+          businessName: businessName,
+        ),
+      ),
     );
   }
 }
 
-class _BranchesTab extends StatelessWidget {
-  const _BranchesTab({required this.isOwner});
+class _BranchesTab extends StatefulWidget {
+  const _BranchesTab({required this.isOwner, required this.businessName});
 
   final bool isOwner;
 
+  /// `null` until the business has a name on file (e.g. fresh onboarding) —
+  /// the header omits the company row rather than showing a placeholder.
+  final String? businessName;
+
+  @override
+  State<_BranchesTab> createState() => _BranchesTabState();
+}
+
+class _BranchesTabState extends State<_BranchesTab> {
   static const double _titleSectionHeight = 60;
   static const double _headerSafetyMargin = 20;
+
+  /// `null` while the Hive read is in flight — the hint never arms until
+  /// this resolves, so it can't briefly play before we know it's been seen.
+  bool? _hintSeen;
+
+  /// One-shot latch: once the hint has fired (played or been cancelled), row
+  /// 0 renders as a plain `BranchListItem` on every later build (filter
+  /// change, refresh) instead of re-wrapping it in `AppSwipeActionHint`.
+  bool _hintAttempted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadHintSeen());
+  }
+
+  Future<void> _loadHintSeen() async {
+    final seen =
+        await sl<HiveLocalStorage>().load(
+              key: StorageKeys.branchesSwipeHintSeen,
+              boxName: HiveBoxes.defaultBox,
+            )
+            as bool? ??
+        false;
+    if (!mounted) return;
+    setState(() => _hintSeen = seen);
+  }
+
+  /// Only the first row, and only once — [_hintSeen] resolves to `false`
+  /// (never shown before) and [_hintAttempted] hasn't already latched from
+  /// this row having played or been cancelled.
+  bool _showSwipeHintFor(int index) =>
+      index == 0 && _hintSeen == false && !_hintAttempted;
+
+  void _markHintShown() {
+    if (!mounted) return;
+    setState(() {
+      _hintSeen = true;
+      _hintAttempted = true;
+    });
+    unawaited(
+      sl<HiveLocalStorage>().save(
+        key: StorageKeys.branchesSwipeHintSeen,
+        value: true,
+        boxName: HiveBoxes.defaultBox,
+      ),
+    );
+  }
 
   /// Pinned search row: bordered field height + vertical padding around it.
   /// Must match the [PreferredSize] child exactly to avoid RenderFlex overflow.
@@ -128,10 +203,12 @@ class _BranchesTab extends StatelessWidget {
                     scrolledUnderElevation: 0,
                     elevation: 0,
                     expandedHeight: _expandedHeaderHeight(),
-                    flexibleSpace: const FlexibleSpaceBar(
+                    flexibleSpace: FlexibleSpaceBar(
                       background: SingleChildScrollView(
-                        physics: NeverScrollableScrollPhysics(),
-                        child: _CollapsingHeader(),
+                        physics: const NeverScrollableScrollPhysics(),
+                        child: _CollapsingHeader(
+                          businessName: widget.businessName,
+                        ),
                       ),
                     ),
                     bottom: PreferredSize(
@@ -148,7 +225,7 @@ class _BranchesTab extends StatelessWidget {
                           readOnly: true,
                           onTap: () => showBranchSearchSheet(
                             context,
-                            isOwner: isOwner,
+                            isOwner: widget.isOwner,
                           ),
                         ),
                       ),
@@ -191,10 +268,21 @@ class _BranchesTab extends StatelessWidget {
                           padding: EdgeInsets.symmetric(
                             horizontal: AppSpacing.xl,
                           ),
-                          child: BranchListItem(
-                            branch: branches[index],
-                            isOwner: isOwner,
-                          ),
+                          child: _showSwipeHintFor(index)
+                              ? AppSwipeActionHint(
+                                  enabled: true,
+                                  onShown: _markHintShown,
+                                  builder: (context, controller) =>
+                                      BranchListItem(
+                                        branch: branches[index],
+                                        isOwner: widget.isOwner,
+                                        hintController: controller,
+                                      ),
+                                )
+                              : BranchListItem(
+                                  branch: branches[index],
+                                  isOwner: widget.isOwner,
+                                ),
                         ),
                       ),
                     ),
@@ -228,7 +316,11 @@ class _BranchesTab extends StatelessWidget {
 
 /// Company row and title — collapses away on scroll.
 class _CollapsingHeader extends StatelessWidget {
-  const _CollapsingHeader();
+  const _CollapsingHeader({required this.businessName});
+
+  /// The authenticated organization's business name, or `null` if it isn't
+  /// on file yet — never a hardcoded/sample company name.
+  final String? businessName;
 
   @override
   Widget build(BuildContext context) {
@@ -236,7 +328,7 @@ class _CollapsingHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AppNavBar(
-          title: 'branches.company_name'.tr(),
+          title: businessName ?? '',
           showBackButton: true,
           onLeadingTap: () => context.pop(),
           trailingAction: AppNavBarTrailingAction.icon,

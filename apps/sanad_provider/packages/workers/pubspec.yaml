@@ -9,6 +9,8 @@ environment:
   flutter: ">=3.19.0"
 
 dependencies:
+  activity_logs:
+    path: ../activity_logs
   app_assets:
     path: ../../../../packages/app_assets
   core:
@@ -31,6 +33,8 @@ dependencies:
     path: ../../../../packages/network
   sheet_navigation:
     path: ../../../../packages/sheet_navigation
+  storage:
+    path: ../../../../packages/storage
 
 dev_dependencies:
   bloc_test: ^10.0.0

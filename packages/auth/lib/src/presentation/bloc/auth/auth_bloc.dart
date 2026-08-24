@@ -9,7 +9,6 @@ import 'package:auth/src/domain/entities/user_entity.dart';
 import 'package:auth/src/domain/enums/auth_account_status.dart';
 import 'package:auth/src/domain/enums/auth_flow_intent.dart';
 import 'package:auth/src/domain/usecases/check_signin_status_usecase.dart';
-import 'package:auth/src/domain/usecases/delete_account_usecase.dart';
 import 'package:auth/src/domain/usecases/get_current_user_usecase.dart';
 import 'package:auth/src/domain/usecases/get_resend_info_usecase.dart';
 import 'package:auth/src/domain/usecases/logout_usecase.dart';
@@ -36,7 +35,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required ResendOtpUseCase resendOtpUseCase,
     required GetResendInfoUseCase getResendInfoUseCase,
     required AuthLogoutUseCase logoutUseCase,
-    required DeleteAccountUseCase deleteAccountUseCase,
     required SessionManager sessionManager,
     required AuthCheckSignInStatusUseCase checkSignInStatusUseCase,
     required AuthStatusNotifier authStatusNotifier,
@@ -48,7 +46,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
        _resendOtpUseCase = resendOtpUseCase,
        _getResendInfoUseCase = getResendInfoUseCase,
        _logoutUseCase = logoutUseCase,
-       _deleteAccountUseCase = deleteAccountUseCase,
        _sessionManager = sessionManager,
        _checkSignInStatusUseCase = checkSignInStatusUseCase,
        _authStatusNotifier = authStatusNotifier,
@@ -61,7 +58,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthResendOtpEvent>(_resendOtp, transformer: droppable());
     on<AuthResendInfoRequestedEvent>(_resendInfo);
     on<AuthLogoutEvent>(_logout, transformer: droppable());
-    on<AuthDeleteAccountEvent>(_deleteAccount, transformer: droppable());
     on<AuthCheckSignInStatusEvent>(_checkSignInStatus);
     on<AuthGoogleSignInEvent>(_signInWithGoogle, transformer: droppable());
   }
@@ -71,7 +67,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final ResendOtpUseCase _resendOtpUseCase;
   final GetResendInfoUseCase _getResendInfoUseCase;
   final AuthLogoutUseCase _logoutUseCase;
-  final DeleteAccountUseCase _deleteAccountUseCase;
   final SessionManager _sessionManager;
   final AuthCheckSignInStatusUseCase _checkSignInStatusUseCase;
   final AuthStatusNotifier _authStatusNotifier;
@@ -138,40 +133,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     await result.match(
       (failure) async => emit(AuthLogoutFailureState(failure)),
       (_) async => emit(const AuthLogoutSuccessState('auth.logout_success')),
-    );
-  }
-
-  Future<void> _deleteAccount(
-    AuthDeleteAccountEvent event,
-    Emitter<AuthState> emit,
-  ) async {
-    final previousUser = _userFromState(state);
-    if (previousUser == null) {
-      emit(
-        const AuthDeleteAccountFailureState(
-          UnknownFailure(message: 'auth.delete_account_no_user'),
-          user: null,
-        ),
-      );
-      return;
-    }
-
-    emit(AuthDeleteAccountLoadingState(previousUser));
-
-    final result = await _deleteAccountUseCase
-        .call(DeleteAccountParams(userSub: event.userSub))
-        .run();
-
-    await result.match(
-      (failure) async {
-        emit(
-          AuthDeleteAccountFailureState(failure, user: previousUser),
-        );
-      },
-      (_) async {
-        await _sessionManager.clear();
-        emit(const AuthLogoutSuccessState('auth.account_deleted_success'));
-      },
     );
   }
 
@@ -317,14 +278,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         );
       case AuthAccountStatus.suspended:
         emit(const AuthSuspendedState());
+      case AuthAccountStatus.scheduledForDeletion:
+        emit(const AuthScheduledForDeletionState());
     }
   }
-
-  static UserEntity? _userFromState(AuthState state) => switch (state) {
-    AuthAuthenticatedState(:final user) => user,
-    AuthCheckSignInStatusSuccessState(:final user) => user,
-    AuthDeleteAccountLoadingState(:final user) => user,
-    AuthDeleteAccountFailureState(:final user) => user,
-    _ => null,
-  };
 }

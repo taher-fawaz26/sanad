@@ -46,6 +46,7 @@ export 'app_slider.dart';
 export 'app_snackbar.dart';
 export 'app_status_badge.dart';
 export 'app_stepper.dart';
+export 'app_swipe_action_hint.dart';
 export 'app_swipe_actions.dart';
 export 'app_switch.dart';
 export 'app_table_cell.dart';

@@ -343,6 +343,9 @@ class EmailOtpPage extends HookWidget {
       case AuthAccountStatus.suspended:
         isVerifying.value = false;
         if (context.mounted) context.go(AuthRoutes.suspended);
+      case AuthAccountStatus.scheduledForDeletion:
+        isVerifying.value = false;
+        if (context.mounted) context.go(AuthRoutes.scheduledForDeletion);
     }
   }
 }

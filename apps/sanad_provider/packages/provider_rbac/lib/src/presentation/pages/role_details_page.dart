@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider_rbac/src/domain/entities/permission_entity.dart';
 import 'package:provider_rbac/src/domain/entities/role_entity.dart';
 import 'package:provider_rbac/src/domain/entities/role_persona_type.dart';
+import 'package:provider_rbac/src/presentation/utils/role_display_name.dart';
 
 /// Read-only role details — Figma `view details` (`5673:28445`).
 class RoleDetailsPage extends StatelessWidget {
@@ -86,7 +87,7 @@ class _HeaderCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            role.displayName,
+            role.localizedDisplayName(),
             style: typography.title2.copyWith(
               color: colors.textPrimary,
               fontWeight: FontWeight.w700,

@@ -10,6 +10,7 @@ import 'package:provider_rbac/src/domain/entities/role_entity.dart';
 import 'package:provider_rbac/src/presentation/bloc/role_form/role_form_bloc.dart';
 import 'package:provider_rbac/src/presentation/widgets/permission_group_card.dart';
 import 'package:shared_ui/shared_ui.dart';
+import 'package:text_optimization/text_optimization.dart';
 
 /// Realistic mock used only to skeletonize the real permission-group cards
 /// via [AppSkeletonizer] while the catalog loads — no bespoke skeleton
@@ -242,16 +243,31 @@ class _RoleFormPageState extends State<RoleFormPage> {
                           validator: _validateName,
                         ),
                         SizedBox(height: AppSpacing.lg),
-                        AppDescriptionField(
+                        AiEnhanceDescriptionField(
                           controller: _descriptionController,
-                          label: 'provider_rbac.description_label'.tr(),
+                          // Confirmed optional against both DTOs' schemas
+                          // (see `_validateDescription`) — spelled out
+                          // explicitly rather than left unmarked, so it
+                          // isn't ambiguous next to the required Role Name
+                          // field above it.
+                          label:
+                              '${'provider_rbac.description_label'.tr()} '
+                              '(${'common.optional'.tr()})',
                           hint: 'provider_rbac.description_hint'.tr(),
-                          maxLines: 5,
                           maxLength: 255,
                           validator: _validateDescription,
                           aiActionLabel: 'common.enhance_with_ai'.tr(),
                         ),
                         SizedBox(height: AppSpacing.lg),
+                        // At least one permission is mandatory to submit —
+                        // see `RoleFormState.canSubmit` — so the section
+                        // carries the same required-asterisk convention as
+                        // Role Name instead of being left unmarked.
+                        AppFieldLabel(
+                          label: 'provider_rbac.permissions_label'.tr(),
+                          isRequired: true,
+                        ),
+                        SizedBox(height: AppSpacing.sm),
                         BlocBuilder<RoleFormBloc, RoleFormState>(
                           builder: (context, state) {
                             if (state.catalogStatus == RequestStatus.failure &&

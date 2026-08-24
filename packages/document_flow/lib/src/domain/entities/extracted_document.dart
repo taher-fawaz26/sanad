@@ -1,6 +1,8 @@
 import 'package:document_flow/src/domain/entities/document_repair_target.dart';
+import 'package:document_flow/src/domain/entities/document_status.dart';
 import 'package:document_flow/src/domain/entities/document_type.dart';
 import 'package:document_flow/src/domain/entities/extracted_field.dart';
+import 'package:document_flow/src/domain/entities/id_verification.dart';
 import 'package:equatable/equatable.dart';
 
 /// Points a document slot back at the media already stored for it.
@@ -46,10 +48,25 @@ class ExtractedDocument extends Equatable {
     this.repair,
     this.raw = const {},
     this.media = const [],
+    this.missingFields = const [],
+    this.status,
+    this.idVerification,
   });
 
   final DocumentType type;
   final DocumentIssue issue;
+
+  /// The server-derived lifecycle status for this document, when the
+  /// extraction/preview response carries one. `null` for a flow that predates
+  /// or doesn't surface this signal (e.g. a synthetic already-registered
+  /// section). Distinct from [issue]: [DocumentStatus.expiringSoon] is a
+  /// non-blocking warning, while [issue] reflects only what blocks submit.
+  final DocumentStatus? status;
+
+  /// The Emirates ID front/back comparison result, when this document is an
+  /// Emirates ID and the backend returned one. Always `null` for a trade
+  /// licence, which has no such concept.
+  final IdVerification? idVerification;
 
   /// A dynamic, already-localized detail message for [issue] (e.g. a backend
   /// rejection message such as "couldn't read license_number…"). When present
@@ -68,6 +85,13 @@ class ExtractedDocument extends Equatable {
   final Map<String, String> raw;
   final List<DocumentMediaRef> media;
 
+  /// Raw backend field identifiers (e.g. `license_number`) this document's
+  /// [issue] concerns — OCR-unreadable or missing required fields. English,
+  /// machine-cased, and not user-facing as-is: the presentation layer resolves
+  /// each to a localized label before display. Empty unless [issue] is set
+  /// with specific fields attributable to it.
+  final List<String> missingFields;
+
   bool get ok => issue == DocumentIssue.none;
 
   @override
@@ -79,6 +103,9 @@ class ExtractedDocument extends Equatable {
     fields,
     raw,
     media,
+    missingFields,
+    status,
+    idVerification,
   ];
 }
 

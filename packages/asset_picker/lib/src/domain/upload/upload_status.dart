@@ -8,6 +8,10 @@ enum UploadStatus {
   /// Queued but not started.
   pending,
 
+  /// A local, pre-upload document-type check is running (e.g. OCR/scanner
+  /// classification) before bytes are transferred.
+  validating,
+
   /// Bytes are currently being transferred.
   uploading,
 
@@ -23,6 +27,9 @@ enum UploadStatus {
 
   /// Whether this is a final success state.
   bool get isUploaded => this == UploadStatus.uploaded;
+
+  /// Whether a pre-upload document-type check is currently running.
+  bool get isValidating => this == UploadStatus.validating;
 
   /// Whether a transfer is currently active.
   bool get isUploading => this == UploadStatus.uploading;

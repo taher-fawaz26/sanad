@@ -40,10 +40,17 @@ class WorkersModule extends FeatureModule {
   /// account may see the Invitations and Roles tabs — backed by
   /// `workers/invitations` and `provider/roles`, both of which the backend
   /// 403s for any worker/manager token regardless of granted permissions
-  /// (RBAC Phase 7 finding F1). A callback, not a `bool`, so it is read
-  /// fresh on every navigation to this route — matching
+  /// (RBAC Phase 7 finding F1). [canViewTeamActivity] resolves whether the
+  /// signed-in account may see another worker's "Recent Activity" section on
+  /// `:id` (owner/manager only — `actorId` is silently ignored for a worker
+  /// token, so showing this to a plain worker would render *their own* feed
+  /// under someone else's profile). Both are callbacks, not a `bool`, so
+  /// they are read fresh on every navigation to this route — matching
   /// `ServicesModule.shellRoute`'s reasoning exactly.
-  static GoRoute route({required bool Function() isOwner}) => GoRoute(
+  static GoRoute route({
+    required bool Function() isOwner,
+    required bool Function() canViewTeamActivity,
+  }) => GoRoute(
     path: WorkerRoutes.list,
     builder: (context, state) {
       final owner = isOwner();
@@ -67,10 +74,14 @@ class WorkersModule extends FeatureModule {
       ),
       GoRoute(
         path: ':id',
-        builder: (context, state) => WorkerDetailsPage(
-          workerId: state.pathParameters['id']!,
-          initialWorker: state.extra as WorkerEntity?,
-          isOwner: isOwner(),
+        builder: (context, state) => BlocProvider(
+          create: (_) => sl<WorkerActionCubit>(),
+          child: WorkerDetailsPage(
+            workerId: state.pathParameters['id']!,
+            initialWorker: state.extra as WorkerEntity?,
+            isOwner: isOwner(),
+            canViewActivity: canViewTeamActivity(),
+          ),
         ),
         routes: [
           GoRoute(

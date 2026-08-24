@@ -274,6 +274,142 @@ void main() {
     );
   });
 
+  group('AppOtpField error-state selection indicator', () {
+    testWidgets(
+      'tapping a digit in error state gives it a primary border, '
+      'distinguishing it from the error-styled siblings (SAN-574)',
+      (tester) async {
+        final controller = TextEditingController(text: '066555');
+        await _pump(
+          tester,
+          AppOtpField(
+            controller: controller,
+            autofocus: true,
+            errorText: 'Incorrect code',
+          ),
+        );
+
+        await _tapCell(tester, 2);
+
+        final colors = AppTheme.light().extension<AppColors>()!;
+
+        // The tapped cell should have the primary border.
+        final tappedContainer = tester.widget<Container>(
+          find.descendant(
+            of: find.byKey(otpCellKey(2)),
+            matching: find.byType(Container),
+          ),
+        );
+        final tappedDecoration =
+            tappedContainer.decoration! as BoxDecoration;
+        expect(
+          tappedDecoration.border,
+          isNot(equals(
+            Border.all(
+              color: FieldTokens.errorBorder(
+                colors,
+                Brightness.light,
+              ),
+            ),
+          )),
+          reason: 'selected cell must not use the error border',
+        );
+        expect(
+          tappedDecoration.border?.top.color,
+          colors.primary,
+          reason: 'selected cell should show primary border',
+        );
+
+        // A non-selected cell should still show error styling.
+        final otherContainer = tester.widget<Container>(
+          find.descendant(
+            of: find.byKey(otpCellKey(4)),
+            matching: find.byType(Container),
+          ),
+        );
+        final otherDecoration =
+            otherContainer.decoration! as BoxDecoration;
+        expect(
+          otherDecoration.border?.top.color,
+          FieldTokens.errorBorder(colors, Brightness.light),
+          reason: 'non-selected cells keep error border',
+        );
+      },
+    );
+  });
+
+  group('AppOtpField onCompleted guard', () {
+    testWidgets(
+      'replacing a digit in a full field does NOT fire onCompleted '
+      '(prevents auto-verify on single-digit edits, SAN-574)',
+      (tester) async {
+        final controller = TextEditingController(text: '066555');
+        var completedCount = 0;
+        await _pump(
+          tester,
+          AppOtpField(
+            controller: controller,
+            autofocus: true,
+            onCompleted: (_) => completedCount++,
+          ),
+        );
+
+        // Tap cell 2 and replace it.
+        await _tapCell(tester, 2);
+        tester.testTextInput.updateEditingValue(
+          const TextEditingValue(
+            text: '069555',
+            selection: TextSelection.collapsed(offset: 3),
+          ),
+        );
+        await tester.pump();
+
+        expect(controller.text, '069555');
+        expect(
+          completedCount,
+          0,
+          reason: 'replacing a digit should not re-trigger onCompleted',
+        );
+      },
+    );
+
+    testWidgets(
+      'backspace then re-type to full length DOES fire onCompleted',
+      (tester) async {
+        final controller = TextEditingController(text: '123456');
+        var completedCount = 0;
+        await _pump(
+          tester,
+          AppOtpField(
+            controller: controller,
+            autofocus: true,
+            onCompleted: (_) => completedCount++,
+          ),
+        );
+
+        // Delete last digit.
+        tester.testTextInput.updateEditingValue(
+          const TextEditingValue(
+            text: '12345',
+            selection: TextSelection.collapsed(offset: 5),
+          ),
+        );
+        await tester.pump();
+        expect(completedCount, 0);
+
+        // Re-type the 6th digit.
+        tester.testTextInput.updateEditingValue(
+          const TextEditingValue(
+            text: '123459',
+            selection: TextSelection.collapsed(offset: 6),
+          ),
+        );
+        await tester.pump();
+        expect(completedCount, 1);
+      },
+    );
+  });
+
   group('AppOtpField paste', () {
     testWidgets('pasting a full 6-digit code fills every cell and completes', (
       tester,

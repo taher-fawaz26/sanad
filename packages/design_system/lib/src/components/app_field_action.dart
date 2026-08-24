@@ -1,3 +1,4 @@
+import 'package:design_system/src/components/app_field_label.dart';
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/spacing/responsive_spacing.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
@@ -17,6 +18,7 @@ class AppFieldAction extends StatelessWidget {
     this.onActionTap,
     this.onTap,
     this.enabled = true,
+    this.isRequired = false,
     this.errorText,
   });
 
@@ -28,6 +30,9 @@ class AppFieldAction extends StatelessWidget {
   final VoidCallback? onActionTap;
   final VoidCallback? onTap;
   final bool enabled;
+
+  /// When `true`, appends a red `*` after the label.
+  final bool isRequired;
 
   /// When non-null, the field renders with an error border and this
   /// message below it (Figma field error state).
@@ -66,10 +71,7 @@ class AppFieldAction extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          label,
-          style: FieldTokens.labelStyle(typography, colors, brightness),
-        ),
+        AppFieldLabel(label: label, isRequired: isRequired),
         SizedBox(height: labelGap),
         Material(
           color: FieldTokens.background(colors, brightness, enabled: enabled),

@@ -9,11 +9,15 @@ class BranchTypeSelectField extends StatelessWidget {
   const BranchTypeSelectField({
     required this.selectedType,
     required this.onTypeSelected,
+    this.isRequired = false,
     super.key,
   });
 
   final BranchType selectedType;
   final ValueChanged<BranchType> onTypeSelected;
+
+  /// When `true`, appends a red `*` after the label.
+  final bool isRequired;
 
   @override
   Widget build(BuildContext context) {
@@ -21,6 +25,7 @@ class BranchTypeSelectField extends StatelessWidget {
       label: 'branches.add_branch.branch_type'.tr(),
       value: _localizedLabel(selectedType),
       hint: 'branches.add_branch.branch_type_hint'.tr(),
+      isRequired: isRequired,
       onTap: () => _openPicker(context),
     );
   }

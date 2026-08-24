@@ -1,11 +1,20 @@
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
+import 'package:workers/src/domain/entities/worker_status.dart';
+import 'package:workers/src/domain/repositories/worker_repository.dart';
+import 'package:workers/src/domain/usecases/delete_worker_usecase.dart';
+import 'package:workers/src/domain/usecases/update_worker_status_usecase.dart';
+import 'package:workers/src/presentation/bloc/worker_action/worker_action_cubit.dart';
 import 'package:workers/src/presentation/pages/worker_details_page.dart';
 import 'package:workers/src/presentation/services/worker_role_assigner.dart';
+
+class _MockWorkerRepository extends Mock implements WorkerRepository {}
 
 // No EasyLocalization bootstrap (avoids a real SharedPreferences hang in this
 // sandboxed test environment) — `.tr()` calls fall back to the raw key.
@@ -21,6 +30,7 @@ const _worker = WorkerEntity(
   fullName: 'Sam Worker',
   role: 'worker',
   initials: 'SW',
+  status: WorkerStatus.active,
 );
 
 void main() {
@@ -41,16 +51,27 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
+    final repo = _MockWorkerRepository();
+    final workerAction = WorkerActionCubit(
+      deleteWorkerUseCase: DeleteWorkerUseCase(repo),
+      updateWorkerStatusUseCase: UpdateWorkerStatusUseCase(repo),
+    );
+    addTearDown(workerAction.close);
+
     await tester.pumpWidget(
       ScreenUtilInit(
         designSize: const Size(360, 800),
         minTextAdapt: true,
         builder: (_, _) => MaterialApp(
           theme: AppTheme.light(),
-          home: WorkerDetailsPage(
-            workerId: _worker.id,
-            initialWorker: _worker,
-            isOwner: isOwner,
+          home: BlocProvider<WorkerActionCubit>.value(
+            value: workerAction,
+            child: WorkerDetailsPage(
+              workerId: _worker.id,
+              initialWorker: _worker,
+              isOwner: isOwner,
+              canViewActivity: false,
+            ),
           ),
         ),
       ),
@@ -70,6 +91,29 @@ void main() {
 
       expect(find.text('workers.edit_profile'), findsOneWidget);
     });
+
+    testWidgets(
+      'shows the "more actions" kebab (SAN: Suspend/Delete were previously '
+      'only reachable via swipe on the list row — restored here too)',
+      (tester) async {
+        await pump(tester, isOwner: true);
+
+        expect(find.byIcon(Icons.more_vert), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'tapping the kebab opens a sheet with Suspend and Delete rows',
+      (tester) async {
+        await pump(tester, isOwner: true);
+
+        await tester.tap(find.byIcon(Icons.more_vert));
+        await tester.pumpAndSettle();
+
+        expect(find.text('workers.action_suspend'), findsOneWidget);
+        expect(find.text('workers.action_delete'), findsOneWidget);
+      },
+    );
   });
 
   group(
@@ -98,6 +142,16 @@ void main() {
           expect(find.text('workers.assigned_branches_title'), findsNothing);
           expect(find.text('workers.no_assigned_branches'), findsNothing);
           expect(find.text('workers.assign_branch'), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'hides the "more actions" kebab — Suspend/Delete are owner-only '
+        'mutations, same gating as the swipe actions on the list row',
+        (tester) async {
+          await pump(tester, isOwner: false);
+
+          expect(find.byIcon(Icons.more_vert), findsNothing);
         },
       );
     },

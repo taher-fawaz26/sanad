@@ -14,7 +14,10 @@ class MediaUploadConfig extends Equatable {
   /// Maximum number of items allowed at once. `null` means unbounded.
   final int? maxFiles;
 
-  /// Maximum size per file, in bytes. `null` means unbounded.
+  /// Maximum size per file, in bytes. `null` defers to the app-wide
+  /// `FileSizePolicy` maximum — `MediaUploadValidator` clamps whatever is
+  /// set here against that global ceiling, so this can tighten it but
+  /// never loosen it beyond the global maximum.
   final int? maxFileSize;
 
   /// Allowed MIME types (e.g. `image/jpeg`). Empty means any MIME type.

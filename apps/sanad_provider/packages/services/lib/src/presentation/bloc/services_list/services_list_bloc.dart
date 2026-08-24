@@ -3,6 +3,7 @@ import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fpdart/fpdart.dart';
+import 'package:services/src/domain/entities/category_ref_entity.dart';
 import 'package:services/src/domain/entities/provider_service_entity.dart';
 import 'package:services/src/domain/entities/provider_service_status.dart';
 import 'package:services/src/domain/usecases/list_provider_services_usecase.dart';
@@ -39,8 +40,9 @@ class _ServicesQuery extends PageQuery {
 }
 
 /// Owns the provider's own services list on the dashboard (`GET
-/// /provider-services`): fetch, refresh, load-more, search, and status
-/// filter.
+/// /provider-services`): fetch, refresh, load-more, search, status filter,
+/// and a client-side category filter derived from the loaded services
+/// themselves (see [ServicesListCategoryChangedEvent]).
 ///
 /// Does not own single-service mutations (delete / status toggle) — those
 /// live in [ServiceActionBloc]; success is folded back in here via
@@ -77,6 +79,7 @@ class ServicesListBloc extends Bloc<ServicesListEvent, ServicesListState>
       _onStatusChanged,
       transformer: restartable(),
     );
+    on<ServicesListCategoryChangedEvent>(_onCategoryChanged);
     on<ServiceReplacedInListEvent>(_onReplaced);
     on<ServiceRemovedFromListEvent>(_onRemoved);
   }
@@ -98,6 +101,21 @@ class ServicesListBloc extends Bloc<ServicesListEvent, ServicesListState>
   ) async {
     emit(state.copyWith(statusFilter: event.status));
     await onQueryChanged(emit);
+  }
+
+  /// Purely client-side: re-filters the already-loaded [state.services] by
+  /// `category.id`, no server round trip (`GET /provider-services` has no
+  /// `categoryId` query param).
+  void _onCategoryChanged(
+    ServicesListCategoryChangedEvent event,
+    Emitter<ServicesListState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        selectedCategoryId: event.categoryId,
+        clearSelectedCategory: event.categoryId == null,
+      ),
+    );
   }
 
   void _onReplaced(

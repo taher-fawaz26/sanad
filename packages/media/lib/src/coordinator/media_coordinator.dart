@@ -1,4 +1,5 @@
-import 'package:asset_picker/asset_picker.dart' show PickedAsset;
+import 'package:asset_picker/asset_picker.dart'
+    show AssetValidationErrorType, AssetValidationException, PickedAsset;
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -137,8 +138,30 @@ abstract final class MediaCoordinator {
       return const MediaCancelled();
     }
 
-    // Pick.
-    final asset = await _safePick(source, pickerConfig);
+    // Pick. `asset_picker`'s own validator (driven by `pickerConfig`'s
+    // `maxFileSize`/extensions, via `toAssetPickerOptions()`) runs inside
+    // this call and throws `AssetValidationException` on a rejected file —
+    // surfaced here rather than swallowed as a cancellation, so an
+    // oversized/unsupported pick shows the same feedback a user gets from
+    // [MediaValidator]'s own (redundant, in-memory) check below.
+    final PickedAsset? asset;
+    try {
+      asset = await _safePick(source, pickerConfig);
+    } on AssetValidationException catch (e) {
+      if (context.mounted) {
+        final message =
+            e.errors.any(
+              (error) => error.type == AssetValidationErrorType.fileTooLarge,
+            )
+            ? 'errors.media_upload.file_too_large'.tr()
+            : 'media.validation.unsupported_type'.tr();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+      callbacks?.onEditCancelled?.call();
+      return const MediaCancelled();
+    }
     if (asset == null) {
       callbacks?.onEditCancelled?.call();
       return const MediaCancelled();
@@ -186,9 +209,15 @@ abstract final class MediaCoordinator {
   ) async {
     try {
       return await MediaPicker.pick(source: source, config: config);
+    } on AssetValidationException {
+      // Rejected by `asset_picker`'s own validator — the caller must show
+      // this, not swallow it (see `_pickEdit`'s catch).
+      rethrow;
     } on Object {
-      // AssetPickerException / platform errors → treat as cancellation; the
-      // permission gate already handled the denied-permission UX.
+      // Every other exception (permission / platform / source-unavailable)
+      // → treat as cancellation; the permission gate already handled the
+      // denied-permission UX, and there's nothing actionable to show for
+      // an unexpected platform failure here.
       return null;
     }
   }

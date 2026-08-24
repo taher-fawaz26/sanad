@@ -12,6 +12,11 @@ abstract final class StorageKeys {
   static const String onboardingSeen = 'onboarding_seen';
   static const String targetAudienceSurveyDraft =
       'target_audience_survey_draft_v1';
+  static const String branchesSwipeHintSeen = 'branches_swipe_hint_seen_v1';
+  static const String servicesSwipeHintSeen = 'services_swipe_hint_seen_v1';
+  static const String workersSwipeHintSeen = 'workers_swipe_hint_seen_v1';
+  static const String invitationsSwipeHintSeen =
+      'invitations_swipe_hint_seen_v1';
 
   // ── Hive — registration ───────────────────────────────────────────────────
   static const String registrationProgressPrefix = 'reg_progress_v1_';

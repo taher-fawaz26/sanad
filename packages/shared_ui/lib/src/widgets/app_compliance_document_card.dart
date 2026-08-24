@@ -12,6 +12,46 @@ enum ComplianceDocumentStatus {
   rejected,
 }
 
+/// Localized chrome/copy for [AppComplianceDocumentCard] — every string the
+/// card itself would otherwise have to hardcode. Built once by the caller
+/// (typically from `.tr()` calls) and shared across every card instance,
+/// since none of it varies per document.
+class ComplianceDocumentCardLabels {
+  const ComplianceDocumentCardLabels({
+    required this.companyName,
+    required this.licenseNumber,
+    required this.updateDocument,
+    required this.expiryDate,
+    required this.underReviewSince,
+    required this.rejectedOn,
+    required this.expiredOn,
+    required this.expiringSoon,
+    required this.expired,
+    required this.underReview,
+    required this.rejected,
+    required this.alertExpiring,
+    required this.alertExpired,
+    required this.alertUnderReview,
+    required this.alertRejected,
+  });
+
+  final String companyName;
+  final String licenseNumber;
+  final String updateDocument;
+  final String expiryDate;
+  final String underReviewSince;
+  final String rejectedOn;
+  final String expiredOn;
+  final String expiringSoon;
+  final String expired;
+  final String underReview;
+  final String rejected;
+  final String alertExpiring;
+  final String alertExpired;
+  final String alertUnderReview;
+  final String alertRejected;
+}
+
 /// Figma `Compliance Document Card` (`3821:19211`) — all five variants.
 ///
 /// Displays a compliance document's title, status, license number, and expiry
@@ -22,6 +62,7 @@ class AppComplianceDocumentCard extends StatelessWidget {
     super.key,
     required this.documentTitle,
     required this.status,
+    required this.labels,
     this.companyName,
     this.licenseNumber,
     this.expiryDate,
@@ -33,6 +74,10 @@ class AppComplianceDocumentCard extends StatelessWidget {
   /// Document display name, e.g. "Trade License" or "Emirates ID".
   final String documentTitle;
   final ComplianceDocumentStatus status;
+
+  /// Localized copy for every fixed label/badge/alert on the card — this
+  /// widget never hardcodes display text itself (see `ui.md`).
+  final ComplianceDocumentCardLabels labels;
 
   /// Optional — renders a "Company Name" row when non-null.
   final String? companyName;
@@ -47,7 +92,8 @@ class AppComplianceDocumentCard extends StatelessWidget {
   /// e.g. "In 30 days".
   final String? countdownText;
 
-  /// Alert box body text. Falls back to a sensible default when null.
+  /// Alert box body text. Falls back to a localized default from [labels]
+  /// when null.
   final String? alertMessage;
 
   /// Tapped when the "Update Document" CTA is shown and pressed.
@@ -62,14 +108,10 @@ class AppComplianceDocumentCard extends StatelessWidget {
   String get _resolvedAlertMessage {
     if (alertMessage != null) return alertMessage!;
     return switch (status) {
-      ComplianceDocumentStatus.expiring =>
-        'Your document is about to expire. Please renew it to avoid penalties and business suspension.',
-      ComplianceDocumentStatus.expired =>
-        'Your document has expired. You may not conduct business until renewed.',
-      ComplianceDocumentStatus.underReview =>
-        'Your renewal is under review. We will update you once processing is complete.',
-      ComplianceDocumentStatus.rejected =>
-        'Your renewal has been rejected. Please review the comments and resubmit your documents.',
+      ComplianceDocumentStatus.expiring => labels.alertExpiring,
+      ComplianceDocumentStatus.expired => labels.alertExpired,
+      ComplianceDocumentStatus.underReview => labels.alertUnderReview,
+      ComplianceDocumentStatus.rejected => labels.alertRejected,
       ComplianceDocumentStatus.verified => '',
     };
   }
@@ -94,6 +136,7 @@ class AppComplianceDocumentCard extends StatelessWidget {
           _HeaderRow(
             title: documentTitle,
             status: status,
+            labels: labels,
             typography: typography,
           ),
           SizedBox(height: AppSpacing.md),
@@ -101,7 +144,7 @@ class AppComplianceDocumentCard extends StatelessWidget {
           SizedBox(height: AppSpacing.md),
           if (companyName != null) ...[
             _LabelValueRow(
-              label: 'Company Name',
+              label: labels.companyName,
               value: companyName!,
               labelColor: colors.textSecondary,
               valueColor: colors.textPrimary,
@@ -112,7 +155,7 @@ class AppComplianceDocumentCard extends StatelessWidget {
           ],
           if (licenseNumber != null) ...[
             _LabelValueRow(
-              label: 'License No.',
+              label: labels.licenseNumber,
               value: licenseNumber!,
               labelColor: colors.gray400,
               valueColor: colors.textMuted,
@@ -125,6 +168,7 @@ class AppComplianceDocumentCard extends StatelessWidget {
             status: status,
             expiryDate: expiryDate,
             countdownText: countdownText,
+            labels: labels,
             typography: typography,
           ),
           if (_showAlert) ...[
@@ -139,7 +183,7 @@ class AppComplianceDocumentCard extends StatelessWidget {
           if (_showCta) ...[
             SizedBox(height: AppSpacing.md),
             AppButtonPresets.primary(
-              label: 'Update Document',
+              label: labels.updateDocument,
               onPressed: onUpdateDocument,
               icon: AppSvgPicture.asset(
                 AppSvgs.cloudUpload,
@@ -161,11 +205,13 @@ class _HeaderRow extends StatelessWidget {
   const _HeaderRow({
     required this.title,
     required this.status,
+    required this.labels,
     required this.typography,
   });
 
   final String title;
   final ComplianceDocumentStatus status;
+  final ComplianceDocumentCardLabels labels;
   final AppTypography typography;
 
   @override
@@ -193,7 +239,7 @@ class _HeaderRow extends StatelessWidget {
           const AppVerifiedPill()
         else
           AppStatusBadge(
-            label: _statusBadgeLabel(status),
+            label: _statusBadgeLabel(status, labels),
             type: _statusBadgeType(status),
             outlined: true,
             size: AppStatusBadgeSize.compact,
@@ -212,11 +258,14 @@ AppStatusBadgeType _statusBadgeType(ComplianceDocumentStatus status) =>
       ComplianceDocumentStatus.verified => AppStatusBadgeType.success,
     };
 
-String _statusBadgeLabel(ComplianceDocumentStatus status) => switch (status) {
-  ComplianceDocumentStatus.expiring => 'Expiring Soon',
-  ComplianceDocumentStatus.expired => 'Expired',
-  ComplianceDocumentStatus.underReview => 'Under Review',
-  ComplianceDocumentStatus.rejected => 'Rejected',
+String _statusBadgeLabel(
+  ComplianceDocumentStatus status,
+  ComplianceDocumentCardLabels labels,
+) => switch (status) {
+  ComplianceDocumentStatus.expiring => labels.expiringSoon,
+  ComplianceDocumentStatus.expired => labels.expired,
+  ComplianceDocumentStatus.underReview => labels.underReview,
+  ComplianceDocumentStatus.rejected => labels.rejected,
   ComplianceDocumentStatus.verified => '',
 };
 
@@ -270,19 +319,21 @@ class _ExpiryRow extends StatelessWidget {
   const _ExpiryRow({
     required this.status,
     required this.typography,
+    required this.labels,
     this.expiryDate,
     this.countdownText,
   });
 
   final ComplianceDocumentStatus status;
   final AppTypography typography;
+  final ComplianceDocumentCardLabels labels;
   final String? expiryDate;
   final String? countdownText;
 
   String get _label => switch (status) {
-    ComplianceDocumentStatus.underReview => 'Under review since',
-    ComplianceDocumentStatus.rejected => 'Rejected on',
-    _ => 'Expiry Date',
+    ComplianceDocumentStatus.underReview => labels.underReviewSince,
+    ComplianceDocumentStatus.rejected => labels.rejectedOn,
+    _ => labels.expiryDate,
   };
 
   @override
@@ -303,12 +354,17 @@ class _ExpiryRow extends StatelessWidget {
     );
   }
 
+  /// Placeholder for a null expiry/status date. The backend allows any
+  /// extracted/stored date field to be unreadable (`null`) — this must never
+  /// collapse to an empty, unlabeled value next to a visible row label.
+  static const _unknownDate = '—';
+
   Widget _buildValue(AppColors colors) {
     final date = expiryDate;
 
     return switch (status) {
       ComplianceDocumentStatus.verified => Text(
-        date ?? '',
+        date ?? _unknownDate,
         style: typography.smallNormal.copyWith(
           fontSize: 14,
           color: colors.palettes.red.shade500,
@@ -341,7 +397,7 @@ class _ExpiryRow extends StatelessWidget {
         ],
       ),
       ComplianceDocumentStatus.expired => Text(
-        date != null ? 'Expired on $date' : '',
+        '${labels.expiredOn} ${date ?? _unknownDate}',
         style: typography.smallNormal.copyWith(
           fontSize: 12,
           color: colors.palettes.red.shade500,
@@ -350,7 +406,7 @@ class _ExpiryRow extends StatelessWidget {
       ),
       ComplianceDocumentStatus.underReview ||
       ComplianceDocumentStatus.rejected => Text(
-        date ?? '',
+        date ?? _unknownDate,
         style: typography.smallNormal.copyWith(
           fontSize: 12,
           color: colors.onInfoContainer,

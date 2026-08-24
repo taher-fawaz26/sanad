@@ -60,5 +60,57 @@ void main() {
         expect(states.single.coverageAccessDenied, isTrue);
       });
     });
+
+    group('goBack', () {
+      test('is a no-op on step 1', () {
+        cubit.goBack();
+        expect(cubit.state.currentStep, 1);
+        expect(cubit.state.furthestStep, 1);
+      });
+
+      test('moves back exactly one step and preserves furthestStep', () {
+        cubit
+          ..advanceTo(2)
+          ..advanceTo(3)
+          ..advanceTo(4);
+        expect(cubit.state.furthestStep, 4);
+
+        cubit.goBack();
+        expect(cubit.state.currentStep, 3);
+        expect(cubit.state.furthestStep, 4);
+
+        cubit
+          ..goBack()
+          ..goBack();
+        expect(cubit.state.currentStep, 1);
+        expect(cubit.state.furthestStep, 4);
+      });
+
+      test('goes back from the review step to step 4', () {
+        cubit.advanceTo(5);
+        cubit.goBack();
+        expect(cubit.state.currentStep, 4);
+      });
+
+      test('leaving step 2 backward clears coverageAccessDenied', () {
+        cubit
+          ..advanceTo(2)
+          ..setCoverageAccessDenied(denied: true);
+        expect(cubit.state.coverageAccessDenied, isTrue);
+
+        cubit.goBack();
+        expect(cubit.state.currentStep, 1);
+        expect(cubit.state.coverageAccessDenied, isFalse);
+      });
+
+      test('going back from step 3 to 2 keeps coverageAccessDenied as-is', () {
+        cubit
+          ..advanceTo(2)
+          ..advanceTo(3);
+        cubit.goBack();
+        expect(cubit.state.currentStep, 2);
+        expect(cubit.state.coverageAccessDenied, isFalse);
+      });
+    });
   });
 }

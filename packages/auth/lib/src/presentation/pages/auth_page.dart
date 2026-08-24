@@ -268,7 +268,8 @@ class AuthPage extends HookWidget {
                         height: 24,
                       ),
                       label: Text(
-                        'auth.google'.tr(),
+                        (isLogin.value ? 'auth.google' : 'auth.google_signup')
+                            .tr(),
                         style: typography.regularNormal.copyWith(
                           fontWeight: FontWeight.w600,
                           color: colors.textPrimary,

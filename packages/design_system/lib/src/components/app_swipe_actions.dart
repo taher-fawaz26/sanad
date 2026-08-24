@@ -79,6 +79,7 @@ class AppSwipeActions extends StatelessWidget {
     super.key,
     this.groupTag,
     this.extentRatio,
+    this.controller,
   });
 
   final List<AppSwipeAction> actions;
@@ -91,6 +92,12 @@ class AppSwipeActions extends StatelessWidget {
   /// Fraction of the row width the action pane occupies. Defaults to a
   /// per-action width so panes scale with the number of actions.
   final double? extentRatio;
+
+  /// Externally-owned controller for programmatic control (e.g. driving a
+  /// one-time swipe discoverability hint via `SwipeActionHint`). Almost
+  /// always omitted — leaving it null lets `Slidable` manage its own
+  /// internal controller, which is the right default for a plain row.
+  final SlidableController? controller;
 
   @override
   Widget build(BuildContext context) {
@@ -106,6 +113,7 @@ class AppSwipeActions extends StatelessWidget {
     return Slidable(
       key: key,
       groupTag: groupTag,
+      controller: controller,
       endActionPane: ActionPane(
         motion: const ScrollMotion(),
         extentRatio: resolvedRatio,

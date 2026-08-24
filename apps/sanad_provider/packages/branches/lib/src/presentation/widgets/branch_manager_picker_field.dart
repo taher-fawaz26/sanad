@@ -15,11 +15,19 @@ class BranchManagerPickerField extends StatelessWidget {
   const BranchManagerPickerField({
     required this.selectedManager,
     required this.onManagerSelected,
+    this.isRequired = false,
+    this.errorText,
     super.key,
   });
 
   final BranchManagerEntity? selectedManager;
   final ValueChanged<BranchManagerEntity> onManagerSelected;
+
+  /// When `true`, appends a red `*` after the label.
+  final bool isRequired;
+
+  /// Inline error message shown below the field (injected string).
+  final String? errorText;
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +42,8 @@ class BranchManagerPickerField extends StatelessWidget {
               size: AppAvatarSize.small,
             ),
       onTap: () => _openPicker(context),
+      isRequired: isRequired,
+      errorText: errorText,
     );
   }
 

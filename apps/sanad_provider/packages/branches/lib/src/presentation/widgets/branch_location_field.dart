@@ -15,6 +15,7 @@ class BranchLocationField extends StatelessWidget {
     this.onActionTap,
     this.onTap,
     this.enabled = true,
+    this.isRequired = false,
     this.errorText,
   });
 
@@ -25,6 +26,7 @@ class BranchLocationField extends StatelessWidget {
   final VoidCallback? onActionTap;
   final VoidCallback? onTap;
   final bool enabled;
+  final bool isRequired;
   final String? errorText;
 
   @override
@@ -38,6 +40,7 @@ class BranchLocationField extends StatelessWidget {
       onActionTap: onActionTap,
       onTap: onTap,
       enabled: enabled,
+      isRequired: isRequired,
       errorText: errorText,
       leading: AppSvgPicture.asset(
         AppSvgs.map,

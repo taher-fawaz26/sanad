@@ -3,8 +3,8 @@ import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
+import 'package:text_optimization/text_optimization.dart';
 
 /// Backend cap on `UpdateServiceProviderSettingsDto.description`.
 const _kBusinessDescriptionMaxLength = 350;
@@ -16,25 +16,17 @@ const _kBusinessDescriptionMaxLength = 350;
 Future<String?> showEditIdentityBottomSheet({
   required BuildContext context,
   String? initialDescription,
-  VoidCallback? onEnhanceWithAi,
 }) {
   return SheetNavigator.push<String>(
     context,
-    _EditIdentitySheetBody(
-      initialDescription: initialDescription,
-      onEnhanceWithAi: onEnhanceWithAi,
-    ),
+    _EditIdentitySheetBody(initialDescription: initialDescription),
   );
 }
 
 class _EditIdentitySheetBody extends StatefulWidget {
-  const _EditIdentitySheetBody({
-    this.initialDescription,
-    this.onEnhanceWithAi,
-  });
+  const _EditIdentitySheetBody({this.initialDescription});
 
   final String? initialDescription;
-  final VoidCallback? onEnhanceWithAi;
 
   @override
   State<_EditIdentitySheetBody> createState() => _EditIdentitySheetBodyState();
@@ -73,10 +65,7 @@ class _EditIdentitySheetBodyState extends State<_EditIdentitySheetBody> {
           children: [
             _Header(colors: colors, typography: typography),
             SizedBox(height: AppSpacing.xxl),
-            _BusinessDescriptionField(
-              controller: _controller,
-              onEnhanceWithAi: widget.onEnhanceWithAi,
-            ),
+            _BusinessDescriptionField(controller: _controller),
             SizedBox(height: AppSpacing.xl),
             AppButton(
               label: 'common.save'.tr(),
@@ -126,20 +115,15 @@ class _Header extends StatelessWidget {
 }
 
 class _BusinessDescriptionField extends StatelessWidget {
-  const _BusinessDescriptionField({
-    required this.controller,
-    this.onEnhanceWithAi,
-  });
+  const _BusinessDescriptionField({required this.controller});
 
   final TextEditingController controller;
-  final VoidCallback? onEnhanceWithAi;
 
   @override
   Widget build(BuildContext context) {
-    return AppDescriptionField(
+    return AiEnhanceDescriptionField(
       controller: controller,
       label: 'settings.business_description'.tr(),
-      maxLines: 5,
       maxLength: _kBusinessDescriptionMaxLength,
       validator: (value) {
         final trimmed = value?.trim() ?? '';
@@ -157,7 +141,6 @@ class _BusinessDescriptionField extends StatelessWidget {
         return null;
       },
       aiActionLabel: 'common.enhance_with_ai'.tr(),
-      onImproveWithAi: onEnhanceWithAi,
     );
   }
 }

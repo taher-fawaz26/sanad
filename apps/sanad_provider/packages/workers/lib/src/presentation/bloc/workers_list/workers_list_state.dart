@@ -4,10 +4,20 @@ class WorkersListState extends Equatable {
   const WorkersListState({
     this.pagination = const PaginationData<WorkerEntity>(),
     this.searchQuery = '',
+    this.statusFilter,
+    this.typeFilter,
   });
 
   final PaginationData<WorkerEntity> pagination;
   final String searchQuery;
+
+  /// `null` means "All" — every status. Applied server-side (see
+  /// `WorkersListBloc.buildQuery`), unlike Services' category filter, which
+  /// has no server-side equivalent.
+  final WorkerStatus? statusFilter;
+
+  /// `null` means "All" — every type. Applied server-side.
+  final WorkerType? typeFilter;
 
   List<WorkerEntity> get workers => pagination.items;
 
@@ -26,11 +36,24 @@ class WorkersListState extends Equatable {
   WorkersListState copyWith({
     PaginationData<WorkerEntity>? pagination,
     String? searchQuery,
+    WorkerStatus? statusFilter,
+    bool clearStatusFilter = false,
+    WorkerType? typeFilter,
+    bool clearTypeFilter = false,
   }) => WorkersListState(
     pagination: pagination ?? this.pagination,
     searchQuery: searchQuery ?? this.searchQuery,
+    statusFilter: clearStatusFilter
+        ? null
+        : (statusFilter ?? this.statusFilter),
+    typeFilter: clearTypeFilter ? null : (typeFilter ?? this.typeFilter),
   );
 
   @override
-  List<Object?> get props => [pagination, searchQuery];
+  List<Object?> get props => [
+    pagination,
+    searchQuery,
+    statusFilter,
+    typeFilter,
+  ];
 }

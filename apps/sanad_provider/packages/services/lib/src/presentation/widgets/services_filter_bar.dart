@@ -1,7 +1,7 @@
-import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 /// Search + filter row — Figma `4715:26136`. The search field is real,
 /// server-backed search (`ServicesListSearchChangedEvent` →
@@ -12,11 +12,11 @@ import 'package:flutter/material.dart';
 /// `active`/`inactive`/`all`) — [onStatusTap] opens a picker and
 /// [statusLabel] reflects the current selection.
 ///
-/// Type has no backend query param to filter on (confirmed against the live
-/// API contract — `GET /provider-services` only accepts `page`/`limit`/
-/// `search`/`status`) — [onTypeTap] is intentionally left unset by every
-/// caller so the dropdown stays visible but inert until the backend adds
-/// one. Do not fake client-side filtering for it.
+/// Category is a real, but client-side, filter (`GET /provider-services` has
+/// no `categoryId` query param — confirmed against the live API contract) —
+/// its options are the unique `service.category` values already present in
+/// the currently-loaded page, deduplicated by `category.id`. [onCategoryTap]
+/// opens a picker and [categoryLabel] reflects the current selection.
 class ServicesFilterBar extends StatelessWidget {
   const ServicesFilterBar({
     super.key,
@@ -25,12 +25,13 @@ class ServicesFilterBar extends StatelessWidget {
     this.onSearchChanged,
     this.statusLabel,
     this.onStatusTap,
-    this.onTypeTap,
+    this.categoryLabel,
+    this.onCategoryTap,
   });
 
   /// Whether to render the search field. `false` when the search field is
   /// hosted elsewhere instead (e.g. a pinned header above a collapsing
-  /// section that contains just the status/type filter row).
+  /// section that contains just the status/category filter row).
   final bool showSearch;
 
   final TextEditingController? searchController;
@@ -41,7 +42,12 @@ class ServicesFilterBar extends StatelessWidget {
   /// generic "Status" placeholder when unset.
   final String? statusLabel;
   final VoidCallback? onStatusTap;
-  final VoidCallback? onTypeTap;
+
+  /// Label shown on the Category dropdown — pass the selected category's
+  /// name so the selection is visible; defaults to the generic "Category"
+  /// placeholder when unset.
+  final String? categoryLabel;
+  final VoidCallback? onCategoryTap;
 
   @override
   Widget build(BuildContext context) {
@@ -60,75 +66,23 @@ class ServicesFilterBar extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: _FilterDropdown(
-                label: statusLabel ?? 'services.filter_status'.tr(),
+              child: AppFilterField<Never>(
+                placeholder: statusLabel ?? 'services.filter_status'.tr(),
+                options: const [],
                 onTap: onStatusTap,
               ),
             ),
             SizedBox(width: AppSpacing.sm),
             Expanded(
-              child: _FilterDropdown(
-                label: 'services.filter_type'.tr(),
-                onTap: onTypeTap,
+              child: AppFilterField<Never>(
+                placeholder: categoryLabel ?? 'services.filter_category'.tr(),
+                options: const [],
+                onTap: onCategoryTap,
               ),
             ),
           ],
         ),
       ],
-    );
-  }
-}
-
-class _FilterDropdown extends StatelessWidget {
-  const _FilterDropdown({required this.label, this.onTap});
-
-  final String label;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final typography = context.appTypography;
-    final height = responsiveDimension(44);
-
-    return Material(
-      color: colors.surface,
-      borderRadius: BorderRadius.circular(AppDimension.radiusSm),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppDimension.radiusSm),
-        child: Container(
-          height: height,
-          padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppDimension.radiusSm),
-            border: Border.all(color: colors.palettes.sky.shade200),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: typography
-                      .medium(typography.smallTight)
-                      .copyWith(color: colors.textPrimary),
-                ),
-              ),
-              AppSvgPicture.asset(
-                AppSvgs.chevronDown,
-                width: AppDimension.iconMd,
-                height: AppDimension.iconMd,
-                colorFilter: ColorFilter.mode(
-                  colors.textSecondary,
-                  BlendMode.srcIn,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

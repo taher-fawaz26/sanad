@@ -16,6 +16,7 @@ import 'package:branches/branches.dart'
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart' show VoidCallback;
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/business_profile_status.dart';
+import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/category_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/legal_data_status.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/organization_profile_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/provider_completion_entity.dart';
@@ -26,6 +27,29 @@ import 'package:sanad_provider/src/features/organization_settings/src/presentati
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/sections/compliance_documents_section.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/sections/working_hours_section.dart';
 import 'package:shared_ui/shared_ui.dart' show ComplianceDocumentStatus;
+
+/// Display names for the provider's selected categories, in the current
+/// locale.
+///
+/// `profile.categories[].name` comes from `GET /settings` (the "Me" read
+/// model), which is not locale-aware — unlike the dedicated `GET
+/// /categories` catalog (`catalog`, already fetched for the edit picker),
+/// which is. Resolving each selected category's name by [CategoryEntity.id]
+/// against that catalog instead of trusting the profile's own copy is what
+/// keeps this view in sync with the app's language (SAN-565); a selection
+/// missing from the catalog (e.g. a very large category list beyond the
+/// picker's page size) falls back to the profile's name rather than
+/// disappearing.
+List<String> selectedCategoryNames(
+  List<CategoryEntity> profileCategories,
+  List<CategoryEntity> catalog,
+) {
+  final catalogById = {for (final category in catalog) category.id: category};
+  return [
+    for (final selected in profileCategories)
+      catalogById[selected.id]?.name ?? selected.name,
+  ];
+}
 
 /// Maps completion-checklist items to the section's display item.
 List<BusinessProgressChecklistItem> businessProgressChecklist(
@@ -155,30 +179,30 @@ List<ComplianceDocumentEntry> complianceDocumentEntries({
   return entries;
 }
 
-/// Turns backend availability into one [WorkingHoursDayGroup] per weekday,
-/// with days sorted Saturday→Friday ([WorkingHoursPolicy.sortDaysCanonically])
-/// and slots within each day sorted chronologically
-/// ([WorkingHoursPolicy.sortSlotsChronologically]).
+/// Turns backend availability into one [WorkingHoursDayGroup] per weekday
+/// via [WorkingHoursPolicy.normalizeAvailability] — the single source of
+/// truth for grouping/sorting, also used by the edit sheet's cubit and the
+/// defensive save-time check, so the view can never drift out of sync with
+/// how the draft state groups (SAN-573).
 ///
 /// Empty days are dropped — the section renders nothing for a day with zero
 /// slots (that would misleadingly read as "closed" rather than "unset").
 /// `localeName` drives AM/PM localization (ص/م in ar, AM/PM in en) via
-/// [BranchScheduleFormatter.formatSlot]'s `locale` parameter.
+/// [BranchScheduleFormatter.formatSlot]'s `locale` parameter. View mode has
+/// no delete affordance, so every [WorkingHoursSlotRow.onDelete] is null.
 List<WorkingHoursDayGroup> workingHoursDayGroups(
   List<WorkingHoursDayEntity> availability, {
   required String localeName,
 }) {
-  final sortedDays = WorkingHoursPolicy.sortDaysCanonically(availability);
+  final normalized = WorkingHoursPolicy.normalizeAvailability(availability);
   return [
-    for (final day in sortedDays)
+    for (final day in normalized)
       if (day.slots.isNotEmpty)
         WorkingHoursDayGroup(
           dayLabel: BranchScheduleFormatter.localizedDay(day.day),
           slots: [
-            for (final slot in WorkingHoursPolicy.sortSlotsChronologically(
-              day.slots,
-            ))
-              WorkingHoursSlotView(
+            for (final slot in day.slots)
+              WorkingHoursSlotRow(
                 hoursLabel: BranchScheduleFormatter.formatSlot(
                   BranchTimeSlotEntity(from: slot.from, to: slot.to),
                   locale: localeName,
@@ -187,31 +211,4 @@ List<WorkingHoursDayGroup> workingHoursDayGroups(
           ],
         ),
   ];
-}
-
-/// Groups the edit sheet's flat, possibly-multiple-slots-per-day entries back
-/// into one [WorkingHoursDayEntity] per day (the shape the backend/bloc
-/// expect) — the edit sheet allows split shifts (SAN-568), so a single day id
-/// can appear more than once in [entries].
-///
-/// Slots within each day are sorted chronologically, and days are sorted
-/// Saturday→Friday, so the persisted payload matches the intended visual
-/// order (defensive — the backend does not require ordering).
-List<WorkingHoursDayEntity> groupWorkingHoursEntries(
-  List<WorkingHoursEditEntry> entries,
-) {
-  final slotsByDay = <String, List<WorkingHoursSlotEntity>>{};
-  for (final entry in entries) {
-    (slotsByDay[entry.dayId] ??= <WorkingHoursSlotEntity>[]).add(
-      WorkingHoursSlotEntity(from: entry.from, to: entry.to),
-    );
-  }
-  final grouped = [
-    for (final MapEntry(key: day, value: slots) in slotsByDay.entries)
-      WorkingHoursDayEntity(
-        day: day,
-        slots: WorkingHoursPolicy.sortSlotsChronologically(slots),
-      ),
-  ];
-  return WorkingHoursPolicy.sortDaysCanonically(grouped);
 }

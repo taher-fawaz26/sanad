@@ -1,0 +1,38 @@
+name: text_optimization
+description: >
+  Shared AI text-optimization ("Enhance with AI") flow — a single domain
+  contract and cubit that every description field's AI-enhance affordance
+  consumes, backed by the third-party `/api/v1/optimize` service.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+
+dependencies:
+  core:
+    path: ../core
+  design_system:
+    path: ../design_system
+  equatable: ^2.1.0
+  flutter:
+    sdk: flutter
+  flutter_bloc: ^9.1.1
+  fpdart: ^1.2.0
+  localization:
+    path: ../localization
+  network:
+    path: ../network
+  shared_ui:
+    path: ../shared_ui
+
+dev_dependencies:
+  bloc_test: ^10.0.0
+  flutter_screenutil: ^5.9.3
+  flutter_test:
+    sdk: flutter
+  mocktail: ^1.0.4
+  testing:
+    path: ../testing
+  very_good_analysis: ^9.0.0

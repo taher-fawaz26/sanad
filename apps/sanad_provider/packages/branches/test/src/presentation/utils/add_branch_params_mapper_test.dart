@@ -2,6 +2,7 @@ import 'package:branches/src/domain/entities/branch_availability_entity.dart';
 import 'package:branches/src/domain/entities/branch_availability_mode.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/domain/entities/branch_manager_entity.dart';
+import 'package:branches/src/domain/entities/branch_schedule_mode.dart';
 import 'package:branches/src/domain/entities/branch_time_slot_entity.dart';
 import 'package:branches/src/domain/entities/branch_type.dart';
 import 'package:branches/src/domain/entities/branch_worker_entity.dart';
@@ -9,7 +10,6 @@ import 'package:branches/src/domain/entities/branch_worker_type.dart';
 import 'package:branches/src/domain/entities/worker_status.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_state.dart';
 import 'package:branches/src/presentation/utils/add_branch_params_mapper.dart';
-import 'package:branches/src/presentation/widgets/branch_schedule_section.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maps/maps.dart';
 import 'package:services/services.dart';
@@ -91,6 +91,41 @@ void main() {
       expect(params.serviceIds, ['s1']);
       expect(params.workerIds, ['w1']);
     });
+
+    test(
+      'maps a draft with no manager selected without throwing '
+      '(defense-in-depth: the mapper itself must never force-unwrap '
+      'selectedManager, even though Step 1 now requires it before '
+      'submission is reachable — regression, this previously crashed live '
+      'on submit)',
+      () {
+        final draftWithoutManager = completeDraft.copyWith(
+          selectedManager: () => null,
+        );
+
+        final params = AddBranchParamsMapper.toCreateParams(
+          draftWithoutManager,
+          companySchedule: companySchedule,
+        );
+
+        expect(params.branchManagerId, isNull);
+      },
+    );
+
+    test(
+      'a valid manager UUID is mapped straight through to branchManagerId '
+      '(the backend runtime rejects a null value — POST /api/v1/branches '
+      'returns 400 "branchManagerId must be a UUID" — so this must always '
+      'be a real id when a manager is selected)',
+      () {
+        final params = AddBranchParamsMapper.toCreateParams(
+          completeDraft,
+          companySchedule: companySchedule,
+        );
+
+        expect(params.branchManagerId, 'mgr-1');
+      },
+    );
 
     test('uses custom schedule when mode is custom', () {
       final draft = completeDraft.copyWith(

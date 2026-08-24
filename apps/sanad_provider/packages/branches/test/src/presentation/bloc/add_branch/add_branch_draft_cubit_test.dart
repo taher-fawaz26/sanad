@@ -1,11 +1,12 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
 import 'package:branches/src/domain/entities/branch_manager_entity.dart';
+import 'package:branches/src/domain/entities/branch_schedule_mode.dart';
 import 'package:branches/src/domain/entities/branch_time_slot_entity.dart';
 import 'package:branches/src/domain/entities/branch_type.dart';
+import 'package:branches/src/domain/policies/branch_schedule_policy.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_cubit.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_state.dart';
-import 'package:branches/src/presentation/widgets/branch_schedule_section.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maps/maps.dart';
 import 'package:services/services.dart';
@@ -250,6 +251,228 @@ void main() {
       );
     });
 
+    group('addScheduleSlot / removeScheduleSlot (SAN-592)', () {
+      blocTest<AddBranchDraftCubit, AddBranchDraft>(
+        'adding a second slot to a day that already has one merges into '
+        'that same day — no duplicate day group',
+        build: () => cubit,
+        seed: () => const AddBranchDraft(
+          customSchedule: [
+            BranchAvailabilityEntity(
+              day: 'SATURDAY',
+              slots: [BranchTimeSlotEntity(from: '09:00', to: '12:00')],
+            ),
+          ],
+        ),
+        act: (c) => c.addScheduleSlot(
+          dayId: 'SATURDAY',
+          from: '14:00',
+          to: '18:00',
+        ),
+        expect: () => [
+          isA<AddBranchDraft>().having(
+            (d) => d.customSchedule,
+            'schedule',
+            const [
+              BranchAvailabilityEntity(
+                day: 'SATURDAY',
+                slots: [
+                  BranchTimeSlotEntity(from: '09:00', to: '12:00'),
+                  BranchTimeSlotEntity(from: '14:00', to: '18:00'),
+                ],
+              ),
+            ],
+          ),
+        ],
+      );
+
+      blocTest<AddBranchDraftCubit, AddBranchDraft>(
+        'adding a slot for a new day keeps every day in canonical '
+        'Saturday→Friday order regardless of insertion order',
+        build: () => cubit,
+        seed: () => const AddBranchDraft(
+          customSchedule: [
+            BranchAvailabilityEntity(
+              day: 'MONDAY',
+              slots: [BranchTimeSlotEntity(from: '09:00', to: '17:00')],
+            ),
+          ],
+        ),
+        act: (c) =>
+            c.addScheduleSlot(dayId: 'SATURDAY', from: '09:00', to: '17:00'),
+        expect: () => [
+          isA<AddBranchDraft>().having(
+            (d) => d.customSchedule.map((day) => day.day).toList(),
+            'day order',
+            ['SATURDAY', 'MONDAY'],
+          ),
+        ],
+      );
+
+      blocTest<AddBranchDraftCubit, AddBranchDraft>(
+        'an overlapping candidate is rejected, the schedule is left '
+        'untouched, and the rejection is stashed for the UI',
+        build: () => cubit,
+        seed: () => const AddBranchDraft(
+          customSchedule: [
+            BranchAvailabilityEntity(
+              day: 'SATURDAY',
+              slots: [BranchTimeSlotEntity(from: '09:00', to: '17:00')],
+            ),
+          ],
+        ),
+        act: (c) =>
+            c.addScheduleSlot(dayId: 'SATURDAY', from: '10:00', to: '12:00'),
+        expect: () => [
+          isA<AddBranchDraft>()
+              .having(
+                (d) => d.customSchedule,
+                'schedule unchanged',
+                const [
+                  BranchAvailabilityEntity(
+                    day: 'SATURDAY',
+                    slots: [BranchTimeSlotEntity(from: '09:00', to: '17:00')],
+                  ),
+                ],
+              )
+              .having(
+                (d) => d.lastScheduleRejection?.reason,
+                'rejection reason',
+                SlotValidationReason.overlapsExisting,
+              ),
+        ],
+      );
+
+      test('addScheduleSlot returns the validation result to the caller', () {
+        final result = cubit.addScheduleSlot(
+          dayId: 'SATURDAY',
+          from: '09:00',
+          to: '08:00',
+        );
+        expect(result.isValid, isFalse);
+        expect(result.reason, SlotValidationReason.endBeforeOrEqualStart);
+      });
+
+      blocTest<AddBranchDraftCubit, AddBranchDraft>(
+        'a successful addScheduleSlot clears a previously stashed rejection',
+        build: () => cubit,
+        seed: () => AddBranchDraft(
+          customSchedule: const [
+            BranchAvailabilityEntity(
+              day: 'SATURDAY',
+              slots: [BranchTimeSlotEntity(from: '09:00', to: '17:00')],
+            ),
+          ],
+          lastScheduleRejection: const ScheduleSlotRejection(
+            reason: SlotValidationReason.endBeforeOrEqualStart,
+            dayId: 'SUNDAY',
+            from: '09:00',
+            to: '08:00',
+          ),
+        ),
+        act: (c) =>
+            c.addScheduleSlot(dayId: 'SUNDAY', from: '09:00', to: '17:00'),
+        expect: () => [
+          isA<AddBranchDraft>().having(
+            (d) => d.lastScheduleRejection,
+            'rejection cleared',
+            isNull,
+          ),
+        ],
+      );
+
+      blocTest<AddBranchDraftCubit, AddBranchDraft>(
+        'removeScheduleSlot deletes exactly the targeted slot, leaving a '
+        'multi-slot day with the rest intact',
+        build: () => cubit,
+        seed: () => const AddBranchDraft(
+          customSchedule: [
+            BranchAvailabilityEntity(
+              day: 'SATURDAY',
+              slots: [
+                BranchTimeSlotEntity(from: '09:00', to: '12:00'),
+                BranchTimeSlotEntity(from: '14:00', to: '18:00'),
+              ],
+            ),
+          ],
+        ),
+        act: (c) => c.removeScheduleSlot('SATURDAY', 0),
+        expect: () => [
+          isA<AddBranchDraft>().having(
+            (d) => d.customSchedule,
+            'schedule',
+            const [
+              BranchAvailabilityEntity(
+                day: 'SATURDAY',
+                slots: [BranchTimeSlotEntity(from: '14:00', to: '18:00')],
+              ),
+            ],
+          ),
+        ],
+      );
+
+      blocTest<AddBranchDraftCubit, AddBranchDraft>(
+        'removeScheduleSlot drops the day entirely once its last slot is '
+        'removed',
+        build: () => cubit,
+        seed: () => const AddBranchDraft(
+          customSchedule: [
+            BranchAvailabilityEntity(
+              day: 'SATURDAY',
+              slots: [BranchTimeSlotEntity(from: '09:00', to: '12:00')],
+            ),
+          ],
+        ),
+        act: (c) => c.removeScheduleSlot('SATURDAY', 0),
+        expect: () => [
+          isA<AddBranchDraft>().having(
+            (d) => d.customSchedule,
+            'schedule',
+            isEmpty,
+          ),
+        ],
+      );
+
+      blocTest<AddBranchDraftCubit, AddBranchDraft>(
+        'dismissScheduleRejection clears a stashed rejection without '
+        'touching the schedule',
+        build: () => cubit,
+        seed: () => AddBranchDraft(
+          customSchedule: const [
+            BranchAvailabilityEntity(
+              day: 'SATURDAY',
+              slots: [BranchTimeSlotEntity(from: '09:00', to: '17:00')],
+            ),
+          ],
+          lastScheduleRejection: const ScheduleSlotRejection(
+            reason: SlotValidationReason.overlapsExisting,
+            dayId: 'SATURDAY',
+            from: '10:00',
+            to: '12:00',
+          ),
+        ),
+        act: (c) => c.dismissScheduleRejection(),
+        expect: () => [
+          isA<AddBranchDraft>()
+              .having(
+                (d) => d.lastScheduleRejection,
+                'rejection cleared',
+                isNull,
+              )
+              .having(
+                (d) => d.customSchedule,
+                'schedule unchanged',
+                const [
+                  BranchAvailabilityEntity(
+                    day: 'SATURDAY',
+                    slots: [BranchTimeSlotEntity(from: '09:00', to: '17:00')],
+                  ),
+                ],
+              ),
+        ],
+      );
+    });
+
     group('updateCoverage', () {
       blocTest<AddBranchDraftCubit, AddBranchDraft>(
         'sets all coverage fields',
@@ -394,13 +617,61 @@ void main() {
         expect(draft.isStepOneComplete, isFalse);
       });
 
-      test('isStepOneComplete fails without selected manager', () {
+      test(
+        'isStepOneComplete requires a manager — the published Swagger spec '
+        'lists branchManagerId as optional, but POST /api/v1/branches '
+        'rejects a null value at runtime (400 "branchManagerId must be a '
+        'UUID"), so the actual backend contract requires it',
+        () {
+          const draft = AddBranchDraft(
+            branchName: 'Branch',
+            selectedCity: testCity,
+            phone: '0501234567',
+            branchAddress: '123 Main St',
+            pickedPosition: LatLng(25.0, 55.0),
+          );
+          expect(draft.isStepOneComplete, isFalse);
+
+          final withManager = draft.copyWith(
+            selectedManager: () => testManager,
+          );
+          expect(withManager.isStepOneComplete, isTrue);
+        },
+      );
+
+      test('isStepOneComplete fails with an empty phone', () {
         const draft = AddBranchDraft(
           branchName: 'Branch',
           selectedCity: testCity,
-          phone: '0501234567',
           branchAddress: '123 Main St',
           pickedPosition: LatLng(25.0, 55.0),
+          selectedManager: testManager,
+        );
+        expect(draft.isStepOneComplete, isFalse);
+      });
+
+      test('isStepOneComplete fails with an invalid phone (SAN-600)', () {
+        for (final phone in ['666666666', '66666666', '123']) {
+          final draft = AddBranchDraft(
+            branchName: 'Branch',
+            selectedCity: testCity,
+            phone: phone,
+            branchAddress: '123 Main St',
+            pickedPosition: const LatLng(25.0, 55.0),
+            selectedManager: testManager,
+          );
+          expect(draft.isStepOneComplete, isFalse, reason: '$phone must fail');
+        }
+      });
+
+      test('isStepOneComplete fails with a landline (mobile-only)', () {
+        const draft = AddBranchDraft(
+          branchName: 'Branch',
+          selectedCity: testCity,
+          phone: '043334444',
+          branchAddress: '123 Main St',
+          pickedPosition: LatLng(25.0, 55.0),
+          selectedManager: testManager,
         );
         expect(draft.isStepOneComplete, isFalse);
       });

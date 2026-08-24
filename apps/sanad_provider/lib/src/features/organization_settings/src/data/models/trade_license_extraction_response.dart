@@ -2,7 +2,9 @@ import 'package:sanad_provider/src/features/organization_settings/src/domain/ent
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/trade_license_legal_data_extraction_entity.dart';
 
 /// Mirrors `TradeLicenseExtractionDto` exactly — the freshly-extracted (not
-/// yet persisted) trade licence read inside `LegalDataExtractionResponseDto`.
+/// yet persisted) trade licence read returned bare by
+/// `POST service-provider/legal-data/trade-license/extract` (no outer
+/// envelope — see `LegalDataApiPaths.tradeLicenseExtract`).
 ///
 /// Unlike [TradeLicenseResponse] (the persisted-record shape), this has no
 /// `id`/`createdAt`/`updatedAt`/document, and it has a required

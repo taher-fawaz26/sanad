@@ -1,9 +1,9 @@
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
 import 'package:branches/src/domain/entities/branch_availability_mode.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
+import 'package:branches/src/domain/entities/branch_schedule_mode.dart';
 import 'package:branches/src/domain/usecases/branch_usecase_params.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_state.dart';
-import 'package:branches/src/presentation/widgets/branch_schedule_section.dart';
 import 'package:core/core.dart';
 
 abstract final class AddBranchParamsMapper {
@@ -31,7 +31,7 @@ abstract final class AddBranchParamsMapper {
       branchAddress: draft.branchAddress ?? '',
       cityId: city.id,
       branchPhone: _normalizePhone(draft.phone),
-      branchManagerId: draft.selectedManager!.id,
+      branchManagerId: draft.selectedManager?.id,
       lat: position.latitude,
       lng: position.longitude,
       radiusKm: radiusKm,

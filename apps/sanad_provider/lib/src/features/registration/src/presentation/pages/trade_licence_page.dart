@@ -3,6 +3,7 @@ import 'package:asset_picker/asset_picker.dart';
 import 'package:design_system/design_system.dart';
 import 'package:document_flow/document_flow.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -32,6 +33,7 @@ class TradeLicencePage extends StatelessWidget {
     removeDocument: 'registration.remove_document'.tr(),
     upload: 'registration.upload'.tr(),
     retryUpload: 'common.retry'.tr(),
+    checkingDocument: 'registration.checking_document'.tr(),
   );
 
   Future<void> _capture(BuildContext context) async {
@@ -45,7 +47,8 @@ class TradeLicencePage extends StatelessWidget {
         options: kRegistrationDocumentOptions,
         theme: registrationPickerTheme(context),
       );
-    } on AssetPickerException {
+    } on AssetPickerException catch (e) {
+      if (kDebugMode) debugPrint('[TradeLicence] capture failed: $e');
       if (!context.mounted) return;
       showAppErrorSnackbar(
         context: context,
@@ -62,10 +65,15 @@ class TradeLicencePage extends StatelessWidget {
     return BlocListener<DocumentFlowBloc, DocumentFlowState>(
       listenWhen: (previous, current) =>
           previous.failure != current.failure &&
-          current.failure is UploadFailure,
+          (current.failure is UploadFailure ||
+              current.failure is DocumentValidationFailure),
       listener: (context, state) {
         final failure = state.failure;
-        if (failure is! UploadFailure) return;
+        if (failure == null) return;
+        if (failure is! UploadFailure &&
+            failure is! DocumentValidationFailure) {
+          return;
+        }
         showAppErrorSnackbar(context: context, title: failure.messageKey.tr());
       },
       child: BlocBuilder<DocumentFlowBloc, DocumentFlowState>(

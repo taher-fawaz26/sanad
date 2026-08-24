@@ -1,11 +1,22 @@
+import 'package:core/core.dart'
+    show SlotValidationReason, WeeklyScheduleDay, WeeklySchedulePolicy;
+import 'package:core/core.dart' as core show SlotValidation, WeeklyTimeSlot;
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/working_hours_day_entity.dart';
+
+export 'package:core/core.dart' show SlotValidationReason;
 
 /// Domain policy for provider working-hours validation and ordering.
 ///
-/// Single source of truth for the overlap rule and weekday/slot ordering —
-/// the UI (edit sheet cubit, view mappers) and the save flow all consult
-/// this policy instead of re-implementing the same logic in widgets. Keeps
-/// the rule change-in-one-place if the backend contract ever tightens.
+/// Thin facade over the generic `WeeklySchedulePolicy` (`package:core`),
+/// bound to this feature's own [WorkingHoursDayEntity]/
+/// [WorkingHoursSlotEntity] shapes and [WorkingHoursDayIds] day order. The
+/// actual overlap/grouping/sorting/upsert algorithm lives in one place —
+/// `packages/core/lib/src/scheduling/weekly_schedule_policy.dart` — shared
+/// with the per-branch working-hours flow in the `branches` package
+/// (`BranchSchedulePolicy`), so the two features can never re-diverge on
+/// scheduling behavior. This facade exists so every call site here keeps
+/// working with [WorkingHoursDayEntity]/[WorkingHoursSlotEntity] rather than
+/// the generic record shape.
 ///
 /// **Overlap rule (client-authoritative):**
 /// Two slots `[a.from, a.to)` and `[b.from, b.to)` on the same day are
@@ -23,15 +34,6 @@ import 'package:sanad_provider/src/features/organization_settings/src/domain/ent
 abstract final class WorkingHoursPolicy {
   WorkingHoursPolicy._();
 
-  /// Result of a candidate-slot validation check. Immutable value type.
-  ///
-  /// Callers pattern-match: `.valid` alone (drop the candidate through) vs.
-  /// the specific rejection reason (surface a localized error).
-  ///
-  /// The specific reason drives which l10n key the UI shows — the policy
-  /// itself never touches strings.
-  static const _validationValid = SlotValidation._(SlotValidationReason.valid);
-
   /// Validate a single candidate `[from, to)` slot in isolation
   /// (independent of any existing slots). Rejects:
   /// - unparseable HH:mm
@@ -42,18 +44,15 @@ abstract final class WorkingHoursPolicy {
   static SlotValidation validateSlotTimes({
     required String from,
     required String to,
-  }) {
-    final f = _parseHhmm(from);
-    final t = _parseHhmm(to);
-    if (f == null || t == null) return _invalid(SlotValidationReason.malformed);
-    if (f >= t) return _invalid(SlotValidationReason.endBeforeOrEqualStart);
-    return _validationValid;
-  }
+  }) => SlotValidation._fromCore(
+    WeeklySchedulePolicy.validateSlotTimes(from: from, to: to),
+  );
 
   /// Validate a candidate slot for `day` against [existingSlots] (which
-  /// must be that same day's current slots). Returns [SlotValidationReason
-  /// .overlapsExisting] on the first conflict; the conflicting slot is
-  /// exposed via [SlotValidation.conflict] so the UI can name it.
+  /// must be that same day's current slots). Returns
+  /// [SlotValidationReason.overlapsExisting] on the first conflict; the
+  /// conflicting slot is exposed via [SlotValidation.conflict] so the UI can
+  /// name it.
   ///
   /// `excludeIndex` is for the edit-existing-slot case: pass the index of
   /// the slot being edited so it isn't compared against itself.
@@ -62,50 +61,21 @@ abstract final class WorkingHoursPolicy {
     required String to,
     required List<WorkingHoursSlotEntity> existingSlots,
     int? excludeIndex,
-  }) {
-    final base = validateSlotTimes(from: from, to: to);
-    if (!base.isValid) return base;
-
-    for (var i = 0; i < existingSlots.length; i++) {
-      if (i == excludeIndex) continue;
-      final other = existingSlots[i];
-      if (_overlaps(from, to, other.from, other.to)) {
-        return SlotValidation._(
-          SlotValidationReason.overlapsExisting,
-          conflict: other,
-        );
-      }
-    }
-    return _validationValid;
-  }
-
-  /// True when two same-day slots share any interior time.
-  /// Adjacent boundaries (`a.to == b.from`) are **not** an overlap.
-  static bool _overlaps(String aFrom, String aTo, String bFrom, String bTo) {
-    final af = _parseHhmm(aFrom);
-    final at = _parseHhmm(aTo);
-    final bf = _parseHhmm(bFrom);
-    final bt = _parseHhmm(bTo);
-    if (af == null || at == null || bf == null || bt == null) return false;
-    return af < bt && bf < at;
-  }
+  }) => SlotValidation._fromCore(
+    WeeklySchedulePolicy.validateCandidateAgainst(
+      from: from,
+      to: to,
+      existingSlots: existingSlots.map(_slotToRecord).toList(),
+      excludeIndex: excludeIndex,
+    ),
+  );
 
   /// Chronological (by `from`) sort of a day's slots — non-mutating.
   static List<WorkingHoursSlotEntity> sortSlotsChronologically(
     List<WorkingHoursSlotEntity> slots,
-  ) {
-    final sorted = [...slots]
-      ..sort((a, b) {
-        final af = _parseHhmm(a.from) ?? 0;
-        final bf = _parseHhmm(b.from) ?? 0;
-        final byFrom = af.compareTo(bf);
-        if (byFrom != 0) return byFrom;
-        final at = _parseHhmm(a.to) ?? 0;
-        final bt = _parseHhmm(b.to) ?? 0;
-        return at.compareTo(bt);
-      });
-    return sorted;
-  }
+  ) => WeeklySchedulePolicy.sortSlotsChronologically(
+    slots.map(_slotToRecord).toList(),
+  ).map(_slotFromRecord).toList();
 
   /// Canonical Saturday→Friday sort of a week's day entries — non-mutating.
   /// Days not present in [WorkingHoursDayIds.all] are pushed to the end
@@ -113,19 +83,27 @@ abstract final class WorkingHoursPolicy {
   /// day codes).
   static List<WorkingHoursDayEntity> sortDaysCanonically(
     List<WorkingHoursDayEntity> days,
-  ) {
-    final indexOf = <String, int>{
-      for (var i = 0; i < WorkingHoursDayIds.all.length; i++)
-        WorkingHoursDayIds.all[i]: i,
-    };
-    final sorted = [...days]
-      ..sort((a, b) {
-        final ai = indexOf[a.day] ?? WorkingHoursDayIds.all.length;
-        final bi = indexOf[b.day] ?? WorkingHoursDayIds.all.length;
-        return ai.compareTo(bi);
-      });
-    return sorted;
-  }
+  ) => WeeklySchedulePolicy.sortDaysCanonically(
+    days.map(_dayToRecord).toList(),
+    canonicalOrder: WorkingHoursDayIds.all,
+  ).map(_dayFromRecord).toList();
+
+  /// Single source of truth for turning any [availability] shape into the
+  /// canonical one: same-day entries merged into one, slots sorted
+  /// chronologically within each day, and days sorted Saturday→Friday.
+  /// Non-mutating.
+  ///
+  /// Every mutation point (initial load, add-slot, delete-slot, and the
+  /// defensive re-check at save) should route through this rather than
+  /// re-implementing grouping/sorting locally — that duplication is exactly
+  /// what let a newly-added slot for an existing day render as a second,
+  /// separate day entry instead of merging into the first (SAN-573).
+  static List<WorkingHoursDayEntity> normalizeAvailability(
+    List<WorkingHoursDayEntity> availability,
+  ) => WeeklySchedulePolicy.normalizeAvailability(
+    availability.map(_dayToRecord).toList(),
+    canonicalOrder: WorkingHoursDayIds.all,
+  ).map(_dayFromRecord).toList();
 
   /// Full-availability validation used defensively before save: returns the
   /// first `[day, conflict]` overlap discovered, or null when everything is
@@ -137,46 +115,84 @@ abstract final class WorkingHoursPolicy {
   static AvailabilityConflict? findAvailabilityConflict(
     List<WorkingHoursDayEntity> availability,
   ) {
-    for (final day in availability) {
-      for (var i = 0; i < day.slots.length; i++) {
-        for (var j = i + 1; j < day.slots.length; j++) {
-          final a = day.slots[i];
-          final b = day.slots[j];
-          if (_overlaps(a.from, a.to, b.from, b.to)) {
-            return AvailabilityConflict(day: day.day, first: a, second: b);
-          }
-        }
-      }
-    }
-    return null;
+    final conflict = WeeklySchedulePolicy.findAvailabilityConflict(
+      availability.map(_dayToRecord).toList(),
+    );
+    if (conflict == null) return null;
+    return AvailabilityConflict(
+      day: conflict.day,
+      first: _slotFromRecord(conflict.first),
+      second: _slotFromRecord(conflict.second),
+    );
   }
 
-  static SlotValidation _invalid(SlotValidationReason reason) =>
-      SlotValidation._(reason);
-
-  /// HH:mm → minutes since midnight, or null if malformed.
-  static int? _parseHhmm(String time) {
-    final parts = time.split(':');
-    if (parts.length != 2) return null;
-    final h = int.tryParse(parts[0]);
-    final m = int.tryParse(parts[1]);
-    if (h == null || m == null) return null;
-    if (h < 0 || h > 23 || m < 0 || m > 59) return null;
-    return h * 60 + m;
+  /// Upsert at the day level: adding a slot for a day that already has one
+  /// or more slots merges into that same day's group — it never creates a
+  /// second, separate entry for the same day (SAN-573). The result is
+  /// always re-normalized via [normalizeAvailability]. On rejection, [days]
+  /// is returned unchanged.
+  static ({List<WorkingHoursDayEntity> days, SlotValidation validation})
+  upsertSlot({
+    required List<WorkingHoursDayEntity> days,
+    required String dayId,
+    required String from,
+    required String to,
+  }) {
+    final result = WeeklySchedulePolicy.upsertSlot(
+      days: days.map(_dayToRecord).toList(),
+      canonicalOrder: WorkingHoursDayIds.all,
+      dayId: dayId,
+      from: from,
+      to: to,
+    );
+    final validation = SlotValidation._fromCore(result.validation);
+    if (!validation.isValid) return (days: days, validation: validation);
+    return (
+      days: result.days.map(_dayFromRecord).toList(),
+      validation: validation,
+    );
   }
-}
 
-/// Why a candidate slot was rejected — see [WorkingHoursPolicy].
-enum SlotValidationReason {
-  valid,
-  malformed,
-  endBeforeOrEqualStart,
-  overlapsExisting,
+  /// Deletes exactly one slot — `dayId`'s slot at `slotIndex` (that day's
+  /// own chronological index, not a flat cross-day index). If that was the
+  /// day's last slot, the (now-empty) day group is dropped.
+  static List<WorkingHoursDayEntity> removeSlot({
+    required List<WorkingHoursDayEntity> days,
+    required String dayId,
+    required int slotIndex,
+  }) => WeeklySchedulePolicy.removeSlot(
+    days: days.map(_dayToRecord).toList(),
+    dayId: dayId,
+    slotIndex: slotIndex,
+  ).map(_dayFromRecord).toList();
+
+  static core.WeeklyTimeSlot _slotToRecord(WorkingHoursSlotEntity slot) =>
+      (from: slot.from, to: slot.to);
+
+  static WorkingHoursSlotEntity _slotFromRecord(core.WeeklyTimeSlot slot) =>
+      WorkingHoursSlotEntity(from: slot.from, to: slot.to);
+
+  static WeeklyScheduleDay _dayToRecord(WorkingHoursDayEntity day) =>
+      (day: day.day, slots: day.slots.map(_slotToRecord).toList());
+
+  static WorkingHoursDayEntity _dayFromRecord(WeeklyScheduleDay day) =>
+      WorkingHoursDayEntity(
+        day: day.day,
+        slots: day.slots.map(_slotFromRecord).toList(),
+      );
 }
 
 /// Result of a slot validation check.
 class SlotValidation {
   const SlotValidation._(this.reason, {this.conflict});
+
+  factory SlotValidation._fromCore(core.SlotValidation source) =>
+      SlotValidation._(
+        source.reason,
+        conflict: source.conflict == null
+            ? null
+            : WorkingHoursPolicy._slotFromRecord(source.conflict!),
+      );
 
   final SlotValidationReason reason;
 

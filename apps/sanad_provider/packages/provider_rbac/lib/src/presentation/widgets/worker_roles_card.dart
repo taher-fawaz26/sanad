@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:localization/localization.dart';
 import 'package:provider_rbac/src/presentation/bloc/worker_roles/worker_roles_bloc.dart';
+import 'package:provider_rbac/src/presentation/utils/role_display_name.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 
@@ -139,7 +140,7 @@ class _WorkerRolesCardBody extends StatelessWidget {
                         SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: Text(
-                            state.roles[i].displayName,
+                            state.roles[i].localizedDisplayName(),
                             style: typography.smallNormal.copyWith(
                               color: colors.textPrimary,
                             ),
@@ -276,7 +277,7 @@ class _ManageRolesSheetBodyState extends State<_ManageRolesSheetBody> {
                         SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: Text(
-                            role.displayName,
+                            role.localizedDisplayName(),
                             style: typography.regularNormal.copyWith(
                               color: colors.textPrimary,
                             ),

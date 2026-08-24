@@ -66,8 +66,4 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   TaskEither<Failure, void> logout() => _remoteDataSource.logout();
-
-  @override
-  TaskEither<Failure, void> deleteAccount(DeleteAccountParams params) =>
-      _remoteDataSource.deleteAccount(userSub: params.userSub);
 }

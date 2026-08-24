@@ -5,9 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fpdart/fpdart.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:provider_rbac/src/domain/entities/permission_entity.dart';
 import 'package:provider_rbac/src/presentation/bloc/role_form/role_form_bloc.dart';
 import 'package:provider_rbac/src/presentation/pages/role_form_page.dart';
+import 'package:text_optimization/text_optimization.dart';
 
 /// Widget-level coverage for [RoleFormPage]'s field validators
 /// (`_validateName` / `_validateDescription`), which have no prior test
@@ -18,6 +21,25 @@ import 'package:provider_rbac/src/presentation/pages/role_form_page.dart';
 /// both of which `MockBloc`/`whenListen` support directly.
 class _MockRoleFormBloc extends MockBloc<RoleFormEvent, RoleFormState>
     implements RoleFormBloc {}
+
+class _MockTextOptimizationRepository extends Mock
+    implements TextOptimizationRepository {}
+
+/// The description field's `AiEnhanceDescriptionField` resolves a
+/// `TextOptimizationCubit` from `sl` (SAN-578) — never tapped here, but the
+/// widget still needs one registered to build.
+void _registerTextOptimizationCubit() {
+  final repository = _MockTextOptimizationRepository();
+  when(
+    () => repository.optimize(any()),
+  ).thenAnswer((_) => TaskEither.right(''));
+  if (sl.isRegistered<TextOptimizationCubit>()) {
+    sl.unregister<TextOptimizationCubit>();
+  }
+  sl.registerFactory<TextOptimizationCubit>(
+    () => TextOptimizationCubit(OptimizeTextUseCase(repository)),
+  );
+}
 
 const _perm1 = PermissionEntity(
   id: 'perm_1',
@@ -68,6 +90,13 @@ Future<void> _pump(
   addTearDown(
     tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
   );
+
+  _registerTextOptimizationCubit();
+  addTearDown(() {
+    if (sl.isRegistered<TextOptimizationCubit>()) {
+      sl.unregister<TextOptimizationCubit>();
+    }
+  });
 
   await tester.pumpWidget(
     ScreenUtilInit(
@@ -139,6 +168,18 @@ void main() {
   });
 
   group('role description field (optional, max 255)', () {
+    testWidgets(
+      'label carries an explicit optional indicator (SAN-590)',
+      (tester) async {
+        await _pump(tester, bloc, state: submittableState);
+
+        expect(
+          find.text('provider_rbac.description_label (common.optional)'),
+          findsOneWidget,
+        );
+      },
+    );
+
     testWidgets('empty value shows no error (optional)', (tester) async {
       await _pump(tester, bloc, state: submittableState);
 
@@ -205,6 +246,17 @@ void main() {
         find.text('validation.length_max'),
         findsNothing,
       );
+    });
+  });
+
+  group('permissions section (SAN-590)', () {
+    testWidgets('the section label is marked required', (tester) async {
+      await _pump(tester, bloc, state: submittableState);
+
+      final label = tester
+          .widgetList<AppFieldLabel>(find.byType(AppFieldLabel))
+          .firstWhere((w) => w.label == 'provider_rbac.permissions_label');
+      expect(label.isRequired, isTrue);
     });
   });
 

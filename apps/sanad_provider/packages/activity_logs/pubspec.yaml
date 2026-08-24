@@ -1,0 +1,37 @@
+name: activity_logs
+description: Activity Logs feature — domain, data, presentation, and DI for the provider activity feed.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+  flutter: ">=3.19.0"
+
+dependencies:
+  core:
+    path: ../../../../packages/core
+  design_system:
+    path: ../../../../packages/design_system
+  easy_localization: ^3.0.8
+  equatable: ^2.1.0
+  flutter:
+    sdk: flutter
+  flutter_bloc: ^9.1.1
+  fpdart: ^1.2.0
+  localization:
+    path: ../../../../packages/localization
+  network:
+    path: ../../../../packages/network
+  shared_ui:
+    path: ../../../../packages/shared_ui
+
+dev_dependencies:
+  bloc_test: ^10.0.0
+  flutter_screenutil: ^5.9.3
+  flutter_test:
+    sdk: flutter
+  mocktail: ^1.0.4
+  testing:
+    path: ../../../../packages/testing
+  very_good_analysis: ^9.0.0

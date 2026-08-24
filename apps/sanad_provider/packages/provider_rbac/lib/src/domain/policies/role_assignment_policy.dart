@@ -47,24 +47,29 @@ abstract final class RoleAssignmentPolicy {
   static bool canRemove(RoleEntity role, WorkerType type) =>
       !isMandatory(role, type);
 
-  /// Roles a user may add on top of the mandatory baseline: custom roles
-  /// only. System roles are type-bound — the *other* type's system role must
-  /// never be offered as an additional pick, since that would let it silently
-  /// replace the mandatory baseline.
+  /// Roles a user may add on top of the mandatory baseline.
+  ///
+  /// A worker's role set is exactly `[worker-basic]` — no customization — so
+  /// [WorkerType.worker] never has additional roles to offer. A manager may
+  /// add any custom role (`!isSystem`); system roles are always excluded,
+  /// since both the *other* type's baseline and this type's own baseline are
+  /// already locked in, not offered as a pick.
   static List<RoleEntity> assignableAdditionalRoles(
+    WorkerType type,
     List<RoleEntity> catalog,
-  ) => catalog.where((role) => !role.isSystem).toList();
+  ) {
+    if (type == WorkerType.worker) return const [];
+    return catalog.where((role) => !role.isSystem).toList();
+  }
 
-  /// System baseline slugs for every [WorkerType] — used to strip *any*
-  /// previous type's baseline out of a selection, regardless of which type
-  /// it came from.
-  static final Set<String> _baselineSlugs = WorkerType.values
-      .map(baselineSlugFor)
-      .toSet();
-
-  /// Rebuilds the selected-role set after [type] changes: drops the previous
-  /// type's baseline, adds the new type's baseline, preserves every
-  /// additional role the user already picked, and de-duplicates by id.
+  /// Rebuilds the selected-role set after [type] changes.
+  ///
+  /// Worker has no customization: the result is exactly the mandatory
+  /// baseline (`[worker-basic]`), discarding every other previously-selected
+  /// role, including custom ones. Manager keeps every valid custom role from
+  /// [selected] on top of its mandatory baseline (`branch-manager`),
+  /// dropping any system role (including a stray `worker-basic`) and
+  /// de-duplicating by id.
   static List<RoleEntity> normalizeAfterTypeChange(
     WorkerType type,
     List<RoleEntity> selected,
@@ -72,13 +77,16 @@ abstract final class RoleAssignmentPolicy {
   ) {
     final required = requiredRoleFor(type, catalog);
 
+    if (type == WorkerType.worker) {
+      return required == null ? const [] : [required];
+    }
+
     final result = <String, RoleEntity>{};
     if (required != null) result[required.id] = required;
     for (final role in selected) {
-      // System defaults are type-bound and never survive a type change —
-      // only the freshly resolved [required] baseline (added above) may
-      // occupy that slot.
-      if (role.isSystem && _baselineSlugs.contains(role.name)) continue;
+      // System roles are always type-bound baselines — only the freshly
+      // resolved [required] baseline (added above) may occupy that slot.
+      if (role.isSystem) continue;
       result[role.id] = role;
     }
     return result.values.toList();

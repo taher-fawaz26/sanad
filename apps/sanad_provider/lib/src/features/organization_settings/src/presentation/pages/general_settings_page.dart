@@ -169,23 +169,18 @@ class _GeneralSettingsView extends StatelessWidget {
     BuildContext context,
     List<WorkingHoursDayEntity> current,
   ) async {
-    final entries = <WorkingHoursEditEntry>[
-      for (final day in current)
-        for (final slot in day.slots)
-          WorkingHoursEditEntry(dayId: day.day, from: slot.from, to: slot.to),
-    ];
-
+    // The edit sheet's cubit is already day-grouped and keeps the draft
+    // normalized (merged/sorted) after every add/delete (SAN-573), so the
+    // result can be dispatched as-is — no flattening/regrouping step needed
+    // here.
     final result = await showEditWorkingHoursBottomSheet(
       context: context,
-      initialEntries: entries,
+      initialDays: current,
     );
     if (result == null || !context.mounted) return;
 
-    // The edit sheet allows split shifts (SAN-568) — group() collapses
-    // multiple slots for the same day back into one WorkingHoursDayEntity,
-    // the shape the backend/bloc expect.
     context.read<OrganizationSettingsBloc>().add(
-      OrganizationSettingsWorkingHoursSaved(groupWorkingHoursEntries(result)),
+      OrganizationSettingsWorkingHoursSaved(result),
     );
   }
 
@@ -321,9 +316,10 @@ class _GeneralSettingsView extends StatelessWidget {
                         const AppSliverGap(sectionSpacing),
                         AppSliverBox(
                           child: CategorySection(
-                            selectedCategories: profile.categories
-                                .map((category) => category.name)
-                                .toList(),
+                            selectedCategories: selectedCategoryNames(
+                              profile.categories,
+                              state.categoryCatalog,
+                            ),
                             onEdit: () => _editCategories(
                               context,
                               state.categoryCatalog,

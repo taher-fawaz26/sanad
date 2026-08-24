@@ -12,12 +12,15 @@ export 'src/di/document_flow_di.dart';
 // Domain — entities & value objects.
 export 'src/domain/entities/document_flow_config.dart';
 export 'src/domain/entities/document_flow_context.dart';
+export 'src/domain/entities/document_issue_deriver.dart';
 export 'src/domain/entities/document_media.dart';
 export 'src/domain/entities/document_repair_target.dart';
+export 'src/domain/entities/document_status.dart';
 export 'src/domain/entities/document_type.dart';
 export 'src/domain/entities/document_validation.dart';
 export 'src/domain/entities/extracted_document.dart';
 export 'src/domain/entities/extracted_field.dart';
+export 'src/domain/entities/id_verification.dart';
 // Domain — failures.
 export 'src/domain/failures/document_flow_failure.dart';
 // Domain — repository contract & params.
@@ -28,6 +31,9 @@ export 'src/domain/usecases/extract_documents_usecase.dart';
 export 'src/domain/usecases/fetch_documents_usecase.dart';
 export 'src/domain/usecases/submit_documents_usecase.dart';
 export 'src/domain/usecases/upload_media_usecase.dart';
+// Domain — pre-upload document-type validation.
+export 'src/domain/validation/document_type_validator.dart';
+export 'src/domain/validation/document_validation_result.dart';
 export 'src/module/document_flow_module.dart';
 // Presentation — bloc, controller.
 export 'src/presentation/bloc/document_flow_bloc.dart';

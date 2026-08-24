@@ -9,6 +9,7 @@ import 'package:services/src/presentation/bloc/request_new_service/request_new_s
 import 'package:services/src/presentation/widgets/add_service_images_field.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
+import 'package:text_optimization/text_optimization.dart';
 
 /// The Request New Service form's fields.
 ///
@@ -96,18 +97,16 @@ class RequestNewServiceFormBodyState extends State<RequestNewServiceFormBody> {
               value: _category.value?.name,
               onTap: _pickCategory,
               errorText: _showCategoryError.value && _category.value == null
-                  ? 'services.request_new_service.category_required_error'
-                        .tr()
+                  ? 'services.request_new_service.category_required_error'.tr()
                   : null,
             ),
           ),
           SizedBox(height: AppSpacing.lg),
-          AppDescriptionField(
+          AiEnhanceDescriptionField(
             label: 'services.request_new_service.description_label'.tr(),
             isRequired: true,
             hint: 'services.request_new_service.description_hint'.tr(),
             controller: _descriptionController,
-            maxLines: 5,
             maxLength: 500,
             validator: _validateDescription,
             autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -159,8 +158,7 @@ class RequestNewServiceFormBodyState extends State<RequestNewServiceFormBody> {
   ) async {
     bloc.add(const RequestNewServiceCategoriesRequested());
     final state = await bloc.stream.firstWhere(
-      (s) =>
-          s.categoriesStatus != RequestNewServiceCategoriesStatus.loading,
+      (s) => s.categoriesStatus != RequestNewServiceCategoriesStatus.loading,
     );
     if (state.categoriesStatus == RequestNewServiceCategoriesStatus.failure) {
       throw state.categoriesFailure!;

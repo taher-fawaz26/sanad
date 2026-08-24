@@ -10,6 +10,7 @@ import 'package:provider_rbac/src/domain/entities/role_persona_type.dart';
 import 'package:provider_rbac/src/presentation/bloc/role_action/role_action_bloc.dart';
 import 'package:provider_rbac/src/presentation/bloc/roles_list/roles_list_bloc.dart';
 import 'package:provider_rbac/src/presentation/widgets/role_actions_bottom_sheet.dart';
+import 'package:provider_rbac/src/presentation/utils/role_display_name.dart';
 import 'package:provider_rbac/src/presentation/widgets/role_list_item.dart';
 import 'package:provider_rbac/src/routes/provider_rbac_routes.dart';
 import 'package:shared_ui/shared_ui.dart';
@@ -97,7 +98,7 @@ class _RolesViewState extends State<_RolesView> {
       AppConfirmationContent(
         title: 'provider_rbac.delete_role_title'.tr(),
         description: 'provider_rbac.delete_role_description'.tr(
-          namedArgs: {'name': role.displayName},
+          namedArgs: {'name': role.localizedDisplayName()},
         ),
         actionLabel: 'common.delete'.tr(),
         cancelLabel: 'common.cancel'.tr(),

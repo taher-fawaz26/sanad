@@ -2,6 +2,13 @@ import 'package:document_flow/document_flow.dart';
 
 /// DTO for `POST auth/extract`.
 ///
+/// Extraction is a preview: a `200` always carries whatever the extractor
+/// could read, even an expired document, unreadable required fields, or a
+/// mismatched Emirates ID front/back — the backend refuses only later, at
+/// `auth/profile`. [fromJson] trusts the response's own `status`,
+/// `missingFields`, and `idVerification` signals rather than inferring a
+/// problem from an empty block.
+///
 /// Parses the backend response into [ExtractedDocuments]. Raw string values
 /// are kept under `raw` (keyed by the field name the review page uses to
 /// build localized [ExtractedField]s) so this data-layer mapper never needs
@@ -45,16 +52,23 @@ abstract final class ExtractionResponse {
   }
 
   static ExtractedDocument _parseEmiratesId(Map<String, dynamic> m) {
-    if (m.isEmpty) {
-      return const ExtractedDocument(
-        type: DocumentType.emiratesIdFront,
-        fields: [],
-        issue: DocumentIssue.imageUnclear,
-      );
-    }
+    final status = DocumentStatus.fromWire(_rawStatus(m));
+    final missingFields = _strList(m, ['missingFields', 'missing_fields']);
+    final idVerification = _idVerification(m['idVerification']);
     return ExtractedDocument(
       type: DocumentType.emiratesIdFront,
       fields: const [],
+      status: status,
+      missingFields: missingFields,
+      idVerification: idVerification,
+      issue: deriveDocumentIssue(
+        status: status,
+        missingFields: missingFields,
+        idVerification: idVerification,
+      ),
+      repair: idVerification != null && !idVerification.matched
+          ? emiratesIdMismatchRepairTarget
+          : null,
       raw: {
         // Backend: fullNameEnglish  |  legacy: fullNameEn / full_name_en / name
         'fullNameEn': _str(
@@ -76,13 +90,8 @@ abstract final class ExtractionResponse {
   }
 
   static ExtractedDocument _parseTradeLicence(Map<String, dynamic> m) {
-    if (m.isEmpty) {
-      return const ExtractedDocument(
-        type: DocumentType.tradeLicense,
-        fields: [],
-        issue: DocumentIssue.expired,
-      );
-    }
+    final status = DocumentStatus.fromWire(_rawStatus(m));
+    final missingFields = _strList(m, ['missingFields', 'missing_fields']);
     final raw = {
       // Backend: tradeNameEnglish  |  legacy: tradeNameEn / tradeName
       'tradeNameEn': _str(
@@ -124,38 +133,43 @@ abstract final class ExtractionResponse {
       ),
     };
 
-    // A non-empty block alone is NOT success. The backend reports, per block,
-    // which required fields OCR could not read via `missingFields` — the
-    // authoritative signal (the same one the organization-settings extract
-    // model consumes). When it's non-empty the extraction is incomplete and
-    // the backend will hard-reject the registration at profile completion
-    // ("we could not read the trade licence number"), so flag the document for
-    // re-upload (generic image-unclear treatment: warning badge + Replace
-    // Document + Continue disabled) instead of falsely reporting "Extracted
-    // successfully" and letting the user walk into a guaranteed failure with no
-    // clear cause (SAN-570). The empty licence number is kept as a defensive
-    // fallback in case an older backend omits `missingFields`. The
-    // partially-read fields are still shown via [raw].
-    final missingFields = _strList(m, ['missingFields', 'missing_fields']);
-    final incomplete =
-        missingFields.isNotEmpty || (raw['licenceNo'] ?? '').isEmpty;
-
     return ExtractedDocument(
       type: DocumentType.tradeLicense,
       fields: const [],
-      issue: incomplete ? DocumentIssue.imageUnclear : DocumentIssue.none,
+      status: status,
       raw: raw,
+      missingFields: missingFields,
+      issue: deriveDocumentIssue(status: status, missingFields: missingFields),
     );
   }
 
-  /// Builds [ExtractedDocuments] for a **document-domain rejection**: any
-  /// `auth/extract` HTTP 400 whose body is a single business message rather
-  /// than a field-validation array (e.g. `EXTRACTION_INCOMPLETE`, a
-  /// front/back Emirates ID mismatch, an unreadable/unsupported document —
-  /// any backend code meaning "the uploaded document itself is the
-  /// problem"). This is the single, canonical mapping point for that whole
-  /// error class: callers never branch on the specific backend `code`, so a
-  /// new backend code needs no client change to render inline.
+  /// Parses the Emirates ID front/back comparison object, or null when the
+  /// backend omitted it (e.g. no trade-licence-style "not applicable" case
+  /// exists for Emirates ID, but a malformed/older response might still lack
+  /// the key).
+  static IdVerification? _idVerification(dynamic value) {
+    final m = _map(value);
+    if (m.isEmpty) return null;
+    final matched = m['matched'];
+    if (matched is! bool) return null;
+    final reason = _str(m, ['reason']);
+    final backIdNumber = _str(m, ['backIdNumber']);
+    return IdVerification(
+      matched: matched,
+      reason: reason.isEmpty ? null : reason,
+      backIdNumber: backIdNumber.isEmpty ? null : backIdNumber,
+    );
+  }
+
+  /// Builds [ExtractedDocuments] for a **document-domain rejection** at
+  /// `auth/profile` (submit): a 400 whose `code` is `EXTRACTION_INCOMPLETE`,
+  /// `EXTRACTION_EXPIRED`, or `EXTRACTION_ID_MISMATCH` — the backend judges
+  /// the documents at submit time now, not at extract, so this is invoked
+  /// from `ReviewInformationPage._onSubmitFailure` rather than from the
+  /// extract call site. This remains the single, canonical mapping point for
+  /// that error class: callers never branch on the specific backend `code`
+  /// beyond routing here, so a new backend code needs no client change to
+  /// render inline.
   ///
   /// The review screen renders the result inline exactly like the
   /// image-unclear/expired outcomes, instead of a full-screen error.
@@ -165,17 +179,17 @@ abstract final class ExtractionResponse {
   /// [message] content — each checked against the same token set so a
   /// mismatch code that names no specific field (e.g. "front and back don't
   /// match") still routes correctly. When nothing resolves, every document in
-  /// this extraction is flagged so the user can still act. Unaffected
-  /// documents are omitted — the 400 aborts extraction, so no data exists for
-  /// them (mirrors the single-section 409 already-registered case).
+  /// this submission is flagged so the user can still act. Unaffected
+  /// documents are omitted — the rejection aborts submit, so no fresh data
+  /// exists for them (mirrors the single-section 409 already-registered
+  /// case).
   ///
-  /// Every match always resolves to [DocumentIssue.imageUnclear] — the
-  /// generic "this document needs re-uploading" badge/banner/Replace-Document
-  /// treatment already used for image-unclear — carrying the backend
-  /// [message] as [ExtractedDocument.issueDetail] so the specific reason is
-  /// still shown. This is deliberate: introducing a distinct badge per
-  /// backend code would mean guessing new visual treatment per code, which
-  /// this mapper exists to avoid.
+  /// Maps to a semantically correct [DocumentIssue] based on the backend
+  /// [code]: `EXTRACTION_ID_MISMATCH` → [DocumentIssue.idMismatch] (the
+  /// front and back don't belong to the same card); everything else falls
+  /// back to [DocumentIssue.imageUnclear] (the generic "re-upload" banner).
+  /// The backend [message] is still carried as [ExtractedDocument.issueDetail]
+  /// so the specific reason is shown when no structured field list applies.
   static ExtractedDocuments fromDomainRejection({
     required List<String> fields,
     required String message,
@@ -194,6 +208,8 @@ abstract final class ExtractionResponse {
       known: all,
     );
 
+    final issue = _issueForCode(code);
+
     return ExtractedDocuments(
       sections: [
         for (final type in all)
@@ -201,12 +217,41 @@ abstract final class ExtractionResponse {
             ExtractedDocument(
               type: type,
               fields: const [],
-              issue: DocumentIssue.imageUnclear,
+              issue: issue,
               issueDetail: message.isEmpty ? null : message,
               repair: _repairTargetFor(type, code),
+              missingFields: _fieldsFor(type, fields: fields, known: all),
             ),
       ],
     );
+  }
+
+  static DocumentIssue _issueForCode(String? code) => switch (code) {
+    'EXTRACTION_ID_MISMATCH' => DocumentIssue.idMismatch,
+    _ => DocumentIssue.imageUnclear,
+  };
+
+  /// Which of [fields] belong to [type], for the missing-fields banner.
+  ///
+  /// Uses the same [_documentForTokens] attribution as
+  /// [_resolveAffectedDocuments]. When [known] has only one document (no
+  /// trade licence in this extraction, or every field is ambiguous), every
+  /// field is attributed to it rather than dropped — mirrors the "fall back
+  /// to all known documents" behavior [_resolveAffectedDocuments] uses.
+  static List<String> _fieldsFor(
+    DocumentType type, {
+    required List<String> fields,
+    required List<DocumentType> known,
+  }) {
+    if (known.length == 1) return fields;
+    final attributed = fields
+        .where((f) => _documentForTokens(f) == type)
+        .toList(growable: false);
+    if (attributed.isNotEmpty) return attributed;
+    // No field individually resolves to this document (e.g. a whole-document
+    // mismatch code with no per-field breakdown) — nothing to list for it.
+    final anyResolved = fields.any((f) => _documentForTokens(f) != null);
+    return anyResolved ? const [] : fields;
   }
 
   /// Backend codes meaning a whole multi-part document must be replaced
@@ -227,10 +272,7 @@ abstract final class ExtractionResponse {
   ) {
     if (code == null || !_wholeDocumentRepairCodes.contains(code)) return null;
     if (section != DocumentType.emiratesIdFront) return null;
-    return const DocumentRepairTarget(
-      parts: [DocumentType.emiratesIdFront, DocumentType.emiratesIdBack],
-      scope: DocumentRepairScope.wholeDocument,
-    );
+    return emiratesIdMismatchRepairTarget;
   }
 
   /// Resolves which of [known] documents a rejection concerns. Tries, in
@@ -311,6 +353,11 @@ abstract final class ExtractionResponse {
   static Map<String, dynamic> _map(dynamic value) {
     if (value is Map<String, dynamic>) return value;
     return const {};
+  }
+
+  static String? _rawStatus(Map<String, dynamic> m) {
+    final v = m['status'];
+    return v is String ? v : null;
   }
 
   static String _str(Map<String, dynamic> m, List<String> keys) {

@@ -1,16 +1,24 @@
+import 'dart:async';
+
+import 'package:activity_logs/activity_logs.dart';
 import 'package:app_assets/app_assets.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
 import 'package:workers/src/domain/entities/worker_status.dart';
 import 'package:workers/src/domain/entities/worker_type.dart';
 import 'package:workers/src/domain/usecases/get_worker_usecase.dart';
+import 'package:workers/src/presentation/bloc/worker_action/worker_action_cubit.dart';
 import 'package:workers/src/presentation/services/worker_branch_assigner.dart';
 import 'package:workers/src/presentation/services/worker_role_assigner.dart';
+import 'package:workers/src/presentation/utils/worker_action_copy.dart';
+import 'package:workers/src/presentation/utils/worker_type_localization.dart';
+import 'package:workers/src/presentation/widgets/worker_actions_bottom_sheet.dart';
 import 'package:workers/src/presentation/widgets/worker_error_state.dart';
 import 'package:workers/src/routes/worker_routes.dart';
 
@@ -32,6 +40,15 @@ const _avatarSize = 96.0;
 const _statusDotSize = 24.0;
 const _cardRadius = 16.0;
 
+/// Pop result signaling the viewed worker was deleted from within the
+/// details page's own "more actions" sheet — distinguishes "removed" from
+/// "replaced" (a plain [WorkerEntity] result) for `WorkerListItem`'s caller.
+class WorkerDeletedResult {
+  const WorkerDeletedResult(this.workerId);
+
+  final String workerId;
+}
+
 /// Figma `worker-details` (`1526:11216`).
 ///
 /// Receives [initialWorker] when navigated from the list (instant render),
@@ -40,6 +57,7 @@ class WorkerDetailsPage extends StatefulWidget {
   const WorkerDetailsPage({
     required this.workerId,
     required this.isOwner,
+    required this.canViewActivity,
     this.initialWorker,
     super.key,
   });
@@ -55,6 +73,12 @@ class WorkerDetailsPage extends StatefulWidget {
   /// all — RBAC Phase 7 finding G3).
   final bool isOwner;
 
+  /// Whether the signed-in account may see this worker's "Recent Activity"
+  /// section (owner/manager only — `actorId` is silently ignored for a
+  /// worker token, so a plain worker viewing this page would otherwise see
+  /// *their own* feed rendered under someone else's profile).
+  final bool canViewActivity;
+
   @override
   State<WorkerDetailsPage> createState() => _WorkerDetailsPageState();
 }
@@ -68,6 +92,13 @@ class _WorkerDetailsPageState extends State<WorkerDetailsPage> {
   /// result tells the list to refresh in-place (no refetch).
   bool _didUpdate = false;
 
+  /// Set once a delete from this page's own "more actions" sheet succeeds —
+  /// takes over [_popResult] so the list removes the worker instead of
+  /// (harmlessly, but incorrectly) re-adding a now-deleted one.
+  bool _deleted = false;
+
+  StreamSubscription<WorkerActionEffect>? _actionEffectSub;
+
   void _applyUpdatedWorker(WorkerEntity worker) {
     setState(() {
       _worker = worker;
@@ -75,13 +106,32 @@ class _WorkerDetailsPageState extends State<WorkerDetailsPage> {
     });
   }
 
-  WorkerEntity? get _popResult => _didUpdate ? _worker : null;
+  Object? get _popResult {
+    if (_deleted) return WorkerDeletedResult(widget.workerId);
+    return _didUpdate ? _worker : null;
+  }
 
   @override
   void initState() {
     super.initState();
     _worker = widget.initialWorker;
     if (_worker == null) _fetch();
+    // Suspend/Delete are owner-only (RBAC Phase 7 finding G3 — no
+    // permission exists for either `PATCH /workers/:id/status` or `DELETE
+    // /workers/:id`), matching the swipe actions' and Edit profile's own
+    // gating — so the cubit is only read for an owner, who is the only
+    // account this route ever provides one for (see `workers_module.dart`).
+    if (widget.isOwner) {
+      _actionEffectSub = context.read<WorkerActionCubit>().effects.listen(
+        _onActionEffect,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _actionEffectSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _fetch() async {
@@ -105,6 +155,38 @@ class _WorkerDetailsPageState extends State<WorkerDetailsPage> {
     );
   }
 
+  void _onActionEffect(WorkerActionEffect effect) {
+    if (!mounted) return;
+    switch (effect) {
+      case WorkerActionStarted(:final type):
+        AppProgress.show(context, title: workerActionProgressTitle(type));
+      case WorkerActionSucceeded(:final type, :final updatedWorker):
+        AppProgress.dismiss();
+        showAppSnackbar(
+          context: context,
+          title: workerActionSuccessMessage(type),
+        );
+        if (type == WorkerActionType.delete) {
+          setState(() => _deleted = true);
+          Navigator.of(context).pop(_popResult);
+        } else if (updatedWorker != null) {
+          _applyUpdatedWorker(updatedWorker);
+        }
+      case WorkerActionFailed(:final type, :final failure):
+        AppProgress.dismiss();
+        showAppErrorSnackbar(
+          context: context,
+          title: workerActionFailureMessage(type, failure),
+        );
+    }
+  }
+
+  void _showMoreActions(BuildContext context) {
+    final worker = _worker;
+    if (worker == null) return;
+    showWorkerActionsBottomSheet(context: context, worker: worker);
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
@@ -126,13 +208,20 @@ class _WorkerDetailsPageState extends State<WorkerDetailsPage> {
                 title: 'workers.details_title'.tr(),
                 showBackButton: true,
                 onLeadingTap: () => Navigator.of(context).pop(_popResult),
-                trailing: AppNotificationIcon(onTap: () {}),
+                trailingAction: widget.isOwner && worker != null
+                    ? AppNavBarTrailingAction.icon
+                    : AppNavBarTrailingAction.none,
+                trailing: Icon(Icons.more_vert, color: colors.textPrimary),
+                onTrailingTap: widget.isOwner && worker != null
+                    ? () => _showMoreActions(context)
+                    : null,
               ),
               Expanded(
                 child: switch ((worker, _loading, _failure)) {
                   (final WorkerEntity w, _, _) => _DetailsBody(
                     worker: w,
                     isOwner: widget.isOwner,
+                    canViewActivity: widget.canViewActivity,
                     onWorkerUpdated: _applyUpdatedWorker,
                   ),
                   (_, true, _) => AppSkeletonizer(
@@ -158,11 +247,13 @@ class _DetailsBody extends StatelessWidget {
   const _DetailsBody({
     required this.worker,
     required this.isOwner,
+    required this.canViewActivity,
     required this.onWorkerUpdated,
   });
 
   final WorkerEntity worker;
   final bool isOwner;
+  final bool canViewActivity;
   final ValueChanged<WorkerEntity> onWorkerUpdated;
 
   @override
@@ -198,6 +289,12 @@ class _DetailsBody extends StatelessWidget {
                 if (isOwner && sl.isRegistered<WorkerRoleAssigner>()) ...[
                   SizedBox(height: AppSpacing.lg),
                   sl<WorkerRoleAssigner>().buildRolesCard(worker.id),
+                ],
+                // Another worker's activity is owner/manager-only — see
+                // `WorkerDetailsPage.canViewActivity`.
+                if (canViewActivity) ...[
+                  SizedBox(height: AppSpacing.lg),
+                  WorkerRecentActivitySection(workerId: worker.id),
                 ],
               ],
             ),
@@ -372,11 +469,7 @@ class _ContactDetailsCard extends StatelessWidget {
     final colors = context.appColors;
     final typography = context.appTypography;
     final dark = colors.palettes.dark;
-    final workerType = WorkerType.fromApiString(worker.role);
-    final typeLabel = switch (workerType) {
-      WorkerType.worker => 'workers.add_worker.type_worker'.tr(),
-      WorkerType.manager => 'workers.add_worker.type_manager'.tr(),
-    };
+    final typeLabel = WorkerType.fromApiString(worker.role).localizedLabel();
 
     final rows = <_ContactDetailRow>[
       _ContactDetailRow(

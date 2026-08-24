@@ -15,7 +15,9 @@ class AddBranchWizardFooter extends StatelessWidget {
     required this.onAddServices,
     required this.onAddWorkers,
     this.coverageAccessDenied = false,
+    this.locationPermanentlyBlocked = false,
     this.onOpenLocationSettings,
+    this.onRequestLocationAgain,
     super.key,
   });
 
@@ -25,8 +27,17 @@ class AddBranchWizardFooter extends StatelessWidget {
   final VoidCallback onAddCoverage;
   final VoidCallback onAddServices;
   final VoidCallback onAddWorkers;
+
+  /// True whenever Step 2 is showing the location-permission blocking body
+  /// (denied, permanently denied, or the location service is off).
   final bool coverageAccessDenied;
+
+  /// True only when recoverable solely via OS settings (permanently denied
+  /// or the location service is off) — the rest (a plain denial) can still
+  /// be requested again in-app.
+  final bool locationPermanentlyBlocked;
   final VoidCallback? onOpenLocationSettings;
+  final VoidCallback? onRequestLocationAgain;
 
   @override
   Widget build(BuildContext context) {
@@ -39,9 +50,14 @@ class AddBranchWizardFooter extends StatelessWidget {
       ),
       child: switch (currentStep) {
         1 => _StepOneButton(onNext: onNext),
+        2 when coverageAccessDenied && locationPermanentlyBlocked =>
+          AppButton(
+            label: 'common.open_settings'.tr(),
+            onPressed: onOpenLocationSettings,
+          ),
         2 when coverageAccessDenied => AppButton(
-          label: 'common.open_settings'.tr(),
-          onPressed: onOpenLocationSettings,
+          label: 'branches.add_branch.location_allow_access'.tr(),
+          onPressed: onRequestLocationAgain,
         ),
         2 => _StepTwoButton(
           onNext: onNext,

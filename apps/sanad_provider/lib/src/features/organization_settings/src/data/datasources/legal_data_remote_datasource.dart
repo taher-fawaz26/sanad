@@ -3,17 +3,17 @@ import 'package:fpdart/fpdart.dart';
 import 'package:network/network.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/data/datasources/media_upload_remote_datasource.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/data/endpoints/legal_data_api_paths.dart';
-import 'package:sanad_provider/src/features/organization_settings/src/data/models/legal_data_extraction_response.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/data/models/legal_data_media_response.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/data/models/legal_data_response.dart';
+import 'package:sanad_provider/src/features/organization_settings/src/data/models/national_id_extraction_response.dart';
+import 'package:sanad_provider/src/features/organization_settings/src/data/models/trade_license_extraction_response.dart';
 
-/// Remote data source for the organization legal-documents update flow.
+/// Remote data source for the organization legal-documents renewal flow.
 ///
-/// Reads/writes go through [BaseApiClient] (session auth via interceptor);
-/// the multipart upload delegates to the shared
-/// [MediaUploadRemoteDataSource] (`POST media/upload-single`) — the same
-/// documented endpoint the cover/logo image flow uses — rather than the
-/// previously-guessed `service-provider/legal-data/media`.
+/// Renewal is split per document: Emirates ID and trade licence each have
+/// their own extract/confirm pair. Reads/writes go through [BaseApiClient]
+/// (session auth via interceptor); the multipart upload delegates to the
+/// shared [MediaUploadRemoteDataSource] (`POST media/upload-single`).
 abstract interface class LegalDataRemoteDataSource {
   TaskEither<Failure, LegalDataResponse> fetchLegalData();
 
@@ -27,16 +27,30 @@ abstract interface class LegalDataRemoteDataSource {
 
   void cancelUpload(String uploadKey);
 
-  TaskEither<Failure, LegalDataExtractionResponse> extract({
+  /// Previews a replacement Emirates ID. The response is a bare
+  /// `NationalIdExtractionDto` — no outer envelope.
+  TaskEither<Failure, NationalIdExtractionResponse> extractEmiratesId({
     required String emiratesIdFrontId,
     required String emiratesIdBackId,
-    String? tradeLicenseId,
   });
 
-  TaskEither<Failure, Unit> updateDocuments({
+  /// Confirms the reviewed Emirates ID extraction, replacing the stored
+  /// document. Companies and individuals alike.
+  TaskEither<Failure, Unit> confirmEmiratesId({
     required String emiratesIdFrontId,
     required String emiratesIdBackId,
-    String? tradeLicenseId,
+  });
+
+  /// Previews a replacement trade licence. Companies only. The response is a
+  /// bare `TradeLicenseExtractionDto` — no outer envelope.
+  TaskEither<Failure, TradeLicenseExtractionResponse> extractTradeLicense({
+    required String tradeLicenseId,
+  });
+
+  /// Confirms the reviewed trade licence extraction, replacing the stored
+  /// document.
+  TaskEither<Failure, Unit> confirmTradeLicense({
+    required String tradeLicenseId,
   });
 }
 
@@ -83,35 +97,52 @@ class LegalDataRemoteDataSourceImpl implements LegalDataRemoteDataSource {
   void cancelUpload(String uploadKey) => _mediaUpload.cancelUpload(uploadKey);
 
   @override
-  TaskEither<Failure, LegalDataExtractionResponse> extract({
+  TaskEither<Failure, NationalIdExtractionResponse> extractEmiratesId({
     required String emiratesIdFrontId,
     required String emiratesIdBackId,
-    String? tradeLicenseId,
-  }) => _apiClient.request<LegalDataExtractionResponse>(
-    path: LegalDataApiPaths.extract,
+  }) => _apiClient.request<NationalIdExtractionResponse>(
+    path: LegalDataApiPaths.emiratesIdExtract,
     method: RequestMethod.post,
     body: {
       'emiratesIdFrontId': emiratesIdFrontId,
       'emiratesIdBackId': emiratesIdBackId,
-      if (tradeLicenseId != null) 'tradeLicenseId': tradeLicenseId,
     },
     parser: (data) =>
-        LegalDataExtractionResponse.fromJson(data as Map<String, dynamic>),
+        NationalIdExtractionResponse.fromJson(data as Map<String, dynamic>),
   );
 
   @override
-  TaskEither<Failure, Unit> updateDocuments({
+  TaskEither<Failure, Unit> confirmEmiratesId({
     required String emiratesIdFrontId,
     required String emiratesIdBackId,
-    String? tradeLicenseId,
   }) => _apiClient.request<Unit>(
-    path: LegalDataApiPaths.documents,
+    path: LegalDataApiPaths.emiratesIdConfirm,
     method: RequestMethod.put,
     body: {
       'emiratesIdFrontId': emiratesIdFrontId,
       'emiratesIdBackId': emiratesIdBackId,
-      if (tradeLicenseId != null) 'tradeLicenseId': tradeLicenseId,
     },
+    parser: (_) => unit,
+  );
+
+  @override
+  TaskEither<Failure, TradeLicenseExtractionResponse> extractTradeLicense({
+    required String tradeLicenseId,
+  }) => _apiClient.request<TradeLicenseExtractionResponse>(
+    path: LegalDataApiPaths.tradeLicenseExtract,
+    method: RequestMethod.post,
+    body: {'tradeLicenseId': tradeLicenseId},
+    parser: (data) =>
+        TradeLicenseExtractionResponse.fromJson(data as Map<String, dynamic>),
+  );
+
+  @override
+  TaskEither<Failure, Unit> confirmTradeLicense({
+    required String tradeLicenseId,
+  }) => _apiClient.request<Unit>(
+    path: LegalDataApiPaths.tradeLicenseConfirm,
+    method: RequestMethod.put,
+    body: {'tradeLicenseId': tradeLicenseId},
     parser: (_) => unit,
   );
 }

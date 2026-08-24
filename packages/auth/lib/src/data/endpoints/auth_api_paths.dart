@@ -35,9 +35,4 @@ abstract final class AuthApiPaths {
 
   /// Canonical identity for every persona. `GET`, bearer. `MeResponseDto`.
   static const String me = 'me';
-
-  /// Not documented under the `Auth` tag in the live OpenAPI spec — kept for
-  /// now pending confirmation with the backend team (open question, plan
-  /// §31 Q1). May 404 in production.
-  static String userDelete(String userSub) => 'user/delete/$userSub';
 }

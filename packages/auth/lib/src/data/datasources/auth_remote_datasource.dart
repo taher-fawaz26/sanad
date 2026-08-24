@@ -46,8 +46,6 @@ abstract class AuthRemoteDataSource {
   TaskEither<Failure, AuthIdentity> getCurrentUser();
 
   TaskEither<Failure, void> logout();
-
-  TaskEither<Failure, void> deleteAccount({required String userSub});
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -127,12 +125,4 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     method: RequestMethod.post,
     parser: (_) {},
   );
-
-  @override
-  TaskEither<Failure, void> deleteAccount({required String userSub}) =>
-      _apiClient.request<void>(
-        path: AuthApiPaths.userDelete(userSub),
-        method: RequestMethod.delete,
-        parser: (_) {},
-      );
 }

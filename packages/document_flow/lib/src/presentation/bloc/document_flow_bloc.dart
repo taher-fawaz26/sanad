@@ -16,6 +16,8 @@ import 'package:document_flow/src/domain/usecases/extract_documents_usecase.dart
 import 'package:document_flow/src/domain/usecases/fetch_documents_usecase.dart';
 import 'package:document_flow/src/domain/usecases/submit_documents_usecase.dart';
 import 'package:document_flow/src/domain/usecases/upload_media_usecase.dart';
+import 'package:document_flow/src/domain/validation/document_type_validator.dart';
+import 'package:document_flow/src/domain/validation/document_validation_result.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -35,10 +37,12 @@ class DocumentFlowBloc extends Bloc<DocumentFlowEvent, DocumentFlowState> {
     required ExtractDocumentsUseCase extractDocuments,
     required SubmitDocumentsUseCase submitDocuments,
     required FetchDocumentsUseCase fetchDocuments,
+    DocumentTypeValidator? validator,
   }) : _uploadMedia = uploadMedia,
        _extractDocuments = extractDocuments,
        _submitDocuments = submitDocuments,
        _fetchDocuments = fetchDocuments,
+       _validator = validator,
        super(DocumentFlowState(config: config)) {
     on<DocumentFlowStarted>(_onStarted);
     on<DocumentPicked>(_onPicked);
@@ -54,6 +58,7 @@ class DocumentFlowBloc extends Bloc<DocumentFlowEvent, DocumentFlowState> {
     on<EditingStarted>(_onEditingStarted);
     // Drop duplicate submits while one is in flight (double-tap guard).
     on<SubmitRequested>(_onSubmitRequested, transformer: droppable());
+    on<ReviewFlagged>(_onReviewFlagged);
     on<FlowReset>(_onReset);
     on<RetryRequested>(_onRetry);
   }
@@ -62,6 +67,15 @@ class DocumentFlowBloc extends Bloc<DocumentFlowEvent, DocumentFlowState> {
   final ExtractDocumentsUseCase _extractDocuments;
   final SubmitDocumentsUseCase _submitDocuments;
   final FetchDocumentsUseCase _fetchDocuments;
+
+  /// Pre-upload document-type gate. `null` skips validation entirely — the
+  /// legacy contract, where [DocumentPicked] only stores the asset and the
+  /// caller must dispatch [DocumentUploadRequested] itself. When set, a
+  /// passing check auto-triggers the upload; a failing one reverts the slot
+  /// to whatever it held before this pick (never destroying an already
+  /// uploaded document) and surfaces a
+  /// [flow_failure.DocumentValidationFailure].
+  final DocumentTypeValidator? _validator;
 
   Future<void> _onStarted(
     DocumentFlowStarted event,
@@ -146,13 +160,82 @@ class DocumentFlowBloc extends Bloc<DocumentFlowEvent, DocumentFlowState> {
     return documents;
   }
 
-  void _onPicked(DocumentPicked event, Emitter<DocumentFlowState> emit) {
+  Future<void> _onPicked(
+    DocumentPicked event,
+    Emitter<DocumentFlowState> emit,
+  ) async {
+    final validator = _validator;
+    if (validator == null) {
+      // Legacy contract: store only. The caller (e.g.
+      // `DocumentFlowController.pick`) is responsible for dispatching
+      // `DocumentUploadRequested` itself.
+      emit(
+        _withDocument(event.type, event.asset.toUploadable()).copyWith(
+          failure: null,
+        ),
+      );
+      return;
+    }
+
+    // Preserve whatever this slot held (e.g. an already-uploaded document
+    // being replaced) so a failing check can restore it untouched — the
+    // currently valid document must never be overwritten before the new one
+    // passes (see `document_flow` pre-upload validation feature).
+    final previous = state.documentAt(event.type);
+
     emit(
-      _withDocument(event.type, event.asset.toUploadable()).copyWith(
-        failure: null,
-      ),
+      _withDocument(
+        event.type,
+        event.asset.toUploadable().markValidating(),
+      ).copyWith(failure: null),
     );
+
+    DocumentValidationResult result;
+    try {
+      result = await validator.validate(event.asset, type: event.type);
+    } on Object {
+      result = const DocumentValidationResult.error();
+    }
+
+    if (isClosed) return;
+
+    switch (result) {
+      case DocumentValidationValid():
+        final picked = event.asset.toUploadable();
+        emit(_withDocument(event.type, picked).copyWith(failure: null));
+        await _uploadDocument(event.type, picked, emit);
+      case DocumentValidationInvalid():
+        emit(
+          _withDocument(event.type, previous).copyWith(
+            failure: flow_failure.DocumentValidationFailure(
+              messageKey: _invalidTypeMessageKey(event.type),
+              kind: DocumentValidationFailureKind.invalidType,
+            ),
+          ),
+        );
+      case DocumentValidationError():
+        emit(
+          _withDocument(event.type, previous).copyWith(
+            failure: const flow_failure.DocumentValidationFailure(
+              messageKey: 'errors.document_validation.engine_error',
+              kind: DocumentValidationFailureKind.engineError,
+            ),
+          ),
+        );
+    }
   }
+
+  /// The localized message for a confident "wrong document type" rejection,
+  /// specific to what the user was asked to provide.
+  String _invalidTypeMessageKey(DocumentType type) => switch (type) {
+    DocumentType.emiratesIdFront || DocumentType.emiratesIdBack =>
+      'errors.document_validation.invalid_emirates_id',
+    DocumentType.tradeLicense =>
+      'errors.document_validation.invalid_trade_license',
+    DocumentType.passport ||
+    DocumentType.vehicleLicense ||
+    DocumentType.other => 'errors.document_validation.invalid_document',
+  };
 
   Future<void> _onUploadRequested(
     DocumentUploadRequested event,
@@ -160,25 +243,36 @@ class DocumentFlowBloc extends Bloc<DocumentFlowEvent, DocumentFlowState> {
   ) async {
     final current = state.documentAt(event.type);
     if (current == null) return;
+    await _uploadDocument(event.type, current, emit);
+  }
 
+  /// Runs the actual media upload for [type], starting from [current].
+  ///
+  /// Shared by [_onUploadRequested] (explicit, caller-triggered upload) and
+  /// [_onPicked] (auto-triggered once a [DocumentTypeValidator] check
+  /// passes) so both paths emit an identical uploading → uploaded/failed
+  /// sequence.
+  Future<void> _uploadDocument(
+    DocumentType type,
+    UploadableAsset current,
+    Emitter<DocumentFlowState> emit,
+  ) async {
     emit(
-      _withDocument(event.type, current.markUploading()).copyWith(
-        failure: null,
-      ),
+      _withDocument(type, current.markUploading()).copyWith(failure: null),
     );
 
     final result = await _uploadMedia(
       UploadMediaParams(
-        type: event.type,
+        type: type,
         filePath: current.asset.path,
         fileName: current.asset.name,
         mimeType: current.asset.mimeType,
-        uploadKey: event.type.name,
+        uploadKey: type.name,
         context: state.context,
         onProgress: (progress) {
-          final inFlight = state.documentAt(event.type);
+          final inFlight = state.documentAt(type);
           if (inFlight == null || !inFlight.isUploading) return;
-          emit(_withDocument(event.type, inFlight.markUploading(progress)));
+          emit(_withDocument(type, inFlight.markUploading(progress)));
         },
       ),
     ).run();
@@ -189,23 +283,23 @@ class DocumentFlowBloc extends Bloc<DocumentFlowEvent, DocumentFlowState> {
       (failure) {
         if (failure is NetworkFailure &&
             failure.message == 'errors.request_cancelled') {
-          emit(_withDocument(event.type, null));
+          emit(_withDocument(type, null));
           return;
         }
-        final inFlight = state.documentAt(event.type);
+        final inFlight = state.documentAt(type);
         final failed = (inFlight ?? current).markFailed(failure.message);
         emit(
-          _withDocument(event.type, failed).copyWith(
+          _withDocument(type, failed).copyWith(
             failure: flow_failure.UploadFailure(messageKey: failure.message),
           ),
         );
       },
       (media) {
-        final inFlight = state.documentAt(event.type);
+        final inFlight = state.documentAt(type);
         if (inFlight == null) return;
         emit(
           _withDocument(
-            event.type,
+            type,
             inFlight.markUploaded(remoteId: media.id, remoteUrl: media.url),
           ),
         );
@@ -261,11 +355,11 @@ class DocumentFlowBloc extends Bloc<DocumentFlowEvent, DocumentFlowState> {
         if (failure is ConflictFailure) {
           emit(
             state.copyWith(
-              extracted: const ExtractedDocuments(
+              extracted: ExtractedDocuments(
                 sections: [
                   ExtractedDocument(
-                    type: DocumentType.emiratesIdFront,
-                    fields: [],
+                    type: _conflictDocumentType,
+                    fields: const [],
                     issue: DocumentIssue.alreadyRegistered,
                   ),
                 ],
@@ -329,14 +423,109 @@ class DocumentFlowBloc extends Bloc<DocumentFlowEvent, DocumentFlowState> {
 
     if (isClosed) return;
 
-    result.fold(
-      (failure) => emit(
+    await result.fold(
+      (failure) => _handleSubmitFailure(failure, emit),
+      (_) async => emit(state.copyWith(phase: const PhaseSuccess())),
+    );
+  }
+
+  /// Routes a submit/confirm rejection to the right recovery, mirroring the
+  /// backend's split between request-drift codes (silently re-extract),
+  /// an already-registered identifier (flag inline, same as the analogous
+  /// extraction-time case), and everything else (surface for the feature to
+  /// handle, e.g. attributing a document-domain code to a specific section).
+  ///
+  /// `EXTRACTION_REQUIRED`/`EXTRACTION_STALE` mean the reviewed media drifted
+  /// from what was last extracted (no prior extract, or the extraction cache
+  /// expired/changed) — re-running extraction is the correct, transparent
+  /// recovery; the review page already renders [PhaseExtracting] as the same
+  /// animated view used for the first extraction, so this needs no bespoke
+  /// UI. A 409 that is *not* `EXTRACTION_STALE` is the "identifier already
+  /// registered to another account" case, handled the same way the
+  /// extraction-time [ConflictFailure] already is.
+  Future<void> _handleSubmitFailure(
+    Failure failure,
+    Emitter<DocumentFlowState> emit,
+  ) async {
+    final code = _codeOf(failure);
+
+    if (code == 'EXTRACTION_REQUIRED' || code == 'EXTRACTION_STALE') {
+      await _onExtractionRequested(const ExtractionRequested(), emit);
+      return;
+    }
+
+    if (failure is ConflictFailure) {
+      emit(
         state.copyWith(
-          phase: const PhaseFailure(FailedStage.submit),
-          failure: flow_failure.SubmitFailure(messageKey: failure.message),
+          extracted: ExtractedDocuments(
+            sections: [
+              ExtractedDocument(
+                type: _conflictDocumentType,
+                fields: const [],
+                issue: DocumentIssue.alreadyRegistered,
+              ),
+            ],
+          ),
+          phase: const PhaseExtracted(),
+          failure: null,
+        ),
+      );
+      return;
+    }
+
+    final metadata = failure.metadata;
+    emit(
+      state.copyWith(
+        phase: const PhaseFailure(FailedStage.submit),
+        failure: flow_failure.SubmitFailure(
+          messageKey: failure.message,
+          code: code,
+          fields:
+              (metadata?['fields'] as List?)
+                  ?.map((e) => e.toString())
+                  .toList() ??
+              const [],
+          requestId: metadata?['requestId']?.toString(),
         ),
       ),
-      (_) => emit(state.copyWith(phase: const PhaseSuccess())),
+    );
+  }
+
+  String? _codeOf(Failure failure) =>
+      failure.metadata?['code']?.toString() ?? failure.code;
+
+  /// Which document an "identifier already registered" conflict concerns,
+  /// when the backend gives no structured way to tell (unlike
+  /// `EXTRACTION_STALE`, this case has no dedicated `code`).
+  ///
+  /// A flow whose [DocumentFlowConfig.requiredDocuments] requires the trade
+  /// licence but *not* the Emirates ID is unambiguous — a renewal scoped to
+  /// only the trade licence (see `DocumentScope.tradeLicense` in
+  /// organization settings) — so the conflict must be about that licence
+  /// number. Every other flow (onboarding, whether individual or
+  /// organization; a renewal scoped to the Emirates ID) always requires the
+  /// Emirates ID, so it resolves there — this preserves onboarding's
+  /// existing behavior exactly, since a conflict during organization
+  /// onboarding has always meant the Emirates ID in practice.
+  DocumentType get _conflictDocumentType {
+    final required = state.config.requiredDocuments;
+    if (required.contains(DocumentType.tradeLicense) &&
+        !required.contains(DocumentType.emiratesIdFront)) {
+      return DocumentType.tradeLicense;
+    }
+    return DocumentType.emiratesIdFront;
+  }
+
+  void _onReviewFlagged(
+    ReviewFlagged event,
+    Emitter<DocumentFlowState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        extracted: event.extracted,
+        phase: const PhaseExtracted(),
+        failure: null,
+      ),
     );
   }
 

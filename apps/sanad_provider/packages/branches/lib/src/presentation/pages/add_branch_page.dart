@@ -2,6 +2,7 @@ import 'package:app_logger/app_logger.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_cubit.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_state.dart';
+import 'package:branches/src/presentation/bloc/add_branch/add_branch_location_cubit.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_wizard_cubit.dart';
 import 'package:branches/src/presentation/models/coverage_area_args.dart';
 import 'package:branches/src/presentation/models/coverage_area_result.dart';
@@ -47,10 +48,41 @@ class AddBranchPage extends StatefulWidget {
   State<AddBranchPage> createState() => _AddBranchPageState();
 }
 
-class _AddBranchPageState extends State<AddBranchPage> {
+class _AddBranchPageState extends State<AddBranchPage>
+    with WidgetsBindingObserver {
   final _stepOneFormKey = GlobalKey<FormState>();
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Request location access from the very start of the flow (Step 1
+    // already needs it for the address field) rather than deferring the
+    // native prompt until Step 2 — see SAN-603.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<AddBranchLocationCubit>().ensureAccess();
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Source of truth is always a fresh OS read on resume — never the
+    // outcome of the original request (fixes SAN-602: granting permission
+    // from Settings and returning must clear the blocking state).
+    if (state == AppLifecycleState.resumed) {
+      context.read<AddBranchLocationCubit>().refresh();
+    }
+  }
+
   // ── Navigation ──
+
+  void _handleBack() => context.read<AddBranchWizardCubit>().goBack();
 
   void _onNextPressed() {
     final wizard = context.read<AddBranchWizardCubit>();
@@ -128,15 +160,14 @@ class _AddBranchPageState extends State<AddBranchPage> {
   }
 
   Future<void> _openCoverageArea() async {
-    // Figma `location-permission-denied` (`1517:9804`).
-    final status = await sl<LocationService>().checkPermission();
-    if (!mounted) return;
-    final wizard = context.read<AddBranchWizardCubit>();
-    final denied =
-        status == LocationPermissionStatus.permanentlyDenied ||
-        status == LocationPermissionStatus.serviceDisabled;
-    wizard.setCoverageAccessDenied(denied: denied);
-    if (denied) return;
+    // Figma `location-permission-denied` (`1517:9804`). Re-checks through
+    // the single location coordinator rather than the permission plugin
+    // directly — the wizard's `coverageAccessDenied` is kept in sync with
+    // this cubit by a listener in `build`, so a denial here just means the
+    // blocking body is already (or about to be) shown.
+    final locationCubit = context.read<AddBranchLocationCubit>();
+    await locationCubit.refresh();
+    if (!mounted || !locationCubit.state.isGranted) return;
 
     final draft = context.read<AddBranchDraftCubit>().state;
     final result = await context.push<CoverageAreaResult>(
@@ -160,6 +191,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
       );
 
     // Coverage confirmed → auto-advance to services step.
+    final wizard = context.read<AddBranchWizardCubit>();
     if (wizard.state.currentStep == 2 && draftCubit.state.isStepTwoComplete) {
       wizard.advanceTo(3);
     }
@@ -210,7 +242,10 @@ class _AddBranchPageState extends State<AddBranchPage> {
   }
 
   Future<void> _openLocationSettings() =>
-      sl<LocationService>().openAppSettings();
+      context.read<AddBranchLocationCubit>().openSettings();
+
+  Future<void> _requestLocationAgain() =>
+      context.read<AddBranchLocationCubit>().requestAgain();
 
   // ── Bloc side effects ──
 
@@ -300,21 +335,30 @@ class _AddBranchPageState extends State<AddBranchPage> {
         listenWhen: (previous, current) =>
             previous.setupStatus != current.setupStatus,
         listener: _onSetupStatusChanged,
-        child: PopScope(
-          canPop: false,
-          onPopInvokedWithResult: (didPop, _) {
-            if (!didPop) _handleClose();
+        child: BlocListener<AddBranchLocationCubit, AddBranchLocationState>(
+          listenWhen: (previous, current) => current.hasChecked,
+          listener: (context, state) {
+            context.read<AddBranchWizardCubit>().setCoverageAccessDenied(
+              denied: !state.isGranted,
+            );
           },
-          child: Scaffold(
-            backgroundColor: context.appColors.surface,
-            body: SafeArea(
-              child: BlocBuilder<AddBranchWizardCubit, AddBranchWizardState>(
-                builder: (context, wizard) {
-                  if (wizard.currentStep == _reviewStep) {
-                    return _buildReviewScreen();
-                  }
-                  return _buildWizardScreen(wizard);
-                },
+          child: PopScope(
+            canPop: false,
+            onPopInvokedWithResult: (didPop, _) {
+              if (!didPop) _handleClose();
+            },
+            child: Scaffold(
+              backgroundColor: context.appColors.surface,
+              body: SafeArea(
+                child:
+                    BlocBuilder<AddBranchWizardCubit, AddBranchWizardState>(
+                      builder: (context, wizard) {
+                        if (wizard.currentStep == _reviewStep) {
+                          return _buildReviewScreen();
+                        }
+                        return _buildWizardScreen(wizard);
+                      },
+                    ),
               ),
             ),
           ),
@@ -323,15 +367,39 @@ class _AddBranchPageState extends State<AddBranchPage> {
     );
   }
 
+  /// Shared nav bar: X/Close stays on the leading side; a back chevron
+  /// (previous-step, never discard/exit) appears opposite it once past
+  /// step 1. Hidden on step 1 per the ticket — X remains the only exit.
+  Widget _buildNavBar(int currentStep) {
+    final showBack = currentStep > 1;
+    final spec = context.appNavBarTheme.standard;
+    return AppNavBar(
+      title: '',
+      leading: AppCloseIcon(onTap: _handleClose),
+      trailingAction: showBack
+          ? AppNavBarTrailingAction.icon
+          : AppNavBarTrailingAction.none,
+      trailing: showBack
+          ? Semantics(
+              label: 'common.back'.tr(),
+              child: Icon(
+                Icons.chevron_left,
+                size: spec.iconSize,
+                color: spec.titleStyle.color,
+              ),
+            )
+          : null,
+      onTrailingTap: showBack ? _handleBack : null,
+    );
+  }
+
   Widget _buildWizardScreen(AddBranchWizardState wizard) {
+    final location = context.watch<AddBranchLocationCubit>().state;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AppNavBar(
-          title: '',
-          leading: AppCloseIcon(onTap: _handleClose),
-        ),
-        Expanded(child: _buildCurrentStep(wizard)),
+        _buildNavBar(wizard.currentStep),
+        Expanded(child: _buildCurrentStep(wizard, location)),
         AddBranchWizardFooter(
           currentStep: wizard.currentStep,
           onNext: _onNextPressed,
@@ -340,7 +408,9 @@ class _AddBranchPageState extends State<AddBranchPage> {
           onAddServices: _openSelectServices,
           onAddWorkers: _openSelectWorkers,
           coverageAccessDenied: wizard.coverageAccessDenied,
+          locationPermanentlyBlocked: location.isBlocked,
           onOpenLocationSettings: _openLocationSettings,
+          onRequestLocationAgain: _requestLocationAgain,
         ),
       ],
     );
@@ -350,10 +420,7 @@ class _AddBranchPageState extends State<AddBranchPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AppNavBar(
-          title: '',
-          leading: AppCloseIcon(onTap: _handleClose),
-        ),
+        _buildNavBar(_reviewStep),
         Expanded(
           child: BranchReviewBody(
             onEditCoverage: _openCoverageArea,
@@ -383,7 +450,10 @@ class _AddBranchPageState extends State<AddBranchPage> {
     );
   }
 
-  Widget _buildCurrentStep(AddBranchWizardState wizard) {
+  Widget _buildCurrentStep(
+    AddBranchWizardState wizard,
+    AddBranchLocationState location,
+  ) {
     final wizardCubit = context.read<AddBranchWizardCubit>();
 
     return switch (wizard.currentStep) {
@@ -401,7 +471,9 @@ class _AddBranchPageState extends State<AddBranchPage> {
         totalSteps: _totalSteps,
         furthestCompletedStep: wizard.furthestStep,
         onStepTapped: wizardCubit.tapStep,
-        child: const AddBranchLocationPermissionBody(),
+        child: AddBranchLocationPermissionBody(
+          status: location.status ?? LocationPermissionStatus.denied,
+        ),
       ),
       2 => AddBranchWizardStepShell(
         currentStep: wizard.currentStep,

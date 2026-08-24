@@ -2,6 +2,7 @@ import 'package:asset_picker/src/domain/entities/asset_picker_options.dart';
 import 'package:asset_picker/src/domain/entities/picked_asset.dart';
 import 'package:asset_picker/src/domain/enums/asset_type.dart';
 import 'package:asset_picker/src/domain/validation/asset_validation_error.dart';
+import 'package:core/core.dart';
 
 /// Validates a selection of [PickedAsset]s against [AssetPickerOptions].
 ///
@@ -54,8 +55,13 @@ class DefaultAssetValidator implements AssetValidator {
 
     for (final asset in assets) {
       // ── Size ─────────────────────────────────────────────────────────
-      final maxSize = options.maxFileSize;
-      if (maxSize != null && asset.size > maxSize) {
+      // Never trusts `options.maxFileSize` alone — clamped against the
+      // global `FileSizePolicy` so no call site (present or future) can
+      // accept a file larger than the app-wide maximum, whether it forgets
+      // to set a limit at all or explicitly requests a looser one. A
+      // caller may still request a *stricter* (smaller) limit.
+      final maxSize = FileSizePolicy.effectiveLimit(options.maxFileSize);
+      if (asset.size > maxSize) {
         errors.add(
           AssetValidationError(
             type: AssetValidationErrorType.fileTooLarge,

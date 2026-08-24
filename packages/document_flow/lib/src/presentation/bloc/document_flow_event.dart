@@ -71,6 +71,22 @@ final class SubmitRequested extends DocumentFlowEvent {
   const SubmitRequested();
 }
 
+/// Overwrites `extracted` with [extracted] and returns to [PhaseExtracted],
+/// clearing any failure — for a feature to flag review sections inline after
+/// a submit/confirm rejection whose affected document it alone knows how to
+/// resolve (e.g. attributing backend field names to a `DocumentType`). The
+/// shared bloc has no such knowledge itself; this event is the generic
+/// primitive that lets the feature apply the result without a bespoke event
+/// per feature.
+final class ReviewFlagged extends DocumentFlowEvent {
+  const ReviewFlagged(this.extracted);
+
+  final ExtractedDocuments extracted;
+
+  @override
+  List<Object?> get props => [extracted];
+}
+
 /// Resets the entire flow back to [PhaseIdle] with no documents.
 final class FlowReset extends DocumentFlowEvent {
   const FlowReset();

@@ -25,6 +25,7 @@ import 'package:services/src/presentation/bloc/service_images/service_images_blo
 import 'package:services/src/presentation/pages/edit_service_page.dart';
 import 'package:services/src/presentation/widgets/edit_service_form_body.dart';
 import 'package:shared_ui/shared_ui.dart';
+import 'package:text_optimization/text_optimization.dart';
 
 // No EasyLocalization bootstrap (avoids a real SharedPreferences hang in this
 // sandboxed test environment) — `.tr()` calls fall back to the raw key.
@@ -33,6 +34,9 @@ class _MockRepository extends Mock implements ProviderServicesRepository {}
 
 class _MockMediaUploadRepository extends Mock
     implements MediaUploadRepository {}
+
+class _MockTextOptimizationRepository extends Mock
+    implements TextOptimizationRepository {}
 
 // No committed images by default — keeps `ManageServiceImagesSection` on
 // its empty-state (drop zone) path, matching the pattern established in
@@ -100,14 +104,27 @@ void main() {
             initialService: initialService,
           );
         },
-      );
+      )
+      // `EditServiceFormBody`'s description field resolves a
+      // `TextOptimizationCubit` from `sl` (SAN-578) — never tapped here,
+      // but the widget still needs one registered to build.
+      ..registerFactory<TextOptimizationCubit>(() {
+        final textOptimizationRepository = _MockTextOptimizationRepository();
+        when(
+          () => textOptimizationRepository.optimize(any()),
+        ).thenAnswer((_) => TaskEither.right(''));
+        return TextOptimizationCubit(
+          OptimizeTextUseCase(textOptimizationRepository),
+        );
+      });
   });
 
   tearDown(() {
     sl
       ..unregister<EditServiceBloc>()
       ..unregister<MediaUploadBloc>()
-      ..unregister<ServiceImagesBloc>();
+      ..unregister<ServiceImagesBloc>()
+      ..unregister<TextOptimizationCubit>();
   });
 
   // `detailsBloc` is intentionally NOT built in `setUp` — a bloc
@@ -123,6 +140,28 @@ void main() {
       tester.view.resetPhysicalSize();
       tester.view.resetDevicePixelRatio();
     });
+
+    // Same fix as `edit_service_form_body_test.dart`: the description
+    // field's AppEnhanceWithAiButton runs a perpetual rainbow-border
+    // animation that never settles on its own, which hangs
+    // `pumpAndSettle()`; disabling animations stops its controller (it
+    // checks `MediaQuery.disableAnimationsOf`).
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+
+    // EasyLocalization isn't bootstrapped in this harness, so `.tr()` falls
+    // back to the raw key — longer than any real translation, which
+    // overflows AppEnhanceWithAiButton's fixed-width pill. A byproduct of
+    // the untranslated test key, not a real layout bug.
+    final originalOnError = FlutterError.onError;
+    FlutterError.onError = (details) {
+      if (details.exception.toString().contains('A RenderFlex overflowed')) {
+        return;
+      }
+      originalOnError?.call(details);
+    };
+    addTearDown(() => FlutterError.onError = originalOnError);
 
     final detailsBloc = ServiceDetailsBloc(
       getProviderServiceUseCase: GetProviderServiceUseCase(repository),
@@ -281,8 +320,7 @@ void main() {
       // `EditServicePage`'s success handler, which calls `context.pop()`
       // via GoRouter (not wired up in this test's plain `MaterialApp`)
       // and is unrelated to what this test checks.
-      final neverResolves =
-          Completer<Either<Failure, ProviderServiceEntity>>();
+      final neverResolves = Completer<Either<Failure, ProviderServiceEntity>>();
       when(
         () => repository.updateProviderService(
           id: 'svc-1',
@@ -309,6 +347,41 @@ void main() {
           description: 'Fetched description',
         ),
       ).called(1);
+    },
+  );
+
+  testWidgets(
+    'PopScope.canPop is true with no unsaved changes (system swipe-back '
+    'pops straight to Service Detail — SAN-581) and false once the '
+    'description is edited (so the discard guard can intercept)',
+    (tester) async {
+      when(
+        () => repository.getProviderService('svc-1'),
+      ).thenReturn(TaskEither.right(_fetchedService()));
+
+      final detailsBloc = await pump(tester);
+      detailsBloc.add(const ServiceDetailsFetchRequested('svc-1'));
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      final popScope = find.byWidgetPredicate((w) => w is PopScope<Object?>);
+      expect(tester.widget<PopScope<Object?>>(popScope).canPop, isTrue);
+
+      await tester.enterText(
+        find.byType(TextField).first,
+        'Unsaved edit',
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<PopScope<Object?>>(popScope).canPop, isFalse);
+
+      await tester.enterText(
+        find.byType(TextField).first,
+        'Fetched description',
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<PopScope<Object?>>(popScope).canPop, isTrue);
     },
   );
 }

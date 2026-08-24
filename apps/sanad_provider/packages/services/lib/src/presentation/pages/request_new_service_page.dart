@@ -40,7 +40,7 @@ class _RequestNewServicePageState extends State<RequestNewServicePage> {
     return BlocProvider(
       create: (_) => sl<MediaUploadBloc>(
         param1: const MediaUploadConfig(
-          maxFileSize: 5 * 1024 * 1024,
+          maxFileSize: FileSizePolicy.maxBytes,
           // "Images are optional (max 6)" per this screen's own doc
           // comment above.
           maxFiles: kMaxServiceImages,

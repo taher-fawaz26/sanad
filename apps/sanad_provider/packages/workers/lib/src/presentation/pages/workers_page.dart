@@ -9,17 +9,24 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
 import 'package:shared_ui/shared_ui.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
+import 'package:storage/storage.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
+import 'package:workers/src/domain/entities/worker_status.dart';
+import 'package:workers/src/domain/entities/worker_type.dart';
 import 'package:workers/src/presentation/bloc/invitation_action/invitation_action_cubit.dart';
 import 'package:workers/src/presentation/bloc/invitations_list/invitations_list_bloc.dart';
 import 'package:workers/src/presentation/bloc/worker_action/worker_action_cubit.dart';
 import 'package:workers/src/presentation/bloc/workers_list/workers_list_bloc.dart';
 import 'package:workers/src/presentation/services/worker_roles_tab.dart';
+import 'package:workers/src/presentation/utils/worker_action_copy.dart';
+import 'package:workers/src/presentation/utils/worker_type_localization.dart';
 import 'package:workers/src/presentation/widgets/invitations_content.dart';
 import 'package:workers/src/presentation/widgets/worker_empty_states.dart';
 import 'package:workers/src/presentation/widgets/worker_error_state.dart';
 import 'package:workers/src/presentation/widgets/worker_list_item.dart';
 import 'package:workers/src/presentation/widgets/worker_search_sheet.dart';
+import 'package:workers/src/presentation/widgets/workers_filter_bar.dart';
 import 'package:workers/src/routes/worker_routes.dart';
 
 /// Figma `team` / `team-empty-state` / search sheet (`1526:12186`,
@@ -72,7 +79,7 @@ class _WorkersPageState extends State<WorkersPage> {
     if (!mounted) return;
     switch (effect) {
       case WorkerActionStarted(:final type):
-        AppProgress.show(context, title: _workerProgressTitle(type));
+        AppProgress.show(context, title: workerActionProgressTitle(type));
       case WorkerActionSucceeded(
         :final type,
         :final workerId,
@@ -88,12 +95,15 @@ class _WorkersPageState extends State<WorkersPage> {
             WorkerReplacedInListEvent(updatedWorker),
           );
         }
-        showAppSnackbar(context: context, title: _workerSuccessMessage(type));
+        showAppSnackbar(
+          context: context,
+          title: workerActionSuccessMessage(type),
+        );
       case WorkerActionFailed(:final type, :final failure):
         AppProgress.dismiss();
         showAppErrorSnackbar(
           context: context,
-          title: _workerFailureMessage(type, failure),
+          title: workerActionFailureMessage(type, failure),
         );
     }
   }
@@ -128,27 +138,8 @@ class _WorkersPageState extends State<WorkersPage> {
   }
 
   // ── Copy helpers ─────────────────────────────────────────────────────────
-
-  String _workerProgressTitle(WorkerActionType type) => switch (type) {
-    WorkerActionType.suspend => 'workers.worker_suspend_in_progress'.tr(),
-    WorkerActionType.unsuspend => 'workers.worker_unsuspend_in_progress'.tr(),
-    WorkerActionType.delete => 'workers.worker_delete_in_progress'.tr(),
-  };
-
-  String _workerSuccessMessage(WorkerActionType type) => switch (type) {
-    WorkerActionType.suspend => 'workers.worker_suspended'.tr(),
-    WorkerActionType.unsuspend => 'workers.worker_unsuspended'.tr(),
-    WorkerActionType.delete => 'workers.worker_deleted'.tr(),
-  };
-
-  String _workerFailureMessage(WorkerActionType type, Failure failure) {
-    if (failure.message.trim().isNotEmpty) return failure.localizedMessage();
-    return switch (type) {
-      WorkerActionType.suspend => 'workers.worker_suspend_failed'.tr(),
-      WorkerActionType.unsuspend => 'workers.worker_unsuspend_failed'.tr(),
-      WorkerActionType.delete => 'workers.worker_delete_failed'.tr(),
-    };
-  }
+  // Worker suspend/unsuspend/delete copy is shared with the Worker Details
+  // page's "more actions" sheet — see worker_action_copy.dart.
 
   String _invitationProgressTitle(InvitationActionType type) => switch (type) {
     InvitationActionType.resend => 'workers.invitation_resend_in_progress'.tr(),
@@ -275,10 +266,63 @@ class _WorkersPageState extends State<WorkersPage> {
   }
 }
 
-class _WorkersContent extends StatelessWidget {
+class _WorkersContent extends StatefulWidget {
   const _WorkersContent({required this.isOwner});
 
   final bool isOwner;
+
+  @override
+  State<_WorkersContent> createState() => _WorkersContentState();
+}
+
+class _WorkersContentState extends State<_WorkersContent> {
+  /// `null` while the Hive read is in flight — the hint never arms until
+  /// this resolves, so it can't briefly play before we know it's been seen.
+  bool? _hintSeen;
+
+  /// One-shot latch: once the hint has fired (played or been cancelled), row
+  /// 0 renders as a plain `WorkerListItem` on every later build (filter
+  /// change, refresh) instead of re-wrapping it in `AppSwipeActionHint`.
+  bool _hintAttempted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadHintSeen());
+  }
+
+  Future<void> _loadHintSeen() async {
+    final seen =
+        await sl<HiveLocalStorage>().load(
+              key: StorageKeys.workersSwipeHintSeen,
+              boxName: HiveBoxes.defaultBox,
+            )
+            as bool? ??
+        false;
+    if (!mounted) return;
+    setState(() => _hintSeen = seen);
+  }
+
+  /// Only the first row, and only once — [_hintSeen] resolves to `false`
+  /// (never shown before) and [_hintAttempted] hasn't already latched from
+  /// this row having played or been cancelled.
+  bool _showSwipeHintFor(int index) =>
+      index == 0 && _hintSeen == false && !_hintAttempted;
+
+  void _markHintShown() {
+    if (!mounted) return;
+    setState(() {
+      _hintSeen = true;
+      _hintAttempted = true;
+    });
+    unawaited(
+      sl<HiveLocalStorage>().save(
+        key: StorageKeys.workersSwipeHintSeen,
+        value: true,
+        boxName: HiveBoxes.defaultBox,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -314,10 +358,22 @@ class _WorkersContent extends StatelessWidget {
                 onTap: () => showWorkerSearchSheet(
                   context,
                   scope: WorkerSearchScope.team,
-                  isOwner: isOwner,
+                  isOwner: widget.isOwner,
                 ),
               ),
             ),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: WorkersFilterBar(
+                statusFilter: state.statusFilter,
+                typeFilter: state.typeFilter,
+                onStatusTap: () =>
+                    _showWorkersStatusFilterSheet(context, state.statusFilter),
+                onTypeTap: () =>
+                    _showWorkersTypeFilterSheet(context, state.typeFilter),
+              ),
+            ),
+            SizedBox(height: AppSpacing.sm),
             Expanded(
               child: AppRefreshIndicator(
                 onRefresh: () async {
@@ -337,12 +393,25 @@ class _WorkersContent extends StatelessWidget {
                       bottom: AppSpacing.lg,
                     ),
                     separatorBuilder: (_, _) => SizedBox(height: AppSpacing.sm),
-                    itemBuilder: (context, worker, index) => RepaintBoundary(
-                      child: WorkerListItem(
-                        worker: worker,
-                        isOwner: isOwner,
-                      ),
-                    ),
+                    itemBuilder: (context, worker, index) =>
+                        _showSwipeHintFor(index)
+                        ? AppSwipeActionHint(
+                            enabled: true,
+                            onShown: _markHintShown,
+                            builder: (context, controller) => RepaintBoundary(
+                              child: WorkerListItem(
+                                worker: worker,
+                                isOwner: widget.isOwner,
+                                hintController: controller,
+                              ),
+                            ),
+                          )
+                        : RepaintBoundary(
+                            child: WorkerListItem(
+                              worker: worker,
+                              isOwner: widget.isOwner,
+                            ),
+                          ),
                     firstPageErrorIndicatorBuilder: (_) => Center(
                       child: WorkerErrorState(
                         failure: state.failure,
@@ -357,7 +426,7 @@ class _WorkersContent extends StatelessWidget {
                       ),
                     ),
                     noItemsFoundIndicatorBuilder: (_) =>
-                        Center(child: _EmptyState(isOwner: isOwner)),
+                        Center(child: _EmptyState(isOwner: widget.isOwner)),
                   ),
                 ),
               ),
@@ -367,6 +436,72 @@ class _WorkersContent extends StatelessWidget {
       },
     );
   }
+}
+
+void _showWorkersStatusFilterSheet(
+  BuildContext context,
+  WorkerStatus? current,
+) {
+  final bloc = context.read<WorkersListBloc>();
+  SheetNavigator.push<void>(
+    context,
+    AppActionList(
+      items: [
+        AppActionSheetItem(
+          label: 'workers.filters.all'.tr(),
+          onTap: () {
+            if (current == null) return;
+            bloc.add(const WorkersListStatusChangedEvent(null));
+          },
+        ),
+        for (final status in WorkerStatus.values)
+          AppActionSheetItem(
+            label: switch (status) {
+              WorkerStatus.active => 'workers.filters.active'.tr(),
+              WorkerStatus.inactive => 'workers.filters.inactive'.tr(),
+            },
+            onTap: () {
+              if (status == current) return;
+              bloc.add(WorkersListStatusChangedEvent(status));
+            },
+          ),
+      ],
+    ),
+    settings: SheetRouteSettings(
+      title: 'workers.filters.status'.tr(),
+      padChild: false,
+    ),
+  );
+}
+
+void _showWorkersTypeFilterSheet(BuildContext context, WorkerType? current) {
+  final bloc = context.read<WorkersListBloc>();
+  SheetNavigator.push<void>(
+    context,
+    AppActionList(
+      items: [
+        AppActionSheetItem(
+          label: 'workers.filters.all'.tr(),
+          onTap: () {
+            if (current == null) return;
+            bloc.add(const WorkersListTypeChangedEvent(null));
+          },
+        ),
+        for (final type in WorkerType.values)
+          AppActionSheetItem(
+            label: type.localizedLabel(),
+            onTap: () {
+              if (type == current) return;
+              bloc.add(WorkersListTypeChangedEvent(type));
+            },
+          ),
+      ],
+    ),
+    settings: SheetRouteSettings(
+      title: 'workers.filters.type'.tr(),
+      padChild: false,
+    ),
+  );
 }
 
 /// Opens the add-worker flow and refreshes the list if a worker was added.

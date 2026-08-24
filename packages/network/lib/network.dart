@@ -8,6 +8,7 @@ export 'src/client/error_mapper.dart';
 export 'src/client/failure_mapper.dart';
 export 'src/client/isolate_parser.dart';
 export 'src/client/secure_dio_client.dart';
+export 'src/config/text_optimization_api_config.dart';
 export 'src/connectivity/connectivity_controller.dart';
 export 'src/connectivity/connectivity_offline_binder.dart';
 export 'src/connectivity/connectivity_offline_gate.dart';

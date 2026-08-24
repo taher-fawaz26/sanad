@@ -1,4 +1,6 @@
 import 'package:asset_picker/asset_picker.dart';
+import 'package:core/core.dart';
+import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -44,7 +46,11 @@ class _AddServiceImagesFieldState extends State<AddServiceImagesField> {
               fileName: item.fileName,
               progress: item.progress,
               status: _tileStatus(item.status),
-              errorMessage: item.failure?.message,
+              // `MediaUploadFailure.message` is always an i18n key, never
+              // already-localized text — `MediaUploadTileData.errorMessage`
+              // is rendered as-is (no `.tr()` downstream), so it must be
+              // resolved here.
+              errorMessage: item.failure?.message.tr(),
             ),
         ];
         final mainId = tileData.isEmpty
@@ -96,20 +102,44 @@ class _AddServiceImagesFieldState extends State<AddServiceImagesField> {
     final maxFiles = bloc.state.config.maxFiles ?? 5;
     final remaining = maxFiles - bloc.state.items.length;
     if (remaining <= 0) return;
-    final result = await AssetPicker.pick(
-      context,
-      options: AssetPickerOptions(
-        allowFiles: false,
-        allowMultiple: true,
-        // Without this, `maxSelection` defaults to 1 and the gallery
-        // provider silently truncates a multi-select down to the first
-        // asset — bound it to the remaining slots instead so a batch pick
-        // can never exceed `maxFiles` either.
-        maxSelection: remaining,
-      ),
-    );
-    if (!result.hasAssets) return;
+    final AssetPickerResult result;
+    try {
+      result = await AssetPicker.pick(
+        context,
+        options: AssetPickerOptions(
+          allowFiles: false,
+          allowMultiple: true,
+          // Without this, `maxSelection` defaults to 1 and the gallery
+          // provider silently truncates a multi-select down to the first
+          // asset — bound it to the remaining slots instead so a batch
+          // pick can never exceed `maxFiles` either.
+          maxSelection: remaining,
+          // Rejects an oversized file immediately — before it's returned
+          // here, so no upload, progress, or `MediaUploadBloc` item is ever
+          // created for it. `MediaUploadConfig.maxFileSize` (set on this
+          // screen's bloc) is a second, defensive check for anything that
+          // reaches it another way (e.g. `MediaUploadReplaceRequested`).
+          maxFileSize: FileSizePolicy.maxBytes,
+        ),
+      );
+    } on AssetValidationException catch (e) {
+      if (context.mounted) _showValidationError(context, e);
+      return;
+    }
+    if (!result.hasAssets || !context.mounted) return;
     bloc.add(MediaUploadAssetsAdded(result.assets));
+  }
+
+  void _showValidationError(BuildContext context, AssetValidationException e) {
+    final isTooLarge = e.errors.any(
+      (error) => error.type == AssetValidationErrorType.fileTooLarge,
+    );
+    showAppErrorSnackbar(
+      context: context,
+      title: isTooLarge
+          ? 'errors.media_upload.file_too_large'.tr()
+          : 'errors.media_upload.unsupported_type'.tr(),
+    );
   }
 
   static MediaUploadTileStatus _tileStatus(MediaUploadStatus status) =>

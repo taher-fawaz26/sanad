@@ -37,6 +37,4 @@ abstract class AuthRepository {
   TaskEither<Failure, AuthIdentity> getCurrentUser();
 
   TaskEither<Failure, void> logout();
-
-  TaskEither<Failure, void> deleteAccount(DeleteAccountParams params);
 }

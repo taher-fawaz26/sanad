@@ -18,6 +18,8 @@ dependencies:
     path: ../../packages/account_settings
   auth:
     path: ../../packages/auth
+  activity_logs:
+    path: ./packages/activity_logs
   authorization:
     path: ../../packages/authorization
   bloc_concurrency: ^0.3.0
@@ -29,6 +31,8 @@ dependencies:
     path: ../../packages/contact_verification
   document_flow:
     path: ../../packages/document_flow
+  document_validation:
+    path: ../../packages/document_validation
   media:
     path: ../../packages/media
   media_upload:
@@ -78,6 +82,8 @@ dependencies:
     path: ../../packages/permissions
   storage:
     path: ../../packages/storage
+  text_optimization:
+    path: ../../packages/text_optimization
 
 dev_dependencies:
   bloc_test: ^10.0.0

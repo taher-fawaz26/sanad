@@ -5,7 +5,6 @@ import 'package:auth/src/data/datasources/google_auth_datasource.dart';
 import 'package:auth/src/data/repositories/auth_repository_impl.dart';
 import 'package:auth/src/domain/repositories/auth_repository.dart';
 import 'package:auth/src/domain/usecases/check_signin_status_usecase.dart';
-import 'package:auth/src/domain/usecases/delete_account_usecase.dart';
 import 'package:auth/src/domain/usecases/get_current_user_usecase.dart';
 import 'package:auth/src/domain/usecases/get_resend_info_usecase.dart';
 import 'package:auth/src/domain/usecases/logout_usecase.dart';
@@ -103,7 +102,6 @@ class AuthDI {
         () => GetCurrentUserUseCase(sl<AuthRepository>()),
       )
       ..registerLazySingleton(() => AuthLogoutUseCase(sl<AuthRepository>()))
-      ..registerLazySingleton(() => DeleteAccountUseCase(sl<AuthRepository>()))
       ..registerLazySingleton(
         () => AuthCheckSignInStatusUseCase(sl<SessionManager>()),
       )
@@ -114,7 +112,6 @@ class AuthDI {
           resendOtpUseCase: sl<ResendOtpUseCase>(),
           getResendInfoUseCase: sl<GetResendInfoUseCase>(),
           logoutUseCase: sl<AuthLogoutUseCase>(),
-          deleteAccountUseCase: sl<DeleteAccountUseCase>(),
           sessionManager: sl<SessionManager>(),
           checkSignInStatusUseCase: sl<AuthCheckSignInStatusUseCase>(),
           authStatusNotifier: sl<AuthStatusNotifier>(),

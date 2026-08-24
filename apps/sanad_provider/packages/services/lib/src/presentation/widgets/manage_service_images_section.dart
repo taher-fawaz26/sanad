@@ -37,9 +37,9 @@ class ManageServiceImagesSection extends StatelessWidget {
     // inside `ServiceImagesBloc`'s own builder, to keep the two blocs'
     // rebuild triggers structurally separate.
     return BlocConsumer<MediaUploadBloc, MediaUploadState>(
-      listener: (context, uploadState) => context
-          .read<ServiceImagesBloc>()
-          .add(ServiceImagesUploadStateChanged(uploadState.items)),
+      listener: (context, uploadState) => context.read<ServiceImagesBloc>().add(
+        ServiceImagesUploadStateChanged(uploadState.items),
+      ),
       builder: (context, uploadState) {
         return BlocConsumer<ServiceImagesBloc, ServiceImagesState>(
           listenWhen: (previous, current) =>
@@ -151,7 +151,11 @@ class ManageServiceImagesSection extends StatelessWidget {
       fileName: item.fileName,
       progress: item.progress,
       status: status,
-      errorMessage: item.failure?.message,
+      // `MediaUploadFailure.message` is always an i18n key, never
+      // already-localized text — `MediaUploadTileData.errorMessage` is
+      // rendered as-is (no `.tr()` downstream), so it must be resolved
+      // here.
+      errorMessage: item.failure?.message.tr(),
     );
   }
 
@@ -160,14 +164,26 @@ class ManageServiceImagesSection extends StatelessWidget {
       _showLimitReached(context);
       return;
     }
-    final result = await AssetPicker.pick(
-      context,
-      options: AssetPickerOptions(
-        allowFiles: false,
-        allowMultiple: true,
-        maxSelection: remaining,
-      ),
-    );
+    final AssetPickerResult result;
+    try {
+      result = await AssetPicker.pick(
+        context,
+        options: AssetPickerOptions(
+          allowFiles: false,
+          allowMultiple: true,
+          maxSelection: remaining,
+          // Rejects an oversized file immediately — before it's returned
+          // here, so no upload, progress, or `MediaUploadBloc` item is
+          // ever created for it. `MediaUploadConfig.maxFileSize` (set on
+          // this screen's bloc) is a second, defensive check for anything
+          // that reaches it another way.
+          maxFileSize: FileSizePolicy.maxBytes,
+        ),
+      );
+    } on AssetValidationException catch (e) {
+      if (context.mounted) _showValidationError(context, e);
+      return;
+    }
     if (!result.hasAssets || !context.mounted) return;
     context.read<MediaUploadBloc>().add(
       MediaUploadAssetsAdded(result.assets),
@@ -180,6 +196,20 @@ class ManageServiceImagesSection extends StatelessWidget {
       title: 'services.image_limit_reached'.tr(
         namedArgs: {'max': kMaxServiceImages.toString()},
       ),
+      color: AppSnackbarColor.error,
+      layout: AppSnackbarLayout.fullWidth,
+    );
+  }
+
+  void _showValidationError(BuildContext context, AssetValidationException e) {
+    final isTooLarge = e.errors.any(
+      (error) => error.type == AssetValidationErrorType.fileTooLarge,
+    );
+    showAppSnackbar(
+      context: context,
+      title: isTooLarge
+          ? 'errors.media_upload.file_too_large'.tr()
+          : 'errors.media_upload.unsupported_type'.tr(),
       color: AppSnackbarColor.error,
       layout: AppSnackbarLayout.fullWidth,
     );

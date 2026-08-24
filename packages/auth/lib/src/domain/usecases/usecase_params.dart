@@ -21,12 +21,3 @@ class VerifyEmailOtpParams extends Equatable {
   @override
   List<Object?> get props => [email, otp];
 }
-
-class DeleteAccountParams extends Equatable {
-  const DeleteAccountParams({required this.userSub});
-
-  final String userSub;
-
-  @override
-  List<Object?> get props => [userSub];
-}

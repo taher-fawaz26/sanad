@@ -1,8 +1,31 @@
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fpdart/fpdart.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/bottom_sheets/edit_identity_bottom_sheet.dart';
+import 'package:text_optimization/text_optimization.dart';
+
+class _MockTextOptimizationRepository extends Mock
+    implements TextOptimizationRepository {}
+
+/// The sheet's description field resolves a `TextOptimizationCubit` from
+/// `sl` (SAN-578) — never tapped here, but the widget still needs one
+/// registered to build.
+void _registerTextOptimizationCubit() {
+  final repository = _MockTextOptimizationRepository();
+  when(
+    () => repository.optimize(any()),
+  ).thenAnswer((_) => TaskEither.right(''));
+  if (sl.isRegistered<TextOptimizationCubit>()) {
+    sl.unregister<TextOptimizationCubit>();
+  }
+  sl.registerFactory<TextOptimizationCubit>(
+    () => TextOptimizationCubit(OptimizeTextUseCase(repository)),
+  );
+}
 
 /// `UpdateServiceProviderSettingsDto.description` caps at 350 chars — see
 /// `update_service_provider_settings_params.dart`. A prior migration had the
@@ -54,6 +77,13 @@ Future<void> _pumpOpener(
   addTearDown(() {
     tester.view.resetPhysicalSize();
     tester.view.resetDevicePixelRatio();
+  });
+
+  _registerTextOptimizationCubit();
+  addTearDown(() {
+    if (sl.isRegistered<TextOptimizationCubit>()) {
+      sl.unregister<TextOptimizationCubit>();
+    }
   });
 
   await tester.pumpWidget(

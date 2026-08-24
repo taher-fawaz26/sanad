@@ -139,6 +139,65 @@ void main() {
       expect(result, 'picked');
     });
 
+    testWidgets('auto-dismisses when parent route is popped', (
+      tester,
+    ) async {
+      // Simulate nested navigators (like go_router's ShellRoute):
+      // the sheet goes on the ROOT navigator, while the page that
+      // opened it lives on an INNER navigator.
+      final innerNavKey = GlobalKey<NavigatorState>();
+
+      await _pumpApp(
+        tester,
+        Navigator(
+          key: innerNavKey,
+          onGenerateRoute: (_) => MaterialPageRoute<void>(
+            builder: (_) => Builder(
+              builder: (pageAContext) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () {
+                    innerNavKey.currentState!.push<void>(
+                      MaterialPageRoute<void>(
+                        builder: (_) => Builder(
+                          builder: (pageBContext) => Scaffold(
+                            body: ElevatedButton(
+                              onPressed: () => SheetNavigator.push<void>(
+                                pageBContext,
+                                const Text('Sheet on page B'),
+                              ),
+                              child: const Text('Open sheet'),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Go to B'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Navigate to page B on the inner navigator.
+      await tester.tap(find.text('Go to B'));
+      await tester.pumpAndSettle();
+
+      // Open the sheet from page B (pushed on root navigator).
+      await tester.tap(find.text('Open sheet'));
+      await tester.pumpAndSettle();
+      expect(find.text('Sheet on page B'), findsOneWidget);
+
+      // Pop page B from the inner navigator — the sheet should be
+      // auto-dismissed even though it lives on the root navigator.
+      innerNavKey.currentState!.pop();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sheet on page B'), findsNothing);
+      expect(find.text('Go to B'), findsOneWidget);
+    });
+
     testWidgets('nested push morphs the previous sheet toward fullscreen', (
       tester,
     ) async {

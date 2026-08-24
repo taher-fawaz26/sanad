@@ -131,12 +131,12 @@ class _EditWorkerPageState extends State<EditWorkerPage> {
   void _showErrorSnackbar(Failure failure) {
     final message = failure.message.trim();
     final caption = message.isEmpty
-        ? 'workers.add_worker.error_invitation_failed'.tr()
+        ? 'workers.edit_worker.error_update_failed'.tr()
         : failure.localizedMessage();
 
     showAppErrorSnackbar(
       context: context,
-      title: 'workers.add_worker.error_invitation_failed'.tr(),
+      title: 'workers.edit_worker.error_update_failed'.tr(),
       caption: caption,
     );
   }

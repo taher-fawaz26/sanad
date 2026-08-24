@@ -1,5 +1,8 @@
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
 import 'package:branches/src/domain/entities/branch_availability_mode.dart';
+import 'package:branches/src/domain/entities/branch_schedule_mode.dart';
+import 'package:branches/src/domain/policies/branch_schedule_policy.dart';
+import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_state.dart';
 import 'package:branches/src/presentation/widgets/branch_schedule_section.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -70,6 +73,11 @@ class _WorkingHoursEditSheetState extends State<WorkingHoursEditSheet> {
   late BranchScheduleMode _mode;
   late List<BranchAvailabilityEntity> _customSchedule;
 
+  /// Most recent add-slot rejection — mirrors `AddBranchDraftCubit`'s
+  /// `lastScheduleRejection`, kept as local widget state here since this
+  /// sheet owns its own schedule draft rather than a cubit.
+  ScheduleSlotRejection? _rejection;
+
   @override
   void initState() {
     super.initState();
@@ -85,9 +93,50 @@ class _WorkingHoursEditSheetState extends State<WorkingHoursEditSheet> {
   void _onModeChanged(BranchScheduleMode mode) {
     setState(() {
       _mode = mode;
+      _rejection = null;
       if (mode == BranchScheduleMode.custom && _customSchedule.isEmpty) {
         _customSchedule = List.of(widget.companySchedule);
       }
+    });
+  }
+
+  /// Delegates to the same shared [BranchSchedulePolicy] the Add Branch
+  /// wizard's schedule step uses, so the two flows can never re-diverge on
+  /// scheduling behavior.
+  SlotValidation _onAddSlot(String dayId, String from, String to) {
+    final result = BranchSchedulePolicy.upsertSlot(
+      days: _customSchedule,
+      dayId: dayId,
+      from: from,
+      to: to,
+    );
+    if (!result.validation.isValid) {
+      setState(
+        () => _rejection = ScheduleSlotRejection(
+          reason: result.validation.reason,
+          dayId: dayId,
+          from: from,
+          to: to,
+          conflict: result.validation.conflict,
+        ),
+      );
+      return result.validation;
+    }
+    setState(() {
+      _customSchedule = result.days;
+      _rejection = null;
+    });
+    return result.validation;
+  }
+
+  void _onRemoveSlot(String dayId, int slotIndex) {
+    setState(() {
+      _customSchedule = BranchSchedulePolicy.removeSlot(
+        days: _customSchedule,
+        dayId: dayId,
+        slotIndex: slotIndex,
+      );
+      _rejection = null;
     });
   }
 
@@ -129,9 +178,10 @@ class _WorkingHoursEditSheetState extends State<WorkingHoursEditSheet> {
           mode: _mode,
           companySchedule: widget.companySchedule,
           customSchedule: _customSchedule,
+          rejection: _rejection,
           onModeChanged: _onModeChanged,
-          onCustomScheduleChanged: (schedule) =>
-              setState(() => _customSchedule = schedule),
+          onAddSlot: _onAddSlot,
+          onRemoveSlot: _onRemoveSlot,
         ),
         SizedBox(height: AppSpacing.xl),
         AppButton(

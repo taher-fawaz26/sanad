@@ -44,4 +44,8 @@ enum DocumentIssue {
 
   /// The document is past its expiry date.
   expired,
+
+  /// The front and back of a multi-part document (e.g. Emirates ID) do not
+  /// belong to the same physical card (`EXTRACTION_ID_MISMATCH`).
+  idMismatch,
 }

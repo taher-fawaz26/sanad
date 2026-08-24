@@ -12,6 +12,11 @@ class CatalogServiceEntity extends Equatable {
   });
 
   final String id;
+
+  /// Canonical service name — deliberately never translated by the backend
+  /// (unlike [category], whose `name`/`description` are localized). Do not
+  /// attempt to translate this client-side; render it as-is regardless of
+  /// app language.
   final String name;
   final CategoryRefEntity category;
 

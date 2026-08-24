@@ -1,5 +1,6 @@
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
 import 'package:branches/src/domain/entities/branch_manager_entity.dart';
+import 'package:branches/src/domain/entities/branch_schedule_mode.dart';
 import 'package:branches/src/domain/entities/branch_type.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_cubit.dart';
@@ -136,7 +137,10 @@ class _AddBranchStepOneState extends State<AddBranchStepOne> {
                 showErrors: widget.showValidationErrors,
               ),
               const AppDivider(thickness: AppDividerThickness.thick),
-              _ContactSection(phoneController: _phoneController),
+              _ContactSection(
+                phoneController: _phoneController,
+                showErrors: widget.showValidationErrors,
+              ),
               const AppDivider(thickness: AppDividerThickness.thick),
               _WorkingHoursSection(
                 onScheduleModeChanged: _onScheduleModeChanged,
@@ -181,11 +185,12 @@ class _MainInfoSection extends StatelessWidget {
                 controller: branchNameController,
                 label: 'branches.add_branch.branch_name'.tr(),
                 hint: 'branches.add_branch.branch_name_hint'.tr(),
+                isRequired: true,
                 validator: (value) {
                   if (!RequiredValidator.isValid(value)) {
                     return 'branches.add_branch.branch_name_required'.tr();
                   }
-                  if (!BusinessNameValidator.isValid(value)) {
+                  if (!MeaningfulTextValidator.isValid(value)) {
                     return 'validation.invalid_name'.tr();
                   }
                   if (!LengthValidator.isValid(value, maxLength: 255)) {
@@ -201,6 +206,7 @@ class _MainInfoSection extends StatelessWidget {
                 builder: (context, selectedType) {
                   return BranchTypeSelectField(
                     selectedType: selectedType,
+                    isRequired: true,
                     onTypeSelected: (type) {
                       context.read<AddBranchDraftCubit>().updateBranchType(
                         type,
@@ -221,6 +227,7 @@ class _MainInfoSection extends StatelessWidget {
                     emptyLabel: 'branches.add_branch.city_empty'.tr(),
                     retryLabel: 'common.cancel'.tr(),
                     selectedCity: selectedCity,
+                    isRequired: true,
                     errorText: showErrors && selectedCity == null
                         ? 'branches.add_branch.city_required'.tr()
                         : null,
@@ -239,6 +246,7 @@ class _MainInfoSection extends StatelessWidget {
                     value: address,
                     hint: 'branches.add_branch.location_hint'.tr(),
                     actionLabel: 'branches.add_branch.location_set'.tr(),
+                    isRequired: true,
                     errorText:
                         showErrors && (address == null || address.isEmpty)
                         ? 'branches.add_branch.location_required'.tr()
@@ -256,17 +264,18 @@ class _MainInfoSection extends StatelessWidget {
 }
 
 class _ContactSection extends StatelessWidget {
-  const _ContactSection({required this.phoneController});
+  const _ContactSection({
+    required this.phoneController,
+    required this.showErrors,
+  });
 
   final TextEditingController phoneController;
+  final bool showErrors;
 
   String? _phoneValidator(String? value) {
     final phone = (value ?? '').trim();
-    if (phone.isEmpty) return null;
-    if (!UaePhoneValidator.isValid(phone)) {
-      return 'branches.add_branch.invalid_phone'.tr();
-    }
-    return null;
+    if (phone.isEmpty) return 'validation.required'.tr();
+    return UaePhoneValidator.mobileValidationMessage(phone)?.tr();
   }
 
   @override
@@ -290,6 +299,7 @@ class _ContactSection extends StatelessWidget {
                 label: 'branches.add_branch.branch_phone'.tr(),
                 controller: phoneController,
                 hint: 'branches.add_branch.branch_phone_hint'.tr(),
+                isRequired: true,
                 validator: _phoneValidator,
               ),
               SizedBox(height: AppSpacing.md),
@@ -302,6 +312,10 @@ class _ContactSection extends StatelessWidget {
                 builder: (context, selectedManager) {
                   return BranchManagerPickerField(
                     selectedManager: selectedManager,
+                    isRequired: true,
+                    errorText: showErrors && selectedManager == null
+                        ? 'branches.add_branch.branch_manager_required'.tr()
+                        : null,
                     onManagerSelected: (manager) {
                       context.read<AddBranchDraftCubit>().updateManager(
                         manager,
@@ -354,23 +368,25 @@ class _WorkingHoursSection extends StatelessWidget {
                     ({
                       BranchScheduleMode mode,
                       List<BranchAvailabilityEntity> customSchedule,
+                      ScheduleSlotRejection? rejection,
                     })
                   >(
                     selector: (state) => (
                       mode: state.scheduleMode,
                       customSchedule: state.customSchedule,
+                      rejection: state.lastScheduleRejection,
                     ),
                     builder: (context, draft) {
+                      final draftCubit = context.read<AddBranchDraftCubit>();
                       return BranchScheduleSection(
                         mode: draft.mode,
                         companySchedule: blocState.companySchedule,
                         customSchedule: draft.customSchedule,
+                        rejection: draft.rejection,
                         onModeChanged: onScheduleModeChanged,
-                        onCustomScheduleChanged: (schedule) {
-                          context
-                              .read<AddBranchDraftCubit>()
-                              .updateCustomSchedule(schedule);
-                        },
+                        onAddSlot: (dayId, from, to) => draftCubit
+                            .addScheduleSlot(dayId: dayId, from: from, to: to),
+                        onRemoveSlot: draftCubit.removeScheduleSlot,
                       );
                     },
                   );

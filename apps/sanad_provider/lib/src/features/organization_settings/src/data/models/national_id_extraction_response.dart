@@ -1,12 +1,16 @@
+import 'package:document_flow/document_flow.dart' show IdVerification;
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/legal_data_status.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/personal_legal_data_extraction_entity.dart';
 
 /// Mirrors `NationalIdExtractionDto` exactly — the freshly-extracted (not yet
-/// persisted) Emirates ID read inside `LegalDataExtractionResponseDto`.
+/// persisted) Emirates ID read returned bare by
+/// `POST service-provider/legal-data/emirates-id/extract` (no outer
+/// envelope — see `LegalDataApiPaths.emiratesIdExtract`).
 ///
 /// Unlike [NationalIdResponse] (the persisted-record shape), this has no
 /// `id`/`createdAt`/`updatedAt`/media, and it has a required
-/// `missingFields` array that the persisted record never carries.
+/// `missingFields` array plus an `idVerification` object that the persisted
+/// record never carries.
 class NationalIdExtractionResponse {
   const NationalIdExtractionResponse({
     required this.status,
@@ -18,6 +22,7 @@ class NationalIdExtractionResponse {
     this.dateOfBirth,
     this.expiryDate,
     this.gender,
+    this.idVerification,
   });
 
   factory NationalIdExtractionResponse.fromJson(Map<String, dynamic> json) {
@@ -31,6 +36,7 @@ class NationalIdExtractionResponse {
       gender: json['gender'] as String?,
       status: LegalDataStatus.fromJson(json['status'] as String),
       missingFields: (json['missingFields'] as List<dynamic>).cast<String>(),
+      idVerification: _idVerification(json['idVerification']),
     );
   }
 
@@ -44,6 +50,11 @@ class NationalIdExtractionResponse {
   final LegalDataStatus status;
   final List<String> missingFields;
 
+  /// The extractor's front/back comparison. `null` means the backend didn't
+  /// return one (e.g. an older/malformed response) — never treated as a
+  /// match or mismatch on its own.
+  final IdVerification? idVerification;
+
   PersonalLegalDataExtractionEntity toEntity() =>
       PersonalLegalDataExtractionEntity(
         fullNameEnglish: fullNameEnglish,
@@ -55,5 +66,17 @@ class NationalIdExtractionResponse {
         gender: gender,
         status: status,
         missingFields: missingFields,
+        idVerification: idVerification,
       );
+
+  static IdVerification? _idVerification(dynamic value) {
+    if (value is! Map<String, dynamic>) return null;
+    final matched = value['matched'];
+    if (matched is! bool) return null;
+    return IdVerification(
+      matched: matched,
+      reason: value['reason'] as String?,
+      backIdNumber: value['backIdNumber'] as String?,
+    );
+  }
 }

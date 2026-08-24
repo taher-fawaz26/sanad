@@ -3,20 +3,27 @@ import 'package:document_flow/document_flow.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:network/network.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/data/datasources/legal_data_remote_datasource.dart';
-import 'package:sanad_provider/src/features/organization_settings/src/data/models/legal_data_extraction_response.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/data/models/legal_data_response.dart';
+import 'package:sanad_provider/src/features/organization_settings/src/data/models/national_id_extraction_response.dart';
+import 'package:sanad_provider/src/features/organization_settings/src/data/models/trade_license_extraction_response.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/legal_data_status.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/personal_legal_data_entity.dart';
-import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/personal_legal_data_extraction_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/trade_license_legal_data_entity.dart';
-import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/trade_license_legal_data_extraction_entity.dart';
 
 /// Organization Settings' [DocumentFlowRepository] implementation.
 ///
-/// Backs the shared upload/extract/submit pipeline with the
-/// `service-provider/legal-data*` endpoints. Unlike registration, this flow
-/// runs under an authenticated session — [DocumentFlowContext] stays empty;
-/// the session token is attached automatically by the network layer.
+/// Backs the shared upload/extract/submit pipeline with the per-document
+/// `service-provider/legal-data/{emirates-id,trade-license}` endpoints.
+/// Unlike registration, this flow runs under an authenticated session —
+/// [DocumentFlowContext] stays empty; the session token is attached
+/// automatically by the network layer.
+///
+/// Renewal is scoped to exactly one document per flow instance
+/// (`DocumentScope.requiredDocuments` only ever lists the Emirates ID pair
+/// *or* the trade licence, never both — see `document_scope.dart`), so
+/// [params.uploadedIds] alone tells [extract]/[submit] which document this
+/// call concerns; no separate scope needs to be threaded through
+/// [DocumentFlowContext].
 class OrganizationDocumentRepository implements DocumentFlowRepository {
   OrganizationDocumentRepository(this._remote, this._networkGuard);
 
@@ -51,6 +58,15 @@ class OrganizationDocumentRepository implements DocumentFlowRepository {
 
   @override
   TaskEither<Failure, ExtractedDocuments> extract(ExtractParams params) {
+    final tradeLicenseId = params.uploadedIds[DocumentType.tradeLicense];
+    if (tradeLicenseId != null) {
+      return _networkGuard
+          .execute(
+            action: _remote.extractTradeLicense(tradeLicenseId: tradeLicenseId),
+          )
+          .map(_toTradeLicenseExtractedDocuments);
+    }
+
     final frontId = params.uploadedIds[DocumentType.emiratesIdFront];
     final backId = params.uploadedIds[DocumentType.emiratesIdBack];
     if (frontId == null || backId == null) {
@@ -60,17 +76,23 @@ class OrganizationDocumentRepository implements DocumentFlowRepository {
     }
     return _networkGuard
         .execute(
-          action: _remote.extract(
+          action: _remote.extractEmiratesId(
             emiratesIdFrontId: frontId,
             emiratesIdBackId: backId,
-            tradeLicenseId: params.uploadedIds[DocumentType.tradeLicense],
           ),
         )
-        .map(_toExtractedDocumentsFromExtraction);
+        .map(_toEmiratesIdExtractedDocuments);
   }
 
   @override
   TaskEither<Failure, Unit> submit(SubmitParams params) {
+    final tradeLicenseId = params.uploadedIds[DocumentType.tradeLicense];
+    if (tradeLicenseId != null) {
+      return _networkGuard.execute(
+        action: _remote.confirmTradeLicense(tradeLicenseId: tradeLicenseId),
+      );
+    }
+
     final frontId = params.uploadedIds[DocumentType.emiratesIdFront];
     final backId = params.uploadedIds[DocumentType.emiratesIdBack];
     if (frontId == null || backId == null) {
@@ -79,10 +101,9 @@ class OrganizationDocumentRepository implements DocumentFlowRepository {
       );
     }
     return _networkGuard.execute(
-      action: _remote.updateDocuments(
+      action: _remote.confirmEmiratesId(
         emiratesIdFrontId: frontId,
         emiratesIdBackId: backId,
-        tradeLicenseId: params.uploadedIds[DocumentType.tradeLicense],
       ),
     );
   }
@@ -93,6 +114,10 @@ class OrganizationDocumentRepository implements DocumentFlowRepository {
           .execute(action: _remote.fetchLegalData())
           .map(_toExtractedDocuments);
 
+  /// The prefetch/prefill read (`GET legal-data`) still returns both
+  /// documents together — unlike extract/confirm, this endpoint was never
+  /// split — so this stays a combined mapping used to seed both possible
+  /// scopes' initial state.
   ExtractedDocuments _toExtractedDocuments(LegalDataResponse response) {
     final personal = response.personalLegalData?.toEntity();
     final tradeLicense = response.tradeLicenseLegalData?.toEntity();
@@ -180,60 +205,85 @@ class OrganizationDocumentRepository implements DocumentFlowRepository {
     ],
   );
 
-  /// Extraction results carry no media (the extractor reads the already-
-  /// uploaded documents but doesn't echo them back) and no `id`/timestamps —
-  /// see [LegalDataExtractionResponse].
-  ExtractedDocuments _toExtractedDocumentsFromExtraction(
-    LegalDataExtractionResponse response,
+  /// Maps a bare Emirates ID extraction preview (no envelope, no media, no
+  /// `id`/timestamps — see [NationalIdExtractionResponse]) to a single-section
+  /// result. [DocumentStatus]/[IdVerification] drive the blocking issue via
+  /// the same [deriveDocumentIssue] onboarding uses, so the two flows agree
+  /// on what counts as "needs action".
+  ExtractedDocuments _toEmiratesIdExtractedDocuments(
+    NationalIdExtractionResponse response,
   ) {
-    final personal = response.personalLegalData.toEntity();
-    final tradeLicense = response.tradeLicenseLegalData?.toEntity();
-
+    final personal = response.toEntity();
+    final status = _toDocumentStatus(personal.status);
     return ExtractedDocuments(
       sections: [
-        _emiratesIdExtractionSection(personal),
-        if (tradeLicense != null) _tradeLicenseExtractionSection(tradeLicense),
+        ExtractedDocument(
+          type: DocumentType.emiratesIdFront,
+          fields: const [],
+          status: status,
+          missingFields: personal.missingFields,
+          idVerification: personal.idVerification,
+          issue: deriveDocumentIssue(
+            status: status,
+            missingFields: personal.missingFields,
+            idVerification: personal.idVerification,
+          ),
+          repair:
+              personal.idVerification != null &&
+                  !personal.idVerification!.matched
+              ? emiratesIdMismatchRepairTarget
+              : null,
+          raw: {
+            'fullNameEn': personal.fullNameEnglish ?? '',
+            'fullNameAr': personal.fullNameArabic ?? '',
+            'idNumber': personal.idNumber ?? '',
+            'nationality': personal.nationality ?? '',
+            'dateOfBirth': personal.dateOfBirth ?? '',
+            'expiryDate': personal.expiryDate ?? '',
+            'gender': personal.gender ?? '',
+          },
+        ),
       ],
     );
   }
 
-  ExtractedDocument _emiratesIdExtractionSection(
-    PersonalLegalDataExtractionEntity personal,
-  ) => ExtractedDocument(
-    type: DocumentType.emiratesIdFront,
-    fields: const [],
-    issue: personal.status == LegalDataStatus.expired
-        ? DocumentIssue.expired
-        : DocumentIssue.none,
-    raw: {
-      'fullNameEn': personal.fullNameEnglish ?? '',
-      'fullNameAr': personal.fullNameArabic ?? '',
-      'idNumber': personal.idNumber ?? '',
-      'nationality': personal.nationality ?? '',
-      'dateOfBirth': personal.dateOfBirth ?? '',
-      'expiryDate': personal.expiryDate ?? '',
-      'gender': personal.gender ?? '',
-    },
-  );
+  /// Maps a bare trade licence extraction preview to a single-section
+  /// result. No `idVerification` — that concept is Emirates-ID-only.
+  ExtractedDocuments _toTradeLicenseExtractedDocuments(
+    TradeLicenseExtractionResponse response,
+  ) {
+    final tradeLicense = response.toEntity();
+    final status = _toDocumentStatus(tradeLicense.status);
+    return ExtractedDocuments(
+      sections: [
+        ExtractedDocument(
+          type: DocumentType.tradeLicense,
+          fields: const [],
+          status: status,
+          missingFields: tradeLicense.missingFields,
+          issue: deriveDocumentIssue(
+            status: status,
+            missingFields: tradeLicense.missingFields,
+          ),
+          raw: {
+            'tradeNameEn': tradeLicense.tradeNameEnglish ?? '',
+            'tradeNameAr': tradeLicense.tradeNameArabic ?? '',
+            'licenceNo': tradeLicense.licenseNumber ?? '',
+            'licenceType': tradeLicense.licenseType ?? '',
+            'establishmentDate': tradeLicense.establishmentDate ?? '',
+            'issuanceDate': tradeLicense.issuanceDate ?? '',
+            'legalForm': tradeLicense.legalForm ?? '',
+            'unifiedRegNo': tradeLicense.unifiedRegistrationNumber ?? '',
+            'unifiedLicenceNo': tradeLicense.unifiedLicenseNumber ?? '',
+          },
+        ),
+      ],
+    );
+  }
 
-  ExtractedDocument _tradeLicenseExtractionSection(
-    TradeLicenseLegalDataExtractionEntity tradeLicense,
-  ) => ExtractedDocument(
-    type: DocumentType.tradeLicense,
-    fields: const [],
-    issue: tradeLicense.status == LegalDataStatus.expired
-        ? DocumentIssue.expired
-        : DocumentIssue.none,
-    raw: {
-      'tradeNameEn': tradeLicense.tradeNameEnglish ?? '',
-      'tradeNameAr': tradeLicense.tradeNameArabic ?? '',
-      'licenceNo': tradeLicense.licenseNumber ?? '',
-      'licenceType': tradeLicense.licenseType ?? '',
-      'establishmentDate': tradeLicense.establishmentDate ?? '',
-      'issuanceDate': tradeLicense.issuanceDate ?? '',
-      'legalForm': tradeLicense.legalForm ?? '',
-      'unifiedRegNo': tradeLicense.unifiedRegistrationNumber ?? '',
-      'unifiedLicenceNo': tradeLicense.unifiedLicenseNumber ?? '',
-    },
-  );
+  DocumentStatus _toDocumentStatus(LegalDataStatus status) => switch (status) {
+    LegalDataStatus.verified => DocumentStatus.verified,
+    LegalDataStatus.expiringSoon => DocumentStatus.expiringSoon,
+    LegalDataStatus.expired => DocumentStatus.expired,
+  };
 }

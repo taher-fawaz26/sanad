@@ -3,20 +3,7 @@ import 'package:branches/src/domain/entities/branch_time_slot_entity.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
-/// API weekday codes used in branch availability payloads.
-abstract final class BranchWeekdays {
-  BranchWeekdays._();
-
-  static const all = <String>[
-    'SATURDAY',
-    'SUNDAY',
-    'MONDAY',
-    'TUESDAY',
-    'WEDNESDAY',
-    'THURSDAY',
-    'FRIDAY',
-  ];
-}
+export 'package:branches/src/domain/entities/branch_weekdays.dart';
 
 /// Formats 24-hour API times for schedule UI.
 abstract final class BranchScheduleFormatter {

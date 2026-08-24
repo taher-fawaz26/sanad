@@ -1,17 +1,39 @@
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fpdart/fpdart.dart';
 import 'package:media_upload/media_upload.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:services/src/domain/entities/category_ref_entity.dart';
 import 'package:services/src/domain/entities/provider_service_entity.dart';
 import 'package:services/src/domain/entities/provider_service_status.dart';
 import 'package:services/src/presentation/widgets/edit_service_form_body.dart';
+import 'package:text_optimization/text_optimization.dart';
 
 class _MockMediaUploadRepository extends Mock
     implements MediaUploadRepository {}
+
+class _MockTextOptimizationRepository extends Mock
+    implements TextOptimizationRepository {}
+
+/// `EditServiceFormBody`'s description field resolves a
+/// `TextOptimizationCubit` from `sl` (SAN-578) — these tests never tap
+/// "Enhance with AI", but the widget still needs one registered to build.
+void _registerTextOptimizationCubit() {
+  final repository = _MockTextOptimizationRepository();
+  when(
+    () => repository.optimize(any()),
+  ).thenAnswer((_) => TaskEither.right(''));
+  if (sl.isRegistered<TextOptimizationCubit>()) {
+    sl.unregister<TextOptimizationCubit>();
+  }
+  sl.registerFactory<TextOptimizationCubit>(
+    () => TextOptimizationCubit(OptimizeTextUseCase(repository)),
+  );
+}
 
 final _service = ProviderServiceEntity(
   id: 'ps-1',
@@ -34,6 +56,7 @@ Future<void> _pump(
   MediaUploadBloc bloc, {
   required ValueChanged<bool> onCompletenessChanged,
   Key? key,
+  ValueChanged<bool>? onUnsavedChanged,
 }) async {
   // The description field's AppEnhanceWithAiButton (from AppDescriptionField)
   // runs a perpetual rainbow-border animation that never settles on its own,
@@ -57,6 +80,13 @@ Future<void> _pump(
   };
   addTearDown(() => FlutterError.onError = originalOnError);
 
+  _registerTextOptimizationCubit();
+  addTearDown(() {
+    if (sl.isRegistered<TextOptimizationCubit>()) {
+      sl.unregister<TextOptimizationCubit>();
+    }
+  });
+
   await tester.pumpWidget(
     ScreenUtilInit(
       designSize: const Size(360, 800),
@@ -71,6 +101,7 @@ Future<void> _pump(
                 key: key,
                 service: _service,
                 onCompletenessChanged: onCompletenessChanged,
+                onUnsavedChanged: onUnsavedChanged,
               ),
             ),
           ),
@@ -118,6 +149,37 @@ void main() {
     expect(key.currentState!.hasUnsavedInput, isTrue);
     expect(key.currentState!.description, 'Full valet wash');
   });
+
+  testWidgets(
+    'onUnsavedChanged fires only on a true edge — not on every keystroke, '
+    'and flips back to false when the description is restored (SAN-581 — '
+    'this drives EditServicePage.canPop, which must re-enable swipe-back '
+    'once there is nothing left to discard)',
+    (tester) async {
+      final events = <bool>[];
+      await _pump(
+        tester,
+        bloc,
+        onCompletenessChanged: (_) {},
+        onUnsavedChanged: events.add,
+      );
+
+      await tester.enterText(find.byType(TextField).first, 'Full valet wash');
+      await tester.pumpAndSettle();
+      expect(events, [true]);
+
+      await tester.enterText(
+        find.byType(TextField).first,
+        'Full valet wash extra',
+      );
+      await tester.pumpAndSettle();
+      expect(events, [true]);
+
+      await tester.enterText(find.byType(TextField).first, 'Exterior wash');
+      await tester.pumpAndSettle();
+      expect(events, [true, false]);
+    },
+  );
 
   group('description validation', () {
     testWidgets('valid input shows no length error', (tester) async {

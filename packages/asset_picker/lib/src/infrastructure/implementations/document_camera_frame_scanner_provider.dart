@@ -8,6 +8,7 @@ import 'package:asset_picker/src/domain/failures/asset_picker_exception.dart';
 import 'package:asset_picker/src/infrastructure/providers/scanner_provider.dart';
 import 'package:asset_picker/src/infrastructure/scanner/document_scanner_config.dart';
 import 'package:document_camera_frame/document_camera_frame.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
 /// Real [ScannerProvider] backed by `document_camera_frame`.
@@ -51,17 +52,21 @@ class DocumentCameraFrameScannerProvider implements ScannerProvider {
       );
     }
 
+    final effectiveConfig = options.scannerConfig ?? _config;
     final captured = await navigator.push<DocumentCaptureData>(
       MaterialPageRoute<DocumentCaptureData>(
         fullscreenDialog: true,
         builder: (_) => _DocumentScannerHostPage(
           options: options,
-          config: _config,
+          config: effectiveConfig,
         ),
       ),
     );
 
-    if (captured == null) return const [];
+    if (captured == null) {
+      _log('scan cancelled (no capture data)');
+      return const [];
+    }
 
     final front = captured.frontImagePath;
     final back = captured.backImagePath;
@@ -69,6 +74,8 @@ class DocumentCameraFrameScannerProvider implements ScannerProvider {
       if (front != null && front.isNotEmpty) front,
       if (back != null && back.isNotEmpty) back,
     ];
+    final bothSides = options.requireBothSides || _config.requireBothSides;
+    _log('capture returned ${paths.length} path(s) (bothSides=$bothSides)');
     if (paths.isEmpty) return const [];
 
     return [
@@ -82,7 +89,11 @@ class DocumentCameraFrameScannerProvider implements ScannerProvider {
     required bool loadBytes,
   }) async {
     final file = File(path);
-    final size = await file.length();
+    final exists = file.existsSync();
+    final size = exists ? await file.length() : 0;
+    _log(
+      'materialize: name=${_basename(path)} exists=$exists sizeBytes=$size',
+    );
     return PickedAsset(
       name: _basename(path),
       path: path,
@@ -92,6 +103,15 @@ class DocumentCameraFrameScannerProvider implements ScannerProvider {
       size: size,
       assetType: AssetType.image,
     );
+  }
+
+  /// Debug-only trace of the scan → asset handoff (never logs image bytes or
+  /// document contents — only path basenames, existence, and sizes). No-op in
+  /// release builds.
+  void _log(String message) {
+    if (kDebugMode) {
+      debugPrint('[DocumentScanner] $message');
+    }
   }
 
   String _basename(String path) {

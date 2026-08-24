@@ -91,6 +91,13 @@ class AuthSuspendedState extends AuthState {
   const AuthSuspendedState();
 }
 
+/// Account exists but deletion has moved past the grace period into actual
+/// execution (`LoginResponseDto.status: SCHEDULED_FOR_DELETION`) — both
+/// tokens are null on the wire, so there is nothing to persist.
+class AuthScheduledForDeletionState extends AuthState {
+  const AuthScheduledForDeletionState();
+}
+
 // ─── Logout ─────────────────────────────────────────────────────────────────
 
 class AuthLogoutLoadingState extends AuthState {
@@ -113,27 +120,6 @@ class AuthLogoutFailureState extends AuthState {
 
   @override
   List<Object?> get props => [failure];
-}
-
-// ─── Delete account ───────────────────────────────────────────────────────
-
-class AuthDeleteAccountLoadingState extends AuthState {
-  const AuthDeleteAccountLoadingState(this.user);
-
-  final UserEntity user;
-
-  @override
-  List<Object?> get props => [user];
-}
-
-class AuthDeleteAccountFailureState extends AuthState {
-  const AuthDeleteAccountFailureState(this.failure, {required this.user});
-
-  final Failure failure;
-  final UserEntity? user;
-
-  @override
-  List<Object?> get props => [failure, user];
 }
 
 // ─── Google Sign-In ──────────────────────────────────────────────────────────

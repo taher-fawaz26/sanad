@@ -82,7 +82,7 @@ class _BranchInfoEditSheetState extends State<BranchInfoEditSheet> {
 
   bool get _isValid =>
       RequiredValidator.isValid(_nameController.text) &&
-      BusinessNameValidator.isValid(_nameController.text) &&
+      MeaningfulTextValidator.isValid(_nameController.text) &&
       LengthValidator.isValid(_nameController.text, maxLength: 255);
 
   bool get _hasChanges =>
@@ -97,7 +97,7 @@ class _BranchInfoEditSheetState extends State<BranchInfoEditSheet> {
     if (!RequiredValidator.isValid(_nameController.text)) {
       return 'branches.add_branch.branch_name_required'.tr();
     }
-    if (!BusinessNameValidator.isValid(_nameController.text)) {
+    if (!MeaningfulTextValidator.isValid(_nameController.text)) {
       return 'validation.invalid_name'.tr();
     }
     if (!LengthValidator.isValid(_nameController.text, maxLength: 255)) {

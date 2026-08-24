@@ -74,7 +74,16 @@ class AppDescriptionField extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = this.controller;
 
-    final fieldStack = Stack(
+    // The field always renders at its fixed `maxLines` height (see
+    // `AppTextField._multilineFieldHeight`: `minLines == maxLines`), so a
+    // button overlaid on top of it — instead of laid out below it — end up
+    // sitting wherever the typed text currently reaches, overlapping once
+    // the content grows past a couple of lines. Laying the button out as a
+    // normal flow sibling underneath keeps a guaranteed gap regardless of
+    // how many lines are filled.
+    final fieldColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
       children: [
         AppTextField(
           controller: controller,
@@ -95,28 +104,29 @@ class AppDescriptionField extends StatelessWidget {
           inputFormatters: inputFormatters,
           autovalidateMode: autovalidateMode,
         ),
-        if (aiActionLabel != null)
-          PositionedDirectional(
-            end: AppSpacing.xs,
-            bottom: AppSpacing.lg,
+        if (aiActionLabel != null) ...[
+          SizedBox(height: AppSpacing.xs),
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
             child: AppEnhanceWithAiButton(
               label: aiActionLabel!,
               onTap: enabled ? onImproveWithAi : null,
               isLoading: isImprovingWithAi,
             ),
           ),
+        ],
       ],
     );
 
     if (!showCharacterCount || maxLength == null || controller == null) {
-      return fieldStack;
+      return fieldColumn;
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        fieldStack,
+        fieldColumn,
         SizedBox(height: AppSpacing.xs),
         ValueListenableBuilder<TextEditingValue>(
           valueListenable: controller,

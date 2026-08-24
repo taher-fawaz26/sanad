@@ -84,3 +84,4 @@ See `package_creation.skill.md` for detailed workflow.
 
 | `shared_ui` | SharedUi package | Scaffolded |
 | `deep_linking` | DeepLinking package | Scaffolded |
+| `text_optimization` | TextOptimization package | Scaffolded |

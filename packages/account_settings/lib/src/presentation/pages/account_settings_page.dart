@@ -8,6 +8,7 @@ import 'package:account_settings/src/presentation/widgets/bottom_sheets/language
 import 'package:account_settings/src/presentation/widgets/sections/account_credentials_section.dart';
 import 'package:account_settings/src/presentation/widgets/sections/help_support_section.dart';
 import 'package:account_settings/src/presentation/widgets/sections/language_preferences_section.dart';
+import 'package:account_settings/src/routes/account_settings_routes.dart';
 import 'package:app_assets/app_assets.dart';
 import 'package:auth/auth.dart';
 import 'package:core/core.dart';
@@ -51,23 +52,9 @@ class AccountSettingsPage extends StatelessWidget {
               );
               return;
             }
-            if (state is AuthDeleteAccountLoadingState) {
-              AppProgress.show(
-                context,
-                title: 'settings.deleting_account_title'.tr(),
-              );
-              return;
-            }
             AppProgress.dismiss();
             if (state is AuthLogoutSuccessState) {
               context.go(AuthRoutes.login);
-              return;
-            }
-            if (state is AuthDeleteAccountFailureState) {
-              showAppErrorSnackbar(
-                context: context,
-                title: state.failure.message,
-              );
             }
           },
           builder: (context, authState) {
@@ -82,8 +69,10 @@ class AccountSettingsPage extends StatelessWidget {
 
                 final email = accountState.email ?? session?.user.email;
 
-                return MutationListener<AccountSettingsBloc,
-                    AccountSettingsState>(
+                return MutationListener<
+                  AccountSettingsBloc,
+                  AccountSettingsState
+                >(
                   status: (state) => state.saveStatus,
                   title: (context) => 'settings.saving_title'.tr(),
                   onFailure: (context, state) {
@@ -168,9 +157,8 @@ class AccountSettingsPage extends StatelessWidget {
                                 child: _DeleteAccountRow(
                                   onTap: session == null
                                       ? null
-                                      : () => _confirmDeleteAccount(
-                                          context,
-                                          session.user,
+                                      : () => context.push(
+                                          AccountSettingsRoutes.deletion,
                                         ),
                                 ),
                               ),
@@ -242,32 +230,6 @@ class AccountSettingsPage extends StatelessWidget {
     context.read<TranslateBloc>().add(
       code == 'ar' ? TrArabicEvent() : TrEnglishEvent(),
     );
-  }
-
-  Future<void> _confirmDeleteAccount(
-    BuildContext context,
-    UserEntity user,
-  ) async {
-    final confirmed = await showAppPopover<bool>(
-      context: context,
-      title: 'settings.delete_account'.tr(),
-      description: 'settings.delete_account_confirm_description'.tr(),
-      imageLayout: AppDialogImageLayout.iconSmall,
-      featureIconColor: AppFeatureIconColor.error,
-      featureIconSize: AppFeatureIconSize.lg,
-      featureIconTheme: AppFeatureIconTheme.lightCircleOutline,
-      actions: AppPopoverActions.dual,
-      primaryLabel: 'common.delete'.tr(),
-      primaryDestructive: true,
-      secondaryLabel: 'common.cancel'.tr(),
-      onPrimary: () => Navigator.of(context, rootNavigator: true).pop(true),
-      onSecondary: () => Navigator.of(context, rootNavigator: true).pop(false),
-    );
-
-    if (confirmed ?? false) {
-      if (!context.mounted) return;
-      context.read<AuthBloc>().add(AuthDeleteAccountEvent(user.id));
-    }
   }
 
   Future<void> _editName(BuildContext context, String? currentName) async {

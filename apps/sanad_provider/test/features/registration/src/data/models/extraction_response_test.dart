@@ -90,14 +90,19 @@ void main() {
       });
     }
 
-    test('missing Emirates ID block returns unclear result', () {
+    // Extraction is a preview now (a 200 is not approval): the client no
+    // longer synthesizes an issue from an empty/malformed block. Only the
+    // response's own explicit signals — `status`, `missingFields`,
+    // `idVerification` — determine the issue; a missing/malformed block with
+    // none of those set parses as a clean, empty document.
+    test('missing Emirates ID block synthesizes no issue', () {
       final result = parse({});
-      expect(id0(result).issue, DocumentIssue.imageUnclear);
+      expect(id0(result).issue, DocumentIssue.none);
     });
 
-    test('Emirates ID block with non-map value returns unclear result', () {
+    test('Emirates ID block with non-map value synthesizes no issue', () {
       final result = parse({'personalLegalData': 'not-a-map'});
-      expect(id0(result).issue, DocumentIssue.imageUnclear);
+      expect(id0(result).issue, DocumentIssue.none);
     });
   });
 
@@ -257,21 +262,27 @@ void main() {
       expect(tl0(result)!.raw['tradeNameEn'], 'Acme LLC');
     });
 
-    test('true but missing block → expired issue', () {
+    test('true but missing block → synthesizes no issue', () {
       final json = {'personalLegalData': canonicalIdMap()};
       final result = parse(json, includeTradeLicence: true);
-      expect(tl0(result)!.issue, DocumentIssue.expired);
+      expect(tl0(result)!.issue, DocumentIssue.none);
     });
   });
 
-  // ── Trade licence required-field guard (SAN-570) ─────────────────────────────
+  // ── Trade licence required-field guard ────────────────────────────────────
+  //
+  // Extraction is a preview: the backend, not the client, decides whether a
+  // missing licence number blocks completion (it now reports that via
+  // `missingFields`, checked at submit time by `auth/profile`). The client no
+  // longer infers "incomplete" from an empty `licenceNo` on its own.
 
   group('trade licence required-field guard', () {
     test(
-      'block present but no licence number → imageUnclear, not success',
+      'block present but no licence number, and missingFields not reported '
+      '→ clean (none), no client-side inference',
       () {
-        // OCR read only the trade name + issuance date; the licence number
-        // the backend hard-rejects on is missing. Must NOT report success.
+        // OCR read only the trade name + issuance date; the backend didn't
+        // report `missingFields` for this preview. Trusted as-is.
         final json = {
           'personalLegalData': canonicalIdMap(),
           'tradeLicenseLegalData': {
@@ -280,9 +291,8 @@ void main() {
           },
         };
         final result = parse(json, includeTradeLicence: true);
-        expect(tl0(result)!.issue, DocumentIssue.imageUnclear);
-        // allOk gates the "Continue to Dashboard" button — must be blocked.
-        expect(result.allOk, isFalse);
+        expect(tl0(result)!.issue, DocumentIssue.none);
+        expect(result.allOk, isTrue);
         // The partially-read fields are still surfaced for the user.
         expect(tl0(result)!.raw['tradeNameEn'], 'Acme LLC');
         expect(tl0(result)!.raw['issuanceDate'], '01/01/2025');
@@ -305,7 +315,10 @@ void main() {
       () {
         // All fields (incl. licenceNo) present, but the backend still reports
         // that some required fields could not be read — trust that signal.
-        final tl = {...canonicalTlMap(), 'missingFields': ['legalForm']};
+        final tl = {
+          ...canonicalTlMap(),
+          'missingFields': ['legalForm'],
+        };
         final json = {
           'personalLegalData': canonicalIdMap(),
           'tradeLicenseLegalData': tl,
@@ -313,6 +326,10 @@ void main() {
         final result = parse(json, includeTradeLicence: true);
         expect(tl0(result)!.issue, DocumentIssue.imageUnclear);
         expect(result.allOk, isFalse);
+        // Carried through to the entity so the review banner can list which
+        // fields OCR couldn't read (SAN-575), instead of only a generic
+        // "image unclear" message.
+        expect(tl0(result)!.missingFields, ['legalForm']);
       },
     );
 
@@ -424,17 +441,192 @@ void main() {
       expect(result.allOk, isTrue);
     });
 
-    test('allOk is false when Emirates ID is unclear', () {
-      final result = parse({});
+    test('allOk is false when Emirates ID reports missingFields', () {
+      final result = parse({
+        'personalLegalData': {
+          ...canonicalIdMap(),
+          'missingFields': ['id_number'],
+        },
+      });
       expect(result.allOk, isFalse);
     });
 
-    test('allOk is false when trade licence is expired', () {
+    test('allOk is false when trade licence status is expired', () {
       final result = parse(
-        {'personalLegalData': canonicalIdMap()},
+        {
+          'personalLegalData': canonicalIdMap(),
+          'tradeLicenseLegalData': {...canonicalTlMap(), 'status': 'expired'},
+        },
         includeTradeLicence: true,
       );
       expect(result.allOk, isFalse);
+    });
+  });
+
+  // ── status / missingFields / idVerification (new contract, 200 preview) ──────
+  //
+  // Extraction is a preview: a `200` always carries whatever the extractor
+  // could read, including an expired document, unreadable required fields,
+  // or a mismatched Emirates ID front/back. These are the explicit signals
+  // the backend now returns — the only signals the client trusts (no more
+  // inferring a problem from an empty block, see the groups above).
+
+  group('status', () {
+    test('"verified" → DocumentStatus.verified, no issue', () {
+      final result = parse({
+        'personalLegalData': {...canonicalIdMap(), 'status': 'verified'},
+      });
+      expect(id0(result).status, DocumentStatus.verified);
+      expect(id0(result).issue, DocumentIssue.none);
+    });
+
+    test(
+      '"expiring_soon" → DocumentStatus.expiringSoon, non-blocking (no '
+      'issue, still submittable)',
+      () {
+        final result = parse({
+          'personalLegalData': {
+            ...canonicalIdMap(),
+            'status': 'expiring_soon',
+          },
+        });
+        expect(id0(result).status, DocumentStatus.expiringSoon);
+        expect(id0(result).issue, DocumentIssue.none);
+        expect(result.allOk, isTrue);
+      },
+    );
+
+    test('"expired" → DocumentStatus.expired and DocumentIssue.expired', () {
+      final result = parse({
+        'personalLegalData': {...canonicalIdMap(), 'status': 'expired'},
+      });
+      expect(id0(result).status, DocumentStatus.expired);
+      expect(id0(result).issue, DocumentIssue.expired);
+      expect(result.allOk, isFalse);
+    });
+
+    test('missing/unrecognized status defaults to verified', () {
+      final result = parse({'personalLegalData': canonicalIdMap()});
+      expect(id0(result).status, DocumentStatus.verified);
+    });
+
+    test('applies independently to the trade licence section', () {
+      final result = parse(
+        {
+          'personalLegalData': canonicalIdMap(),
+          'tradeLicenseLegalData': {
+            ...canonicalTlMap(),
+            'status': 'expiring_soon',
+          },
+        },
+        includeTradeLicence: true,
+      );
+      expect(tl0(result)!.status, DocumentStatus.expiringSoon);
+      expect(tl0(result)!.issue, DocumentIssue.none);
+    });
+  });
+
+  group('every extracted field is nullable', () {
+    test(
+      'an Emirates ID block with only status/missingFields still parses',
+      () {
+        final result = parse({
+          'personalLegalData': {'status': 'verified', 'missingFields': []},
+        });
+        final doc = id0(result);
+        expect(doc.issue, DocumentIssue.none);
+        expect(doc.raw['fullNameEn'], '');
+        expect(doc.raw['idNumber'], '');
+        expect(doc.raw['expiryDate'], '');
+      },
+    );
+
+    test(
+      'a trade licence block with only status/missingFields still parses',
+      () {
+        final result = parse(
+          {
+            'personalLegalData': canonicalIdMap(),
+            'tradeLicenseLegalData': {
+              'status': 'verified',
+              'missingFields': [],
+            },
+          },
+          includeTradeLicence: true,
+        );
+        final doc = tl0(result)!;
+        expect(doc.issue, DocumentIssue.none);
+        expect(doc.raw['tradeNameEn'], '');
+        expect(doc.raw['licenceNo'], '');
+      },
+    );
+  });
+
+  group('idVerification', () {
+    test('replaces the old idNumbersMatch field — matched: true', () {
+      final result = parse({
+        'personalLegalData': {
+          ...canonicalIdMap(),
+          'idVerification': {'matched': true},
+        },
+      });
+      expect(id0(result).idVerification, const IdVerification(matched: true));
+      expect(id0(result).issue, DocumentIssue.none);
+    });
+
+    test(
+      'matched: false → DocumentIssue.idMismatch and a whole-document repair '
+      'target (front + back)',
+      () {
+        final result = parse({
+          'personalLegalData': {
+            ...canonicalIdMap(),
+            'idVerification': {
+              'matched': false,
+              'reason': 'front_back_id_mismatch',
+            },
+          },
+        });
+        final doc = id0(result);
+        expect(doc.idVerification?.matched, isFalse);
+        expect(doc.idVerification?.reason, 'front_back_id_mismatch');
+        expect(doc.issue, DocumentIssue.idMismatch);
+        expect(doc.repair?.scope, DocumentRepairScope.wholeDocument);
+        expect(doc.repair?.parts, [
+          DocumentType.emiratesIdFront,
+          DocumentType.emiratesIdBack,
+        ]);
+        expect(result.allOk, isFalse);
+      },
+    );
+
+    test('carries backIdNumber when provided', () {
+      final result = parse({
+        'personalLegalData': {
+          ...canonicalIdMap(),
+          'idVerification': {
+            'matched': false,
+            'backIdNumber': '784-1990-0000002-2',
+          },
+        },
+      });
+      expect(id0(result).idVerification?.backIdNumber, '784-1990-0000002-2');
+    });
+
+    test('absent idVerification → null, no issue synthesized from it', () {
+      final result = parse({'personalLegalData': canonicalIdMap()});
+      expect(id0(result).idVerification, isNull);
+    });
+
+    test('never appears on the trade licence section (EID-only concept)', () {
+      final result = parse(
+        {
+          'personalLegalData': canonicalIdMap(),
+          'tradeLicenseLegalData': canonicalTlMap(),
+        },
+        includeTradeLicence: true,
+      );
+      expect(tl0(result)!.idVerification, isNull);
     });
   });
 
@@ -474,6 +666,10 @@ void main() {
         expect(tl.issueDetail, incompleteMessage);
         expect(tl.repair, isNull); // single-part — default replace unchanged
         expect(result.allOk, isFalse);
+        // The raw field(s) the rejection named are carried onto the section
+        // so the review banner can render mapped labels instead of the raw
+        // backend message text (SAN-575).
+        expect(tl.missingFields, ['license_number']);
       },
     );
 
@@ -487,7 +683,52 @@ void main() {
       final id = id0(result);
       expect(id.issue, DocumentIssue.imageUnclear);
       expect(id.issueDetail, 'msg');
+      expect(id.missingFields, ['id_number']);
     });
+
+    test(
+      'multiple fields spanning both documents are each attributed to their '
+      'own section, not lumped onto one',
+      () {
+        final result = ExtractionResponse.fromDomainRejection(
+          fields: const ['id_number', 'license_number', 'nationality'],
+          message: 'msg',
+          includeTradeLicence: true,
+        );
+        expect(id0(result).missingFields, ['id_number', 'nationality']);
+        expect(tl0(result)!.missingFields, ['license_number']);
+      },
+    );
+
+    test(
+      'a field that resolves to no document is dropped from missingFields '
+      'while other resolvable fields still populate their section',
+      () {
+        final result = ExtractionResponse.fromDomainRejection(
+          fields: const ['id_number', 'some_unrelated_code'],
+          message: 'msg',
+          includeTradeLicence: true,
+        );
+        expect(id0(result).missingFields, ['id_number']);
+      },
+    );
+
+    test(
+      'when only one document is known (no trade licence in this '
+      'extraction) every field is attributed to it, even if the token '
+      "wouldn't otherwise resolve",
+      () {
+        final result = ExtractionResponse.fromDomainRejection(
+          fields: const ['id_number', 'some_unrelated_code'],
+          message: 'msg',
+          includeTradeLicence: false,
+        );
+        expect(id0(result).missingFields, [
+          'id_number',
+          'some_unrelated_code',
+        ]);
+      },
+    );
 
     test('camelCase field names resolve too (licenseNumber → trade)', () {
       final result = ExtractionResponse.fromDomainRejection(
@@ -537,7 +778,7 @@ void main() {
         );
         expect(tl0(result), isNull);
         final id = id0(result);
-        expect(id.issue, DocumentIssue.imageUnclear);
+        expect(id.issue, DocumentIssue.idMismatch);
         expect(id.issueDetail, mismatchMessage);
         expect(
           id.repair,
@@ -546,6 +787,48 @@ void main() {
             scope: DocumentRepairScope.wholeDocument,
           ),
         );
+      },
+    );
+
+    test(
+      'EXTRACTION_ID_MISMATCH maps to DocumentIssue.idMismatch, not '
+      'imageUnclear — the UI shows a semantically correct ID-mismatch '
+      'banner instead of the generic "image unclear" message',
+      () {
+        final result = ExtractionResponse.fromDomainRejection(
+          fields: const ['emiratesIdFrontId', 'emiratesIdBackId'],
+          code: 'EXTRACTION_ID_MISMATCH',
+          message: mismatchMessage,
+          includeTradeLicence: false,
+        );
+        final id = id0(result);
+        expect(id.issue, DocumentIssue.idMismatch);
+        expect(id.issue, isNot(DocumentIssue.imageUnclear));
+      },
+    );
+
+    test(
+      'an unknown extraction code still falls back to imageUnclear',
+      () {
+        final result = ExtractionResponse.fromDomainRejection(
+          fields: const [],
+          code: 'SOME_FUTURE_ERROR',
+          message: 'Something happened',
+          includeTradeLicence: false,
+        );
+        expect(id0(result).issue, DocumentIssue.imageUnclear);
+      },
+    );
+
+    test(
+      'null extraction code falls back to imageUnclear',
+      () {
+        final result = ExtractionResponse.fromDomainRejection(
+          fields: const [],
+          message: 'Something happened',
+          includeTradeLicence: false,
+        );
+        expect(id0(result).issue, DocumentIssue.imageUnclear);
       },
     );
 

@@ -85,9 +85,13 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
 
   bool get isTypeValid => type != null;
 
-  /// Phone is valid when contact is optional, or when it normalizes to a
-  /// valid UAE number.
-  bool get isPhoneValid => !widget.requireContact || phone != null;
+  /// Phone is valid when contact is optional, or when it's a genuine UAE
+  /// mobile number — not merely non-empty (SAN-596: a landline-shaped
+  /// 8-digit number like `50000000` must not read as "valid" here just
+  /// because [UaePhoneValidator.normalize] can format it).
+  bool get isPhoneValid =>
+      !widget.requireContact ||
+      UaePhoneValidator.isMobile(phoneController.text.trim());
 
   /// Role ids to submit with the invitation — the mandatory baseline role
   /// for [type] plus any additional roles picked. Empty outside the Add
@@ -210,12 +214,18 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
   /// Empty text is only an error when the field is required; a non-empty
   /// value that fails [UaePhoneValidator] gets its own distinct format
   /// error rather than being conflated with "required".
+  ///
+  /// Mobile-only (`mobileValidationMessage`, not `validationMessage`) —
+  /// team members are contacted on a mobile number, and the backend rejects
+  /// landline-shaped input for this endpoint (SAN-596: an 8-digit landline
+  /// number like `50000000` was previously accepted client-side and only
+  /// rejected after a failed save attempt).
   String? _validatePhone(String? _) {
     final raw = phoneController.text.trim();
     if (raw.isEmpty) {
       return widget.requireContact ? 'validation.required'.tr() : null;
     }
-    return UaePhoneValidator.validationMessage(raw)?.tr();
+    return UaePhoneValidator.mobileValidationMessage(raw)?.tr();
   }
 
   /// `UpdateWorkerDto.jobTitle` / `CreateInvitationDto.jobTitle` are both
@@ -247,6 +257,9 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
             hint: 'workers.add_worker.full_name_hint'.tr(),
             isRequired: true,
             validator: _validateFullName,
+            // SAN-593: validate live as the user types, rather than only
+            // after a failed submit attempt (`showValidationErrors`).
+            autovalidateMode: AutovalidateMode.onUserInteraction,
           ),
           SizedBox(height: AppSpacing.md),
           AppTextField(
@@ -258,6 +271,7 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
             enabled: !widget.emailReadOnly,
             isRequired: widget.requireContact,
             validator: _validateEmail,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
           ),
           SizedBox(height: AppSpacing.md),
           AppPhoneField(
@@ -266,6 +280,7 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
             hint: 'workers.add_worker.phone_hint'.tr(),
             isRequired: widget.requireContact,
             validator: _validatePhone,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
           ),
           SizedBox(height: AppSpacing.md),
           AppTextField(
@@ -273,6 +288,7 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
             label: 'workers.add_worker.job_title_label'.tr(),
             hint: 'workers.add_worker.job_title_hint'.tr(),
             validator: _validateJobTitle,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
           ),
           SizedBox(height: AppSpacing.md),
           WorkerTypeSelectField(

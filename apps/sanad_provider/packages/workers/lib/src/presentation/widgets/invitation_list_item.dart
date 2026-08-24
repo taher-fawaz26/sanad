@@ -20,9 +20,19 @@ const invitationSwipeGroupTag = 'invitations';
 /// previous action sheet gated them. All actions call the exact same
 /// `InvitationActionCubit` methods via `invitation_action_invokers.dart`.
 class InvitationListItem extends StatelessWidget {
-  const InvitationListItem({required this.invitation, super.key});
+  const InvitationListItem({
+    required this.invitation,
+    super.key,
+    this.hintController,
+  });
 
   final InvitationEntity invitation;
+
+  /// Externally-driven controller for the first-time swipe discoverability
+  /// hint (`AppSwipeActionHint`). Only ever supplied for the one row the
+  /// hint targets — every other row leaves this null and keeps
+  /// `AppSwipeActions`'s default self-owned controller.
+  final SlidableController? hintController;
 
   bool get _canResend => invitation.status != InvitationStatus.accepted;
   bool get _canCancel => invitation.status == InvitationStatus.pending;
@@ -34,6 +44,7 @@ class InvitationListItem extends StatelessWidget {
 
     return AppSwipeActions(
       groupTag: invitationSwipeGroupTag,
+      controller: hintController,
       actions: [
         AppSwipeAction(
           svgAsset: AppSvgs.invitationCopy,

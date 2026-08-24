@@ -33,6 +33,7 @@ class ServiceListItem extends StatelessWidget {
     super.key,
     this.onTap,
     this.isOwner = true,
+    this.hintController,
   });
 
   final ProviderServiceEntity service;
@@ -42,6 +43,12 @@ class ServiceListItem extends StatelessWidget {
   /// Defaults to `true` for backwards compatibility with any consumer that
   /// doesn't yet thread `isOwner` in.
   final bool isOwner;
+
+  /// Externally-driven controller for the first-time swipe discoverability
+  /// hint (`AppSwipeActionHint`). Only ever supplied for the one row the
+  /// hint targets — every other row leaves this null and keeps
+  /// `AppSwipeActions`'s default self-owned controller.
+  final SlidableController? hintController;
 
   bool get _isActive => service.status == ProviderServiceStatus.active;
 
@@ -55,6 +62,7 @@ class ServiceListItem extends StatelessWidget {
 
     return AppSwipeActions(
       groupTag: serviceSwipeGroupTag,
+      controller: hintController,
       actions: isOwner
           ? [
               AppSwipeAction(

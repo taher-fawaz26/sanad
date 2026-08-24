@@ -28,7 +28,11 @@ import 'package:services/src/presentation/bloc/services_list/services_list_bloc.
 import 'package:services/src/presentation/pages/services_page.dart';
 import 'package:services/src/presentation/widgets/service_list_item.dart';
 import 'package:services/src/presentation/widgets/service_metrics_section.dart';
+import 'package:services/src/presentation/widgets/services_empty_state.dart';
 import 'package:services/src/presentation/widgets/services_filter_bar.dart';
+import 'package:storage/storage.dart';
+
+import '../../../support/fake_hive_local_storage.dart';
 
 // No EasyLocalization bootstrap (avoids a real SharedPreferences hang in this
 // sandboxed test environment) — `.tr()` calls fall back to the raw key.
@@ -70,6 +74,66 @@ ServicesPagedResult<ProviderServiceEntity> _servicesPage() =>
       ),
     );
 
+const _carCategory = CategoryRefEntity(
+  id: 'cat-1',
+  name: 'Car',
+  description: null,
+);
+const _homeCategory = CategoryRefEntity(
+  id: 'cat-2',
+  name: 'Home Cleaning',
+  description: null,
+);
+
+// Two services in two distinct categories — the fixture the category-filter
+// tests below narrow with `ServicesListCategoryChangedEvent`.
+ServicesPagedResult<ProviderServiceEntity> _multiCategoryServicesPage() =>
+    ServicesPagedResult(
+      items: [
+        ProviderServiceEntity(
+          id: 'svc-1',
+          serviceId: 'catalog-1',
+          serviceName: 'Wash Car',
+          category: _carCategory,
+          description: 'desc',
+          status: ProviderServiceStatus.active,
+          images: const [],
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+        ),
+        ProviderServiceEntity(
+          id: 'svc-2',
+          serviceId: 'catalog-2',
+          serviceName: 'Sofa Cleaning',
+          category: _homeCategory,
+          description: 'desc',
+          status: ProviderServiceStatus.active,
+          images: const [],
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+        ),
+      ],
+      meta: const PaginationMetaEntity(
+        totalItems: 2,
+        itemCount: 2,
+        itemsPerPage: 10,
+        totalPages: 1,
+        currentPage: 1,
+      ),
+    );
+
+ServicesPagedResult<ProviderServiceEntity> _emptyServicesPage() =>
+    const ServicesPagedResult(
+      items: [],
+      meta: PaginationMetaEntity(
+        totalItems: 0,
+        itemCount: 0,
+        itemsPerPage: 10,
+        totalPages: 1,
+        currentPage: 1,
+      ),
+    );
+
 ServicesPagedResult<ServiceRequestEntity> _emptyRequestsPage() =>
     const ServicesPagedResult(
       items: [],
@@ -97,7 +161,13 @@ void main() {
     ).thenAnswer(
       (_) => TaskEither.of(const ProviderServiceOverviewEntity.unavailable()),
     );
+    // Default: hint already seen — these tests aren't about the swipe hint,
+    // so this keeps it from ever arming here. The dedicated "first-time
+    // swipe hint" group below overrides this per scenario.
+    registerFakeHiveLocalStorage(hintSeen: true);
   });
+
+  tearDown(unregisterFakeHiveLocalStorage);
 
   // Blocs are built inside the test body (via this helper), not `setUp` —
   // a bloc constructed in `setUp` never delivers its stream to a widget
@@ -215,6 +285,273 @@ void main() {
     },
   );
 
+  group('My Services search (SAN-580)', () {
+    testWidgets(
+      'a genuinely empty provider (no search, no filter) shows the full '
+      'onboarding empty state, with the search bar/segmented control '
+      'hidden and no FAB (its own CTA replaces it)',
+      (tester) async {
+        when(
+          () => providerServicesRepo.listProviderServices(page: 1, limit: 10),
+        ).thenAnswer((_) => TaskEither.of(_emptyServicesPage()));
+
+        await pump(tester);
+        await tester.pump();
+        // Scaffold animates a FAB's appear/disappear transition — a single
+        // zero-duration pump can still catch the outgoing FAB mid-animation.
+        // No repeating animation on this (non-skeletonized) branch, so
+        // settling is safe/bounded here.
+        await tester.pumpAndSettle();
+
+        expect(find.byType(ServicesEmptyState), findsOneWidget);
+        expect(find.byType(ServicesSearchEmptyState), findsNothing);
+        expect(find.byType(ServicesFilterBar), findsNothing);
+        expect(find.byType(AppSegmentedControl<int>), findsNothing);
+        expect(find.byType(AppFloatingActionButton), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'a search with matches keeps the list, filter bar, and FAB visible '
+      '— no empty state of any kind',
+      (tester) async {
+        when(
+          () => providerServicesRepo.listProviderServices(page: 1, limit: 10),
+        ).thenAnswer((_) => TaskEither.of(_servicesPage()));
+        when(
+          () => providerServicesRepo.listProviderServices(
+            page: 1,
+            limit: 10,
+            search: 'Wash',
+          ),
+        ).thenAnswer((_) => TaskEither.of(_servicesPage()));
+
+        await pump(tester);
+        await tester.pump();
+
+        await tester.enterText(find.byType(TextField).first, 'Wash');
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pump();
+
+        expect(find.byType(ServiceListItem), findsOneWidget);
+        expect(find.byType(ServicesEmptyState), findsNothing);
+        expect(find.byType(ServicesSearchEmptyState), findsNothing);
+        expect(find.byType(ServicesFilterBar), findsOneWidget);
+        expect(find.byType(AppFloatingActionButton), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'a search with no matches shows the distinct "no results" empty '
+      'state, not the full "no services added yet" onboarding state — '
+      'the search bar, segmented control, and FAB all stay visible '
+      '(previously the entire chrome collapsed away, trapping the user)',
+      (tester) async {
+        when(
+          () => providerServicesRepo.listProviderServices(page: 1, limit: 10),
+        ).thenAnswer((_) => TaskEither.of(_servicesPage()));
+        when(
+          () => providerServicesRepo.listProviderServices(
+            page: 1,
+            limit: 10,
+            search: 'zzz',
+          ),
+        ).thenAnswer((_) => TaskEither.of(_emptyServicesPage()));
+
+        await pump(tester);
+        await tester.pump();
+
+        await tester.enterText(find.byType(TextField).first, 'zzz');
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pump();
+
+        expect(find.byType(ServicesSearchEmptyState), findsOneWidget);
+        expect(find.byType(ServicesEmptyState), findsNothing);
+        expect(find.byType(ServiceListItem), findsNothing);
+        expect(find.byType(ServicesFilterBar), findsOneWidget);
+        expect(find.byType(AppSegmentedControl<int>), findsOneWidget);
+        expect(find.byType(AppFloatingActionButton), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'clearing a no-match search restores the real list', (tester) async {
+        when(
+          () => providerServicesRepo.listProviderServices(page: 1, limit: 10),
+        ).thenAnswer((_) => TaskEither.of(_servicesPage()));
+        when(
+          () => providerServicesRepo.listProviderServices(
+            page: 1,
+            limit: 10,
+            search: 'zzz',
+          ),
+        ).thenAnswer((_) => TaskEither.of(_emptyServicesPage()));
+
+        await pump(tester);
+        await tester.pump();
+
+        await tester.enterText(find.byType(TextField).first, 'zzz');
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pump();
+        expect(find.byType(ServicesSearchEmptyState), findsOneWidget);
+
+        await tester.enterText(find.byType(TextField).first, '');
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pump();
+
+        expect(find.byType(ServiceListItem), findsOneWidget);
+        expect(find.byType(ServicesSearchEmptyState), findsNothing);
+        expect(find.byType(ServicesEmptyState), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'the Scaffold does not resize for the keyboard — the FAB stays '
+      'anchored at a fixed position instead of Scaffold\'s default '
+      'follow-the-keyboard behavior lifting it into the middle of the '
+      'list on search focus',
+      (tester) async {
+        when(
+          () => providerServicesRepo.listProviderServices(page: 1, limit: 10),
+        ).thenAnswer((_) => TaskEither.of(_servicesPage()));
+
+        await pump(tester);
+        await tester.pump();
+
+        final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+        expect(scaffold.resizeToAvoidBottomInset, isFalse);
+      },
+    );
+  });
+
+  group('My Services Category filter (Type → Category rework)', () {
+    testWidgets(
+      'the filter bar shows a Category dropdown, never a Type one',
+      (tester) async {
+        when(
+          () => providerServicesRepo.listProviderServices(page: 1, limit: 10),
+        ).thenAnswer((_) => TaskEither.of(_multiCategoryServicesPage()));
+
+        await pump(tester);
+        await tester.pump();
+
+        expect(find.text('services.filter_category'), findsOneWidget);
+        expect(find.text('services.filter_type'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'selecting a category narrows the list to only that category — no '
+      'server round trip, purely client-side over the loaded page',
+      (tester) async {
+        when(
+          () => providerServicesRepo.listProviderServices(page: 1, limit: 10),
+        ).thenAnswer((_) => TaskEither.of(_multiCategoryServicesPage()));
+
+        final bloc = await pump(tester);
+        await tester.pump();
+
+        expect(find.byType(ServiceListItem), findsNWidgets(2));
+
+        // Dispatched directly to the bloc rather than through the Category
+        // picker sheet, since the sheet interaction itself isn't what this
+        // test verifies (mirrors the existing status-filter test above).
+        bloc.add(const ServicesListCategoryChangedEvent('cat-2'));
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.byType(ServiceListItem), findsOneWidget);
+        expect(find.text('Sofa Cleaning'), findsOneWidget);
+        expect(find.text('Wash Car'), findsNothing);
+        // No new repo call for the category change — status/search are the
+        // only server-side filters.
+        verify(
+          () => providerServicesRepo.listProviderServices(page: 1, limit: 10),
+        ).called(1);
+      },
+    );
+
+    testWidgets(
+      'a category with no matching loaded services shows the distinct '
+      '"no results" empty state, not the full "no services added yet" '
+      'onboarding state — the search bar, segmented control, and FAB all '
+      'stay visible',
+      (tester) async {
+        when(
+          () => providerServicesRepo.listProviderServices(page: 1, limit: 10),
+        ).thenAnswer((_) => TaskEither.of(_multiCategoryServicesPage()));
+
+        final bloc = await pump(tester);
+        await tester.pump();
+
+        bloc.add(const ServicesListCategoryChangedEvent('cat-unknown'));
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.byType(ServicesCategoryEmptyState), findsOneWidget);
+        expect(find.byType(ServicesEmptyState), findsNothing);
+        expect(find.byType(ServiceListItem), findsNothing);
+        expect(find.byType(ServicesFilterBar), findsOneWidget);
+        expect(find.byType(AppSegmentedControl<int>), findsOneWidget);
+        expect(find.byType(AppFloatingActionButton), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'clearing the category restores the full list',
+      (tester) async {
+        when(
+          () => providerServicesRepo.listProviderServices(page: 1, limit: 10),
+        ).thenAnswer((_) => TaskEither.of(_multiCategoryServicesPage()));
+
+        final bloc = await pump(tester);
+        await tester.pump();
+
+        bloc.add(const ServicesListCategoryChangedEvent('cat-2'));
+        await tester.pump();
+        await tester.pump();
+        expect(find.byType(ServiceListItem), findsOneWidget);
+
+        bloc.add(const ServicesListCategoryChangedEvent(null));
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.byType(ServiceListItem), findsNWidgets(2));
+      },
+    );
+
+    testWidgets(
+      'category and an active status filter narrow the list together',
+      (tester) async {
+        when(
+          () => providerServicesRepo.listProviderServices(page: 1, limit: 10),
+        ).thenAnswer((_) => TaskEither.of(_multiCategoryServicesPage()));
+        when(
+          () => providerServicesRepo.listProviderServices(
+            page: 1,
+            limit: 10,
+            status: ProviderServiceStatus.active,
+          ),
+        ).thenAnswer((_) => TaskEither.of(_multiCategoryServicesPage()));
+
+        final bloc = await pump(tester);
+        await tester.pump();
+
+        bloc.add(
+          const ServicesListStatusChangedEvent(ProviderServiceStatus.active),
+        );
+        await tester.pump();
+        await tester.pump();
+        bloc.add(const ServicesListCategoryChangedEvent('cat-1'));
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.byType(ServiceListItem), findsOneWidget);
+        expect(find.text('Wash Car'), findsOneWidget);
+      },
+    );
+  });
+
   group('isOwner: false (RBAC Phase 7C — the reported worker 403 bug)', () {
     // Deliberately does NOT construct ServiceAnalyticsBloc or
     // ServiceRequestsListBloc at all — proves the page never reads them
@@ -330,6 +667,133 @@ void main() {
               'ServiceListItem.isOwner must be false for a non-owner '
               'page so the Edit / Pause-Resume / Delete swipes are hidden',
         );
+      },
+    );
+  });
+
+  group('swipe discoverability hint (My Services) — wiring & persistence', () {
+    // The animation/timing/cancellation mechanics themselves are covered by
+    // the shared driver's own suite
+    // (design_system/test/src/components/app_swipe_action_hint_test.dart) —
+    // these tests only verify this page wires it correctly.
+
+    testWidgets(
+      'unseen: the first row is wrapped in the shared AppSwipeActionHint '
+      'driver',
+      (tester) async {
+        registerFakeHiveLocalStorage(hintSeen: false);
+        when(
+          () => providerServicesRepo.listProviderServices(page: 1, limit: 10),
+        ).thenAnswer((_) => TaskEither.of(_servicesPage()));
+
+        await pump(tester);
+        await tester.pump();
+
+        expect(find.byType(AppSwipeActionHint), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'already seen: no AppSwipeActionHint is mounted — the row renders as '
+      'a plain ServiceListItem',
+      (tester) async {
+        registerFakeHiveLocalStorage(hintSeen: true);
+        when(
+          () => providerServicesRepo.listProviderServices(page: 1, limit: 10),
+        ).thenAnswer((_) => TaskEither.of(_servicesPage()));
+
+        await pump(tester);
+        await tester.pump();
+
+        expect(find.byType(AppSwipeActionHint), findsNothing);
+        expect(find.byType(ServiceListItem), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'a real swipe on the row cancels the hint and persists it as seen',
+      (tester) async {
+        final storage = registerFakeHiveLocalStorage(hintSeen: false);
+        when(
+          () => providerServicesRepo.listProviderServices(page: 1, limit: 10),
+        ).thenAnswer((_) => TaskEither.of(_servicesPage()));
+
+        await pump(tester);
+        await tester.pump();
+        expect(find.byType(AppSwipeActionHint), findsOneWidget);
+
+        await tester.drag(find.text('Wash Car'), const Offset(-300, 0));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        verify(
+          () => storage.save(
+            key: StorageKeys.servicesSwipeHintSeen,
+            value: true,
+            boxName: HiveBoxes.defaultBox,
+          ),
+        ).called(1);
+      },
+    );
+
+    testWidgets(
+      'a non-owner row (no swipe actions attached) makes the hint '
+      'self-abort without throwing, and still marks itself seen',
+      (tester) async {
+        final storage = registerFakeHiveLocalStorage(hintSeen: false);
+        when(
+          () => providerServicesRepo.listProviderServices(page: 1, limit: 10),
+        ).thenAnswer((_) => TaskEither.of(_servicesPage()));
+
+        final servicesListBloc = ServicesListBloc(
+          listProviderServicesUseCase: ListProviderServicesUseCase(
+            providerServicesRepo,
+          ),
+        );
+        final serviceActionBloc = ServiceActionBloc(
+          deleteProviderServiceUseCase: DeleteProviderServiceUseCase(
+            providerServicesRepo,
+          ),
+          setProviderServiceStatusUseCase: SetProviderServiceStatusUseCase(
+            providerServicesRepo,
+          ),
+        );
+        addTearDown(() {
+          servicesListBloc.close();
+          serviceActionBloc.close();
+        });
+
+        await tester.pumpWidget(
+          ScreenUtilInit(
+            designSize: const Size(360, 800),
+            minTextAdapt: true,
+            builder: (_, _) => MaterialApp(
+              theme: AppTheme.light(),
+              home: MultiBlocProvider(
+                providers: [
+                  BlocProvider<ServicesListBloc>.value(
+                    value: servicesListBloc,
+                  ),
+                  BlocProvider<ServiceActionBloc>.value(
+                    value: serviceActionBloc,
+                  ),
+                ],
+                child: const ProviderServicesPage(isOwner: false),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(tester.takeException(), isNull);
+        verify(
+          () => storage.save(
+            key: StorageKeys.servicesSwipeHintSeen,
+            value: true,
+            boxName: HiveBoxes.defaultBox,
+          ),
+        ).called(1);
       },
     );
   });

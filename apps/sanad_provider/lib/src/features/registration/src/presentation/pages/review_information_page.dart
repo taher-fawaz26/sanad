@@ -7,11 +7,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sanad_provider/src/features/registration/src/data/models/extraction_response.dart';
+import 'package:sanad_provider/src/features/registration/src/presentation/cubit/registration_details_cubit.dart';
+import 'package:sanad_provider/src/features/registration/src/presentation/mappers/document_field_name_resolver.dart';
 import 'package:sanad_provider/src/features/registration/src/presentation/widgets/profile_completion_error_dialog.dart';
+import 'package:sanad_provider/src/features/registration/src/presentation/widgets/registration_extracting_view.dart';
 import 'package:sanad_provider/src/features/registration/src/presentation/widgets/registration_header.dart';
 import 'package:sanad_provider/src/features/registration/src/presentation/widgets/registration_logo.dart';
 import 'package:sanad_provider/src/features/registration/src/presentation/widgets/registration_sliver_shell.dart';
 import 'package:sanad_provider/src/features/registration/src/presentation/widgets/select_capture_method_sheet.dart';
+import 'package:sanad_provider/src/features/registration/src/routes/registration_navigation.dart';
 import 'package:sanad_provider/src/features/registration/src/routes/registration_routes.dart';
 import 'package:shared_ui/shared_ui.dart';
 
@@ -47,11 +52,38 @@ class _ReviewInformationPageState extends State<ReviewInformationPage> {
 
   void _onSubmitSuccess(BuildContext context) => context.go(widget.homeRoute);
 
+  /// Submit-time codes meaning the *documents themselves* are the problem
+  /// (mirroring the extract-time domain-rejection treatment that used to run
+  /// at extract, before extraction became a preview): route back to review
+  /// with the affected section flagged inline instead of the generic
+  /// completion-error dialog.
+  static const _inlineFlagCodes = {
+    'EXTRACTION_INCOMPLETE',
+    'EXTRACTION_EXPIRED',
+    'EXTRACTION_ID_MISMATCH',
+  };
+
   Future<void> _onSubmitFailure(
     BuildContext context,
     DocumentFlowState state,
   ) async {
     final failure = state.failure;
+
+    if (failure is SubmitFailure && _inlineFlagCodes.contains(failure.code)) {
+      final isOrganization = context
+          .read<RegistrationDetailsCubit>()
+          .state
+          .isOrganization;
+      final flagged = ExtractionResponse.fromDomainRejection(
+        fields: failure.fields,
+        code: failure.code,
+        message: failure.messageKey,
+        includeTradeLicence: isOrganization,
+      );
+      context.read<DocumentFlowBloc>().add(ReviewFlagged(flagged));
+      return;
+    }
+
     final errorMessage = failure is SubmitFailure ? failure.messageKey : null;
 
     final retry = await showProfileCompletionErrorDialog(
@@ -86,15 +118,36 @@ class _ReviewInformationPageState extends State<ReviewInformationPage> {
     try {
       final result = await captureRegistrationDocument(context);
       if (result == null || result.isEmpty || !context.mounted) return;
+      // Only `DocumentPicked` is dispatched here — `DocumentFlowBloc` runs
+      // the pre-upload document-type check itself and auto-triggers the
+      // upload once it passes; a second, immediately-fired
+      // `DocumentUploadRequested` would race that internal validation step.
       final bloc = context.read<DocumentFlowBloc>()
-        ..add(DocumentPicked(type: type, asset: result.assets.first))
-        ..add(DocumentUploadRequested(type));
-      await bloc.stream.firstWhere(
+        ..add(DocumentPicked(type: type, asset: result.assets.first));
+      final state = await bloc.stream.firstWhere(
         (state) =>
             (state.documentAt(type)?.isUploaded ?? false) ||
-            (state.documentAt(type)?.status.isFailed ?? false),
+            (state.documentAt(type)?.status.isFailed ?? false) ||
+            state.failure is DocumentValidationFailure,
       );
       if (!context.mounted) return;
+      final failure = state.failure;
+      if (failure is DocumentValidationFailure) {
+        // Invalid document type (or the check itself failed) — the
+        // previously valid document, if any, was never overwritten; surface
+        // the reason and stop rather than re-extracting.
+        showAppErrorSnackbar(context: context, title: failure.messageKey.tr());
+        return;
+      }
+      if (!(state.documentAt(type)?.isUploaded ?? false)) {
+        // The replacement upload itself failed — surface it and stop rather
+        // than re-extracting against stale or absent media.
+        showAppErrorSnackbar(
+          context: context,
+          title: 'registration.upload_failed'.tr(),
+        );
+        return;
+      }
       bloc.add(const ExtractionRequested());
     } on AssetPickerException {
       if (!context.mounted) return;
@@ -118,7 +171,14 @@ class _ReviewInformationPageState extends State<ReviewInformationPage> {
       return const SizedBox.shrink();
     }
 
-    if (extracted == null || state.phase is PhaseExtracting) {
+    if (state.phase is PhaseExtracting) {
+      // Re-extraction while replacing a document — same mounted, animated
+      // extraction visual as the first extraction (SAN-575: a bare,
+      // unscaffolded loader here painted as a black screen).
+      return const RegistrationExtractingView();
+    }
+
+    if (extracted == null) {
       return const Center(child: AppLoadingIndicator());
     }
 
@@ -143,6 +203,13 @@ class _ReviewInformationPageState extends State<ReviewInformationPage> {
   ) {
     final title = 'registration.review_title'.tr();
     return RegistrationSliverShell(
+      onBack: () => RegistrationNavigation.popStep(
+        context,
+        isOrganization: context
+            .read<RegistrationDetailsCubit>()
+            .state
+            .isOrganization,
+      ),
       headerBuilder: (context, t) =>
           RegistrationLogo(collapseProgress: t, collapsedTitle: title),
       footer: AppButtonPresets.primary(
@@ -167,8 +234,12 @@ class _ReviewInformationPageState extends State<ReviewInformationPage> {
               issue: emiratesId.issue,
               fields: _emiratesIdFields(emiratesId.raw),
               replaceLabel: 'registration.replace_document'.tr(),
-              resolveIssueLabels: (issue) =>
-                  _resolveIssueLabels(issue, detail: emiratesId.issueDetail),
+              resolveIssueLabels: (issue) => _resolveIssueLabels(
+                issue,
+                detail: emiratesId.issueDetail,
+                missingFields: emiratesId.missingFields,
+                status: emiratesId.status,
+              ),
               thumbnail: state.documentAt(DocumentType.emiratesIdFront)?.asset,
               onReplace: () => _onReplaceRequested(context, emiratesId),
             ),
@@ -179,8 +250,12 @@ class _ReviewInformationPageState extends State<ReviewInformationPage> {
               issue: tradeLicence.issue,
               fields: _tradeLicenceFields(tradeLicence.raw),
               replaceLabel: 'registration.replace_document'.tr(),
-              resolveIssueLabels: (issue) =>
-                  _resolveIssueLabels(issue, detail: tradeLicence.issueDetail),
+              resolveIssueLabels: (issue) => _resolveIssueLabels(
+                issue,
+                detail: tradeLicence.issueDetail,
+                missingFields: tradeLicence.missingFields,
+                status: tradeLicence.status,
+              ),
               thumbnail: state.documentAt(DocumentType.tradeLicense)?.asset,
               onReplace: () => _onReplaceRequested(context, tradeLicence),
             ),
@@ -192,13 +267,33 @@ class _ReviewInformationPageState extends State<ReviewInformationPage> {
 
   /// [detail] is the affected document's [ExtractedDocument.issueDetail] — a
   /// dynamic, already-localized backend message (e.g. from an
-  /// `EXTRACTION_INCOMPLETE` rejection). When present it replaces the static
-  /// banner copy; when null the issue-generic message is used, so all existing
-  /// states render exactly as before.
+  /// `EXTRACTION_INCOMPLETE` rejection). [missingFields] are the raw backend
+  /// field identifiers (e.g. `full_name_english`) that message concerns.
+  ///
+  /// Raw backend identifiers must never reach the banner as-is (SAN-575), so
+  /// when [missingFields] is non-empty it takes priority: the banner lists
+  /// the affected fields resolved through [resolveDocumentFieldLabel] instead
+  /// of the raw backend [detail] sentence, which otherwise embeds those same
+  /// identifiers verbatim. [detail] is the fallback for rejections that name
+  /// no specific field (e.g. a whole-document mismatch); the issue-generic
+  /// message is the final fallback, so all pre-existing states still render.
+  ///
+  /// [status] is checked only for the [DocumentIssue.none] case:
+  /// [DocumentStatus.expiringSoon] is a non-blocking warning (the document is
+  /// still submittable, so [ExtractedFieldsView] shows no error banner for
+  /// it) — it renders as a warning badge instead of the success badge,
+  /// without affecting any other issue.
   DocumentIssueLabels _resolveIssueLabels(
     DocumentIssue issue, {
     String? detail,
+    List<String> missingFields = const [],
+    DocumentStatus? status,
   }) => switch (issue) {
+    DocumentIssue.none when status == DocumentStatus.expiringSoon =>
+      DocumentIssueLabels(
+        badgeLabel: 'registration.expiring_soon'.tr(),
+        badgeType: AppStatusBadgeType.warning,
+      ),
     DocumentIssue.none => DocumentIssueLabels(
       badgeLabel: 'registration.extracted_success'.tr(),
       badgeType: AppStatusBadgeType.success,
@@ -207,7 +302,11 @@ class _ReviewInformationPageState extends State<ReviewInformationPage> {
       badgeLabel: 'registration.image_unclear'.tr(),
       badgeType: AppStatusBadgeType.warning,
       bannerTitle: 'registration.image_unclear'.tr(),
-      bannerMessage: (detail != null && detail.isNotEmpty)
+      bannerMessage: missingFields.isNotEmpty
+          ? 'registration.missing_fields_message'.tr(
+              namedArgs: {'fields': describeMissingFields(missingFields)},
+            )
+          : (detail != null && detail.isNotEmpty)
           ? detail
           : 'registration.image_unclear_message'.tr(),
     ),
@@ -222,6 +321,12 @@ class _ReviewInformationPageState extends State<ReviewInformationPage> {
       badgeType: AppStatusBadgeType.alert,
       bannerTitle: 'registration.expired'.tr(),
       bannerMessage: 'registration.expired_message'.tr(),
+    ),
+    DocumentIssue.idMismatch => DocumentIssueLabels(
+      badgeLabel: 'registration.id_mismatch'.tr(),
+      badgeType: AppStatusBadgeType.alert,
+      bannerTitle: 'registration.id_mismatch'.tr(),
+      bannerMessage: 'registration.id_mismatch_message'.tr(),
     ),
   };
 

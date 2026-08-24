@@ -54,11 +54,19 @@ class UploadableAsset extends Equatable {
   /// Whether the upload finished successfully.
   bool get isUploaded => status.isUploaded;
 
+  /// Whether a pre-upload document-type check is currently running.
+  bool get isValidating => status.isValidating;
+
   /// Whether a transfer is currently active.
   bool get isUploading => status.isUploading;
 
   /// Whether a (re)attempt is allowed from the current [status].
   bool get canStart => status.canStart;
+
+  /// Returns a copy transitioned to [UploadStatus.validating] — a local
+  /// pre-upload document-type check is running.
+  UploadableAsset markValidating() =>
+      copyWith(status: UploadStatus.validating, progress: 0, error: null);
 
   /// Returns a copy transitioned to [UploadStatus.uploading] with [progress].
   UploadableAsset markUploading([double progress = 0.0]) =>

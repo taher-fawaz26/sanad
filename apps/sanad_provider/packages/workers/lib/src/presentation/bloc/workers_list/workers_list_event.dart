@@ -28,6 +28,26 @@ final class WorkersListSearchChangedEvent extends WorkersListEvent {
   List<Object?> get props => [query];
 }
 
+/// `status` is `null` for "All" — see [WorkersListState.statusFilter].
+final class WorkersListStatusChangedEvent extends WorkersListEvent {
+  const WorkersListStatusChangedEvent(this.status);
+
+  final WorkerStatus? status;
+
+  @override
+  List<Object?> get props => [status];
+}
+
+/// `type` is `null` for "All" — see [WorkersListState.typeFilter].
+final class WorkersListTypeChangedEvent extends WorkersListEvent {
+  const WorkersListTypeChangedEvent(this.type);
+
+  final WorkerType? type;
+
+  @override
+  List<Object?> get props => [type];
+}
+
 /// Replaces a worker in the list by id. Dispatched after an edit succeeds or
 /// after `WorkerActionCubit` reports a status change so the list reflects the
 /// new data without an extra API round-trip.

@@ -198,6 +198,75 @@ void main() {
     });
   });
 
+  group('WorkingHoursPolicy.normalizeAvailability', () {
+    test(
+      'merges two separate entries for the SAME day into one group '
+      '(SAN-573: a newly-added slot must never render as a second, '
+      'separate day entry)',
+      () {
+        final result = WorkingHoursPolicy.normalizeAvailability([
+          WorkingHoursDayEntity(
+            day: WorkingHoursDayIds.saturday,
+            slots: [_slot('09:00', '14:00')],
+          ),
+          WorkingHoursDayEntity(
+            day: WorkingHoursDayIds.saturday,
+            slots: [_slot('14:00', '18:00')],
+          ),
+        ]);
+        expect(result, hasLength(1));
+        expect(result.single.slots, hasLength(2));
+      },
+    );
+
+    test('sorts days Saturday → Friday regardless of input order', () {
+      final result = WorkingHoursPolicy.normalizeAvailability([
+        WorkingHoursDayEntity(
+          day: WorkingHoursDayIds.friday,
+          slots: [_slot('10:00', '14:00')],
+        ),
+        WorkingHoursDayEntity(
+          day: WorkingHoursDayIds.saturday,
+          slots: [_slot('10:00', '14:00')],
+        ),
+      ]);
+      expect(result.map((d) => d.day).toList(), [
+        WorkingHoursDayIds.saturday,
+        WorkingHoursDayIds.friday,
+      ]);
+    });
+
+    test('sorts slots chronologically within each merged day', () {
+      final result = WorkingHoursPolicy.normalizeAvailability([
+        WorkingHoursDayEntity(
+          day: WorkingHoursDayIds.saturday,
+          slots: [_slot('16:00', '22:00')],
+        ),
+        WorkingHoursDayEntity(
+          day: WorkingHoursDayIds.saturday,
+          slots: [_slot('09:00', '14:00')],
+        ),
+      ]);
+      expect(result.single.slots[0].from, '09:00');
+      expect(result.single.slots[1].from, '16:00');
+    });
+
+    test('empty availability yields an empty list', () {
+      expect(WorkingHoursPolicy.normalizeAvailability(const []), isEmpty);
+    });
+
+    test('does not mutate the input list', () {
+      final input = [
+        WorkingHoursDayEntity(
+          day: WorkingHoursDayIds.friday,
+          slots: [_slot('10:00', '14:00')],
+        ),
+      ];
+      WorkingHoursPolicy.normalizeAvailability(input);
+      expect(input.single.day, WorkingHoursDayIds.friday);
+    });
+  });
+
   group('WorkingHoursPolicy.findAvailabilityConflict', () {
     test('clean availability returns null', () {
       final result = WorkingHoursPolicy.findAvailabilityConflict([

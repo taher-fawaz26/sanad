@@ -27,6 +27,7 @@ class BranchListItem extends StatelessWidget {
     super.key,
     this.onTap,
     this.isOwner = false,
+    this.hintController,
   });
 
   final BranchEntity branch;
@@ -48,6 +49,12 @@ class BranchListItem extends StatelessWidget {
   /// to `false` (fail closed) so a caller that forgets to thread this
   /// through never over-grants Delete.
   final bool isOwner;
+
+  /// Externally-driven controller for the first-time swipe discoverability
+  /// hint (`AppSwipeActionHint`). Only ever supplied for the one row the
+  /// hint targets — every other row leaves this null and keeps
+  /// `AppSwipeActions`'s default self-owned controller.
+  final SlidableController? hintController;
 
   static Color _avatarColor(AppColors colors, String seed) {
     final palette = <Color>[
@@ -101,6 +108,7 @@ class BranchListItem extends StatelessWidget {
     // it's already a field on `this`.
     return AppSwipeActions(
       groupTag: branchSwipeGroupTag,
+      controller: hintController,
       actions: [
         if (canEdit)
           AppSwipeAction(

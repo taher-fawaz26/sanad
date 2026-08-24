@@ -184,6 +184,33 @@ void main() {
     );
 
     testWidgets(
+      "card title is the branch's own name (the draft), never a "
+      'hardcoded/localized company name — mirrors BranchDetailsPage',
+      (tester) async {
+        draftCubit.updateBasicInfo(branchName: 'Downtown Branch');
+        await pump(tester);
+
+        expect(summaryView(tester).data.title, 'Downtown Branch');
+        expect(find.text('Ghabbour Service Centre'), findsNothing);
+        expect(find.text('branches.company_name'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'card title tracks the branch name as the user edits Step 1',
+      (tester) async {
+        draftCubit.updateBasicInfo(branchName: 'First Name');
+        await pump(tester);
+        expect(summaryView(tester).data.title, 'First Name');
+
+        draftCubit.updateBasicInfo(branchName: 'Renamed Branch');
+        await tester.pumpAndSettle();
+
+        expect(summaryView(tester).data.title, 'Renamed Branch');
+      },
+    );
+
+    testWidgets(
       'a backend validation failure mentioning "availability" highlights '
       'the Working Hours section without touching the draft',
       (tester) async {

@@ -1,4 +1,5 @@
 import 'package:account_settings/account_settings.dart';
+import 'package:activity_logs/activity_logs.dart';
 import 'package:app_logger/app_logger.dart';
 import 'package:asset_picker/asset_picker.dart';
 import 'package:auth/auth.dart';
@@ -7,8 +8,10 @@ import 'package:contact_verification/contact_verification.dart';
 import 'package:core/core.dart';
 import 'package:deep_linking/deep_linking.dart';
 import 'package:design_system/design_system.dart';
+import 'package:document_validation/document_validation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:sanad_provider/src/features/home/home.dart';
 import 'package:sanad_provider/src/features/invitation/invitation.dart';
 import 'package:localization/localization.dart';
 import 'package:maps/maps.dart';
@@ -22,6 +25,7 @@ import 'package:sanad_provider/src/config/app_config.dart';
 import 'package:sanad_provider/src/routing/provider_navigator.dart';
 import 'package:services/services.dart';
 import 'package:storage/storage.dart';
+import 'package:text_optimization/text_optimization.dart';
 import 'package:workers/workers.dart';
 
 late final ModuleRegistry moduleRegistry;
@@ -62,11 +66,24 @@ Future<void> configureDependencies() async {
     },
   );
 
+  // ── Shared "Enhance with AI" text-optimization flow (SAN-578) ────────────
+  TextOptimizationDI.init();
+
   // ── Permissions (registers PermissionService, config, theme, provider) ───
   PermissionsDI.init();
 
   // ── Media upload (shared multipart-upload pipeline; no FeatureModule) ────
   MediaUploadDI.init();
+
+  // ── Activity Logs (GET /activity-logs; only current consumer is Worker
+  // Details' "Recent Activity" section, which owns its own bloc — no
+  // routes, so no FeatureModule needed) ────────────────────────────────────
+  ActivityLogsDI.init();
+
+  // ── Pre-upload document-type validation (Emirates ID scan / Trade
+  // License OCR gate); no FeatureModule — a `DocumentTypeValidator` used
+  // directly by every `DocumentFlowBloc` instance. ─────────────────────────
+  DocumentValidationDI.init();
 
   // ── Deep linking (OS-level incoming URI → GoRouter location) ─────────────
   DeepLinkingDI.init(config: AppConfig.deepLinkConfig);
@@ -96,6 +113,7 @@ Future<void> configureDependencies() async {
     ),
     ContactVerificationModule(),
     AccountSettingsModule(),
+    HomeModule(),
     OrganizationSettingsModule(),
     BranchesModule(),
     ServicesModule(),
@@ -107,17 +125,8 @@ Future<void> configureDependencies() async {
       config: AssetPickerConfig(
         scannerNavigatorKey: providerRootNavigatorKey,
         documentScannerConfig: const DocumentScannerConfig(
-          requireBothSides: false,
           primaryColor: Color(0xFF26A68C),
           showInstructionText: true,
-          screenTitle: 'Scan Emirates ID',
-          frontSideInstruction: 'Place the front inside the frame',
-          backSideInstruction: 'Place the back inside the frame',
-          frontSideTitle: 'Front Side',
-          backSideTitle: 'Back Side',
-          retakeButtonText: 'Retake Front Side',
-          nextButtonText: 'Scan Back Side',
-          previousButtonText: 'Retake Front Side',
           saveButtonText: 'Continue',
         ),
       ),

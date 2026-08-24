@@ -11,11 +11,11 @@ class CreateBranchRequest extends Equatable {
     required this.branchAddress,
     required this.cityId,
     required this.branchPhone,
-    required this.branchManagerId,
     required this.lat,
     required this.lng,
     required this.radiusKm,
     required this.workerIds,
+    this.branchManagerId,
     this.googleMapsLink,
     this.socialMediaLink,
     this.availabilityMode = BranchAvailabilityMode.coreHours,
@@ -29,7 +29,7 @@ class CreateBranchRequest extends Equatable {
   final String branchAddress;
   final String cityId;
   final String branchPhone;
-  final String branchManagerId;
+  final String? branchManagerId;
   final double lat;
   final double lng;
   final double radiusKm;
@@ -48,13 +48,13 @@ class CreateBranchRequest extends Equatable {
       'branchAddress': branchAddress,
       'cityId': cityId,
       'branchPhone': branchPhone,
-      'branchManagerId': branchManagerId,
       'lat': lat,
       'lng': lng,
       'radiusKm': radiusKm,
       'workerIds': workerIds,
       'availabilityMode': availabilityMode.toApiString(),
     };
+    if (branchManagerId != null) body['branchManagerId'] = branchManagerId;
     if (googleMapsLink != null) body['googleMapsLink'] = googleMapsLink;
     if (socialMediaLink != null) body['socialMediaLink'] = socialMediaLink;
     if (availability != null) {

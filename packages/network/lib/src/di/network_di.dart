@@ -4,6 +4,7 @@ import 'package:logger/logger.dart';
 import 'package:network/src/client/api_client_impl.dart';
 import 'package:network/src/client/base_api_client.dart';
 import 'package:network/src/client/secure_dio_client.dart';
+import 'package:network/src/config/text_optimization_api_config.dart';
 import 'package:network/src/connectivity/connectivity_controller.dart';
 import 'package:network/src/connectivity/connectivity_service.dart';
 import 'package:network/src/connectivity/connectivity_service_impl.dart';
@@ -48,6 +49,13 @@ import 'package:network/src/token/token_manager_impl.dart';
 /// deliberately does not know about auth-domain types.
 abstract final class NetworkDI {
   NetworkDI._();
+
+  /// `GetIt` instance name for the [BaseApiClient] wired to the third-party
+  /// text-optimization host ([TextOptimizationApiConfig]) — deliberately a
+  /// separate, unauthenticated client so the user's session token is never
+  /// sent to that external host. Consumed by the `text_optimization` package.
+  static const textOptimizationApiClientInstanceName =
+      'textOptimizationApiClient';
 
   static Future<void> init({
     required NetworkConfig networkConfig,
@@ -112,6 +120,38 @@ abstract final class NetworkDI {
       )
       ..registerLazySingleton<BaseApiClient>(
         () => ApiClientImpl(sl<SecureDioClient>(), sl<NetworkGuard>()),
+      )
+      // Text-optimization Dio — a separate unauthenticated client scoped to
+      // the fixed third-party host (SAN-578). No AuthInterceptor: this host
+      // is not the Sanad backend and must never receive the session token.
+      ..registerLazySingleton<Dio>(
+        () {
+          final dio = Dio(
+            BaseOptions(
+              baseUrl: TextOptimizationApiConfig.baseUrl,
+              connectTimeout: TextOptimizationApiConfig.connectTimeout,
+              receiveTimeout: TextOptimizationApiConfig.receiveTimeout,
+              headers: const {'Accept': 'application/json'},
+            ),
+          );
+          dio.interceptors.addAll([
+            TimeoutErrorInterceptor(),
+            LoggingInterceptor(logger: logger),
+          ]);
+          return dio;
+        },
+        instanceName: 'textOptimizationDio',
+      )
+      ..registerLazySingleton<SecureDioClient>(
+        () => SecureDioClient(sl<Dio>(instanceName: 'textOptimizationDio')),
+        instanceName: 'textOptimizationSecureDioClient',
+      )
+      ..registerLazySingleton<BaseApiClient>(
+        () => ApiClientImpl(
+          sl<SecureDioClient>(instanceName: 'textOptimizationSecureDioClient'),
+          sl<NetworkGuard>(),
+        ),
+        instanceName: textOptimizationApiClientInstanceName,
       );
   }
 }

@@ -15,14 +15,19 @@ class DocumentFlowController {
 
   final DocumentFlowBloc _bloc;
 
-  /// Opens the capture sheet for [type] and stores the result without
-  /// uploading. Call [upload] afterwards (or pass `autoUpload: true`).
+  /// Opens the capture sheet for [type] and stores the result.
+  ///
+  /// What happens next is entirely owned by [DocumentFlowBloc]: when it was
+  /// built with a `DocumentTypeValidator`, a passing pre-upload check
+  /// auto-triggers the upload; a failing one surfaces a
+  /// `DocumentValidationFailure` and uploads nothing. Without a validator
+  /// (the legacy contract), the asset is only stored — call [upload]
+  /// explicitly afterwards.
   Future<void> pick(
     BuildContext context, {
     required DocumentType type,
     required AssetPickerOptions options,
     required AssetPickerTheme theme,
-    bool autoUpload = true,
   }) async {
     final result = await captureDocumentAsset(
       context,
@@ -32,7 +37,6 @@ class DocumentFlowController {
     if (result == null || result.assets.isEmpty) return;
 
     _bloc.add(DocumentPicked(type: type, asset: result.assets.first));
-    if (autoUpload) upload(type);
   }
 
   void upload(DocumentType type) =>

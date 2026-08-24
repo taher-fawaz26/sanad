@@ -14,36 +14,36 @@ import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Shows the working hours edit bottom sheet — Figma `3821:18452`.
 ///
-/// Returns the updated schedule when the user taps Save, or `null` when
-/// dismissed without saving.
-Future<List<WorkingHoursEditEntry>?> showEditWorkingHoursBottomSheet({
+/// Returns the updated, day-grouped schedule when the user taps Save, or
+/// `null` when dismissed without saving.
+Future<List<WorkingHoursDayEntity>?> showEditWorkingHoursBottomSheet({
   required BuildContext context,
-  List<WorkingHoursEditEntry> initialEntries = const [],
+  List<WorkingHoursDayEntity> initialDays = const [],
 }) {
-  return SheetNavigator.push<List<WorkingHoursEditEntry>>(
+  return SheetNavigator.push<List<WorkingHoursDayEntity>>(
     context,
-    _EditWorkingHoursSheetBody(initialEntries: initialEntries),
+    _EditWorkingHoursSheetBody(initialDays: initialDays),
   );
 }
 
 class _EditWorkingHoursSheetBody extends StatelessWidget {
-  const _EditWorkingHoursSheetBody({required this.initialEntries});
+  const _EditWorkingHoursSheetBody({required this.initialDays});
 
-  final List<WorkingHoursEditEntry> initialEntries;
+  final List<WorkingHoursDayEntity> initialDays;
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => EditWorkingHoursCubit(initialEntries: initialEntries),
+      create: (_) => EditWorkingHoursCubit(initialDays: initialDays),
       child: const _EditWorkingHoursSheetView(),
     );
   }
 }
 
 Future<void> _openAddDaySheet(BuildContext context) async {
-  // Do NOT filter out days that already have a slot — users need to be
-  // able to add split shifts on the same day (SAN-568). Multiple entries
-  // per day are collapsed back into WorkingHoursDayEntity.slots on save.
+  // Every weekday stays selectable — adding a slot for a day that already
+  // has one or more slots is a merge (EditWorkingHoursCubit.addSlot upserts
+  // into that day's existing group), not a duplicate day entry (SAN-568/573).
   final cubit = context.read<EditWorkingHoursCubit>();
   final result = await SheetNavigator.push<AppAddScheduleDayResult>(
     context,
@@ -87,14 +87,11 @@ Future<void> _openAddDaySheet(BuildContext context) async {
   );
 
   if (result == null || !context.mounted) return;
-  // Cubit.add() consults WorkingHoursPolicy — the same source of truth used
-  // at save time. On rejection the draft is left untouched and the sheet's
-  // inline error surface renders a localized message next to the "Add a
-  // Day" button, so the user sees the conflict immediately (SAN-573) rather
-  // than only at Save.
-  cubit.add(
-    WorkingHoursEditEntry(dayId: result.day, from: result.from, to: result.to),
-  );
+  // addSlot() consults WorkingHoursPolicy — the same source of truth used at
+  // save time — and immediately merges/re-sorts the draft (SAN-573). On
+  // rejection the draft is left untouched and the sheet's inline error
+  // surface renders a localized message next to the "Add a Day" button.
+  cubit.addSlot(dayId: result.day, from: result.from, to: result.to);
 }
 
 /// Localized inline error for a rejected add-slot attempt, formatted from
@@ -157,26 +154,37 @@ class _EditWorkingHoursSheetView extends StatelessWidget {
             child: BlocBuilder<EditWorkingHoursCubit, EditWorkingHoursDraft>(
               builder: (context, draft) {
                 final localeName = context.locale.toString();
+                final cubit = context.read<EditWorkingHoursCubit>();
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   spacing: AppSpacing.md,
                   children: [
-                    for (final (index, entry) in draft.entries.indexed)
-                      AppScheduleDayRow(
-                        title: BranchScheduleFormatter.localizedDay(
-                          entry.dayId,
-                        ),
-                        value: BranchScheduleFormatter.formatSlot(
-                          BranchTimeSlotEntity(
-                            from: entry.from,
-                            to: entry.to,
+                    // One WorkingHoursDayCard per day — the exact same
+                    // "one container per day" shell the view-mode section
+                    // uses, with per-slot delete wired to removeSlot()
+                    // (SAN-573).
+                    for (final day in draft.days)
+                      WorkingHoursDayCard(
+                        group: WorkingHoursDayGroup(
+                          dayLabel: BranchScheduleFormatter.localizedDay(
+                            day.day,
                           ),
-                          locale: localeName,
+                          slots: [
+                            for (final (index, slot) in day.slots.indexed)
+                              WorkingHoursSlotRow(
+                                hoursLabel: BranchScheduleFormatter.formatSlot(
+                                  BranchTimeSlotEntity(
+                                    from: slot.from,
+                                    to: slot.to,
+                                  ),
+                                  locale: localeName,
+                                ),
+                                onDelete: () =>
+                                    cubit.removeSlot(day.day, index),
+                              ),
+                          ],
                         ),
-                        onDelete: () => context
-                            .read<EditWorkingHoursCubit>()
-                            .removeAt(index),
                       ),
                     AppButtonPresets.outline(
                       label: 'settings.add_day'.tr(),
@@ -196,8 +204,8 @@ class _EditWorkingHoursSheetView extends StatelessWidget {
           AppButton(
             label: 'common.save'.tr(),
             onPressed: () => Navigator.of(context).pop(
-              List<WorkingHoursEditEntry>.of(
-                context.read<EditWorkingHoursCubit>().state.entries,
+              List<WorkingHoursDayEntity>.of(
+                context.read<EditWorkingHoursCubit>().state.days,
               ),
             ),
           ),

@@ -7,14 +7,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:services/src/domain/entities/catalog_service_entity.dart';
+import 'package:services/src/domain/entities/category_record_entity.dart';
 import 'package:services/src/domain/entities/category_ref_entity.dart';
 import 'package:services/src/domain/entities/pagination_meta_entity.dart';
 import 'package:services/src/domain/entities/provider_service_entity.dart';
 import 'package:services/src/domain/entities/provider_service_status.dart';
 import 'package:services/src/domain/repositories/catalog_repository.dart';
+import 'package:services/src/domain/repositories/categories_repository.dart';
 import 'package:services/src/domain/repositories/provider_services_repository.dart';
 import 'package:services/src/domain/usecases/browse_catalog_usecase.dart';
 import 'package:services/src/domain/usecases/create_provider_service_usecase.dart';
+import 'package:services/src/domain/usecases/get_categories_usecase.dart';
 import 'package:services/src/presentation/bloc/add_service/add_service_bloc.dart';
 
 class _MockProviderServicesRepo extends Mock
@@ -22,10 +25,22 @@ class _MockProviderServicesRepo extends Mock
 
 class _MockCatalogRepo extends Mock implements CatalogRepository {}
 
+class _MockCategoriesRepo extends Mock implements CategoriesRepository {}
+
 const _category = CategoryRefEntity(
   id: 'cat-1',
   name: 'Car',
   description: null,
+);
+
+CategoryRecordEntity _categoryRecord(String id) => CategoryRecordEntity(
+  id: id,
+  slug: id,
+  name: 'Car',
+  description: 'Car services',
+  icon: null,
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
 );
 
 ProviderServiceEntity _service(String id) => ProviderServiceEntity(
@@ -52,15 +67,18 @@ const _params = CreateProviderServiceParams(
 void main() {
   late _MockProviderServicesRepo repo;
   late _MockCatalogRepo catalogRepo;
+  late _MockCategoriesRepo categoriesRepo;
 
   setUp(() {
     repo = _MockProviderServicesRepo();
     catalogRepo = _MockCatalogRepo();
+    categoriesRepo = _MockCategoriesRepo();
   });
 
   AddServiceBloc buildBloc() => AddServiceBloc(
     createProviderServiceUseCase: CreateProviderServiceUseCase(repo),
     browseCatalogUseCase: BrowseCatalogUseCase(catalogRepo),
+    getCategoriesUseCase: GetCategoriesUseCase(categoriesRepo),
   );
 
   group('AddServiceBloc — submit', () {
@@ -89,15 +107,16 @@ void main() {
 
     blocTest<AddServiceBloc, AddServiceState>(
       'submit failure surfaces the failure',
-      setUp: () => when(
-        () => repo.createProviderService(
-          serviceId: 'catalog-1',
-          description: 'desc',
-          imageIds: ['media-1'],
-        ),
-      ).thenAnswer(
-        (_) => TaskEither.left(const ServerFailure(message: 'boom')),
-      ),
+      setUp: () =>
+          when(
+            () => repo.createProviderService(
+              serviceId: 'catalog-1',
+              description: 'desc',
+              imageIds: ['media-1'],
+            ),
+          ).thenAnswer(
+            (_) => TaskEither.left(const ServerFailure(message: 'boom')),
+          ),
       build: buildBloc,
       act: (bloc) => bloc.add(const AddServiceSubmittedEvent(_params)),
       verify: (bloc) {
@@ -109,18 +128,19 @@ void main() {
     // Double-tap guard, matching RequestNewServiceBloc/EditServiceBloc.
     blocTest<AddServiceBloc, AddServiceState>(
       'double-tap submit is dropped while one is in flight',
-      setUp: () => when(
-        () => repo.createProviderService(
-          serviceId: 'catalog-1',
-          description: 'desc',
-          imageIds: ['media-1'],
-        ),
-      ).thenAnswer(
-        (_) => TaskEither(() async {
-          await Future<void>.delayed(const Duration(milliseconds: 50));
-          return right(_service('1'));
-        }),
-      ),
+      setUp: () =>
+          when(
+            () => repo.createProviderService(
+              serviceId: 'catalog-1',
+              description: 'desc',
+              imageIds: ['media-1'],
+            ),
+          ).thenAnswer(
+            (_) => TaskEither(() async {
+              await Future<void>.delayed(const Duration(milliseconds: 50));
+              return right(_service('1'));
+            }),
+          ),
       build: buildBloc,
       act: (bloc) {
         bloc
@@ -141,70 +161,150 @@ void main() {
     );
   });
 
-  group('AddServiceBloc — catalog picker', () {
+  group('AddServiceBloc — categories picker (SAN-577 step 1)', () {
     blocTest<AddServiceBloc, AddServiceState>(
-      'catalog fetch success emits the loaded list',
-      setUp: () => when(() => catalogRepo.browseCatalog(limit: 100)).thenAnswer(
-        (_) => TaskEither.of(
-          ServicesPagedResult(
-            items: [_catalogService('svc-wash-car')],
-            meta: const PaginationMetaEntity(
-              totalItems: 1,
-              itemCount: 1,
-              itemsPerPage: 100,
-              totalPages: 1,
-              currentPage: 1,
+      'categories fetch success emits the loaded list',
+      setUp: () =>
+          when(() => categoriesRepo.getCategories(limit: 100)).thenAnswer(
+            (_) => TaskEither.of(
+              ServicesPagedResult(
+                items: [_categoryRecord('cat-1')],
+                meta: const PaginationMetaEntity(
+                  totalItems: 1,
+                  itemCount: 1,
+                  itemsPerPage: 100,
+                  totalPages: 1,
+                  currentPage: 1,
+                ),
+              ),
             ),
           ),
-        ),
-      ),
       build: buildBloc,
-      act: (bloc) => bloc.add(const AddServiceCatalogRequested()),
+      act: (bloc) => bloc.add(const AddServiceCategoriesRequested()),
       expect: () => [
         isA<AddServiceState>().having(
-          (s) => s.catalogStatus,
-          'catalogStatus',
-          AddServiceCatalogStatus.loading,
+          (s) => s.categoriesStatus,
+          'categoriesStatus',
+          AddServiceCategoriesStatus.loading,
         ),
         isA<AddServiceState>()
             .having(
-              (s) => s.catalogStatus,
-              'catalogStatus',
-              AddServiceCatalogStatus.success,
+              (s) => s.categoriesStatus,
+              'categoriesStatus',
+              AddServiceCategoriesStatus.success,
             )
             .having(
-              (s) => s.catalogItems.map((c) => c.id),
-              'catalogItems',
-              ['svc-wash-car'],
+              (s) => s.categories.map((c) => c.id),
+              'categories',
+              ['cat-1'],
             ),
       ],
     );
 
     blocTest<AddServiceBloc, AddServiceState>(
-      'catalog fetch failure surfaces the failure',
-      setUp: () => when(() => catalogRepo.browseCatalog(limit: 100)).thenAnswer(
-        (_) => TaskEither.left(const ServerFailure(message: 'boom')),
-      ),
+      'categories fetch failure surfaces the failure',
+      setUp: () =>
+          when(
+            () => categoriesRepo.getCategories(limit: 100),
+          ).thenAnswer(
+            (_) => TaskEither.left(const ServerFailure(message: 'boom')),
+          ),
       build: buildBloc,
-      act: (bloc) => bloc.add(const AddServiceCatalogRequested()),
+      act: (bloc) => bloc.add(const AddServiceCategoriesRequested()),
       expect: () => [
         isA<AddServiceState>().having(
-          (s) => s.catalogStatus,
-          'catalogStatus',
-          AddServiceCatalogStatus.loading,
+          (s) => s.categoriesStatus,
+          'categoriesStatus',
+          AddServiceCategoriesStatus.loading,
         ),
         isA<AddServiceState>()
             .having(
-              (s) => s.catalogStatus,
-              'catalogStatus',
-              AddServiceCatalogStatus.failure,
+              (s) => s.categoriesStatus,
+              'categoriesStatus',
+              AddServiceCategoriesStatus.failure,
             )
             .having(
-              (s) => s.catalogFailure,
-              'catalogFailure',
+              (s) => s.categoriesFailure,
+              'categoriesFailure',
               const ServerFailure(message: 'boom'),
             ),
       ],
     );
   });
+
+  group(
+    'AddServiceBloc — catalog picker (SAN-577 step 2, category-scoped)',
+    () {
+      blocTest<AddServiceBloc, AddServiceState>(
+        'catalog fetch success emits the loaded list, scoped to categoryId',
+        setUp: () =>
+            when(
+              () => catalogRepo.browseCatalog(limit: 100, categoryId: 'cat-1'),
+            ).thenAnswer(
+              (_) => TaskEither.of(
+                ServicesPagedResult(
+                  items: [_catalogService('svc-wash-car')],
+                  meta: const PaginationMetaEntity(
+                    totalItems: 1,
+                    itemCount: 1,
+                    itemsPerPage: 100,
+                    totalPages: 1,
+                    currentPage: 1,
+                  ),
+                ),
+              ),
+            ),
+        build: buildBloc,
+        act: (bloc) => bloc.add(const AddServiceCatalogRequested('cat-1')),
+        expect: () => [
+          isA<AddServiceState>().having(
+            (s) => s.catalogStatus,
+            'catalogStatus',
+            AddServiceCatalogStatus.loading,
+          ),
+          isA<AddServiceState>()
+              .having(
+                (s) => s.catalogStatus,
+                'catalogStatus',
+                AddServiceCatalogStatus.success,
+              )
+              .having(
+                (s) => s.catalogItems.map((c) => c.id),
+                'catalogItems',
+                ['svc-wash-car'],
+              ),
+        ],
+      );
+
+      blocTest<AddServiceBloc, AddServiceState>(
+        'catalog fetch failure surfaces the failure',
+        setUp: () =>
+            when(
+              () => catalogRepo.browseCatalog(limit: 100, categoryId: 'cat-1'),
+            ).thenAnswer(
+              (_) => TaskEither.left(const ServerFailure(message: 'boom')),
+            ),
+        build: buildBloc,
+        act: (bloc) => bloc.add(const AddServiceCatalogRequested('cat-1')),
+        expect: () => [
+          isA<AddServiceState>().having(
+            (s) => s.catalogStatus,
+            'catalogStatus',
+            AddServiceCatalogStatus.loading,
+          ),
+          isA<AddServiceState>()
+              .having(
+                (s) => s.catalogStatus,
+                'catalogStatus',
+                AddServiceCatalogStatus.failure,
+              )
+              .having(
+                (s) => s.catalogFailure,
+                'catalogFailure',
+                const ServerFailure(message: 'boom'),
+              ),
+        ],
+      );
+    },
+  );
 }

@@ -1,4 +1,5 @@
 import 'package:asset_picker/asset_picker.dart';
+import 'package:core/core.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 PickedAsset _asset({
@@ -48,6 +49,58 @@ void main() {
     );
     expect(errors.single.type, AssetValidationErrorType.fileTooLarge);
     expect(errors.single.message, contains('exceeds'));
+  });
+
+  group('global FileSizePolicy clamp', () {
+    test(
+      'rejects a file over the global maximum even when maxFileSize is '
+      'unset — a call site that forgets to set a limit must not accept an '
+      'unbounded file',
+      () {
+        final errors = validator.validate(
+          [_asset(size: FileSizePolicy.maxBytes + 1)],
+          const AssetPickerOptions(),
+        );
+        expect(errors.single.type, AssetValidationErrorType.fileTooLarge);
+      },
+    );
+
+    test(
+      'accepts a file exactly at the global maximum when maxFileSize is '
+      'unset',
+      () {
+        final errors = validator.validate(
+          [_asset(size: FileSizePolicy.maxBytes)],
+          const AssetPickerOptions(),
+        );
+        expect(errors, isEmpty);
+      },
+    );
+
+    test(
+      'clamps a caller-requested limit looser than the global maximum down '
+      'to it — a feature-specific rule may never exceed the global cap',
+      () {
+        final errors = validator.validate(
+          [_asset(size: FileSizePolicy.maxBytes + 1)],
+          const AssetPickerOptions(maxFileSize: 10 * 1024 * 1024),
+        );
+        expect(errors.single.type, AssetValidationErrorType.fileTooLarge);
+        expect(errors.single.message, contains('5.0 MB'));
+      },
+    );
+
+    test(
+      'preserves a caller-requested limit stricter than the global maximum',
+      () {
+        final errors = validator.validate(
+          [_asset(size: 2 * 1024 * 1024)],
+          const AssetPickerOptions(maxFileSize: 1024 * 1024),
+        );
+        expect(errors.single.type, AssetValidationErrorType.fileTooLarge);
+        expect(errors.single.message, contains('1.0 MB'));
+      },
+    );
   });
 
   test('flags disallowed extension', () {

@@ -6,6 +6,7 @@ library;
 
 export 'src/di/account_settings_di.dart';
 export 'src/module/account_settings_module.dart';
+export 'src/presentation/bloc/account_deletion/account_deletion_bloc.dart';
 export 'src/presentation/bloc/account_settings/account_settings_bloc.dart';
 export 'src/presentation/pages/account_settings_page.dart';
 export 'src/routes/account_settings_routes.dart';

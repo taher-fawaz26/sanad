@@ -57,6 +57,7 @@ class OrganizationSettingsModule extends FeatureModule {
             fetchDocuments: sl<FetchDocumentsUseCase>(
               instanceName: organizationDocumentFlowInstance,
             ),
+            validator: sl<DocumentTypeValidator>(),
           ),
           child: LegalDocumentsPage(scope: scope),
         );

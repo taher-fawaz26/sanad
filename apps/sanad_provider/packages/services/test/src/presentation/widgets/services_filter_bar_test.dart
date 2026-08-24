@@ -54,17 +54,42 @@ void main() {
   );
 
   testWidgets(
-    'the Type dropdown renders but stays inert when onTypeTap is unset',
+    'tapping the Category dropdown invokes onCategoryTap',
+    (tester) async {
+      var tapped = false;
+      await _pump(
+        tester,
+        ServicesFilterBar(onCategoryTap: () => tapped = true),
+      );
+
+      await tester.tap(find.text('services.filter_category'));
+
+      expect(tapped, isTrue);
+    },
+  );
+
+  testWidgets(
+    'categoryLabel overrides the default "Category" placeholder',
+    (tester) async {
+      await _pump(tester, const ServicesFilterBar(categoryLabel: 'Plumbing'));
+
+      expect(find.text('Plumbing'), findsOneWidget);
+      expect(find.text('services.filter_category'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'the Category dropdown renders but stays inert when onCategoryTap is '
+    'unset',
     (tester) async {
       await _pump(tester, const ServicesFilterBar());
 
-      // Present — Type must never be removed even though it isn't wired.
-      expect(find.text('services.filter_type'), findsOneWidget);
+      expect(find.text('services.filter_category'), findsOneWidget);
 
       // Tapping it is a no-op (no callback provided): the disabled InkWell
       // absorbs the tap without throwing and without needing a callback to
       // assert against.
-      await tester.tap(find.text('services.filter_type'));
+      await tester.tap(find.text('services.filter_category'));
       await tester.pump();
     },
   );
@@ -76,7 +101,7 @@ void main() {
 
       expect(find.byType(AppSearchField), findsNothing);
       expect(find.text('services.filter_status'), findsOneWidget);
-      expect(find.text('services.filter_type'), findsOneWidget);
+      expect(find.text('services.filter_category'), findsOneWidget);
     },
   );
 }

@@ -41,7 +41,7 @@ class _AddServicePageState extends State<AddServicePage> {
     return BlocProvider(
       create: (_) => sl<MediaUploadBloc>(
         param1: const MediaUploadConfig(
-          maxFileSize: 5 * 1024 * 1024,
+          maxFileSize: FileSizePolicy.maxBytes,
           maxFiles: kMaxServiceImages,
           allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
         ),
@@ -98,20 +98,17 @@ class _AddServicePageState extends State<AddServicePage> {
                       vertical: AppSpacing.md,
                     ),
                     child: BlocBuilder<AddServiceBloc, AddServiceState>(
-                      builder: (context, state) =>
-                          ValueListenableBuilder<bool>(
-                            valueListenable: _isFormComplete,
-                            builder: (context, isFormComplete, _) =>
-                                AppButtonPresets.primary(
-                                  label: 'services.add_service.create_button'
-                                      .tr(),
-                                  onPressed:
-                                      isFormComplete && !state.isSubmitting
-                                      ? () => _onCreate(context)
-                                      : null,
-                                  isLoading: state.isSubmitting,
-                                ),
-                          ),
+                      builder: (context, state) => ValueListenableBuilder<bool>(
+                        valueListenable: _isFormComplete,
+                        builder: (context, isFormComplete, _) =>
+                            AppButtonPresets.primary(
+                              label: 'services.add_service.create_button'.tr(),
+                              onPressed: isFormComplete && !state.isSubmitting
+                                  ? () => _onCreate(context)
+                                  : null,
+                              isLoading: state.isSubmitting,
+                            ),
+                      ),
                     ),
                   ),
                 ],

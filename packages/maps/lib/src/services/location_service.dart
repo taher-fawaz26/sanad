@@ -26,6 +26,11 @@ abstract class LocationService {
   /// fetching a position. Cheap enough to gate UI on.
   Future<LocationPermissionStatus> checkPermission();
 
+  /// Triggers the native OS permission prompt (when the OS still allows
+  /// asking) and returns the resulting state. Checks the location service
+  /// first, same as [checkPermission].
+  Future<LocationPermissionStatus> requestPermission();
+
   /// Opens the OS app-settings screen.
   Future<bool> openAppSettings();
 }

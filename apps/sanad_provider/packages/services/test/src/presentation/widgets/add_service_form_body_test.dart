@@ -9,54 +9,79 @@ import 'package:fpdart/fpdart.dart';
 import 'package:media_upload/media_upload.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:services/src/domain/entities/catalog_service_entity.dart';
+import 'package:services/src/domain/entities/category_record_entity.dart';
 import 'package:services/src/domain/entities/category_ref_entity.dart';
 import 'package:services/src/domain/entities/pagination_meta_entity.dart';
 import 'package:services/src/domain/usecases/browse_catalog_usecase.dart';
 import 'package:services/src/domain/usecases/create_provider_service_usecase.dart';
+import 'package:services/src/domain/usecases/get_categories_usecase.dart';
 import 'package:services/src/presentation/bloc/add_service/add_service_bloc.dart';
 import 'package:services/src/presentation/widgets/add_service_form_body.dart';
+import 'package:text_optimization/text_optimization.dart';
 
 class _MockMediaUploadRepository extends Mock
     implements MediaUploadRepository {}
 
+class _MockTextOptimizationRepository extends Mock
+    implements TextOptimizationRepository {}
+
+/// `AddServiceFormBody`'s description field resolves a `TextOptimizationCubit`
+/// from `sl` (SAN-578) — these tests never tap "Enhance with AI", but the
+/// widget still needs one registered to build at all.
+void _registerTextOptimizationCubit() {
+  final repository = _MockTextOptimizationRepository();
+  when(
+    () => repository.optimize(any()),
+  ).thenAnswer((_) => TaskEither.right(''));
+  if (sl.isRegistered<TextOptimizationCubit>()) {
+    sl.unregister<TextOptimizationCubit>();
+  }
+  sl.registerFactory<TextOptimizationCubit>(
+    () => TextOptimizationCubit(OptimizeTextUseCase(repository)),
+  );
+}
+
 /// Never invoked by these tests — this widget only ever dispatches
-/// [AddServiceCatalogRequested]; submission is [AddServicePage]'s job.
+/// [AddServiceCatalogRequested]/[AddServiceCategoriesRequested]; submission
+/// is [AddServicePage]'s job.
 class _UnusedCreateProviderServiceUseCase extends Mock
     implements CreateProviderServiceUseCase {}
 
-/// Backs the Service Name dropdown — proves it loads from the real catalog
-/// (`GET /services` via [AddServiceBloc]'s [BrowseCatalogUseCase]), and
-/// that only `name` is shown.
-class _FakeBrowseCatalogUseCase implements BrowseCatalogUseCase {
-  const _FakeBrowseCatalogUseCase();
+/// Backs the Category picker (`GET /categories`) — two categories, one
+/// ("Home") deliberately has zero catalog services so the empty-in-category
+/// state can be exercised.
+class _FakeGetCategoriesUseCase implements GetCategoriesUseCase {
+  const _FakeGetCategoriesUseCase();
 
-  static final _services = [
-    const CatalogServiceEntity(
-      id: 'svc-wash-car',
-      name: 'Wash Car',
-      category: CategoryRefEntity(
-        id: 'cat-car',
-        name: 'Car',
-        description: null,
-      ),
+  // Not `const` — `CategoryRecordEntity.createdAt`/`updatedAt` are
+  // `DateTime`, which has no const constructor.
+  static final _categories = [
+    CategoryRecordEntity(
+      id: 'cat-car',
+      slug: 'car',
+      name: 'Car',
+      description: 'Car services',
+      icon: null,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
     ),
-    const CatalogServiceEntity(
-      id: 'svc-oil-change',
-      name: 'Oil Change',
-      category: CategoryRefEntity(
-        id: 'cat-car',
-        name: 'Car',
-        description: null,
-      ),
+    CategoryRecordEntity(
+      id: 'cat-home',
+      slug: 'home',
+      name: 'Home',
+      description: 'Home services',
+      icon: null,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
     ),
   ];
 
   @override
-  TaskEither<Failure, ServicesPagedResult<CatalogServiceEntity>> call(
-    BrowseCatalogParams params,
+  TaskEither<Failure, ServicesPagedResult<CategoryRecordEntity>> call(
+    GetCategoriesParams params,
   ) => TaskEither.right(
     ServicesPagedResult(
-      items: _services,
+      items: _categories,
       meta: const PaginationMetaEntity(
         totalItems: 2,
         itemCount: 2,
@@ -66,6 +91,56 @@ class _FakeBrowseCatalogUseCase implements BrowseCatalogUseCase {
       ),
     ),
   );
+}
+
+/// Backs the Service picker (`GET /services?categoryId=`) — SAN-577:
+/// scoped per category, proving the service list is never the full,
+/// unfiltered catalog. "cat-home" intentionally has none.
+class _FakeBrowseCatalogUseCase implements BrowseCatalogUseCase {
+  const _FakeBrowseCatalogUseCase();
+
+  static const _byCategory = {
+    'cat-car': [
+      CatalogServiceEntity(
+        id: 'svc-wash-car',
+        name: 'Wash Car',
+        category: CategoryRefEntity(
+          id: 'cat-car',
+          name: 'Car',
+          description: null,
+        ),
+      ),
+      CatalogServiceEntity(
+        id: 'svc-oil-change',
+        name: 'Oil Change',
+        category: CategoryRefEntity(
+          id: 'cat-car',
+          name: 'Car',
+          description: null,
+        ),
+      ),
+    ],
+    'cat-home': <CatalogServiceEntity>[],
+  };
+
+  @override
+  TaskEither<Failure, ServicesPagedResult<CatalogServiceEntity>> call(
+    BrowseCatalogParams params,
+  ) {
+    final items = _byCategory[params.categoryId] ?? const [];
+    return TaskEither.right(
+      ServicesPagedResult(
+        items: items,
+        meta: PaginationMetaEntity(
+          totalItems: items.length,
+          itemCount: items.length,
+          itemsPerPage: 100,
+          totalPages: 1,
+          currentPage: 1,
+        ),
+      ),
+    );
+  }
 }
 
 PickedAsset _asset({String name = 'photo.jpg'}) => PickedAsset(
@@ -91,8 +166,8 @@ class _Harness {
 /// Builds and pumps the widget tree, constructing both blocs here — inside
 /// the `testWidgets` body's own zone — rather than in a top-level `setUp()`.
 /// A bloc built in `setUp()` and then subscribed to (via
-/// `AddServiceBloc.stream` in `_loadCatalog`) from inside the test body
-/// never delivers its emissions to that subscriber under
+/// `AddServiceBloc.stream` in `_loadCatalog`/`_loadCategories`) from inside
+/// the test body never delivers its emissions to that subscriber under
 /// `flutter_test`'s FakeAsync zone; constructing it here avoids the
 /// mismatch.
 Future<_Harness> _pump(
@@ -101,8 +176,8 @@ Future<_Harness> _pump(
   VoidCallback onRequestNewService = _noop,
   Key? key,
 }) async {
-  // The Service modal sheet can exceed the default (small) test surface —
-  // use a realistic device-sized surface instead.
+  // The Category/Service modal sheets can exceed the default (small) test
+  // surface — use a realistic device-sized surface instead.
   await tester.binding.setSurfaceSize(const Size(1080, 2400));
   tester.view.physicalSize = const Size(1080, 2400);
   tester.view.devicePixelRatio = 3.0;
@@ -137,10 +212,18 @@ Future<_Harness> _pump(
   final addServiceBloc = AddServiceBloc(
     createProviderServiceUseCase: _UnusedCreateProviderServiceUseCase(),
     browseCatalogUseCase: const _FakeBrowseCatalogUseCase(),
+    getCategoriesUseCase: const _FakeGetCategoriesUseCase(),
   );
   addTearDown(() {
     mediaBloc.close();
     addServiceBloc.close();
+  });
+
+  _registerTextOptimizationCubit();
+  addTearDown(() {
+    if (sl.isRegistered<TextOptimizationCubit>()) {
+      sl.unregister<TextOptimizationCubit>();
+    }
   });
 
   await tester.pumpWidget(
@@ -171,27 +254,56 @@ Future<_Harness> _pump(
   return _Harness(mediaBloc, addServiceBloc);
 }
 
+/// Opens the Category picker (the first `AppSelectField`) and selects
+/// [name].
+Future<void> _selectCategory(WidgetTester tester, String name) async {
+  await tester.tap(find.byType(AppSelectField).first);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(name).last);
+  await tester.pumpAndSettle();
+}
+
+/// Opens the Service picker (the second `AppSelectField`) and selects
+/// [name]. Only reachable once a category has been selected.
+Future<void> _selectService(WidgetTester tester, String name) async {
+  await tester.tap(find.byType(AppSelectField).at(1));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(name).last);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   setUpAll(() {
     registerFallbackValue(_asset());
   });
 
   testWidgets(
-    'renders Service Name dropdown, Description and Images fields — no '
-    'price or free category field',
+    'renders Category and Service dropdowns, Description and Images '
+    'fields — no price field, Service starts disabled',
     (tester) async {
       await _pump(
         tester,
         onCompletenessChanged: (_) {},
       );
 
-      expect(find.byType(AppSelectField), findsOneWidget);
+      expect(find.byType(AppSelectField), findsNWidgets(2));
       expect(find.byType(AppTextField), findsOneWidget);
       expect(
-        find.text('services.add_service.service_select_hint'),
+        find.text('services.add_service.category_select_hint'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('services.add_service.service_disabled_hint'),
         findsOneWidget,
       );
       expect(find.text('services.add_service.price_hint'), findsNothing);
+
+      final serviceField = tester.widget<AppSelectField>(
+        find.byType(AppSelectField).at(1),
+      );
+      expect(serviceField.enabled, isFalse);
+      expect(serviceField.onTap, isNull);
+
       // AppInlineLinkText renders as a single Text.rich, so use
       // findRichText to see its span text.
       expect(
@@ -205,8 +317,24 @@ void main() {
   );
 
   testWidgets(
-    'selecting a service from the dropdown updates the field, retains its '
-    'id, and reveals the read-only category',
+    'tapping the disabled Service field before a category is chosen opens '
+    'nothing',
+    (tester) async {
+      await _pump(
+        tester,
+        onCompletenessChanged: (_) {},
+      );
+
+      await tester.tap(find.byType(AppSelectField).at(1));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AppTableRow), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'selecting a category enables the Service field, scoped to that '
+    'category — selecting a service updates the field and retains its id',
     (tester) async {
       final key = GlobalKey<AddServiceFormBodyState>();
       await _pump(
@@ -215,11 +343,19 @@ void main() {
         key: key,
       );
 
-      await tester.tap(find.byType(AppSelectField).first);
+      await _selectCategory(tester, 'Car');
+
+      expect(find.text('Car'), findsOneWidget);
+      final serviceField = tester.widget<AppSelectField>(
+        find.byType(AppSelectField).at(1),
+      );
+      expect(serviceField.enabled, isTrue);
+
+      await tester.tap(find.byType(AppSelectField).at(1));
       await tester.pumpAndSettle();
 
-      // Only the name is shown in the picker rows.
-      expect(find.text('Wash Car'), findsWidgets);
+      // Only this category's services are listed — not the full catalog.
+      expect(find.text('Wash Car'), findsOneWidget);
       expect(find.text('Oil Change'), findsOneWidget);
 
       await tester.tap(find.text('Oil Change'));
@@ -227,13 +363,67 @@ void main() {
 
       expect(key.currentState!.serviceId, 'svc-oil-change');
       expect(find.text('Oil Change'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'a category with no services shows the localized empty state inside '
+    'the Service picker, and Category stays changeable',
+    (tester) async {
+      await _pump(
+        tester,
+        onCompletenessChanged: (_) {},
+      );
+
+      await _selectCategory(tester, 'Home');
+      await tester.tap(find.byType(AppSelectField).at(1));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('services.add_service.service_empty_in_category'),
+        findsOneWidget,
+      );
+
+      // Category is still tappable/changeable behind this sheet — dismiss
+      // it via the modal barrier (no confirm/close button on a singleSelect
+      // AppSelectSheet) and switch category.
+      await tester.tapAt(const Offset(20, 20));
+      await tester.pumpAndSettle();
+      await _selectCategory(tester, 'Car');
+
       expect(find.text('Car'), findsOneWidget);
     },
   );
 
   testWidgets(
-    'reports complete once a service, a description, and at least one '
-    'uploaded image are present',
+    'changing category after selecting a service clears the previously '
+    'selected service',
+    (tester) async {
+      final key = GlobalKey<AddServiceFormBodyState>();
+      await _pump(
+        tester,
+        onCompletenessChanged: (_) {},
+        key: key,
+      );
+
+      await _selectCategory(tester, 'Car');
+      await _selectService(tester, 'Wash Car');
+      expect(key.currentState!.serviceId, 'svc-wash-car');
+
+      await _selectCategory(tester, 'Home');
+
+      expect(key.currentState!.serviceId, isNull);
+      expect(find.text('Wash Car'), findsNothing);
+      expect(
+        find.text('services.add_service.service_select_hint'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'reports complete once a category, a service, a description, and at '
+    'least one uploaded image are present',
     (tester) async {
       final completenessEvents = <bool>[];
       await _pump(
@@ -241,10 +431,8 @@ void main() {
         onCompletenessChanged: completenessEvents.add,
       );
 
-      await tester.tap(find.byType(AppSelectField).first);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Wash Car'));
-      await tester.pumpAndSettle();
+      await _selectCategory(tester, 'Car');
+      await _selectService(tester, 'Wash Car');
 
       expect(completenessEvents, isNot(contains(true)));
 
@@ -323,8 +511,9 @@ void main() {
   });
 
   testWidgets(
-    'validateSelection reveals the required error when no service is '
-    'selected, and clears it once one is picked',
+    'validateSelection reveals both required errors when nothing is '
+    'selected, reveals only the service error once a category is chosen, '
+    'and clears both once a service is picked',
     (tester) async {
       final key = GlobalKey<AddServiceFormBodyState>();
       await _pump(
@@ -333,6 +522,10 @@ void main() {
         key: key,
       );
 
+      expect(
+        find.text('services.add_service.category_required_error'),
+        findsNothing,
+      );
       expect(
         find.text('services.add_service.service_required_error'),
         findsNothing,
@@ -343,14 +536,26 @@ void main() {
 
       expect(isValid, isFalse);
       expect(
+        find.text('services.add_service.category_required_error'),
+        findsOneWidget,
+      );
+      expect(
         find.text('services.add_service.service_required_error'),
         findsOneWidget,
       );
 
-      await tester.tap(find.byType(AppSelectField).first);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Wash Car'));
-      await tester.pumpAndSettle();
+      await _selectCategory(tester, 'Car');
+
+      expect(
+        find.text('services.add_service.category_required_error'),
+        findsNothing,
+      );
+      expect(
+        find.text('services.add_service.service_required_error'),
+        findsOneWidget,
+      );
+
+      await _selectService(tester, 'Wash Car');
 
       expect(
         find.text('services.add_service.service_required_error'),
@@ -369,10 +574,8 @@ void main() {
         onCompletenessChanged: completenessEvents.add,
       );
 
-      await tester.tap(find.byType(AppSelectField).first);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Wash Car'));
-      await tester.pumpAndSettle();
+      await _selectCategory(tester, 'Car');
+      await _selectService(tester, 'Wash Car');
       await tester.enterText(find.byType(TextField).first, 'Great service');
       await tester.pumpAndSettle();
 
@@ -406,10 +609,8 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        await tester.tap(find.byType(AppSelectField).first);
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Wash Car'));
-        await tester.pumpAndSettle();
+        await _selectCategory(tester, 'Car');
+        await _selectService(tester, 'Wash Car');
         await tester.enterText(find.byType(TextField).first, 'Great service');
         await tester.pumpAndSettle();
 

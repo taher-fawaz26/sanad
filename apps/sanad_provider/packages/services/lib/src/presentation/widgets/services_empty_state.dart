@@ -84,6 +84,79 @@ class ServicesEmptyState extends StatelessWidget {
   }
 }
 
+/// My Services search/filter-results variant — shown when the current
+/// search query or status filter matches zero of the provider's existing
+/// services (SAN-580: must stay distinct from [ServicesEmptyState], which
+/// means "you have never added a service" and would otherwise mislead the
+/// provider into thinking their services were lost).
+class ServicesSearchEmptyState extends StatelessWidget {
+  const ServicesSearchEmptyState({
+    required this.query,
+    super.key,
+    this.onClearSearch,
+  });
+
+  final String query;
+  final VoidCallback? onClearSearch;
+
+  @override
+  Widget build(BuildContext context) {
+    final iconSize = responsiveDimension(48);
+
+    return AppEmptyState(
+      illustration: AppSvgPicture.asset(
+        AppSvgs.searchAlert,
+        width: iconSize,
+        height: iconSize,
+        colorFilter: ColorFilter.mode(
+          context.appColors.textMuted,
+          BlendMode.srcIn,
+        ),
+      ),
+      title: 'services.empty_search_title'.tr(),
+      description: 'services.empty_search_description'.tr(
+        namedArgs: {'query': query},
+      ),
+      actionLabel: 'common.cancel'.tr(),
+      actionStyle: AppEmptyStateActionStyle.link,
+      onAction: onClearSearch,
+    );
+  }
+}
+
+/// My Services category-filter-results variant — shown when the selected
+/// Category filter matches zero of the currently-loaded services. Must stay
+/// distinct from [ServicesEmptyState] for the same reason as
+/// [ServicesSearchEmptyState]: the provider may still have services in other
+/// categories, so "No services added yet" would be misleading.
+class ServicesCategoryEmptyState extends StatelessWidget {
+  const ServicesCategoryEmptyState({super.key, this.onClearCategory});
+
+  final VoidCallback? onClearCategory;
+
+  @override
+  Widget build(BuildContext context) {
+    final iconSize = responsiveDimension(48);
+
+    return AppEmptyState(
+      illustration: AppSvgPicture.asset(
+        AppSvgs.searchAlert,
+        width: iconSize,
+        height: iconSize,
+        colorFilter: ColorFilter.mode(
+          context.appColors.textMuted,
+          BlendMode.srcIn,
+        ),
+      ),
+      title: 'services.empty_search_title'.tr(),
+      description: 'services.empty_category_description'.tr(),
+      actionLabel: 'common.cancel'.tr(),
+      actionStyle: AppEmptyStateActionStyle.link,
+      onAction: onClearCategory,
+    );
+  }
+}
+
 /// Empty state for the Service request tab.
 class ServiceRequestsEmptyState extends StatelessWidget {
   const ServiceRequestsEmptyState({super.key});

@@ -2,6 +2,7 @@ import 'package:asset_picker/asset_picker.dart';
 import 'package:design_system/design_system.dart';
 import 'package:document_flow/document_flow.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sanad_provider/src/features/registration/src/presentation/widgets/registration_logo.dart';
@@ -54,6 +55,7 @@ class _DocumentRepairPageState extends State<DocumentRepairPage> {
     removeDocument: 'registration.remove_document'.tr(),
     upload: 'registration.upload'.tr(),
     retryUpload: 'common.retry'.tr(),
+    checkingDocument: 'registration.checking_document'.tr(),
   );
 
   String _titleFor(DocumentType type) => switch (type) {
@@ -82,7 +84,8 @@ class _DocumentRepairPageState extends State<DocumentRepairPage> {
         options: kRegistrationEmiratesIdOptions,
         theme: registrationPickerTheme(context),
       );
-    } on AssetPickerException {
+    } on AssetPickerException catch (e) {
+      if (kDebugMode) debugPrint('[DocumentRepair] capture failed: $e');
       if (mounted) {
         showAppErrorSnackbar(
           context: context,
@@ -124,7 +127,9 @@ class _DocumentRepairPageState extends State<DocumentRepairPage> {
     return BlocConsumer<DocumentFlowBloc, DocumentFlowState>(
       listenWhen: (prev, curr) =>
           prev.failure != curr.failure &&
-          (curr.failure is UploadFailure || curr.failure is ExtractionFailure),
+          (curr.failure is UploadFailure ||
+              curr.failure is ExtractionFailure ||
+              curr.failure is DocumentValidationFailure),
       listener: (context, state) {
         final failure = state.failure;
         if (failure == null) return;

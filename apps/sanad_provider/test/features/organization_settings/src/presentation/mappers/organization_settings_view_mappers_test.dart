@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/business_profile_status.dart';
+import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/category_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/legal_data_status.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/organization_profile_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/personal_legal_data_entity.dart';
@@ -8,7 +9,6 @@ import 'package:sanad_provider/src/features/organization_settings/src/domain/ent
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/working_hours_day_entity.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/mappers/organization_settings_view_mappers.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/components/organization_status_badge.dart';
-import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/sections/working_hours_section.dart';
 import 'package:shared_ui/shared_ui.dart' show ComplianceDocumentStatus;
 
 // Note: EasyLocalization is deliberately not bootstrapped in this repo's unit
@@ -28,6 +28,60 @@ void main() {
     personalLegalData: personalLegalData,
     tradeLicenseLegalData: tradeLicenseLegalData,
   );
+
+  group('selectedCategoryNames', () {
+    test(
+      "resolves a selected category's name from the catalog, not the "
+      'profile — the profile-embedded name comes from a non-locale-aware '
+      'endpoint (SAN-565), the catalog is always fetched fresh in the '
+      'current locale',
+      () {
+        final result = selectedCategoryNames(
+          const [CategoryEntity(id: 'cat-1', name: 'Car Wash & Detailing')],
+          const [CategoryEntity(id: 'cat-1', name: 'غسيل السيارات والتلميع')],
+        );
+
+        expect(result, ['غسيل السيارات والتلميع']);
+      },
+    );
+
+    test('preserves selection order across multiple categories', () {
+      final result = selectedCategoryNames(
+        const [
+          CategoryEntity(id: 'cat-2', name: 'Gardening & Landscaping'),
+          CategoryEntity(id: 'cat-1', name: 'Car Wash & Detailing'),
+        ],
+        const [
+          CategoryEntity(id: 'cat-1', name: 'غسيل السيارات والتلميع'),
+          CategoryEntity(id: 'cat-2', name: 'البستنة وتنسيق الحدائق'),
+        ],
+      );
+
+      expect(result, ['البستنة وتنسيق الحدائق', 'غسيل السيارات والتلميع']);
+    });
+
+    test(
+      "falls back to the profile's own name when a selected category is "
+      'missing from the catalog',
+      () {
+        final result = selectedCategoryNames(
+          const [CategoryEntity(id: 'cat-missing', name: 'Fallback Name')],
+          const [CategoryEntity(id: 'cat-1', name: 'غسيل السيارات والتلميع')],
+        );
+
+        expect(result, ['Fallback Name']);
+      },
+    );
+
+    test('empty selection yields an empty list', () {
+      expect(
+        selectedCategoryNames(const [], const [
+          CategoryEntity(id: 'cat-1', name: 'غسيل السيارات والتلميع'),
+        ]),
+        isEmpty,
+      );
+    });
+  });
 
   group('businessProgressChecklist', () {
     test('maps completion items to checklist items', () {
@@ -336,35 +390,6 @@ void main() {
         workingHoursDayGroups(const [], localeName: 'en_US'),
         isEmpty,
       );
-    });
-  });
-
-  group('groupWorkingHoursEntries', () {
-    test(
-      'groups multiple slots for the same day and returns days in canonical '
-      'Saturday-first order with chronologically-sorted slots (SAN-573)',
-      () {
-        final result = groupWorkingHoursEntries(const [
-          // Deliberately out of order (Friday first) to prove canonical sort.
-          WorkingHoursEditEntry(dayId: 'Friday', from: '10:00', to: '16:00'),
-          WorkingHoursEditEntry(dayId: 'Saturday', from: '14:00', to: '18:00'),
-          WorkingHoursEditEntry(dayId: 'Saturday', from: '09:00', to: '12:00'),
-        ]);
-
-        expect(result, hasLength(2));
-        // Saturday must come before Friday.
-        expect(result.first.day, 'Saturday');
-        expect(result.last.day, 'Friday');
-
-        // Saturday slots must be chronologically sorted.
-        expect(result.first.slots, hasLength(2));
-        expect(result.first.slots[0].from, '09:00');
-        expect(result.first.slots[1].from, '14:00');
-      },
-    );
-
-    test('empty entries yields an empty list', () {
-      expect(groupWorkingHoursEntries(const []), isEmpty);
     });
   });
 }

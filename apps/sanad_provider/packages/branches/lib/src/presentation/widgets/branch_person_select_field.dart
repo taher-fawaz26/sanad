@@ -11,6 +11,8 @@ class BranchPersonSelectField extends StatelessWidget {
     this.avatar,
     this.onTap,
     this.enabled = true,
+    this.isRequired = false,
+    this.errorText,
   });
 
   final String label;
@@ -19,6 +21,12 @@ class BranchPersonSelectField extends StatelessWidget {
   final Widget? avatar;
   final VoidCallback? onTap;
   final bool enabled;
+
+  /// When `true`, appends a red `*` after the label.
+  final bool isRequired;
+
+  /// Inline error message shown below the field (injected string).
+  final String? errorText;
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +37,8 @@ class BranchPersonSelectField extends StatelessWidget {
       prefix: avatar,
       onTap: onTap,
       enabled: enabled,
+      isRequired: isRequired,
+      errorText: errorText,
     );
   }
 }

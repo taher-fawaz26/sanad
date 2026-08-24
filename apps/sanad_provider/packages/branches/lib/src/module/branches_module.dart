@@ -1,6 +1,7 @@
 import 'package:branches/src/di/branches_di.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_cubit.dart';
+import 'package:branches/src/presentation/bloc/add_branch/add_branch_location_cubit.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_wizard_cubit.dart';
 import 'package:branches/src/presentation/bloc/branch_details/branch_details_bloc.dart';
 import 'package:branches/src/presentation/bloc/branches/branches_bloc.dart';
@@ -51,6 +52,9 @@ class BranchesModule extends FeatureModule {
           BlocProvider(create: (_) => AddBranchDraftCubit()),
           BlocProvider(
             create: (_) => AddBranchWizardCubit(totalSteps: 4),
+          ),
+          BlocProvider(
+            create: (_) => AddBranchLocationCubit(sl<LocationService>()),
           ),
         ],
         child: const AddBranchPage(),

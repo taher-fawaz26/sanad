@@ -127,6 +127,7 @@ class _AppOtpFieldState extends State<AppOtpField> {
   void _handleControllerChanged() {
     final text = _controller.text;
     final textChanged = text != _lastText;
+    final wasComplete = _lastText.length == widget.length;
     _lastText = text;
 
     if (mounted) setState(() {});
@@ -135,7 +136,9 @@ class _AppOtpFieldState extends State<AppOtpField> {
     HapticFeedback.lightImpact();
     _field?.didChange(text);
     widget.onChanged?.call(text);
-    if (text.length == widget.length) widget.onCompleted?.call(text);
+    if (text.length == widget.length && !wasComplete) {
+      widget.onCompleted?.call(text);
+    }
   }
 
   void _handleFocusChanged() {
@@ -378,12 +381,13 @@ class _AppOtpFieldState extends State<AppOtpField> {
     var borderWidth = defaultWidth;
     if (!widget.enabled) {
       borderColor = FieldTokens.disabledBorder(colors, brightness);
+    } else if (isSelectedDigit) {
+      // Targeted for replacement — emphasise even in error state
+      // so the user sees which cell gets their next keystroke.
+      borderColor = colors.primary;
+      borderWidth = emphasisWidth;
     } else if (hasError) {
       borderColor = FieldTokens.errorBorder(colors, brightness);
-      borderWidth = emphasisWidth;
-    } else if (isSelectedDigit) {
-      // The digit is targeted for replacement — emphasise it.
-      borderColor = colors.primary;
       borderWidth = emphasisWidth;
     } else if (hasDigit) {
       borderColor = colors.primary;

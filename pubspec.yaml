@@ -6,9 +6,12 @@ environment:
   sdk: ">=3.11.0 <4.0.0"
 
 workspace:
+  - apps/sanad_provider/packages/activity_logs
+  - packages/text_optimization
   - packages/deep_linking
   - packages/contact_verification
   - packages/document_flow
+  - packages/document_validation
   - packages/media_upload
   - packages/shared_ui
   - apps/sanad_provider/packages/workers
@@ -48,6 +51,18 @@ dev_dependencies:
 
 # This is the workspace root. All real packages live under apps/ and packages/.
 # Do not add dependencies here — add them to the individual package pubspecs.
+
+# This is a Dart pub *workspace* (single shared resolution/pubspec.lock across
+# all members), so dependency_overrides can only be declared here at the root
+# — Dart does not honor per-member overrides in this mode. This repoints the
+# font_awesome_flutter dependency already declared in packages/design_system
+# to a local, git-ignored, Pro-enabled configured copy — see
+# third_party/README.md for what it is and how to regenerate it. It is NOT a
+# new dependency: without third_party/font_awesome_flutter present locally,
+# resolution fails, by design (Pro assets are never committed).
+dependency_overrides:
+  font_awesome_flutter:
+    path: third_party/font_awesome_flutter
 
 # ─── Melos Configuration ─────────────────────────────────────────────────────
 # NOTE: Melos 7.x has no standalone melos.yaml file — all Melos config
