@@ -25,7 +25,6 @@ import 'package:shared_ui/shared_ui.dart';
 /// Shared by provider and client. Composes credential, language, help, and
 /// delete-account flows from existing design-system widgets.
 class AccountSettingsPage extends StatelessWidget {
-  /// Creates the account settings page.
   const AccountSettingsPage({super.key});
 
   @override
