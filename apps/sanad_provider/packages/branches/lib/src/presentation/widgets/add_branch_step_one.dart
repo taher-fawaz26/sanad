@@ -144,6 +144,7 @@ class _AddBranchStepOneState extends State<AddBranchStepOne> {
               const AppDivider(thickness: AppDividerThickness.thick),
               _WorkingHoursSection(
                 onScheduleModeChanged: _onScheduleModeChanged,
+                showErrors: widget.showValidationErrors,
               ),
             ],
           ),
@@ -333,9 +334,13 @@ class _ContactSection extends StatelessWidget {
 }
 
 class _WorkingHoursSection extends StatelessWidget {
-  const _WorkingHoursSection({required this.onScheduleModeChanged});
+  const _WorkingHoursSection({
+    required this.onScheduleModeChanged,
+    required this.showErrors,
+  });
 
   final ValueChanged<BranchScheduleMode> onScheduleModeChanged;
+  final bool showErrors;
 
   @override
   Widget build(BuildContext context) {
@@ -378,15 +383,37 @@ class _WorkingHoursSection extends StatelessWidget {
                     ),
                     builder: (context, draft) {
                       final draftCubit = context.read<AddBranchDraftCubit>();
-                      return BranchScheduleSection(
-                        mode: draft.mode,
-                        companySchedule: blocState.companySchedule,
-                        customSchedule: draft.customSchedule,
-                        rejection: draft.rejection,
-                        onModeChanged: onScheduleModeChanged,
-                        onAddSlot: (dayId, from, to) => draftCubit
-                            .addScheduleSlot(dayId: dayId, from: from, to: to),
-                        onRemoveSlot: draftCubit.removeScheduleSlot,
+                      final showScheduleError = showErrors &&
+                          draft.mode == BranchScheduleMode.custom &&
+                          draft.customSchedule.isEmpty;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          BranchScheduleSection(
+                            mode: draft.mode,
+                            companySchedule: blocState.companySchedule,
+                            customSchedule: draft.customSchedule,
+                            rejection: draft.rejection,
+                            onModeChanged: onScheduleModeChanged,
+                            onAddSlot: (dayId, from, to) =>
+                                draftCubit.addScheduleSlot(
+                              dayId: dayId,
+                              from: from,
+                              to: to,
+                            ),
+                            onRemoveSlot: draftCubit.removeScheduleSlot,
+                          ),
+                          if (showScheduleError) ...[
+                            SizedBox(height: AppSpacing.xs),
+                            Text(
+                              'branches.add_branch.schedule_required'.tr(),
+                              style: context.appTypography.smallNormal
+                                  .copyWith(
+                                color: context.appColors.error,
+                              ),
+                            ),
+                          ],
+                        ],
                       );
                     },
                   );

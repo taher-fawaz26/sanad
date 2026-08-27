@@ -311,6 +311,7 @@
       "branch_name_max_length_error": "يجب ألا يتجاوز الطول {max} حرفًا.",
       "city_required": "يرجى اختيار مدينة",
       "branch_manager_required": "يرجى اختيار مدير الفرع",
+      "schedule_required": "يرجى إضافة يوم عمل واحد على الأقل",
       "invalid_phone": "أدخل رقم هاتف صالحاً",
       "submitting_title": "جارٍ إضافة فرعك...",
       "submitting_description": "يرجى الانتظار بينما نقوم بإعداد فرعك.",

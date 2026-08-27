@@ -676,6 +676,49 @@ void main() {
         expect(draft.isStepOneComplete, isFalse);
       });
 
+      test(
+        'isStepOneComplete fails with custom schedule and no slots (SAN-701)',
+        () {
+          const draft = AddBranchDraft(
+            branchName: 'Branch',
+            selectedCity: testCity,
+            phone: '0501234567',
+            branchAddress: '123 Main St',
+            pickedPosition: LatLng(25.0, 55.0),
+            selectedManager: testManager,
+            scheduleMode: BranchScheduleMode.custom,
+          );
+          expect(draft.isStepOneComplete, isFalse);
+
+          final withSlot = draft.copyWith(
+            customSchedule: [
+              const BranchAvailabilityEntity(
+                day: 'monday',
+                slots: [BranchTimeSlotEntity(from: '09:00', to: '17:00')],
+              ),
+            ],
+          );
+          expect(withSlot.isStepOneComplete, isTrue);
+        },
+      );
+
+      test(
+        'isStepOneComplete passes with company schedule mode regardless of '
+        'custom schedule',
+        () {
+          const draft = AddBranchDraft(
+            branchName: 'Branch',
+            selectedCity: testCity,
+            phone: '0501234567',
+            branchAddress: '123 Main St',
+            pickedPosition: LatLng(25.0, 55.0),
+            selectedManager: testManager,
+            scheduleMode: BranchScheduleMode.company,
+          );
+          expect(draft.isStepOneComplete, isTrue);
+        },
+      );
+
       test('isStepTwoComplete requires radius and address', () {
         expect(const AddBranchDraft().isStepTwoComplete, isFalse);
         expect(

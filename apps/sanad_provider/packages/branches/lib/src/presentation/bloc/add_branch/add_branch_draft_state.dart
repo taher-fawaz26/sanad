@@ -106,7 +106,12 @@ class AddBranchDraft extends Equatable {
       branchAddress != null &&
       pickedPosition != null &&
       UaePhoneValidator.isMobile(phone) &&
-      selectedManager != null;
+      selectedManager != null &&
+      _isScheduleComplete;
+
+  bool get _isScheduleComplete =>
+      scheduleMode == BranchScheduleMode.company ||
+      customSchedule.isNotEmpty;
 
   bool get isStepTwoComplete =>
       coverageRadiusKm != null &&

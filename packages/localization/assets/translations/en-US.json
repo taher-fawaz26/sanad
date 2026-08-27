@@ -311,6 +311,7 @@
       "branch_name_max_length_error": "Must not exceed {max} characters.",
       "city_required": "Please select a city",
       "branch_manager_required": "Please select a branch manager",
+      "schedule_required": "Please add at least one working day",
       "invalid_phone": "Enter a valid phone number",
       "submitting_title": "Adding your branch...",
       "submitting_description": "Please wait while we set up your branch.",
