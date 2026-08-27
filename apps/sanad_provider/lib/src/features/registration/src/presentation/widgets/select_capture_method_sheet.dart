@@ -1,26 +1,37 @@
 import 'package:asset_picker/asset_picker.dart';
 import 'package:core/core.dart';
+import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 /// Scanner presentation for Emirates ID: two-sided, localized titles.
-DocumentScannerConfig emiratesIdScannerConfig() => DocumentScannerConfig(
-  screenTitle: 'registration.scan_emirates_id_title'.tr(),
-  frontSideTitle: 'registration.scan_front_side'.tr(),
-  backSideTitle: 'registration.scan_back_side'.tr(),
-  frontSideInstruction: 'registration.scan_front_instruction'.tr(),
-  backSideInstruction: 'registration.scan_back_instruction'.tr(),
-  retakeButtonText: 'registration.scan_retake'.tr(),
-  saveButtonText: 'registration.scan_continue'.tr(),
-  showInstructionText: true,
-  primaryColor: const Color(0xFF26A68C),
-);
+///
+/// [primaryColor] can't come from `context.appColors` inside this function —
+/// the document-scanner SDK renders its own native UI outside the Flutter
+/// widget tree this config is built in, so the caller resolves the token and
+/// passes the raw [Color] in (see `context.appColors.palettes.main.shade600`
+/// at the call sites, which is brightness-independent — matches this brand
+/// CTA's fixed teal regardless of theme).
+DocumentScannerConfig emiratesIdScannerConfig({required Color primaryColor}) =>
+    DocumentScannerConfig(
+      screenTitle: 'registration.scan_emirates_id_title'.tr(),
+      frontSideTitle: 'registration.scan_front_side'.tr(),
+      backSideTitle: 'registration.scan_back_side'.tr(),
+      frontSideInstruction: 'registration.scan_front_instruction'.tr(),
+      backSideInstruction: 'registration.scan_back_instruction'.tr(),
+      retakeButtonText: 'registration.scan_retake'.tr(),
+      saveButtonText: 'registration.scan_continue'.tr(),
+      showInstructionText: true,
+      primaryColor: primaryColor,
+    );
 
 /// Scanner presentation for Trade License: single-document, no front/back.
-DocumentScannerConfig tradeLicenseScannerConfig() => DocumentScannerConfig(
+DocumentScannerConfig tradeLicenseScannerConfig({
+  required Color primaryColor,
+}) => DocumentScannerConfig(
   screenTitle: 'registration.scan_trade_license_title'.tr(),
   showInstructionText: true,
-  primaryColor: const Color(0xFF26A68C),
+  primaryColor: primaryColor,
   saveButtonText: 'registration.scan_continue'.tr(),
 );
 
@@ -62,15 +73,19 @@ const _kDocumentBaseOptions = AssetPickerOptions(
 );
 
 /// Emirates ID capture options with localized scanner config applied.
-AssetPickerOptions get kRegistrationEmiratesIdOptions =>
+AssetPickerOptions registrationEmiratesIdOptions(BuildContext context) =>
     _kEmiratesIdBaseOptions.copyWith(
-      scannerConfig: emiratesIdScannerConfig(),
+      scannerConfig: emiratesIdScannerConfig(
+        primaryColor: context.appColors.palettes.main.shade600,
+      ),
     );
 
 /// Trade licence capture options with localized scanner config applied.
-AssetPickerOptions get kRegistrationDocumentOptions =>
+AssetPickerOptions registrationDocumentOptions(BuildContext context) =>
     _kDocumentBaseOptions.copyWith(
-      scannerConfig: tradeLicenseScannerConfig(),
+      scannerConfig: tradeLicenseScannerConfig(
+        primaryColor: context.appColors.palettes.main.shade600,
+      ),
     );
 
 /// Builds an [AssetPickerTheme] with registration-specific bottom-sheet labels.
@@ -119,7 +134,7 @@ Future<AssetPickerResult?> captureRegistrationDocument(
   BuildContext context, {
   AssetPickerOptions? options,
 }) async {
-  final effectiveOptions = options ?? kRegistrationDocumentOptions;
+  final effectiveOptions = options ?? registrationDocumentOptions(context);
   final theme = registrationPickerTheme(context);
   final sheetOptions = effectiveOptions.copyWith(
     sheetTitle: 'registration.select_action'.tr(),

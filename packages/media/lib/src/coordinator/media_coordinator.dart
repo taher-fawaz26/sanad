@@ -15,6 +15,7 @@ import 'package:media/src/picker/media_picker.dart';
 import 'package:media/src/utilities/media_permissions.dart';
 import 'package:media/src/validation/media_validator.dart';
 import 'package:media/src/viewer/media_viewer_page.dart';
+import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// The outcome of a media flow. The package produces this and stops — the
 /// consuming feature decides what to do next (upload, remove via its own
@@ -223,26 +224,13 @@ abstract final class MediaCoordinator {
   }
 
   static Future<MediaFlowResult> _remove(BuildContext context) async {
-    final colors = context.appColors;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showConfirmationSheet(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text('media.remove_confirm_title'.tr()),
-        content: Text('media.remove_confirm_message'.tr()),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text('common.cancel'.tr()),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(
-              'media.remove'.tr(),
-              style: TextStyle(color: colors.error),
-            ),
-          ),
-        ],
-      ),
+      title: 'media.remove_confirm_title'.tr(),
+      description: 'media.remove_confirm_message'.tr(),
+      actionLabel: 'media.remove'.tr(),
+      cancelLabel: 'common.cancel'.tr(),
+      actionIntent: AppButtonIntent.destructive,
     );
     return (confirmed ?? false)
         ? const MediaRemoveRequested()

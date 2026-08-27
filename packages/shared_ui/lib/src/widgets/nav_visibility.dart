@@ -1,3 +1,4 @@
+import 'package:app_animations/app_animations.dart';
 import 'package:flutter/widgets.dart';
 import 'package:shared_ui/src/widgets/nav_visibility_controller.dart';
 
@@ -28,7 +29,10 @@ class NavVisibility extends StatelessWidget {
   /// The bottom navigation bar widget.
   final Widget child;
 
-  /// Duration of the show/hide transition.
+  /// Duration of the show/hide transition. `220ms` is a bespoke, one-off
+  /// tuning for this specific collapse — deliberately not
+  /// [AppMotionDuration.quick] (200ms); kept as a local default (still
+  /// caller-overridable) rather than promoted to the shared vocabulary.
   final Duration duration;
 
   @override
@@ -39,7 +43,7 @@ class NavVisibility extends StatelessWidget {
         return TweenAnimationBuilder<double>(
           tween: Tween<double>(end: controller.visible ? 1 : 0),
           duration: duration,
-          curve: Curves.easeInOut,
+          curve: AppMotionCurve.standard,
           builder: (context, factor, child) {
             return Align(
               alignment: Alignment.topCenter,

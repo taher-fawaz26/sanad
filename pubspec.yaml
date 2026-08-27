@@ -20,6 +20,7 @@ workspace:
   - apps/sanad_provider
   - apps/design_catalog
   - packages/analytics
+  - packages/app_animations
   - packages/app_assets
   - packages/bottom_nav_bar
   - packages/app_logger

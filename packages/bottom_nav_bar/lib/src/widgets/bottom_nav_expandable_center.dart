@@ -1,3 +1,4 @@
+import 'package:app_animations/app_animations.dart';
 import 'package:bottom_nav_bar/src/controller/bottom_nav_controller.dart';
 import 'package:bottom_nav_bar/src/expandable/circular_menu_adapter.dart';
 import 'package:bottom_nav_bar/src/models/bottom_nav_action.dart';
@@ -102,8 +103,8 @@ class _BottomNavExpandableCenterState<T>
             alignment: Alignment.bottomCenter,
             radius: theme.fanDistance,
             animationDuration: theme.animationDuration,
-            curve: Curves.easeOut,
-            reverseCurve: Curves.easeIn,
+            curve: AppMotionCurve.decelerated,
+            reverseCurve: AppMotionCurve.accelerated,
             toggleButtonColor: fabClosedColor,
             toggleButtonOpenColor: fabOpenColor,
             toggleButtonSize: theme.iconSize,

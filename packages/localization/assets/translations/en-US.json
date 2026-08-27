@@ -717,6 +717,21 @@
     "account_scheduled_for_deletion_title": "Account locked",
     "account_scheduled_for_deletion_description": "This account is being permanently deleted and can no longer sign in. Contact support if you believe this is a mistake."
   },
+  "onboarding": {
+    "get_started_title": "Get started",
+    "get_started_subtitle": "Sign in with UAE PASS and your documents, vehicles and family are already here",
+    "continue_uae_pass": "Continue with UAE PASS",
+    "continue_email": "Continue with Email",
+    "continue_google": "Google",
+    "continue_phone": "Phone",
+    "terms_prefix": "By continuing you agree to sanad ",
+    "terms_link": "Terms of Use",
+    "email_title": "Continue with Email",
+    "email_subtitle": "Sign in or sign up with your email.",
+    "email_label": "Email",
+    "email_hint": "Email Address",
+    "next": "Next"
+  },
   "otp": {
     "title": "Enter OTP",
     "subtitle": "We've sent a verification code to {destination}",

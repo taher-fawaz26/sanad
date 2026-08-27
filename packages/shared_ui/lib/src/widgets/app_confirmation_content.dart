@@ -13,8 +13,8 @@ class AppConfirmationContent extends StatelessWidget {
     required this.cancelLabel,
     required this.onConfirm,
     required this.onCancel,
-    this.actionType = AppButtonType.primary,
-    this.destructive = false,
+    this.actionVariant = AppButtonVariant.primary,
+    this.actionIntent = AppButtonIntent.standard,
     this.padHorizontal = true,
     this.padTop = true,
     this.badge,
@@ -25,8 +25,8 @@ class AppConfirmationContent extends StatelessWidget {
   final String description;
   final String actionLabel;
   final String cancelLabel;
-  final AppButtonType actionType;
-  final bool destructive;
+  final AppButtonVariant actionVariant;
+  final AppButtonIntent actionIntent;
   final VoidCallback onConfirm;
   final VoidCallback onCancel;
 
@@ -91,14 +91,14 @@ class AppConfirmationContent extends StatelessWidget {
           SizedBox(height: sectionGap),
           AppButton(
             label: actionLabel,
-            type: actionType,
-            destructive: destructive,
+            variant: actionVariant,
+            intent: actionIntent,
             onPressed: onConfirm,
           ),
           SizedBox(height: innerGap),
           AppButton(
             label: cancelLabel,
-            type: AppButtonType.outline,
+            variant: AppButtonVariant.outline,
             onPressed: onCancel,
           ),
         ],

@@ -1,9 +1,13 @@
+import 'package:app_animations/app_animations.dart';
 import 'package:flutter/animation.dart';
 
 /// Applies [curve] to a `0..1` progress value `t`, clamping first so
 /// out-of-range inputs (e.g. from overscroll) never produce an out-of-range
 /// curve result.
-double applyCollapseCurve(double t, {Curve curve = Curves.easeOut}) {
+double applyCollapseCurve(
+  double t, {
+  Curve curve = AppMotionCurve.decelerated,
+}) {
   return curve.transform(t.clamp(0.0, 1.0));
 }
 

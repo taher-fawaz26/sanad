@@ -133,6 +133,9 @@ void main() {
     testWidgets('empty value shows the required error', (tester) async {
       await _pump(tester, bloc, state: submittableState);
 
+      // Give the (now-required) description a valid value so only the name
+      // field's own required error surfaces.
+      await tester.enterText(find.byType(TextField).at(1), 'A description');
       await tester.tap(find.byType(AppButton));
       await tester.pumpAndSettle();
 
@@ -156,6 +159,9 @@ void main() {
       await _pump(tester, bloc, state: submittableState);
 
       await tester.enterText(find.byType(TextField).first, 'a' * 100);
+      // Description is required too; fill it so no unrelated required error
+      // is picked up by the assertions below.
+      await tester.enterText(find.byType(TextField).at(1), 'A description');
       await tester.tap(find.byType(AppButton));
       await tester.pumpAndSettle();
 
@@ -167,20 +173,27 @@ void main() {
     });
   });
 
-  group('role description field (optional, max 255)', () {
+  group('role description field (required, max 255)', () {
     testWidgets(
-      'label carries an explicit optional indicator (SAN-590)',
+      'label is marked required, not optional (SAN-598)',
       (tester) async {
         await _pump(tester, bloc, state: submittableState);
 
+        // No longer appends the "(optional)" suffix.
         expect(
           find.text('provider_rbac.description_label (common.optional)'),
-          findsOneWidget,
+          findsNothing,
         );
+        final field = tester.widget<AiEnhanceDescriptionField>(
+          find.byType(AiEnhanceDescriptionField),
+        );
+        expect(field.isRequired, isTrue);
       },
     );
 
-    testWidgets('empty value shows no error (optional)', (tester) async {
+    testWidgets('empty value shows the required error (SAN-598)', (
+      tester,
+    ) async {
       await _pump(tester, bloc, state: submittableState);
 
       // Name must be valid so only the description's own errors surface.
@@ -188,11 +201,9 @@ void main() {
       await tester.tap(find.byType(AppButton));
       await tester.pumpAndSettle();
 
-      expect(
-        find.text('validation.length_max'),
-        findsNothing,
-      );
-      expect(find.text('validation.required'), findsNothing);
+      // Two required errors would appear if the name were empty too; here
+      // only the description contributes one.
+      expect(find.text('validation.required'), findsOneWidget);
     });
 
     testWidgets('256 characters shows the max-length error', (tester) async {

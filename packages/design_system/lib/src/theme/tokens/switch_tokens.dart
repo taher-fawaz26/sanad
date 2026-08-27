@@ -1,3 +1,4 @@
+import 'package:app_animations/app_animations.dart';
 import 'package:design_system/design_system.dart' show AppSwitch, AppTheme;
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
@@ -91,7 +92,7 @@ abstract final class SwitchTokens {
   static const double trackHeight = 32;
   static const double knobSize = 28;
   static const double knobInset = 2;
-  static const Duration animationDuration = Duration(milliseconds: 200);
+  static const Duration animationDuration = AppMotionDuration.quick;
 
   static AppSwitchTheme themeExtension({
     required AppColors colors,

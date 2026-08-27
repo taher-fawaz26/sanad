@@ -393,7 +393,7 @@ class _FilterChip extends StatelessWidget {
     return AppButton(
       label: label,
       size: AppButtonSize.small,
-      type: selected ? AppButtonType.secondary : AppButtonType.outline,
+      variant: selected ? AppButtonVariant.secondary : AppButtonVariant.outline,
       onPressed: onTap,
     );
   }

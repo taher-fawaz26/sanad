@@ -1,7 +1,6 @@
-import 'package:app_assets/app_assets.dart';
+import 'package:app_animations/app_animations.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/widgets.dart';
-import 'package:lottie/lottie.dart';
 
 /// SANAD green/gold orb played while AI document extraction is in progress.
 ///
@@ -10,7 +9,7 @@ import 'package:lottie/lottie.dart';
 /// nothing about extraction, HTTP, or bloc state, and should be dropped in
 /// wherever an "extracting…" visual is needed.
 ///
-/// Renders through a single `Lottie.asset` element kept alive by the normal
+/// Renders through [AppLottie.documentExtraction], kept alive by the normal
 /// widget tree, so it is never recreated (and never restarts) by unrelated
 /// rebuilds of its parent, e.g. a `BlocBuilder` re-evaluating on state that
 /// isn't the extraction phase.
@@ -23,19 +22,6 @@ class AppDocumentExtractionLoader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dimension = responsiveDimension(size);
-    return Semantics(
-      excludeSemantics: true,
-      child: RepaintBoundary(
-        child: Lottie.asset(
-          AppAnimations.documentExtractionLoader,
-          package: AppAssets.package,
-          width: dimension,
-          height: dimension,
-          fit: BoxFit.contain,
-          repeat: true,
-        ),
-      ),
-    );
+    return AppLottie.documentExtraction(size: responsiveDimension(size));
   }
 }

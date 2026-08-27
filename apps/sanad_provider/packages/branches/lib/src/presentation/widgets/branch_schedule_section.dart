@@ -97,6 +97,7 @@ class BranchScheduleSection extends StatelessWidget {
                         onDelete: mode == BranchScheduleMode.custom
                             ? () => onRemoveSlot(entry.day, index)
                             : null,
+                        deleteSemanticLabel: 'common.delete'.tr(),
                       ),
                   ],
                 ),

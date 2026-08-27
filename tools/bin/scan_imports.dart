@@ -22,6 +22,18 @@ void main() {
       (rules['infinite_scroll_pagination_allowed_packages'] as YamlList? ?? YamlList())
           .map((e) => e.toString())
           .toSet();
+  final lottieAllowed =
+      (rules['lottie_allowed_packages'] as YamlList? ?? YamlList())
+          .map((e) => e.toString())
+          .toSet();
+  final flutterAnimateAllowed =
+      (rules['flutter_animate_allowed_packages'] as YamlList? ?? YamlList())
+          .map((e) => e.toString())
+          .toSet();
+  final animationsAllowed =
+      (rules['animations_allowed_packages'] as YamlList? ?? YamlList())
+          .map((e) => e.toString())
+          .toSet();
 
   for (final pkg in packages) {
     final libDir = Directory(p.join(pkg.absolutePath, 'lib'));
@@ -53,6 +65,27 @@ void main() {
             !ispAllowed.contains(pkg.name)) {
           violations.add(
             '${pkg.name}/$relFile:${i + 1} — infinite_scroll_pagination outside shared_ui',
+          );
+        }
+
+        if (importPath.contains('package:lottie/') &&
+            !lottieAllowed.contains(pkg.name)) {
+          violations.add(
+            '${pkg.name}/$relFile:${i + 1} — lottie outside app_animations',
+          );
+        }
+
+        if (importPath.contains('package:flutter_animate/') &&
+            !flutterAnimateAllowed.contains(pkg.name)) {
+          violations.add(
+            '${pkg.name}/$relFile:${i + 1} — flutter_animate outside app_animations',
+          );
+        }
+
+        if (importPath.contains('package:animations/') &&
+            !animationsAllowed.contains(pkg.name)) {
+          violations.add(
+            '${pkg.name}/$relFile:${i + 1} — animations outside app_animations',
           );
         }
 

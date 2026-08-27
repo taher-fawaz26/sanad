@@ -1,7 +1,6 @@
-import 'package:app_assets/app_assets.dart';
+import 'package:app_animations/app_animations.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
 import 'package:shared_ui/src/states/app_empty_state.dart';
 
 /// Full-screen page shown when the signed-in user lacks permission for the
@@ -44,17 +43,7 @@ class AppForbiddenPage extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 AppEmptyState(
-                  illustration: Semantics(
-                    excludeSemantics: true,
-                    child: Lottie.asset(
-                      AppAnimations.forbidden403,
-                      package: AppAssets.package,
-                      width: size,
-                      height: size,
-                      fit: BoxFit.contain,
-                      repeat: true,
-                    ),
-                  ),
+                  illustration: AppLottie.forbidden(size: size),
                   title: title,
                   description: description,
                 ),

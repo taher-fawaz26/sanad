@@ -7,17 +7,17 @@ import 'package:workers/src/domain/entities/invitation_entity.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 import 'package:workers/src/presentation/bloc/invitation_action/invitation_action_cubit.dart';
 
-const ({AppButtonType type, bool destructive}) _resendButton = (
-  type: AppButtonType.warning,
-  destructive: false,
+const ({AppButtonVariant variant, AppButtonIntent intent}) _resendButton = (
+  variant: AppButtonVariant.primary,
+  intent: AppButtonIntent.warning,
 );
-const ({AppButtonType type, bool destructive}) _cancelButton = (
-  type: AppButtonType.primary,
-  destructive: true,
+const ({AppButtonVariant variant, AppButtonIntent intent}) _cancelButton = (
+  variant: AppButtonVariant.primary,
+  intent: AppButtonIntent.destructive,
 );
-const ({AppButtonType type, bool destructive}) _deleteButton = (
-  type: AppButtonType.primary,
-  destructive: true,
+const ({AppButtonVariant variant, AppButtonIntent intent}) _deleteButton = (
+  variant: AppButtonVariant.primary,
+  intent: AppButtonIntent.destructive,
 );
 
 /// Copies [invitation]'s link to the clipboard. No confirmation — matches
@@ -49,8 +49,8 @@ Future<void> confirmAndResendInvitation({
       namedArgs: {'name': invitation.fullName},
     ),
     actionLabel: 'common.resend'.tr(),
-    actionType: _resendButton.type,
-    destructive: _resendButton.destructive,
+    actionVariant: _resendButton.variant,
+    actionIntent: _resendButton.intent,
     cancelLabel: 'common.cancel'.tr(),
   );
 
@@ -71,8 +71,8 @@ Future<void> confirmAndCancelInvitation({
       namedArgs: {'name': invitation.fullName},
     ),
     actionLabel: 'workers.invitation_cancel_action'.tr(),
-    actionType: _cancelButton.type,
-    destructive: _cancelButton.destructive,
+    actionVariant: _cancelButton.variant,
+    actionIntent: _cancelButton.intent,
     cancelLabel: 'common.cancel'.tr(),
   );
 
@@ -93,8 +93,8 @@ Future<void> confirmAndDeleteInvitation({
       namedArgs: {'name': invitation.fullName},
     ),
     actionLabel: 'common.delete'.tr(),
-    actionType: _deleteButton.type,
-    destructive: _deleteButton.destructive,
+    actionVariant: _deleteButton.variant,
+    actionIntent: _deleteButton.intent,
     cancelLabel: 'common.cancel'.tr(),
   );
 

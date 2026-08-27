@@ -2,7 +2,7 @@ import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
 import 'package:flutter/material.dart';
 
-/// Semantic intent for an `AppSwipeAction` — mirrors `AppButtonType`'s
+/// Semantic intent for an `AppSwipeAction` — mirrors `AppButtonIntent`'s
 /// destructive/warning conventions instead of forcing arbitrary colors.
 enum AppSwipeActionVariant {
   /// Low-emphasis action, e.g. "View".

@@ -95,7 +95,7 @@ class AuthPage extends HookWidget {
               ),
               AppButton(
                 label: 'auth.register'.tr(),
-                type: AppButtonType.transparent,
+                variant: AppButtonVariant.transparent,
                 size: AppButtonSize.small,
                 onPressed: toggleMode,
               ),

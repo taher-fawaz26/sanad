@@ -1,13 +1,18 @@
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
+import 'package:design_system/src/theme/tokens/button_tokens.dart';
 import 'package:flutter/material.dart';
 
 /// Figma icon button size tier (`62:731`).
+///
+/// The tappable hit target (44/48 dp) meets the platform minimum-touch-target
+/// guideline independently of the visual glyph size (20/24 dp) — the extra
+/// tap area is transparent, so it doesn't change how the button looks.
 enum AppIconButtonSize {
-  /// 28 dp touch target, 20 dp icon.
+  /// 44 dp touch target, 20 dp icon.
   small,
 
-  /// 40 dp touch target, 24 dp icon.
+  /// 48 dp touch target, 24 dp icon.
   large,
 }
 
@@ -34,15 +39,16 @@ abstract final class IconButtonTokens {
   static IconButtonStyleSpec resolve({
     required AppIconButtonSize size,
     required AppColors colors,
+    AppButtonIntent intent = AppButtonIntent.standard,
     Color? iconColor,
   }) {
     final (dimension, iconDimension) = switch (size) {
       AppIconButtonSize.small => (
-        AppDimension.iconButtonSm,
+        responsiveDimension(44),
         AppDimension.iconMd,
       ),
       AppIconButtonSize.large => (
-        AppDimension.iconButtonLg,
+        AppDimension.buttonMd, // 48 dp — shared with AppButton's medium height.
         AppDimension.iconMenu,
       ),
     };
@@ -51,7 +57,14 @@ abstract final class IconButtonTokens {
       size: dimension,
       iconSize: iconDimension,
       borderRadius: BorderRadius.circular(AppDimension.radiusSm),
-      iconColor: iconColor ?? colors.textSecondary,
+      iconColor: iconColor ?? _defaultColor(intent, colors),
     );
   }
+
+  static Color _defaultColor(AppButtonIntent intent, AppColors colors) =>
+      switch (intent) {
+        AppButtonIntent.standard => colors.textSecondary,
+        AppButtonIntent.warning => colors.warning,
+        AppButtonIntent.destructive => colors.error,
+      };
 }

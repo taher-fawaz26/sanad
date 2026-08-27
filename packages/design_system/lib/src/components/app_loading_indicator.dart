@@ -1,6 +1,5 @@
-import 'package:app_assets/app_assets.dart';
+import 'package:app_animations/app_animations.dart';
 import 'package:flutter/widgets.dart';
-import 'package:lottie/lottie.dart';
 
 // ─── AppLoadingIndicator ───────────────────────────────────────────────────
 
@@ -21,16 +20,6 @@ class AppLoadingIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      excludeSemantics: true,
-      child: Lottie.asset(
-        AppAnimations.appLoadingIndicator,
-        package: AppAssets.package,
-        width: size,
-        height: size,
-        fit: BoxFit.contain,
-        repeat: true,
-      ),
-    );
+    return AppLottie.loading(size: size);
   }
 }

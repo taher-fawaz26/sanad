@@ -345,7 +345,7 @@ class _EditServiceContentState extends State<_EditServiceContent> {
       description: 'services.discard_confirm_description'.tr(),
       actionLabel: 'services.discard_confirm_action'.tr(),
       cancelLabel: 'services.discard_confirm_cancel'.tr(),
-      destructive: true,
+      actionIntent: AppButtonIntent.destructive,
     );
 
     if ((discard ?? false) && context.mounted && context.canPop()) {

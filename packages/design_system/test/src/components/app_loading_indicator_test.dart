@@ -1,8 +1,8 @@
+import 'package:app_animations/app_animations.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lottie/lottie.dart';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -29,17 +29,14 @@ void main() {
       await _pump(tester, const AppLoadingIndicator());
 
       expect(find.byType(AppLoadingIndicator), findsOneWidget);
-      expect(find.byType(LottieBuilder), findsOneWidget);
+      expect(find.byType(AppLottie), findsOneWidget);
     });
 
     testWidgets('respects custom size', (tester) async {
       await _pump(tester, const AppLoadingIndicator(size: 64));
 
-      final lottie = tester.widget<LottieBuilder>(
-        find.byType(LottieBuilder),
-      );
-      expect(lottie.width, 64.0);
-      expect(lottie.height, 64.0);
+      final lottie = tester.widget<AppLottie>(find.byType(AppLottie));
+      expect(lottie.size, 64.0);
     });
   });
 }

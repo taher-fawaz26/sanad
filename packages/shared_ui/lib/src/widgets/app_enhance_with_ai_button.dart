@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:app_animations/app_animations.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
@@ -10,6 +11,15 @@ import 'package:flutter/material.dart';
 /// The border is a rainbow conic gradient that continuously flows around the
 /// outline. `flutter_svg` cannot render the CSS `conic-gradient` inside the
 /// SVG's `<foreignObject>`, so the gradient is painted via [CustomPainter].
+///
+/// **Documented exception — keeps its own `AnimationController`.** A
+/// [CustomPainter]-driven continuous gradient rotation isn't something any
+/// `app_animations` effect models (those animate widget properties —
+/// opacity, translate, scale — not a shader angle); a hand-rolled
+/// controller bound to `CustomPainter.repaint` is the correct, minimal
+/// mechanism here, and is already exemplary on the performance rules that
+/// matter: `RepaintBoundary`-isolated paint layer, `TickerMode`-aware
+/// (auto-pauses off-screen), and gated by [AppMotion.reduceMotionOf].
 class AppEnhanceWithAiButton extends StatefulWidget {
   const AppEnhanceWithAiButton({
     super.key,
@@ -37,7 +47,9 @@ class AppEnhanceWithAiButton extends StatefulWidget {
   // #26A68C — the sparkle color from the SVG
   static const _sparkleColor = Color(0xFF26A68C);
 
-  /// One full revolution — calm, premium pace.
+  /// One full revolution — calm, premium pace. Bespoke: no
+  /// `AppMotionDuration` token is a multi-second decorative flow duration
+  /// like this one, and this is currently the only widget with that need.
   static const _flowDuration = Duration(milliseconds: 5200);
 
   @override
@@ -72,8 +84,7 @@ class _AppEnhanceWithAiButtonState extends State<AppEnhanceWithAiButton>
   }
 
   void _syncAnimation() {
-    final shouldAnimate =
-        widget.animate && !MediaQuery.disableAnimationsOf(context);
+    final shouldAnimate = widget.animate && !AppMotion.reduceMotionOf(context);
     if (shouldAnimate) {
       if (!_controller.isAnimating) {
         _controller.repeat();
@@ -95,9 +106,8 @@ class _AppEnhanceWithAiButtonState extends State<AppEnhanceWithAiButton>
   @override
   Widget build(BuildContext context) {
     // TickerMode automatically pauses the controller's ticker when false
-    // (e.g. off-screen in scrollables). disableAnimations stops + resets.
-    final animateBorder =
-        widget.animate && !MediaQuery.disableAnimationsOf(context);
+    // (e.g. off-screen in scrollables). Reduced motion stops + resets.
+    final animateBorder = widget.animate && !AppMotion.reduceMotionOf(context);
 
     const radius = BorderRadius.all(
       Radius.circular(AppEnhanceWithAiButton._radius),

@@ -186,7 +186,7 @@ class _SearchError extends StatelessWidget {
             SizedBox(height: AppSpacing.md),
             AppButton(
               label: retryLabel,
-              type: AppButtonType.secondary,
+              variant: AppButtonVariant.secondary,
               onPressed: onRetry,
             ),
           ],

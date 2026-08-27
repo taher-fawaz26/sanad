@@ -26,26 +26,36 @@ DocumentUploadCardLabels _labels() => DocumentUploadCardLabels(
 
 /// Emirates ID capture options — reuses the shared scanner config factory
 /// from the registration flow so scanner titles/labels stay consistent.
-AssetPickerOptions get _kEmiratesIdCaptureOptions => const AssetPickerOptions(
-  allowCamera: false,
-  allowGallery: false,
-  allowFiles: false,
-  allowScanner: true,
-  allowedAssetTypes: [AssetType.image, AssetType.pdf],
-  allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
-  loadBytes: true,
-  maxFileSize: FileSizePolicy.maxBytes,
-).copyWith(scannerConfig: emiratesIdScannerConfig());
+AssetPickerOptions _emiratesIdCaptureOptions(BuildContext context) =>
+    const AssetPickerOptions(
+      allowCamera: false,
+      allowGallery: false,
+      allowFiles: false,
+      allowScanner: true,
+      allowedAssetTypes: [AssetType.image, AssetType.pdf],
+      allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
+      loadBytes: true,
+      maxFileSize: FileSizePolicy.maxBytes,
+    ).copyWith(
+      scannerConfig: emiratesIdScannerConfig(
+        primaryColor: context.appColors.palettes.main.shade600,
+      ),
+    );
 
 /// Trade Licence capture options — reuses the shared scanner config factory.
-AssetPickerOptions get _kTradeLicenseCaptureOptions => const AssetPickerOptions(
-  allowCamera: false,
-  allowScanner: true,
-  allowedAssetTypes: [AssetType.image, AssetType.pdf],
-  allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
-  loadBytes: true,
-  maxFileSize: FileSizePolicy.maxBytes,
-).copyWith(scannerConfig: tradeLicenseScannerConfig());
+AssetPickerOptions _tradeLicenseCaptureOptions(BuildContext context) =>
+    const AssetPickerOptions(
+      allowCamera: false,
+      allowScanner: true,
+      allowedAssetTypes: [AssetType.image, AssetType.pdf],
+      allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
+      loadBytes: true,
+      maxFileSize: FileSizePolicy.maxBytes,
+    ).copyWith(
+      scannerConfig: tradeLicenseScannerConfig(
+        primaryColor: context.appColors.palettes.main.shade600,
+      ),
+    );
 
 /// Update flow for a single organization legal document (Emirates ID, or
 /// Trade Licence) — never both at once.
@@ -117,8 +127,8 @@ class _LegalDocumentsPageState extends State<LegalDocumentsPage> {
         context,
         type: type,
         options: type == DocumentType.tradeLicense
-            ? _kTradeLicenseCaptureOptions
-            : _kEmiratesIdCaptureOptions,
+            ? _tradeLicenseCaptureOptions(context)
+            : _emiratesIdCaptureOptions(context),
         theme: AssetPickerTheme.of(context),
       );
     } on AssetValidationException catch (e) {

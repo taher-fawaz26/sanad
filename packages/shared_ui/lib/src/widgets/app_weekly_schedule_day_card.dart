@@ -8,12 +8,20 @@ import 'package:shared_ui/src/widgets/app_schedule_day_row.dart';
 /// [onDelete] is null in view (read-only) mode and non-null in edit mode —
 /// deletes just this slot, never the whole day.
 class AppWeeklyScheduleSlotRow {
-  const AppWeeklyScheduleSlotRow({required this.hoursLabel, this.onDelete});
+  const AppWeeklyScheduleSlotRow({
+    required this.hoursLabel,
+    this.onDelete,
+    this.deleteSemanticLabel,
+  });
 
   /// Fully-formatted, locale-aware label — e.g. `9:00 AM – 3:00 PM` /
   /// `9:00 ص – 3:00 م`.
   final String hoursLabel;
   final VoidCallback? onDelete;
+
+  /// Accessibility label for the delete action. Falls back to the day label
+  /// when omitted — callers should pass a real localized label.
+  final String? deleteSemanticLabel;
 }
 
 /// One day rendered by [AppWeeklyScheduleDayCard] — the grouping unit shared
@@ -57,6 +65,7 @@ class AppWeeklyScheduleDayCard extends StatelessWidget {
         title: group.dayLabel,
         value: slot?.hoursLabel ?? '',
         onDelete: slot?.onDelete,
+        deleteSemanticLabel: slot?.deleteSemanticLabel,
       );
     }
     return _MultiSlotDayGroupCard(group: group);
@@ -152,23 +161,13 @@ class _MultiSlotDayGroupCardState extends State<_MultiSlotDayGroupCard> {
                       ),
                       if (slot.onDelete != null) ...[
                         SizedBox(width: AppSpacing.sm),
-                        IconButton(
-                          onPressed: slot.onDelete,
-                          icon: AppSvgPicture.asset(
-                            AppSvgs.trashBold,
-                            width: AppDimension.iconLg,
-                            height: AppDimension.iconLg,
-                            colorFilter: ColorFilter.mode(
-                              colors.error,
-                              BlendMode.srcIn,
-                            ),
-                          ),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 24,
-                            minHeight: 24,
-                          ),
-                          visualDensity: VisualDensity.compact,
+                        AppIconButton(
+                          onTap: slot.onDelete,
+                          iconAsset: AppSvgs.trashBold,
+                          size: AppIconButtonSize.small,
+                          intent: AppButtonIntent.destructive,
+                          semanticLabel:
+                              slot.deleteSemanticLabel ?? widget.group.dayLabel,
                         ),
                       ],
                     ],

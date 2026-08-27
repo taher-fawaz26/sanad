@@ -1,5 +1,5 @@
+import 'package:app_animations/app_animations.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
-import 'package:design_system/src/utils/constants/app_durations.dart';
 import 'package:flutter/material.dart';
 
 /// Token resolver for the app-wide skeleton loading effect.
@@ -28,8 +28,8 @@ import 'package:flutter/material.dart';
 abstract final class SkeletonTokens {
   SkeletonTokens._();
 
-  /// One full shimmer sweep — reuses [AppDurations.shimmer] (1200 ms).
-  static Duration get sweepDuration => AppDurations.shimmer;
+  /// One full shimmer sweep — reuses [AppMotionDuration.shimmer] (1200 ms).
+  static Duration get sweepDuration => AppMotionDuration.shimmer;
 
   /// Corner radius applied to generated bones (8 dp — matches inputs/chips).
   static const double boneBorderRadius = 8;

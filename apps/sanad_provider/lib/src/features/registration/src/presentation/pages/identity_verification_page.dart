@@ -51,7 +51,7 @@ class _IdentityVerificationPageState extends State<IdentityVerificationPage> {
       await controller.pick(
         context,
         type: slot,
-        options: kRegistrationEmiratesIdOptions,
+        options: registrationEmiratesIdOptions(context),
         theme: registrationPickerTheme(context),
       );
     } on AssetPickerException catch (e) {

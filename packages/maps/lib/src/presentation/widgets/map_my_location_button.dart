@@ -69,6 +69,7 @@ class _MapMyLocationButtonState extends State<MapMyLocationButton> {
               icon: Icons.my_location,
               size: AppIconButtonSize.large,
               onTap: _goToMyLocation,
+              semanticLabel: 'Go to my location',
             ),
     );
   }

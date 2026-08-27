@@ -42,9 +42,9 @@ Future<void> confirmAndToggleBranchMaintenance({
           ),
     actionLabel: 'common.confirm'.tr(),
     cancelLabel: 'common.cancel'.tr(),
-    actionType: goingUnderMaintenance
-        ? AppButtonType.warning
-        : AppButtonType.primary,
+    actionIntent: goingUnderMaintenance
+        ? AppButtonIntent.warning
+        : AppButtonIntent.standard,
   );
 
   if ((confirmed ?? false) && context.mounted) {
@@ -69,7 +69,7 @@ Future<void> confirmAndDeleteBranch({
     badgeLabel: branch.branchName,
     actionLabel: 'common.delete'.tr(),
     cancelLabel: 'common.cancel'.tr(),
-    destructive: true,
+    actionIntent: AppButtonIntent.destructive,
   );
 
   if ((confirmed ?? false) && context.mounted) {

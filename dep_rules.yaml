@@ -29,6 +29,12 @@ forbidden_edges:
   - from: design_system
     to: authorization
     reason: design_system is a pure UI foundation and must not depend on the authorization leaf built on top of it
+  - from: app_animations
+    to: [design_system, shared_ui]
+    reason: >-
+      app_animations is a tier-0 foundation (design_system itself depends on
+      it to migrate AppLoadingIndicator) — depending back on either would
+      create a cycle
   - from: "*"
     to: [apps/sanad_client, apps/sanad_provider, apps/design_catalog]
     reason: packages must never depend on apps (app-local packages under apps/*/packages/ are fine — only the app roots themselves are forbidden)
@@ -48,7 +54,7 @@ deleted_packages:
 # package to appear here; adding a new feature without a tier is a build error.
 layer_order:
   - tier: 0
-    packages: [core, app_assets, config, utilities]
+    packages: [core, app_assets, app_animations, config, utilities]
   - tier: 1
     packages: [design_system, app_logger, localization, shared_ui, bottom_nav_bar, authorization]
   - tier: 2
@@ -113,3 +119,16 @@ dio_allowed_packages:
 # never a domain/data pagination abstraction.
 infinite_scroll_pagination_allowed_packages:
   - shared_ui
+
+# Packages allowed to import lottie/flutter_animate/animations directly —
+# app_animations is the single animation-dependency boundary; every other
+# package consumes motion through its API (AppLottie, AppEffects,
+# AppPageTransitions, ...) instead. See packages/app_animations/README.md.
+lottie_allowed_packages:
+  - app_animations
+
+flutter_animate_allowed_packages:
+  - app_animations
+
+animations_allowed_packages:
+  - app_animations

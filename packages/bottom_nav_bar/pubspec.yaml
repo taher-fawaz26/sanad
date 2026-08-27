@@ -8,6 +8,8 @@ environment:
   sdk: ">=3.11.0 <4.0.0"
 
 dependencies:
+  app_animations:
+    path: ../app_animations
   flutter:
     sdk: flutter
 

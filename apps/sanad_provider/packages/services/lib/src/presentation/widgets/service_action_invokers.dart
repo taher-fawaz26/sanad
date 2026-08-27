@@ -50,7 +50,7 @@ Future<void> confirmAndToggleServiceStatus({
     badgeLabel: service.serviceName,
     actionLabel: isActive ? 'services.pause_confirm'.tr() : 'common.yes'.tr(),
     cancelLabel: isActive ? 'common.cancel'.tr() : 'common.close'.tr(),
-    actionType: isActive ? AppButtonType.warning : AppButtonType.primary,
+    actionIntent: isActive ? AppButtonIntent.warning : AppButtonIntent.standard,
   );
 
   if ((confirmed ?? false) && context.mounted) {
@@ -77,7 +77,7 @@ Future<void> confirmAndDeleteService({
     badgeLabel: service.serviceName,
     actionLabel: 'services.delete_confirm'.tr(),
     cancelLabel: 'common.cancel'.tr(),
-    destructive: true,
+    actionIntent: AppButtonIntent.destructive,
   );
 
   if ((confirmed ?? false) && context.mounted) {

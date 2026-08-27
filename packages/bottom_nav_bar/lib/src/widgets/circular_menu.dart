@@ -4,6 +4,22 @@ import 'package:flutter/material.dart';
 
 import 'circular_menu_item.dart';
 
+/// **Documented exception — vendored, not migrated onto `app_animations`.**
+/// This widget was integrated wholesale from the open-source `circular_menu`
+/// package (see the `refactor(navigation)` commit that added it) rather than
+/// authored in-house — note the pre-null-safety constructor style, the
+/// string-thrown exceptions, and the upstream doc typos ("rverse",
+/// "staring") preserved as-is. Its own `curve`/`reverseCurve`/
+/// `animationDuration` fields below default to `Curves.bounceOut`/
+/// `Curves.fastOutSlowIn`/500ms, but those defaults are dead code in this
+/// app: the only call site, `BottomNavExpandableCenter`, always overrides
+/// all three (with `AppMotionCurve.decelerated`/`accelerated` and
+/// `BottomNavThemeData.animationDuration`) — token integration happens
+/// there, not here. This file is intentionally left as an unmodified
+/// upstream copy so a future update can diff cleanly against it; it also
+/// does not check reduced motion — opening/closing this menu is a
+/// functional state change (it reveals actionable items), the same bucket
+/// as a sheet/page transition, not decorative motion.
 class CircularMenu extends StatefulWidget {
   /// use global key to control animation anywhere in the code
   final GlobalKey<CircularMenuState>? key;
@@ -303,19 +319,19 @@ class CircularMenuState extends State<CircularMenu>
       child: Align(
         alignment: widget.alignment,
         child: CircularMenuItem(
-            margin: widget.toggleButtonMargin,
-            color: Color.lerp(
-              widget.toggleButtonColor ?? Theme.of(context).primaryColor,
-              widget.toggleButtonOpenColor ??
-                  widget.toggleButtonColor ??
-                  Theme.of(context).primaryColor,
-              _animation.value,
-            ),
-            padding: widget.toggleButtonPadding,
-            onTap: toggle,
-            boxShadow: widget.toggleButtonBoxShadow,
-            child: toggleChild,
+          margin: widget.toggleButtonMargin,
+          color: Color.lerp(
+            widget.toggleButtonColor ?? Theme.of(context).primaryColor,
+            widget.toggleButtonOpenColor ??
+                widget.toggleButtonColor ??
+                Theme.of(context).primaryColor,
+            _animation.value,
           ),
+          padding: widget.toggleButtonPadding,
+          onTap: toggle,
+          boxShadow: widget.toggleButtonBoxShadow,
+          child: toggleChild,
+        ),
       ),
     );
   }

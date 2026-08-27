@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:design_system/src/utils/constants/app_durations.dart';
+import 'package:app_animations/app_animations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
@@ -18,9 +18,8 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 /// whichever comes first — the caller uses it to persist "seen" so the hint
 /// never plays again.
 ///
-/// Respects `MediaQuery.disableAnimations` (OS reduce-motion) and
-/// `MediaQuery.accessibleNavigation` (a screen reader is active) by skipping
-/// the animation outright and calling [onShown] immediately — screen-reader
+/// Respects reduced motion (`AppMotion.reduceMotionOf`) by skipping the
+/// animation outright and calling [onShown] immediately — screen-reader
 /// users reach actions through the per-action `Semantics` tree, not swipe.
 class AppSwipeActionHint extends StatefulWidget {
   const AppSwipeActionHint({
@@ -30,9 +29,9 @@ class AppSwipeActionHint extends StatefulWidget {
     super.key,
     this.peekFraction = 0.55,
     this.initialDelay = const Duration(milliseconds: 450),
-    this.revealDuration = AppDurations.normal,
+    this.revealDuration = AppMotionDuration.normal,
     this.hold = const Duration(milliseconds: 700),
-    this.closeDuration = AppDurations.normal,
+    this.closeDuration = AppMotionDuration.normal,
     this.repeats = 1,
   }) : assert(
          peekFraction > 0 && peekFraction <= 1,
@@ -103,8 +102,7 @@ class _AppSwipeActionHintState extends State<AppSwipeActionHint>
   Future<void> _maybeStart() async {
     if (_done || !mounted) return;
 
-    final mediaQuery = MediaQuery.of(context);
-    if (mediaQuery.disableAnimations || mediaQuery.accessibleNavigation) {
+    if (AppMotion.reduceMotionOf(context)) {
       _finish();
       return;
     }
@@ -136,7 +134,7 @@ class _AppSwipeActionHintState extends State<AppSwipeActionHint>
       await _controller.openTo(
         -peek,
         duration: widget.revealDuration,
-        curve: Curves.easeInOut,
+        curve: AppMotionCurve.standard,
       );
 
       if (_done || !mounted) return;
@@ -145,7 +143,7 @@ class _AppSwipeActionHintState extends State<AppSwipeActionHint>
       if (_done || !mounted) return;
       await _controller.close(
         duration: widget.closeDuration,
-        curve: Curves.easeInOut,
+        curve: AppMotionCurve.standard,
       );
     }
 

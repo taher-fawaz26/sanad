@@ -11,8 +11,10 @@ class AppButtonGroup extends StatelessWidget {
     super.key,
     this.secondaryLabel,
     this.onSecondary,
-    this.primaryType = AppButtonType.primary,
-    this.secondaryType = AppButtonType.secondary,
+    this.primaryVariant = AppButtonVariant.primary,
+    this.secondaryVariant = AppButtonVariant.secondary,
+    this.primaryIntent = AppButtonIntent.standard,
+    this.secondaryIntent = AppButtonIntent.standard,
     this.size = AppButtonSize.block,
   });
 
@@ -20,8 +22,10 @@ class AppButtonGroup extends StatelessWidget {
   final VoidCallback? onPrimary;
   final String? secondaryLabel;
   final VoidCallback? onSecondary;
-  final AppButtonType primaryType;
-  final AppButtonType secondaryType;
+  final AppButtonVariant primaryVariant;
+  final AppButtonVariant secondaryVariant;
+  final AppButtonIntent primaryIntent;
+  final AppButtonIntent secondaryIntent;
   final AppButtonSize size;
 
   @override
@@ -36,7 +40,8 @@ class AppButtonGroup extends StatelessWidget {
             child: AppButton(
               label: secondaryLabel!,
               onPressed: onSecondary,
-              type: secondaryType,
+              variant: secondaryVariant,
+              intent: secondaryIntent,
               size: size,
             ),
           ),
@@ -47,7 +52,8 @@ class AppButtonGroup extends StatelessWidget {
           child: AppButton(
             label: primaryLabel,
             onPressed: onPrimary,
-            type: primaryType,
+            variant: primaryVariant,
+            intent: primaryIntent,
             size: size,
           ),
         ),

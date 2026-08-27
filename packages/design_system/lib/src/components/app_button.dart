@@ -7,6 +7,11 @@ import 'package:flutter/material.dart';
 
 /// Figma `Controls / Buttons` (`30:1738`, `731:3785`).
 ///
+/// [variant] is the visual form (primary/secondary/outline/transparent) and
+/// [intent] is the semantic color (standard/warning/destructive) — the two
+/// are orthogonal, so any combination (e.g. `outline` + `destructive`) is
+/// valid.
+///
 /// Icon positions:
 /// - [AppButtonIconPosition.none] — label only, centered
 /// - [AppButtonIconPosition.left] — icon at leading edge, label centered
@@ -17,24 +22,22 @@ class AppButton extends StatefulWidget {
     required this.label,
     required this.onPressed,
     super.key,
-    this.type = AppButtonType.primary,
+    this.variant = AppButtonVariant.primary,
+    this.intent = AppButtonIntent.standard,
     this.size = AppButtonSize.block,
     this.icon,
     this.iconPosition = AppButtonIconPosition.none,
     this.isLoading = false,
-    this.destructive = false,
   });
 
   final String label;
   final VoidCallback? onPressed;
-  final AppButtonType type;
+  final AppButtonVariant variant;
+  final AppButtonIntent intent;
   final AppButtonSize size;
   final Widget? icon;
   final AppButtonIconPosition iconPosition;
   final bool isLoading;
-
-  /// When `true`, uses the red/danger palette (Figma destructive CTAs).
-  final bool destructive;
 
   @override
   State<AppButton> createState() => _AppButtonState();
@@ -58,19 +61,13 @@ class _AppButtonState extends State<AppButton> {
       if (_pressed && enabled) WidgetState.pressed,
     };
 
-    final surface = widget.destructive
-        ? ButtonTokens.destructive(
-            colors: colors,
-            brightness: brightness,
-            variant: ButtonVariant.filled,
-            states: states,
-          )
-        : ButtonTokens.resolve(
-            type: widget.type,
-            colors: colors,
-            brightness: brightness,
-            states: states,
-          );
+    final surface = ButtonTokens.resolve(
+      variant: widget.variant,
+      intent: widget.intent,
+      colors: colors,
+      brightness: brightness,
+      states: states,
+    );
 
     final minHeight = ButtonTokens.minHeight(widget.size);
     final radius = ButtonTokens.borderRadius();
@@ -106,18 +103,25 @@ class _AppButtonState extends State<AppButton> {
       ),
     );
 
+    final semanticButton = Semantics(
+      button: true,
+      enabled: enabled,
+      liveRegion: widget.isLoading,
+      child: button,
+    );
+
     if (widget.size == AppButtonSize.block) {
-      return SizedBox(width: double.infinity, child: button);
+      return SizedBox(width: double.infinity, child: semanticButton);
     }
 
-    return button;
+    return semanticButton;
   }
 
   Widget _buildContent(TextStyle textStyle) {
     if (widget.isLoading) {
       return Center(
         child: AppLoadingIndicator(
-          size: ButtonTokens.iconBoxSize(),
+          size: ButtonTokens.spinnerSize(widget.size),
         ),
       );
     }
@@ -185,7 +189,9 @@ class _AppButtonState extends State<AppButton> {
   }
 }
 
-/// Convenience constructors for common Figma button presets.
+/// Convenience constructors for the most common Figma button presets — all
+/// implicitly `intent: AppButtonIntent.standard`. For warning/destructive
+/// CTAs, pass `intent:` directly to [AppButton].
 extension AppButtonPresets on AppButton {
   static AppButton primary({
     required String label,
@@ -220,7 +226,7 @@ extension AppButtonPresets on AppButton {
       key: key,
       label: label,
       onPressed: onPressed,
-      type: AppButtonType.secondary,
+      variant: AppButtonVariant.secondary,
       size: size,
       icon: icon,
       iconPosition: iconPosition,
@@ -241,28 +247,7 @@ extension AppButtonPresets on AppButton {
       key: key,
       label: label,
       onPressed: onPressed,
-      type: AppButtonType.outline,
-      size: size,
-      icon: icon,
-      iconPosition: iconPosition,
-      isLoading: isLoading,
-    );
-  }
-
-  static AppButton warning({
-    required String label,
-    required VoidCallback? onPressed,
-    Key? key,
-    AppButtonSize size = AppButtonSize.block,
-    Widget? icon,
-    AppButtonIconPosition iconPosition = AppButtonIconPosition.none,
-    bool isLoading = false,
-  }) {
-    return AppButton(
-      key: key,
-      label: label,
-      onPressed: onPressed,
-      type: AppButtonType.warning,
+      variant: AppButtonVariant.outline,
       size: size,
       icon: icon,
       iconPosition: iconPosition,
@@ -283,7 +268,7 @@ extension AppButtonPresets on AppButton {
       key: key,
       label: label,
       onPressed: onPressed,
-      type: AppButtonType.transparent,
+      variant: AppButtonVariant.transparent,
       size: size,
       icon: icon,
       iconPosition: iconPosition,

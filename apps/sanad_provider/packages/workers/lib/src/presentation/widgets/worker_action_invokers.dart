@@ -7,17 +7,17 @@ import 'package:workers/src/domain/entities/worker_status.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 import 'package:workers/src/presentation/bloc/worker_action/worker_action_cubit.dart';
 
-const ({AppButtonType type, bool destructive}) _suspendButton = (
-  type: AppButtonType.warning,
-  destructive: false,
+const ({AppButtonVariant variant, AppButtonIntent intent}) _suspendButton = (
+  variant: AppButtonVariant.primary,
+  intent: AppButtonIntent.warning,
 );
-const ({AppButtonType type, bool destructive}) _unsuspendButton = (
-  type: AppButtonType.primary,
-  destructive: false,
+const ({AppButtonVariant variant, AppButtonIntent intent}) _unsuspendButton = (
+  variant: AppButtonVariant.primary,
+  intent: AppButtonIntent.standard,
 );
-const ({AppButtonType type, bool destructive}) _deleteButton = (
-  type: AppButtonType.primary,
-  destructive: true,
+const ({AppButtonVariant variant, AppButtonIntent intent}) _deleteButton = (
+  variant: AppButtonVariant.primary,
+  intent: AppButtonIntent.destructive,
 );
 
 /// Confirms then suspends/unsuspends [worker] via [WorkerActionCubit].
@@ -43,8 +43,8 @@ Future<void> confirmAndChangeWorkerStatus({
     actionLabel: isSuspending
         ? 'workers.suspend_action'.tr()
         : 'workers.unsuspend_action'.tr(),
-    actionType: btnConfig.type,
-    destructive: btnConfig.destructive,
+    actionVariant: btnConfig.variant,
+    actionIntent: btnConfig.intent,
     cancelLabel: 'common.cancel'.tr(),
   );
 
@@ -68,8 +68,8 @@ Future<void> confirmAndDeleteWorker({
       namedArgs: {'name': worker.fullName},
     ),
     actionLabel: 'common.delete'.tr(),
-    actionType: _deleteButton.type,
-    destructive: _deleteButton.destructive,
+    actionVariant: _deleteButton.variant,
+    actionIntent: _deleteButton.intent,
     cancelLabel: 'common.cancel'.tr(),
   );
 

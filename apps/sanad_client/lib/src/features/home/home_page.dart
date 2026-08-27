@@ -1,4 +1,4 @@
-import 'package:design_system/design_system.dart';
+import 'package:app_animations/app_animations.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_ui/shared_ui.dart';
 
@@ -26,7 +26,7 @@ class _ClientHomePageState extends State<ClientHomePage> {
     super.initState();
     // Simulated bootstrap so the reference skeleton is visible on first paint.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await Future<void>.delayed(AppDurations.pageTransition);
+      await Future<void>.delayed(AppMotionDuration.pageTransition);
       if (mounted) setState(() => _isLoading = false);
     });
   }

@@ -1,3 +1,4 @@
+import 'package:app_animations/app_animations.dart';
 import 'package:app_assets/app_assets.dart';
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
@@ -166,8 +167,8 @@ class _AppSearchFieldState extends State<AppSearchField> {
         children: [
           Expanded(
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeInOut,
+              duration: AppMotionDuration.quick,
+              curve: AppMotionCurve.standard,
               height: spec.height,
               margin: EdgeInsetsDirectional.only(
                 end: _showCancel ? spec.cancelGap : 0,

@@ -44,7 +44,7 @@ class TradeLicencePage extends StatelessWidget {
       await controller.pick(
         context,
         type: DocumentType.tradeLicense,
-        options: kRegistrationDocumentOptions,
+        options: registrationDocumentOptions(context),
         theme: registrationPickerTheme(context),
       );
     } on AssetPickerException catch (e) {

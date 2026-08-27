@@ -18,8 +18,8 @@ Future<bool?> showConfirmationSheet({
   required String actionLabel,
   required String cancelLabel,
   String? badgeLabel,
-  AppButtonType actionType = AppButtonType.primary,
-  bool destructive = false,
+  AppButtonVariant actionVariant = AppButtonVariant.primary,
+  AppButtonIntent actionIntent = AppButtonIntent.standard,
 }) {
   return SheetNavigator.push<bool>(
     context,
@@ -29,8 +29,8 @@ Future<bool?> showConfirmationSheet({
         description: description,
         actionLabel: actionLabel,
         cancelLabel: cancelLabel,
-        actionType: actionType,
-        destructive: destructive,
+        actionVariant: actionVariant,
+        actionIntent: actionIntent,
         badge: badgeLabel == null
             ? null
             : AppChip(label: badgeLabel, tone: AppChipTone.softNeutral),

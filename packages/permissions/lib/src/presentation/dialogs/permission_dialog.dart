@@ -66,7 +66,7 @@ class PermissionDialogContent extends StatelessWidget {
         AppButton(
           label: secondaryLabel,
           onPressed: secondaryAction,
-          type: AppButtonType.outline,
+          variant: AppButtonVariant.outline,
         ),
       ],
     );

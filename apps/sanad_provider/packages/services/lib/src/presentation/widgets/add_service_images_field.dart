@@ -90,7 +90,7 @@ class _AddServiceImagesFieldState extends State<AddServiceImagesField> {
       description: 'services.delete_image_confirm_description'.tr(),
       actionLabel: 'services.delete_image_confirm_action'.tr(),
       cancelLabel: 'common.cancel'.tr(),
-      destructive: true,
+      actionIntent: AppButtonIntent.destructive,
     );
     if ((confirmed ?? false) && context.mounted) {
       context.read<MediaUploadBloc>().add(MediaUploadRemoveRequested(id));

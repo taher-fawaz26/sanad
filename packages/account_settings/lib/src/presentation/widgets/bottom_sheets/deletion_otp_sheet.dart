@@ -176,7 +176,7 @@ class _DeletionOtpSheetBodyState extends State<_DeletionOtpSheetBody> {
               SizedBox(height: AppSpacing.xl),
               AppButton(
                 label: 'account_deletion.otp_confirm_button'.tr(),
-                destructive: true,
+                intent: AppButtonIntent.destructive,
                 isLoading: isVerifying,
                 onPressed: isVerifying ? null : _submit,
               ),

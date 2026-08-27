@@ -11,12 +11,17 @@ class AppScheduleDayRow extends StatelessWidget {
     super.key,
     this.valueColor,
     this.onDelete,
+    this.deleteSemanticLabel,
   });
 
   final String title;
   final String value;
   final Color? valueColor;
   final VoidCallback? onDelete;
+
+  /// Accessibility label for the delete action. Falls back to [title] when
+  /// omitted — callers should pass a real localized label (e.g. "Delete").
+  final String? deleteSemanticLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -58,23 +63,12 @@ class AppScheduleDayRow extends StatelessWidget {
               ),
               if (onDelete != null) ...[
                 SizedBox(width: AppSpacing.sm),
-                IconButton(
-                  onPressed: onDelete,
-                  icon: AppSvgPicture.asset(
-                    AppSvgs.trashBold,
-                    width: AppDimension.iconLg,
-                    height: AppDimension.iconLg,
-                    colorFilter: ColorFilter.mode(
-                      colors.error,
-                      BlendMode.srcIn,
-                    ),
-                  ),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 24,
-                    minHeight: 24,
-                  ),
-                  visualDensity: VisualDensity.compact,
+                AppIconButton(
+                  onTap: onDelete,
+                  iconAsset: AppSvgs.trashBold,
+                  size: AppIconButtonSize.small,
+                  intent: AppButtonIntent.destructive,
+                  semanticLabel: deleteSemanticLabel ?? title,
                 ),
               ],
             ],

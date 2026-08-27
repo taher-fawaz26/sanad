@@ -12,6 +12,8 @@ environment:
   flutter: ">=3.19.0"
 
 dependencies:
+  app_animations:
+    path: ../app_animations
   core:
     path: ../core
   design_system:

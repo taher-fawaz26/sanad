@@ -111,7 +111,7 @@ class AppEmptyState extends StatelessWidget {
                   label: actionLabel!,
                   onPressed: onAction,
                   icon: actionIcon,
-                  type: AppButtonType.transparent,
+                  variant: AppButtonVariant.transparent,
                   iconPosition: actionIconPosition,
                 ),
               ),

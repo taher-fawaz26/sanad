@@ -43,12 +43,11 @@ export 'tokens/button_group_tokens.dart'
 export 'tokens/button_tokens.dart'
     show
         AppButtonIconPosition,
+        AppButtonIntent,
         AppButtonSize,
-        AppButtonType,
-        ButtonStyleType,
+        AppButtonVariant,
         ButtonSurfaceColors,
-        ButtonTokens,
-        ButtonVariant;
+        ButtonTokens;
 export 'tokens/checkbox_tokens.dart' show CheckboxStyleSpec, CheckboxTokens;
 export 'tokens/chip_tokens.dart'
     show

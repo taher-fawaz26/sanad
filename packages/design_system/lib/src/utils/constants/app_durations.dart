@@ -1,18 +1,18 @@
-/// Design-system animation and timer durations.
+/// OTP timer constants.
+///
+/// This is deliberately NOT a motion/animation token set — for
+/// duration/curve tokens use `AppMotionDuration`/`AppMotionCurve`
+/// (`package:app_animations`) instead. These two values are `Timer.periodic`
+/// polling intervals for the OTP countdown label, not animation durations;
+/// they stay here (rather than in `AppMotionDuration`) because nothing about
+/// them is motion — no `Animation`/`AnimationController`/implicit
+/// `Animated*` widget consumes them.
 abstract final class AppDurations {
   AppDurations._();
 
-  static const Duration instant = Duration.zero;
-  static const Duration fast = Duration(milliseconds: 150);
-  static const Duration normal = Duration(milliseconds: 300);
-  static const Duration slow = Duration(milliseconds: 500);
-
-  /// OTP resend countdown tick — 1 second.
+  /// OTP resend countdown tick.
   static const Duration otpTimerTick = Duration(seconds: 1);
 
-  /// OTP resend cooldown — 60 seconds.
+  /// OTP resend cooldown.
   static const Duration otpResendCooldown = Duration(seconds: 60);
-
-  static const Duration pageTransition = Duration(milliseconds: 350);
-  static const Duration shimmer = Duration(milliseconds: 1200);
 }

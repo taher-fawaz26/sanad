@@ -1,3 +1,4 @@
+import 'package:app_animations/app_animations.dart';
 import 'package:design_system/src/dimensions/app_radius.dart';
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/theme/app_font.dart';
@@ -86,6 +87,7 @@ abstract final class AppTheme {
       useMaterial3: true,
       brightness: brightness,
       colorScheme: colorScheme,
+      pageTransitionsTheme: AppPageTransitions.theme,
       // Primary UI font — Inter (Figma: Dr2_Font_family)
       fontFamily: AppFontFamily.inter,
       // Fallback chain: IBMPlexSansArabic handles Arabic glyphs automatically
@@ -186,7 +188,7 @@ abstract final class AppTheme {
           ),
           backgroundColor: WidgetStateProperty.resolveWith((states) {
             return ButtonTokens.resolve(
-              type: AppButtonType.primary,
+              variant: AppButtonVariant.primary,
               colors: colors,
               brightness: brightness,
               states: states,
@@ -194,7 +196,7 @@ abstract final class AppTheme {
           }),
           foregroundColor: WidgetStateProperty.resolveWith((states) {
             return ButtonTokens.resolve(
-              type: AppButtonType.primary,
+              variant: AppButtonVariant.primary,
               colors: colors,
               brightness: brightness,
               states: states,
@@ -223,7 +225,7 @@ abstract final class AppTheme {
           ),
           foregroundColor: WidgetStateProperty.resolveWith((states) {
             return ButtonTokens.resolve(
-              type: AppButtonType.outline,
+              variant: AppButtonVariant.outline,
               colors: colors,
               brightness: brightness,
               states: states,
@@ -231,7 +233,7 @@ abstract final class AppTheme {
           }),
           side: WidgetStateProperty.resolveWith((states) {
             final border = ButtonTokens.resolve(
-              type: AppButtonType.outline,
+              variant: AppButtonVariant.outline,
               colors: colors,
               brightness: brightness,
               states: states,
@@ -250,7 +252,7 @@ abstract final class AppTheme {
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           foregroundColor: WidgetStateProperty.resolveWith((states) {
             return ButtonTokens.resolve(
-              type: AppButtonType.transparent,
+              variant: AppButtonVariant.transparent,
               colors: colors,
               brightness: brightness,
               states: states,
@@ -258,7 +260,7 @@ abstract final class AppTheme {
           }),
           backgroundColor: WidgetStateProperty.resolveWith((states) {
             return ButtonTokens.resolve(
-              type: AppButtonType.transparent,
+              variant: AppButtonVariant.transparent,
               colors: colors,
               brightness: brightness,
               states: states,

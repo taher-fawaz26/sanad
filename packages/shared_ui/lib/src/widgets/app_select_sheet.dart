@@ -211,9 +211,11 @@ class _AppSelectSheetState<T> extends State<AppSelectSheet<T>> {
             onChanged: (value) => setState(() => _query = value),
           ),
         ),
-        ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: maxHeight),
-          child: _buildBody(),
+        Flexible(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            child: _buildBody(),
+          ),
         ),
         if (!widget.singleSelect) ...[
           const AppDivider(),

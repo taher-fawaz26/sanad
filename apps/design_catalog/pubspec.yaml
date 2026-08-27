@@ -8,6 +8,8 @@ environment:
   sdk: ">=3.11.0 <4.0.0"
 
 dependencies:
+  app_animations:
+    path: ../../packages/app_animations
   app_assets:
     path: ../../packages/app_assets
   design_system:

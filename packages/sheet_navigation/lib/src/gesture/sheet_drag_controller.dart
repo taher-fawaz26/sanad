@@ -1,3 +1,4 @@
+import 'package:app_animations/app_animations.dart';
 import 'package:flutter/animation.dart';
 import 'package:flutter/gestures.dart';
 
@@ -68,6 +69,9 @@ class SheetDragController {
 
   void _animateTo(double extentFraction) {
     final target = _fullExtent == 0 ? 0.0 : extentFraction / _fullExtent;
-    controller.animateTo(target.clamp(0.0, 1.0), curve: Curves.easeOut);
+    controller.animateTo(
+      target.clamp(0.0, 1.0),
+      curve: AppMotionCurve.decelerated,
+    );
   }
 }

@@ -205,13 +205,13 @@ class _AccountDeletionPageState extends State<AccountDeletionPage> {
         SizedBox(height: AppSpacing.xl),
         AppButton(
           label: 'account_deletion.delete_button'.tr(),
-          destructive: true,
+          intent: AppButtonIntent.destructive,
           onPressed: (!isOwner || _deleteConfirmed) ? _onDeletePressed : null,
         ),
         SizedBox(height: AppSpacing.md),
         AppButton(
           label: 'common.cancel'.tr(),
-          type: AppButtonType.outline,
+          variant: AppButtonVariant.outline,
           onPressed: () => context.pop(),
         ),
       ],

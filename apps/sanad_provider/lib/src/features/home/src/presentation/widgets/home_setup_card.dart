@@ -121,7 +121,7 @@ class _SetupCardContent extends StatelessWidget {
           AppProgressBar(value: completion.percentage / 100),
           AppButton(
             label: 'home.complete_setup'.tr(),
-            type: AppButtonType.outline,
+            variant: AppButtonVariant.outline,
             onPressed: onCompleteSetup,
           ),
         ],

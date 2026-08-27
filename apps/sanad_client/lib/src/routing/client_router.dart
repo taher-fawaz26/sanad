@@ -5,16 +5,36 @@ import 'package:go_router/go_router.dart';
 import 'package:network/network.dart';
 import 'package:sanad_client/src/di/app_di.dart';
 import 'package:sanad_client/src/features/home/home_page.dart';
+import 'package:sanad_client/src/features/onboarding/continue_with_email_page.dart';
+import 'package:sanad_client/src/features/onboarding/get_started_page.dart';
+import 'package:sanad_client/src/features/onboarding/onboarding_routes.dart';
+import 'package:sanad_client/src/features/onboarding/splash_page.dart';
 import 'package:sanad_client/src/routing/client_routes.dart';
 import 'package:shared_ui/shared_ui.dart';
 
 /// sanad_client top-level router, independent from sanad_provider.
 GoRouter buildClientRouter() {
   final authStatus = sl<AuthStatusNotifier>();
-  final routeContext = FeatureRouteContext(
+  const routeContext = FeatureRouteContext(
     homeRoute: ClientRoutes.home,
     protectedRoutes: ClientRoutes.protected,
   );
+
+  // AuthModule unconditionally registers '/' (packages/auth's SplashPage)
+  // and '/login' (its combined AuthPage) — the client app renders its own
+  // onboarding flow (OnboardingSplashPage / GetStartedPage /
+  // ContinueWithEmailPage) at those paths instead. packages/auth stays
+  // unmodified (sanad_provider still uses its screens as-is; this app still
+  // needs AuthModule for AuthBloc/session/OTP). Do not remove this filter:
+  // without it GoRouter throws GoError('Duplicate path') at startup.
+  const authOverriddenPaths = {AuthRoutes.splash, AuthRoutes.login};
+  final moduleRoutes = moduleRegistry.allRoutes(routeContext);
+  final filteredModuleRoutes = moduleRoutes
+      .where(
+        (route) =>
+            route is! GoRoute || !authOverriddenPaths.contains(route.path),
+      )
+      .toList();
 
   return GoRouter(
     initialLocation: AuthRoutes.splash,
@@ -39,10 +59,24 @@ GoRouter buildClientRouter() {
     routes: [
       AuthShell.buildShellRoute(
         children: [
-          ...moduleRegistry.allRoutes(routeContext),
+          GoRoute(
+            path: OnboardingRoutes.splash,
+            builder: (context, state) => const OnboardingSplashPage(),
+          ),
+          GoRoute(
+            path: OnboardingRoutes.getStarted,
+            builder: (context, state) => const GetStartedPage(),
+          ),
+          GoRoute(
+            path: OnboardingRoutes.continueWithEmail,
+            builder: (context, state) => const ContinueWithEmailPage(),
+          ),
+          ...filteredModuleRoutes,
           AuthShell.otpRoute(
-            // The client app has no onboarding flow; a brand-new account
-            // returns to login (sign-up lives in the provider app).
+            // No post-signup onboarding token flow for the client app yet
+            // (unrelated to the pre-auth features/onboarding screens above);
+            // a brand-new account returns to login (sign-up lives in the
+            // provider app).
             onAuthenticated: (context) => context.go(ClientRoutes.home),
             onOnboarding: (context, email, onboardingToken) =>
                 context.go(AuthRoutes.login),

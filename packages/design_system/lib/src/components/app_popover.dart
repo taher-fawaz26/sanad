@@ -283,7 +283,9 @@ class AppPopover extends StatelessWidget {
           AppButton(
             label: primaryLabel!,
             onPressed: onPrimary,
-            destructive: primaryDestructive,
+            intent: primaryDestructive
+                ? AppButtonIntent.destructive
+                : AppButtonIntent.standard,
           ),
         if (actions == AppPopoverActions.dual ||
             actions == AppPopoverActions.textInput) ...[

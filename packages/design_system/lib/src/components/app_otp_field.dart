@@ -1,3 +1,4 @@
+import 'package:app_animations/app_animations.dart';
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/spacing/responsive_spacing.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
@@ -451,9 +452,13 @@ class _OtpCaret extends StatefulWidget {
 
 class _OtpCaretState extends State<_OtpCaret>
     with SingleTickerProviderStateMixin {
+  // Coincides numerically with AppMotionDuration.emphasis (500ms) — reused
+  // rather than a duplicate literal, though a blink rate isn't fundamentally
+  // an "emphasis" motion; kept as its own bespoke controller (auth-critical,
+  // see class doc) rather than migrated onto app_animations' effects.
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 500),
+    duration: AppMotionDuration.emphasis,
   )..repeat(reverse: true);
 
   @override

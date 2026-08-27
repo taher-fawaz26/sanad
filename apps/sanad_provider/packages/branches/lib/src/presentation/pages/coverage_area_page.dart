@@ -513,7 +513,7 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
             child: AppButton(
               label: 'common.add'.tr(),
               size: AppButtonSize.small,
-              type: AppButtonType.outline,
+              variant: AppButtonVariant.outline,
               icon: const Icon(Icons.add),
               iconPosition: AppButtonIconPosition.left,
               onPressed: _openAddAreaPicker,

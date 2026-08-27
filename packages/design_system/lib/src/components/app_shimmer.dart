@@ -1,12 +1,27 @@
+import 'package:app_animations/app_animations.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
-import 'package:design_system/src/utils/constants/app_durations.dart';
 import 'package:flutter/material.dart';
 
 /// Animated shimmer effect that sweeps a gradient highlight across [child].
 ///
 /// Wrap any placeholder skeleton layout with this widget to add the standard
-/// Sanad loading animation. The gradient cycles every [AppDurations.shimmer]
-/// (1200 ms).
+/// Sanad loading animation. The gradient cycles every
+/// [AppMotionDuration.shimmer] (1200 ms).
+///
+/// **Documented exception — kept as a bespoke `AnimationController` +
+/// `ShaderMask` rather than `app_animations`' generic shimmer effect.**
+/// `ShaderMask` with `BlendMode.srcATop` *replaces* the child's own pixel
+/// colors with the traveling `[base, highlight, base]` gradient — the child
+/// widgets ([ShimmerBox]/[ShimmerCircle]) render a fixed `onBackground`
+/// fill, but what's actually visible is always the light `disabled`/
+/// `surface` sweep, never that fill color. `flutter_animate`'s built-in
+/// shimmer effect overlays a highlight on top of the child's existing paint
+/// instead of replacing it — swapping to it would let the child's own dark
+/// fill show through between sweeps, a visible regression on every skeleton
+/// screen in both apps. Still fully integrated with the shared motion
+/// vocabulary: duration from [AppMotionDuration.shimmer], reduced motion
+/// from [AppMotion.reduceMotionOf] (freezes the sweep; the skeleton shape
+/// itself still communicates "loading" without the decorative motion).
 class AppShimmer extends StatefulWidget {
   const AppShimmer({required this.child, super.key});
 
@@ -25,8 +40,27 @@ class _AppShimmerState extends State<AppShimmer>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: AppDurations.shimmer,
-    )..repeat();
+      duration: AppMotionDuration.shimmer,
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reduced-motion is read from an InheritedWidget (MediaQuery), so this
+    // must happen here rather than initState — didChangeDependencies is
+    // guaranteed to run once before the first build, so the sweep starts (or
+    // doesn't) correctly from frame one either way.
+    _syncAnimating();
+  }
+
+  void _syncAnimating() {
+    if (AppMotion.reduceMotionOf(context)) {
+      if (_controller.isAnimating) _controller.stop();
+      _controller.value = 0;
+    } else if (!_controller.isAnimating) {
+      _controller.repeat();
+    }
   }
 
   @override

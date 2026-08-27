@@ -102,7 +102,7 @@ class _RolesViewState extends State<_RolesView> {
         ),
         actionLabel: 'common.delete'.tr(),
         cancelLabel: 'common.cancel'.tr(),
-        destructive: true,
+        actionIntent: AppButtonIntent.destructive,
         onConfirm: () => Navigator.of(context).pop(true),
         onCancel: () => Navigator.of(context).pop(false),
       ),

@@ -1,3 +1,4 @@
+import 'package:app_animations/app_animations.dart';
 import 'package:design_system/src/theme/tokens/segmented_control_tokens.dart';
 import 'package:flutter/material.dart';
 
@@ -65,8 +66,8 @@ class AppSegmentedControl<T> extends StatelessWidget {
             children: [
               if (selectedIndex >= 0)
                 AnimatedPositioned(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeInOut,
+                  duration: AppMotionDuration.quick,
+                  curve: AppMotionCurve.standard,
                   left: segmentWidth * visualIndex,
                   top: 0,
                   bottom: 0,

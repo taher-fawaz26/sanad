@@ -95,7 +95,8 @@ abstract final class AppSvgs {
   /// UAE flag — phone field country prefix.
   static const String flagAe = '$_base/flag_ae.svg';
 
-  /// Phone with incoming arrow — contact information sheet header (`3809:18013`).
+  /// Phone with incoming arrow — contact information sheet header
+  /// (`3809:18013`).
   static const String phoneOutcome = '$_base/phone_outcome.svg';
 
   /// Chevron down — select / dropdown fields.
@@ -276,4 +277,21 @@ abstract final class AppSvgs {
   /// Git-pull-request — Home "New Request" quick action (Figma `6801:6776`).
   static const String homeActionNewRequest =
       '$_base/home_action_new_request.svg';
+
+  // ── Client onboarding (Figma `6979:27187` / `6974:25087` / `6979:27423`) ──
+
+  /// Sparkle + checkmark splash mark — client onboarding splash screen
+  /// (`6979:27190`). Distinct from [sanadLogo] (wordmark) and [badgeCheck].
+  static const String onboardingSplashMark =
+      '$_base/onboarding_splash_mark.svg';
+
+  /// UAE PASS logo — "Continue with UAE PASS" button (`6736:49231` subtree
+  /// of `6979:25202`).
+  static const String uaePassLogo = '$_base/uae_pass_logo.svg';
+
+  /// Smartphone/device outline — "Phone" sign-in option (`6979:25218`).
+  static const String smartphoneDevice = '$_base/smartphone_device.svg';
+
+  /// Send/mail icon — Continue with Email screen icon circle (`7002:27956`).
+  static const String sendMail = '$_base/send_mail.svg';
 }

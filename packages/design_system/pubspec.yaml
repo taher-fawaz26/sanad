@@ -8,6 +8,8 @@ environment:
   sdk: ">=3.11.0 <4.0.0"
 
 dependencies:
+  app_animations:
+    path: ../app_animations
   app_assets:
     path: ../app_assets
   cached_network_image: ^3.4.1
@@ -23,7 +25,6 @@ dependencies:
   flutter_svg: ^2.2.0
   font_awesome_flutter: ^11.0.0
   hydrated_bloc: ^11.0.0
-  lottie: ^3.3.3
   skeletonizer: ^2.1.3
 
 dev_dependencies:

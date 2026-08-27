@@ -105,12 +105,15 @@ class _RoleFormPageState extends State<RoleFormPage> {
   /// Maps to the standalone `description` field on `CreateRoleDto` /
   /// `UpdateRoleDto` (NOT `displayName` — that's the name field above).
   /// Confirmed live against both DTOs' schemas: `minLength: 1, maxLength:
-  /// 255`, OPTIONAL (not in either DTO's required-fields array). Not
-  /// enforcing the minimum client-side since an empty value simply means
-  /// "not provided".
+  /// 255`. The backend leaves it optional, but the product requires a
+  /// description for every role (SAN-598), so it is validated as required
+  /// client-side.
   String? _validateDescription(String? value) {
+    if (!RequiredValidator.isValid(value)) {
+      return 'validation.required'.tr();
+    }
     final trimmed = value?.trim() ?? '';
-    if (trimmed.isNotEmpty && !MeaningfulTextValidator.isValid(trimmed)) {
+    if (!MeaningfulTextValidator.isValid(trimmed)) {
       return 'validation.meaningless_text'.tr();
     }
     if (!LengthValidator.isValid(value, maxLength: 255)) {
@@ -245,14 +248,12 @@ class _RoleFormPageState extends State<RoleFormPage> {
                         SizedBox(height: AppSpacing.lg),
                         AiEnhanceDescriptionField(
                           controller: _descriptionController,
-                          // Confirmed optional against both DTOs' schemas
-                          // (see `_validateDescription`) — spelled out
-                          // explicitly rather than left unmarked, so it
-                          // isn't ambiguous next to the required Role Name
-                          // field above it.
-                          label:
-                              '${'provider_rbac.description_label'.tr()} '
-                              '(${'common.optional'.tr()})',
+                          // Required by product (SAN-598) — carries the same
+                          // required-asterisk convention as Role Name above,
+                          // and `_validateDescription` enforces a non-empty
+                          // value on submit.
+                          label: 'provider_rbac.description_label'.tr(),
+                          isRequired: true,
                           hint: 'provider_rbac.description_hint'.tr(),
                           maxLength: 255,
                           validator: _validateDescription,

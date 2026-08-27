@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 
 /// Circular floating action button (e.g. "add service").
 ///
-/// Background is the brand teal `#26A68C` — [AppPalettes.main]'s `shade600`
-/// step — fixed across light/dark themes (unlike [AppColors.primary], which
-/// remaps per brightness) so the button reads consistently in either mode.
+/// Sourced from [ButtonTokens] (`variant: primary, intent: standard`) — the
+/// same resolver [AppButton] uses. `AppButtonVariant.primary`'s default fill
+/// intentionally has no light/dark fork, so the button reads consistently in
+/// either theme, same as before this was tokenized.
 class AppFloatingActionButton extends StatelessWidget {
   /// Creates a floating action button.
   const AppFloatingActionButton({
@@ -31,7 +32,13 @@ class AppFloatingActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final backgroundColor = colors.palettes.main.shade600;
+    final surface = ButtonTokens.resolve(
+      variant: AppButtonVariant.primary,
+      colors: colors,
+      brightness: Theme.of(context).brightness,
+      states: const {},
+    );
+    final backgroundColor = surface.background;
 
     return Semantics(
       button: true,
@@ -57,7 +64,7 @@ class AppFloatingActionButton extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(icon, color: colors.palettes.white, size: size * 0.5),
+            child: Icon(icon, color: surface.foreground, size: size * 0.5),
           ),
         ),
       ),

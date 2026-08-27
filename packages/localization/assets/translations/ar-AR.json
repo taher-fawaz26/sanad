@@ -717,6 +717,21 @@
     "account_scheduled_for_deletion_title": "الحساب مقفل",
     "account_scheduled_for_deletion_description": "يتم حذف هذا الحساب نهائيًا ولم يعد بإمكانه تسجيل الدخول. تواصل مع الدعم إذا كنت تعتقد أن هذا خطأ."
   },
+  "onboarding": {
+    "get_started_title": "ابدأ الآن",
+    "get_started_subtitle": "سجّل الدخول باستخدام UAE PASS وستجد مستنداتك ومركباتك وعائلتك جاهزة هنا",
+    "continue_uae_pass": "المتابعة عبر UAE PASS",
+    "continue_email": "المتابعة عبر البريد الإلكتروني",
+    "continue_google": "جوجل",
+    "continue_phone": "الهاتف",
+    "terms_prefix": "بالمتابعة، فإنك توافق على ",
+    "terms_link": "شروط الاستخدام",
+    "email_title": "المتابعة عبر البريد الإلكتروني",
+    "email_subtitle": "سجّل الدخول أو أنشئ حسابًا عبر بريدك الإلكتروني.",
+    "email_label": "البريد الإلكتروني",
+    "email_hint": "البريد الإلكتروني",
+    "next": "التالي"
+  },
   "otp": {
     "title": "أدخل رمز التحقق",
     "subtitle": "لقد أرسلنا رمز تحقق إلى {destination}",

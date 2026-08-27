@@ -60,32 +60,32 @@ class _SanadClientAppState extends State<SanadClientApp> {
               return Builder(
                 builder: (context) {
                   final locale = context.locale;
-                  return MaterialApp.router(
-                    debugShowCheckedModeBanner: false,
-                    localizationsDelegates: context.localizationDelegates,
-                    supportedLocales: context.supportedLocales,
-                    locale: locale,
-                    theme: AppTheme.light(),
-                    darkTheme: AppTheme.dark(),
-                    themeMode: _resolveThemeMode(themeState),
-                    routerConfig: _router,
-                    builder: (context, child) {
-                      final mediaQuery = MediaQuery.of(context);
-                      final systemScale = mediaQuery.textScaler.scale(1);
-                      final safeScale = systemScale.clamp(0.9, 1.3);
-                      return MediaQuery(
-                        data: mediaQuery.copyWith(
-                          textScaler: TextScaler.linear(safeScale),
-                        ),
-                        child: ScreenUtilInit(
-                          designSize: const Size(360, 800),
-                          useInheritedMediaQuery: true,
-                          minTextAdapt: true,
-                          splitScreenMode: true,
-                          builder: (_, _) => child ?? const SizedBox.shrink(),
-                        ),
-                      );
-                    },
+                  final mediaQuery = MediaQuery.of(context);
+                  final systemScale = mediaQuery.textScaler.scale(1);
+                  final safeScale = systemScale.clamp(0.9, 1.3);
+                  return MediaQuery(
+                    data: mediaQuery.copyWith(
+                      textScaler: TextScaler.linear(safeScale),
+                    ),
+                    child: ScreenUtilInit(
+                      designSize: const Size(360, 800),
+                      useInheritedMediaQuery: true,
+                      minTextAdapt: true,
+                      splitScreenMode: true,
+                      builder: (_, _) {
+                        return MaterialApp.router(
+                          debugShowCheckedModeBanner: false,
+                          localizationsDelegates:
+                              context.localizationDelegates,
+                          supportedLocales: context.supportedLocales,
+                          locale: locale,
+                          theme: AppTheme.light(),
+                          darkTheme: AppTheme.dark(),
+                          themeMode: _resolveThemeMode(themeState),
+                          routerConfig: _router,
+                        );
+                      },
+                    ),
                   );
                 },
               );

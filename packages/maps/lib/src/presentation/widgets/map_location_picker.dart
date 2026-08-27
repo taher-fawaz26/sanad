@@ -533,7 +533,7 @@ class _PermissionMessage extends StatelessWidget {
           SizedBox(height: AppSpacing.sm),
           AppButton(
             label: labels.openSettings,
-            type: AppButtonType.secondary,
+            variant: AppButtonVariant.secondary,
             onPressed: () {
               context.read<LocationPickerBloc>().add(
                 const LocationPickerSettingsRequested(),

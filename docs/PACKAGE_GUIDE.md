@@ -8,6 +8,7 @@
 |---------|-------------|--------|
 | `core` | Failure, UseCase, DI base, validators, extensions | Active |
 | `app_assets` | Shared images, SVGs, icons, lottie/animations, and asset path constants (no fonts, no widgets) | Active |
+| `app_animations` | Centralized animation design system — motion tokens, reusable effects/patterns, page transitions, and the single Lottie wrapper (`AppLottie`). Sole declarer of `lottie`/`flutter_animate`/`animations` | Active |
 | `config` | Pure-Dart env constants, feature flags, API URLs | Active |
 | `flavors` | Flavor definitions (dev/qa/stage/prod) | Active |
 | `network` | Dio client, interceptors, token management | Active |

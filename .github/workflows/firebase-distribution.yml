@@ -43,17 +43,71 @@ jobs:
         with:
           gradle-version: wrapper
 
-      # sanad_provider needs the Maps REST key at build time (dart-define) for
-      # serving-area discovery — see docs/CONFIGURATION.md. Without this the
-      # APK silently discovers zero serving areas (falls back to
-      # NoopNearbyAreasRepository). sanad_client doesn't use Maps and needs no
-      # dart-define.
-      - name: Write Maps dart-define (provider only)
+      # sanad_provider needs the Maps key in TWO places (provider only):
+      #
+      #   1. dart_defines/android.json — the dart-define consumed by Dart for
+      #      the Maps REST calls (serving-area discovery). Without it the APK
+      #      silently discovers zero serving areas (falls back to
+      #      NoopNearbyAreasRepository).
+      #
+      #   2. android/local.properties — the source of the `MAPS_API_KEY`
+      #      manifest placeholder (see android/app/build.gradle.kts). This is
+      #      what the *native* Google Maps SDK reads to render map tiles.
+      #      Missing here, the placeholder resolves to "" and the map picker
+      #      shows a blank background with only the pin/watermark (SAN-598) —
+      #      which is why debug builds (dev's own local.properties) work but
+      #      the Firebase App Distribution APK doesn't.
+      #
+      # sanad_client doesn't use Maps and needs neither.
+      - name: Write Maps config (provider only)
         if: matrix.app == 'provider'
         working-directory: apps/sanad_provider
         run: |
           mkdir -p dart_defines
           echo '{"MAPS_API_KEY":"${{ secrets.MAPS_API_KEY_ANDROID }}"}' > dart_defines/android.json
+          echo 'MAPS_API_KEY=${{ secrets.MAPS_API_KEY_ANDROID }}' >> android/local.properties
+
+      # SAN-598 / reproducible release signing (provider only): sign the release
+      # APK with a PERSISTENT release keystore (stored base64 in a secret) so the
+      # signing certificate — and therefore its SHA-1/SHA-256 — is identical on
+      # every CI run. This is what lets the Google Maps Android API key stay
+      # restricted to one stable release SHA-1 instead of the ephemeral debug
+      # keystore the runner would otherwise fall back to. See
+      # android/app/build.gradle.kts: it switches to the `release` signingConfig
+      # only when key.properties exists. Local dev is unaffected — a dev machine
+      # has no key.properties, so it keeps using debug signing.
+      - name: Decode release keystore (provider only)
+        if: matrix.app == 'provider'
+        working-directory: apps/sanad_provider/android
+        env:
+          # Existing `development` environment secrets. STORE_PASSWORD maps to
+          # PROVIDER_ANDROID_KEYSTORE_PASSWORD (the keystore/store password);
+          # KEY_PASSWORD maps to PROVIDER_ANDROID_KEY_PASSWORD (the key password).
+          KEYSTORE_BASE64: ${{ secrets.PROVIDER_ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.PROVIDER_ANDROID_KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.PROVIDER_ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PROVIDER_ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$STORE_PASSWORD" ] \
+             || [ -z "$KEY_PASSWORD" ] || [ -z "$KEY_ALIAS" ]; then
+            echo "::error::Missing Android release signing secrets \
+          (PROVIDER_ANDROID_KEYSTORE_BASE64 / _KEYSTORE_PASSWORD / _KEY_PASSWORD \
+          / _KEY_ALIAS). Configure them on the 'development' environment."
+            exit 1
+          fi
+          # Decode the keystore next to the :app module. storeFile in
+          # key.properties is resolved relative to the :app dir (android/app).
+          echo "$KEYSTORE_BASE64" | base64 -d > app/release-keystore.jks
+          # key.properties is read by android/app/build.gradle.kts. Values come
+          # from env (masked in logs); the file itself is never printed and is
+          # git-ignored (android/.gitignore: key.properties, **/*.jks).
+          {
+            echo "storeFile=release-keystore.jks"
+            echo "keyAlias=${KEY_ALIAS}"
+            echo "storePassword=${STORE_PASSWORD}"
+            echo "keyPassword=${KEY_PASSWORD}"
+          } > key.properties
+          echo "Release keystore + key.properties written (contents not printed)."
 
       - name: Build APK
         working-directory: apps/sanad_${{ matrix.app }}
@@ -62,6 +116,42 @@ jobs:
             flutter build apk --release --build-number=${{ github.run_number }} --dart-define-from-file=dart_defines/android.json
           else
             flutter build apk --release --build-number=${{ github.run_number }}
+          fi
+
+      # Prove the APK is actually signed with the persistent release cert (not
+      # the debug fallback), and — when the expected fingerprint is configured —
+      # assert it hasn't drifted. Only the public certificate fingerprints are
+      # printed; no private key or password is ever emitted.
+      - name: Verify release APK signing certificate (provider only)
+        if: matrix.app == 'provider'
+        working-directory: apps/sanad_provider
+        env:
+          EXPECTED_SHA256: ${{ vars.ANDROID_RELEASE_CERT_SHA256 }}
+        run: |
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          APKSIGNER=$(ls -d "$SDK"/build-tools/*/apksigner | sort -V | tail -n1)
+          echo "Using: $APKSIGNER"
+          "$APKSIGNER" verify --print-certs "$APK" | tee apksigner-certs.txt
+          if grep -qi "CN=Android Debug" apksigner-certs.txt; then
+            echo "::error::Release APK is signed with the DEBUG certificate, \
+          not the persistent release keystore."
+            exit 1
+          fi
+          ACTUAL=$(grep -i "certificate SHA-256 digest:" apksigner-certs.txt \
+            | head -n1 | awk '{print $NF}' | tr 'A-Z' 'a-z' | tr -d ':')
+          echo "Release certificate SHA-256: $ACTUAL"
+          if [ -n "$EXPECTED_SHA256" ]; then
+            EXPECT=$(echo "$EXPECTED_SHA256" | tr 'A-Z' 'a-z' | tr -d ':')
+            if [ "$ACTUAL" != "$EXPECT" ]; then
+              echo "::error::Release cert SHA-256 ($ACTUAL) does not match \
+          ANDROID_RELEASE_CERT_SHA256 ($EXPECT)."
+              exit 1
+            fi
+            echo "Certificate SHA-256 matches ANDROID_RELEASE_CERT_SHA256."
+          else
+            echo "::warning::ANDROID_RELEASE_CERT_SHA256 not set — skipping \
+          fingerprint-match assertion. Set it to enforce reproducible signing."
           fi
 
       - name: Upload to Firebase App Distribution
