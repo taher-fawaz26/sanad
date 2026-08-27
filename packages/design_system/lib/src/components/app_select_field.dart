@@ -93,7 +93,12 @@ class AppSelectField extends StatelessWidget {
               ),
             ),
             child: InkWell(
-              onTap: enabled ? onTap : null,
+              onTap: enabled
+                  ? () {
+                      FocusManager.instance.primaryFocus?.unfocus();
+                      onTap?.call();
+                    }
+                  : null,
               borderRadius: FieldTokens.borderRadiusAll(),
               child: SizedBox(
                 height: fieldHeight,

@@ -187,7 +187,10 @@ class _AppPhoneFieldState extends State<AppPhoneField> {
               field.didChange(value);
               widget.onChanged?.call(value);
             },
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(10),
+            ],
             style: FieldTokens.valueStyle(
               typography,
               colors,
