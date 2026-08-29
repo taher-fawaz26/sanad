@@ -46,6 +46,7 @@ class AddBranchDraft extends Equatable {
     this.selectedManager,
     this.scheduleMode = BranchScheduleMode.company,
     this.customSchedule = const [],
+    this.companyHasWorkingHours = false,
     this.lastScheduleRejection,
     this.coverageRadiusKm,
     this.servingAreas = const [],
@@ -62,6 +63,12 @@ class AddBranchDraft extends Equatable {
   final BranchManagerEntity? selectedManager;
   final BranchScheduleMode scheduleMode;
   final List<BranchAvailabilityEntity> customSchedule;
+
+  /// Whether the company (parent) schedule has at least one working slot,
+  /// seeded from the setup fetch. In [BranchScheduleMode.company] the branch
+  /// inherits the company schedule, so this gates Step 1 completion: a company
+  /// with no hours set yet cannot be inherited into a usable branch.
+  final bool companyHasWorkingHours;
 
   /// Most recent add-slot validation rejection for [customSchedule], or
   /// `null` when there's nothing to show. See [ScheduleSlotRejection].
@@ -109,9 +116,18 @@ class AddBranchDraft extends Equatable {
       selectedManager != null &&
       _isScheduleComplete;
 
-  bool get _isScheduleComplete =>
-      scheduleMode == BranchScheduleMode.company ||
-      customSchedule.isNotEmpty;
+  /// Working hours are mandatory. In company mode the branch inherits the
+  /// company schedule, so it must actually have hours; in custom mode the
+  /// user must have added at least one working slot.
+  bool get _isScheduleComplete => switch (scheduleMode) {
+    BranchScheduleMode.company => companyHasWorkingHours,
+    BranchScheduleMode.custom => hasCustomWorkingHours,
+  };
+
+  /// True when the custom schedule has at least one day with at least one
+  /// slot — a day entry stripped of all its slots does not count.
+  bool get hasCustomWorkingHours =>
+      customSchedule.any((day) => day.slots.isNotEmpty);
 
   bool get isStepTwoComplete =>
       coverageRadiusKm != null &&
@@ -132,6 +148,7 @@ class AddBranchDraft extends Equatable {
     BranchManagerEntity? Function()? selectedManager,
     BranchScheduleMode? scheduleMode,
     List<BranchAvailabilityEntity>? customSchedule,
+    bool? companyHasWorkingHours,
     ScheduleSlotRejection? Function()? lastScheduleRejection,
     double? Function()? coverageRadiusKm,
     List<ServingArea>? servingAreas,
@@ -151,6 +168,8 @@ class AddBranchDraft extends Equatable {
         : this.selectedManager,
     scheduleMode: scheduleMode ?? this.scheduleMode,
     customSchedule: customSchedule ?? this.customSchedule,
+    companyHasWorkingHours:
+        companyHasWorkingHours ?? this.companyHasWorkingHours,
     lastScheduleRejection: lastScheduleRejection != null
         ? lastScheduleRejection()
         : this.lastScheduleRejection,
@@ -173,6 +192,7 @@ class AddBranchDraft extends Equatable {
     selectedManager,
     scheduleMode,
     customSchedule,
+    companyHasWorkingHours,
     lastScheduleRejection,
     coverageRadiusKm,
     servingAreas,

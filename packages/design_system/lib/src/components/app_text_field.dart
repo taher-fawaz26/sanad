@@ -40,6 +40,7 @@ class AppTextField extends StatefulWidget {
     this.maxLines = 1,
     this.textCapitalization = TextCapitalization.none,
     this.autovalidateMode,
+    this.isLtr = false,
   });
 
   final TextEditingController? controller;
@@ -73,6 +74,12 @@ class AppTextField extends StatefulWidget {
   final int maxLines;
   final TextCapitalization textCapitalization;
   final AutovalidateMode? autovalidateMode;
+
+  /// When `true`, the input row (text, cursor, prefix/suffix positions) is
+  /// forced to LTR regardless of the app locale. Use for inherently-LTR
+  /// content: email, URL/website, and social-profile fields. The label,
+  /// error, and caption still follow the ambient locale direction.
+  final bool isLtr;
 
   @override
   State<AppTextField> createState() => _AppTextFieldState();
@@ -133,40 +140,43 @@ class _AppTextFieldState extends State<AppTextField> {
               ),
               SizedBox(height: _labelGap),
             ],
-            _wrapFieldHeight(
-              Material(
-                type: MaterialType.transparency,
-                child: TextField(
-                  controller: widget.controller,
-                  focusNode: widget.focusNode,
-                  enabled: widget.enabled,
-                  readOnly: widget.readOnly,
-                  autofocus: widget.autofocus,
-                  obscureText: widget.obscureText,
-                  keyboardType:
-                      widget.keyboardType ??
-                      (widget.maxLines > 1 ? TextInputType.multiline : null),
-                  textInputAction: widget.textInputAction,
-                  onChanged: (value) {
-                    field.didChange(value);
-                    widget.onChanged?.call(value);
-                  },
-                  onSubmitted: widget.onSubmitted,
-                  inputFormatters: widget.inputFormatters,
-                  minLines: widget.maxLines > 1 ? widget.maxLines : null,
-                  maxLines: widget.maxLines,
-                  textCapitalization: widget.textCapitalization,
-                  style: FieldTokens.valueStyle(
-                    typography,
-                    colors,
-                    brightness,
+            _wrapLtr(
+              _wrapFieldHeight(
+                Material(
+                  type: MaterialType.transparency,
+                  child: TextField(
+                    textDirection: widget.isLtr ? TextDirection.ltr : null,
+                    controller: widget.controller,
+                    focusNode: widget.focusNode,
                     enabled: widget.enabled,
-                  ),
-                  decoration: _buildDecoration(
-                    colors: colors,
-                    typography: typography,
-                    brightness: brightness,
-                    hasError: hasError,
+                    readOnly: widget.readOnly,
+                    autofocus: widget.autofocus,
+                    obscureText: widget.obscureText,
+                    keyboardType:
+                        widget.keyboardType ??
+                        (widget.maxLines > 1 ? TextInputType.multiline : null),
+                    textInputAction: widget.textInputAction,
+                    onChanged: (value) {
+                      field.didChange(value);
+                      widget.onChanged?.call(value);
+                    },
+                    onSubmitted: widget.onSubmitted,
+                    inputFormatters: widget.inputFormatters,
+                    minLines: widget.maxLines > 1 ? widget.maxLines : null,
+                    maxLines: widget.maxLines,
+                    textCapitalization: widget.textCapitalization,
+                    style: FieldTokens.valueStyle(
+                      typography,
+                      colors,
+                      brightness,
+                      enabled: widget.enabled,
+                    ),
+                    decoration: _buildDecoration(
+                      colors: colors,
+                      typography: typography,
+                      brightness: brightness,
+                      hasError: hasError,
+                    ),
                   ),
                 ),
               ),
@@ -196,6 +206,15 @@ class _AppTextFieldState extends State<AppTextField> {
       return widget.errorText;
     }
     return field.errorText;
+  }
+
+  /// Forces the input row (chrome, prefix/suffix, and editable text) to LTR
+  /// when [AppTextField.isLtr] is `true`. The label above and any
+  /// error/caption below stay under the ambient locale direction, so
+  /// localized labels remain RTL in Arabic.
+  Widget _wrapLtr(Widget child) {
+    if (!widget.isLtr) return child;
+    return Directionality(textDirection: TextDirection.ltr, child: child);
   }
 
   /// Single-line fields keep the Figma 48px height. Multiline fields size

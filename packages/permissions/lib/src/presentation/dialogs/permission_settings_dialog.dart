@@ -1,4 +1,3 @@
-import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:permissions/src/domain/enums/permission_type.dart';
 import 'package:permissions/src/presentation/dialogs/permission_dialog.dart';
@@ -35,19 +34,31 @@ class PermissionSettingsDialog {
 
     await SheetNavigator.push<void>(
       context,
-      PermissionDialogContent(
-        explanation: resolved,
-        theme: theme,
-        primaryLabel:
-            resolved.openSettingsLabel ?? theme.texts.openSettingsButtonLabel,
-        primaryAction: () {
-          Navigator.of(context).pop();
-          onOpenSettings();
-        },
-        secondaryLabel: resolved.cancelLabel ?? theme.texts.cancelButtonLabel,
-        secondaryAction: () => Navigator.of(context).pop(),
+      // `sheetContext` (not the outer `context`) is what the pop calls must
+      // use — see the matching comment in `PermissionRationaleDialog.show`.
+      Builder(
+        builder: (sheetContext) => PermissionDialogContent(
+          explanation: resolved,
+          theme: theme,
+          primaryLabel:
+              resolved.openSettingsLabel ??
+              theme.texts.openSettingsButtonLabel,
+          primaryAction: () {
+            Navigator.of(sheetContext).pop();
+            onOpenSettings();
+          },
+          secondaryLabel:
+              resolved.cancelLabel ?? theme.texts.cancelButtonLabel,
+          secondaryAction: () => Navigator.of(sheetContext).pop(),
+        ),
       ),
-      settings: const SheetRouteSettings(barrierColor: Colors.transparent),
+      settings: const SheetRouteSettings(
+        barrierColor: Colors.transparent,
+        // See `PermissionRationaleDialog.show` — this sheet always pops
+        // itself before anything else happens, so it must never morph to
+        // fullscreen from a route pushed while it's still exiting.
+        expandPreviousToFullscreen: false,
+      ),
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Editable organization social profile links.
@@ -117,12 +118,16 @@ class _EditSocialProfilesSheetBodyState
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _SheetHeader(title: 'settings.section_social'.tr()),
+            SettingsSheetTitle(title: 'settings.section_social'.tr()),
             SizedBox(height: AppSpacing.lg),
             AppTextField(
               label: 'settings.social_facebook'.tr(),
               hint: 'settings.social_facebook'.tr(),
               controller: _facebookController,
+              isLtr: true,
+              prefixIcon: const _SocialPrefixIcon(
+                asset: AppSvgs.socialFacebook,
+              ),
               keyboardType: TextInputType.url,
               textInputAction: TextInputAction.next,
               validator: _urlValidator,
@@ -132,6 +137,8 @@ class _EditSocialProfilesSheetBodyState
               label: 'settings.social_tiktok'.tr(),
               hint: 'settings.social_tiktok'.tr(),
               controller: _tiktokController,
+              isLtr: true,
+              prefixIcon: const _SocialPrefixIcon(asset: AppSvgs.socialTiktok),
               keyboardType: TextInputType.url,
               textInputAction: TextInputAction.next,
               validator: _urlValidator,
@@ -141,6 +148,10 @@ class _EditSocialProfilesSheetBodyState
               label: 'settings.social_instagram'.tr(),
               hint: 'settings.social_instagram'.tr(),
               controller: _instagramController,
+              isLtr: true,
+              prefixIcon: const _SocialPrefixIcon(
+                asset: AppSvgs.socialInstagram,
+              ),
               keyboardType: TextInputType.url,
               textInputAction: TextInputAction.next,
               validator: _urlValidator,
@@ -150,6 +161,8 @@ class _EditSocialProfilesSheetBodyState
               label: 'settings.social_twitter'.tr(),
               hint: 'settings.social_twitter'.tr(),
               controller: _xController,
+              isLtr: true,
+              prefixIcon: const _SocialPrefixIcon(asset: AppSvgs.socialTwitter),
               keyboardType: TextInputType.url,
               textInputAction: TextInputAction.next,
               validator: _urlValidator,
@@ -159,6 +172,7 @@ class _EditSocialProfilesSheetBodyState
               label: 'settings.social_website_url'.tr(),
               hint: 'settings.social_website_url'.tr(),
               controller: _websiteController,
+              isLtr: true,
               keyboardType: TextInputType.url,
               textInputAction: TextInputAction.done,
               validator: _urlValidator,
@@ -175,38 +189,9 @@ class _EditSocialProfilesSheetBodyState
   }
 }
 
-class _SheetHeader extends StatelessWidget {
-  const _SheetHeader({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final typography = context.appTypography;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AppSvgPicture.asset(
-          AppSvgs.socialFacebook,
-          width: AppDimension.iconMenu,
-          height: AppDimension.iconMenu,
-        ),
-        SizedBox(height: AppSpacing.md),
-        Text(
-          title,
-          style: typography.title3.copyWith(
-            color: colors.primary,
-            fontWeight: FontWeight.w600,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
-}
-
+/// Left-aligned platform icon rendered inside a social/URL AppTextField's
+/// prefix slot. The field itself is forced LTR via `isLtr: true`, so this
+/// prefix always sits on the visual left regardless of app locale.
 class _SocialPrefixIcon extends StatelessWidget {
   const _SocialPrefixIcon({required this.asset});
 
@@ -214,10 +199,13 @@ class _SocialPrefixIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppSvgPicture.asset(
-      asset,
-      width: AppDimension.iconMenu,
-      height: AppDimension.iconMenu,
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      child: AppSvgPicture.asset(
+        asset,
+        width: AppDimension.iconMd,
+        height: AppDimension.iconMd,
+      ),
     );
   }
 }

@@ -1,134 +1,161 @@
-// Deletion OTP "Confirm Deletion" sheet: the resend row shows a countdown
-// only while the server cooldown is actually ticking (never "Resend in 0
-// seconds"), and there is no yellow "last attempt" warning. EasyLocalization
-// is not bootstrapped, so `.tr()` falls back to raw keys.
-//
-// The OTP field runs a repeating caret animation, so these tests use bounded
-// `pump()`s — never `pumpAndSettle()`.
+import 'package:account_settings/src/domain/entities/account_deletion_request.dart';
+import 'package:account_settings/src/domain/enums/account_deletion_status.dart';
 import 'package:account_settings/src/domain/entities/deletion_resend_info.dart';
-import 'package:account_settings/src/presentation/bloc/account_deletion/account_deletion_bloc.dart';
 import 'package:account_settings/src/presentation/widgets/bottom_sheets/deletion_otp_sheet.dart';
-import 'package:bloc_test/bloc_test.dart';
+import 'package:account_settings/src/domain/usecases/account_settings_params.dart';
+import 'package:account_settings/src/domain/usecases/get_deletion_resend_info_usecase.dart';
+import 'package:account_settings/src/domain/usecases/resend_deletion_otp_usecase.dart';
+import 'package:account_settings/src/domain/usecases/verify_deletion_otp_usecase.dart';
+import 'package:auth/auth.dart';
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fpdart/fpdart.dart';
 import 'package:mocktail/mocktail.dart';
 
-class _MockAccountDeletionBloc
-    extends MockBloc<AccountDeletionEvent, AccountDeletionState>
-    implements AccountDeletionBloc {}
+class _MockVerifyOtp extends Mock implements VerifyDeletionOtpUseCase {}
 
-Future<void> _openSheet(
-  WidgetTester tester,
-  AccountDeletionBloc bloc,
-) async {
-  tester.view.physicalSize = const Size(400, 1400);
-  tester.view.devicePixelRatio = 1.0;
-  addTearDown(tester.view.resetPhysicalSize);
-  addTearDown(tester.view.resetDevicePixelRatio);
+class _MockResendOtp extends Mock implements ResendDeletionOtpUseCase {}
 
-  await tester.pumpWidget(
-    ScreenUtilInit(
-      designSize: const Size(400, 800),
-      builder: (_, _) => MaterialApp(
-        theme: AppTheme.light(),
-        home: Scaffold(
-          body: Builder(
-            builder: (context) => ElevatedButton(
-              onPressed: () =>
-                  showDeletionOtpSheet(context: context, bloc: bloc),
-              child: const Text('open'),
+class _MockResendInfo extends Mock implements GetDeletionResendInfoUseCase {}
+
+class _MockLogout extends Mock implements AuthLogoutUseCase {}
+
+class _MockSessionManager extends Mock implements SessionManager {}
+
+final _request = AccountDeletionRequest(
+  id: 'req-1',
+  status: AccountDeletionStatus.scheduled,
+  initiator: DeletionInitiator.self,
+  verificationRequired: false,
+  scheduledExecutionDate: DateTime(2026, 9, 2),
+  gracePeriodDays: 14,
+  message: 'scheduled',
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+);
+
+void main() {
+  late _MockVerifyOtp verifyOtp;
+  late _MockResendOtp resendOtp;
+  late _MockResendInfo resendInfo;
+  late _MockLogout logout;
+  late _MockSessionManager sessionManager;
+
+  setUpAll(() {
+    registerFallbackValue(const VerifyDeletionOtpParams(otp: '000000'));
+    registerFallbackValue(const NoParams());
+  });
+
+  setUp(() {
+    verifyOtp = _MockVerifyOtp();
+    resendOtp = _MockResendOtp();
+    resendInfo = _MockResendInfo();
+    logout = _MockLogout();
+    sessionManager = _MockSessionManager();
+
+    when(() => resendInfo(any())).thenAnswer(
+      (_) => TaskEither.right(
+        const DeletionResendInfo(
+          canResend: false,
+          remainingSeconds: 30,
+          attemptsLeft: 4,
+        ),
+      ),
+    );
+    when(() => logout(any())).thenAnswer((_) => TaskEither.right(null));
+    when(sessionManager.clear).thenAnswer((_) async {});
+
+    sl
+      ..registerFactory<VerifyDeletionOtpUseCase>(() => verifyOtp)
+      ..registerFactory<ResendDeletionOtpUseCase>(() => resendOtp)
+      ..registerFactory<GetDeletionResendInfoUseCase>(() => resendInfo)
+      ..registerFactory<AuthLogoutUseCase>(() => logout)
+      ..registerFactory<SessionManager>(() => sessionManager);
+  });
+
+  tearDown(sl.reset);
+
+  Future<bool?> openSheet(WidgetTester tester) async {
+    bool? outcome;
+    await tester.pumpWidget(
+      ScreenUtilInit(
+        designSize: const Size(360, 800),
+        builder: (_, _) => MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () async =>
+                    outcome = await showDeletionOtpSheet(context: context),
+                child: const Text('open'),
+              ),
             ),
           ),
         ),
       ),
-    ),
-  );
-  await tester.tap(find.text('open'));
-  // Bounded pumps to let the modal-sheet route animate in (no pumpAndSettle —
-  // the OTP caret animation never settles).
-  await tester.pump();
-  await tester.pump(const Duration(milliseconds: 400));
-}
-
-void main() {
-  setUpAll(() {
-    registerFallbackValue(const AccountDeletionResendInfoRequested());
-    registerFallbackValue(const AccountDeletionOtpResendRequested());
-  });
-
-  late _MockAccountDeletionBloc bloc;
-
-  void seed(DeletionResendInfo info) {
-    bloc = _MockAccountDeletionBloc();
-    whenListen(
-      bloc,
-      const Stream<AccountDeletionState>.empty(),
-      initialState: AccountDeletionState(resendInfo: info),
     );
+    await tester.tap(find.text('open'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    return outcome;
   }
 
   testWidgets(
-    'remainingSeconds == 0 shows an actionable Resend Code, never "0 seconds"',
+    'opening the sheet does not mint a second code - one was already sent '
+    'with POST /account/deletion',
     (tester) async {
-      // canResend=false + remaining=0 is the exact stale state that used to
-      // render "Resend in 0 seconds".
-      seed(
-        const DeletionResendInfo(
-          canResend: false,
-          remainingSeconds: 0,
-          attemptsLeft: 3,
-        ),
-      );
-      await _openSheet(tester, bloc);
+      await openSheet(tester);
+      await tester.pump(const Duration(milliseconds: 50));
 
-      expect(find.textContaining('common.resend'), findsOneWidget);
-      expect(
-        find.textContaining('account_deletion.otp_resend_cooldown'),
-        findsNothing,
-      );
+      verifyNever(() => resendOtp(any()));
+      verify(() => resendInfo(any())).called(greaterThanOrEqualTo(1));
     },
   );
 
-  testWidgets('remainingSeconds > 0 shows the cooldown, not the resend link', (
+  testWidgets('a verified code ends the session before the sheet resolves', (
     tester,
   ) async {
-    seed(
-      const DeletionResendInfo(
-        canResend: false,
-        remainingSeconds: 30,
-        attemptsLeft: 3,
-      ),
-    );
-    await _openSheet(tester, bloc);
+    when(() => verifyOtp(any())).thenAnswer((_) => TaskEither.right(_request));
 
-    expect(
-      find.textContaining('account_deletion.otp_resend_cooldown'),
-      findsOneWidget,
-    );
-    expect(find.textContaining('common.resend'), findsNothing);
+    await openSheet(tester);
+    await tester.pump(const Duration(milliseconds: 50));
+
+    await tester.enterText(find.byType(EditableText).first, '123456');
+    await tester.pump();
+    // Submit via the keyboard action rather than the button: inside the sheet
+    // viewport the button can sit below the fold, and this exercises the same
+    // OtpSubmitted path.
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump(const Duration(milliseconds: 150));
+
+    // The session teardown is inseparable from verification - a user must
+    // never be left signed into an account scheduled for deletion.
+    verify(() => logout(any())).called(1);
+    verify(sessionManager.clear).called(1);
   });
 
-  testWidgets(
-    'no yellow "last attempt" warning even when attemptsLeft is low',
-    (
-      tester,
-    ) async {
-      seed(
-        const DeletionResendInfo(
-          canResend: true,
-          remainingSeconds: 0,
-          attemptsLeft: 1,
-        ),
-      );
-      await _openSheet(tester, bloc);
+  testWidgets('a rejected code keeps the sheet open with a field error', (
+    tester,
+  ) async {
+    when(() => verifyOtp(any())).thenAnswer(
+      (_) => TaskEither.left(const ValidationFailure(message: 'bad code')),
+    );
 
-      expect(
-        find.textContaining('account_deletion.otp_last_attempt'),
-        findsNothing,
-      );
-      expect(find.byType(AppAlert), findsNothing);
-    },
-  );
+    await openSheet(tester);
+    await tester.pump(const Duration(milliseconds: 50));
+
+    await tester.enterText(find.byType(EditableText).first, '123456');
+    await tester.pump();
+    // Submit via the keyboard action rather than the button: inside the sheet
+    // viewport the button can sit below the fold, and this exercises the same
+    // OtpSubmitted path.
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump(const Duration(milliseconds: 150));
+
+    verifyNever(() => logout(any()));
+    expect(find.byType(AppOtpField), findsOneWidget);
+  });
 }

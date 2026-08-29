@@ -103,6 +103,26 @@ class _ModalSheetContentState<T> extends State<_ModalSheetContent<T>> {
     );
   }
 
+  /// Handles a system-back / predictive-back intent that reached this sheet.
+  ///
+  /// The sheet always reports `canPop: false` (see [build]) so the framework
+  /// treats it — the top-most route on the root navigator — as the owner of
+  /// the back gesture. That guarantees the intent is consumed here and never
+  /// forwarded to (or interpreted as a pop of) the underlying page's
+  /// navigator, which is the SAN sheet/back bug: the underlying route would
+  /// navigate away while the root-level sheet stayed mounted.
+  ///
+  /// A dismissible sheet closes itself in response (matching the Android
+  /// bottom-sheet convention that back dismisses the sheet); a non-dismissible
+  /// sheet swallows the intent entirely. Either way the underlying route is
+  /// left untouched. Drag-to-dismiss and explicit `SheetNavigator.pop` call
+  /// `Navigator.pop` directly, which bypasses [PopScope], so they are
+  /// unaffected.
+  void _onSystemBack(bool didPop) {
+    if (didPop) return;
+    if (_route.sheetSettings.isDismissible) _route.dismiss();
+  }
+
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
@@ -144,49 +164,58 @@ class _ModalSheetContentState<T> extends State<_ModalSheetContent<T>> {
           )
         : const AlwaysStoppedAnimation<double>(0);
 
-    return AnimatedBuilder(
-      animation: Listenable.merge([enterCurved, morphCurved]),
-      builder: (context, child) {
-        final morphT = morphCurved.value;
-        // As morphT -> 1 (a child sheet is pushed on top), both bounds
-        // widen toward the full screen height, forcing this sheet to
-        // fullscreen regardless of sheetSize.
-        final currentMin = lerpDouble(restMin, screenHeight, morphT)!;
-        final currentMax = lerpDouble(restMax, screenHeight, morphT)!;
-        final radius = SheetTransitions.lerpRadius(spec.topRadius, morphT);
+    return PopScope(
+      // Always false: the sheet is the top-most route on the root navigator,
+      // so it must be the authoritative back handler. Reporting canPop:false
+      // makes the framework route the system/predictive back intent to
+      // [_onSystemBack] instead of letting it fall through and pop the
+      // underlying page's (possibly nested) navigator.
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) => _onSystemBack(didPop),
+      child: AnimatedBuilder(
+        animation: Listenable.merge([enterCurved, morphCurved]),
+        builder: (context, child) {
+          final morphT = morphCurved.value;
+          // As morphT -> 1 (a child sheet is pushed on top), both bounds
+          // widen toward the full screen height, forcing this sheet to
+          // fullscreen regardless of sheetSize.
+          final currentMin = lerpDouble(restMin, screenHeight, morphT)!;
+          final currentMax = lerpDouble(restMax, screenHeight, morphT)!;
+          final radius = SheetTransitions.lerpRadius(spec.topRadius, morphT);
 
-        return Align(
-          alignment: Alignment.bottomCenter,
-          child: FractionalTranslation(
-            translation: Offset(0, 1 - enterCurved.value),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: currentMin,
-                maxHeight: currentMax,
-              ),
-              child: SheetScaffold(
-                radius: radius,
-                title: _settings.title,
-                padChild: _settings.padChild,
-                sheetSize: _settings.sheetSize,
-                showDragHandle: _settings.enableDrag,
-                enableDrag: _settings.enableDrag,
-                useSafeArea: _settings.useSafeArea,
-                onVerticalDragUpdate: (details) => _drag.onDragUpdate(
-                  details,
-                  MediaQuery.sizeOf(context).height,
+          return Align(
+            alignment: Alignment.bottomCenter,
+            child: FractionalTranslation(
+              translation: Offset(0, 1 - enterCurved.value),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: currentMin,
+                  maxHeight: currentMax,
                 ),
-                onVerticalDragEnd: (details) => _drag.onDragEnd(
-                  details,
-                  MediaQuery.sizeOf(context).height,
+                child: SheetScaffold(
+                  radius: radius,
+                  title: _settings.title,
+                  padChild: _settings.padChild,
+                  sheetSize: _settings.sheetSize,
+                  showDragHandle: _settings.enableDrag,
+                  enableDrag: _settings.enableDrag,
+                  useSafeArea: _settings.useSafeArea,
+                  onVerticalDragUpdate: (details) => _drag.onDragUpdate(
+                    details,
+                    MediaQuery.sizeOf(context).height,
+                  ),
+                  onVerticalDragEnd: (details) => _drag.onDragEnd(
+                    details,
+                    MediaQuery.sizeOf(context).height,
+                  ),
+                  child: child!,
                 ),
-                child: child!,
               ),
             ),
-          ),
-        );
-      },
-      child: Builder(builder: _route.builder),
+          );
+        },
+        child: Builder(builder: _route.builder),
+      ),
     );
   }
 }

@@ -312,6 +312,7 @@
       "city_required": "Please select a city",
       "branch_manager_required": "Please select a branch manager",
       "schedule_required": "Please add at least one working day",
+      "schedule_company_empty": "Your company has no working hours set yet. Please choose a custom schedule.",
       "invalid_phone": "Enter a valid phone number",
       "submitting_title": "Adding your branch...",
       "submitting_description": "Please wait while we set up your branch.",
@@ -735,16 +736,23 @@
   },
   "otp": {
     "title": "Enter OTP",
-    "subtitle": "We've sent a verification code to {destination}",
+    "subtitle": "We've sent a verification code to",
     "verify": "Verify",
     "invalid_code": "Invalid code, please try again",
     "expired_code": "Code expired. Please request a new one.",
-    "not_received": "Don't receive OTP ?",
+    "not_received": "Don't receive OTP?",
     "send_again": "Send again",
     "success_title_email": "Email Verified!",
     "success_title_phone": "Phone Verified!",
     "success_subtitle_email": "Your email has been successfully verified. Thank you!",
-    "success_subtitle_phone": "Your phone number has been successfully verified. Thank you!"
+    "success_subtitle_phone": "Your phone number has been successfully verified. Thank you!",
+    "retry": "Retry",
+    "resends_left": {
+      "zero": "No resends left",
+      "one": "1 resend left",
+      "other": "{} resends left"
+    },
+    "dispatch_failed": "We couldn't send the code."
   },
   "empty_states": {
     "network_title": "No Internet Connection",
@@ -778,6 +786,7 @@
     "required_fields_missing": "Required information is incomplete. Please go back and complete all steps.",
     "google_sign_in_cancelled": "Google sign-in was cancelled.",
     "google_sign_in_failed": "Google sign-in failed. Please try again.",
+    "remove_image_not_supported": "Removing this photo isn't supported yet. Please try again later.",
     "media_upload": {
       "file_too_large": "File size must not exceed 5 MB.",
       "unsupported_type": "This file type isn't supported.",

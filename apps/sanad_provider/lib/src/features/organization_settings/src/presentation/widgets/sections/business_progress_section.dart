@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:app_animations/app_animations.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -23,7 +24,17 @@ class BusinessProgressChecklistItem {
 /// `GET service-provider/completion` (see `ProviderCompletionEntity`) —
 /// this widget owns no bloc and makes no API calls, and never re-derives
 /// completeness itself.
-class BusinessProgressSection extends StatelessWidget {
+///
+/// **Collapsed by default.** The card opens showing only a concise summary —
+/// the title/subtitle, the completion [_ProgressRing], and the
+/// `requiredCompleted / requiredTotal` footer. Tapping anywhere on the card (or
+/// its bottom chevron) animates the full body open/closed: the hidden-from-
+/// customers notice and the per-item [_ChecklistRow] list. The only local state
+/// is [_expanded]; all displayed values remain caller-driven. Motion uses the
+/// shared [AppMotionDuration]/[AppMotionCurve] tokens and collapses to
+/// `Duration.zero` under [AppMotion.reduceMotionOf] (reduced motion / a11y),
+/// so the toggle still works instantly without animation.
+class BusinessProgressSection extends StatefulWidget {
   const BusinessProgressSection({
     required this.completionPercent,
     required this.items,
@@ -44,100 +55,195 @@ class BusinessProgressSection extends StatelessWidget {
   final int requiredTotal;
 
   @override
+  State<BusinessProgressSection> createState() =>
+      _BusinessProgressSectionState();
+}
+
+class _BusinessProgressSectionState extends State<BusinessProgressSection> {
+  bool _expanded = false;
+
+  void _toggle() => setState(() => _expanded = !_expanded);
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final typography = context.appTypography;
+    // Functional expand/collapse: under reduced motion we skip the implicit
+    // AnimatedSize/AnimatedRotation entirely and render the final state, so the
+    // toggle is an instant cut (a zero-duration implicit animation would notify
+    // its controller mid-layout) while the affordance itself is preserved.
+    final reduceMotion = AppMotion.reduceMotionOf(context);
+    const motionDuration = AppMotionDuration.quick;
+
+    var body = _expanded
+        ? _ExpandedBody(
+            items: widget.items,
+            visibleToCustomers: widget.visibleToCustomers,
+          )
+        : const SizedBox.shrink();
+    if (!reduceMotion) {
+      body = AnimatedSize(
+        duration: motionDuration,
+        curve: AppMotionCurve.standard,
+        alignment: Alignment.topCenter,
+        child: body,
+      );
+    }
+
+    Widget chevron = Icon(
+      Icons.keyboard_arrow_down,
+      color: colors.textSecondary,
+      size: AppDimension.iconMenu,
+    );
+    chevron = reduceMotion
+        ? Transform.rotate(
+            angle: _expanded ? math.pi : 0,
+            child: chevron,
+          )
+        : AnimatedRotation(
+            turns: _expanded ? 0.5 : 0.0,
+            duration: motionDuration,
+            curve: AppMotionCurve.standard,
+            child: chevron,
+          );
+
+    return Semantics(
+      button: true,
+      expanded: _expanded,
+      label: 'settings.business_progress_title'.tr(),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _toggle,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.surface,
+            border: Border.all(color: colors.border),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x0D101828),
+                blurRadius: 8,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(AppSpacing.xxl),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Collapsed summary — always visible.
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        spacing: AppSpacing.md,
+                        children: [
+                          Text(
+                            'settings.business_progress_title'.tr(),
+                            style: typography.regularNone.copyWith(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            'settings.business_progress_subtitle'.tr(),
+                            style: typography.smallNormal.copyWith(
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    _ProgressRing(percent: widget.completionPercent),
+                  ],
+                ),
+                // Expandable body — hidden-from-customers notice + checklist.
+                body,
+                SizedBox(height: AppSpacing.xl),
+                const AppDivider(),
+                SizedBox(height: AppSpacing.xl),
+                Row(
+                  spacing: AppSpacing.xs,
+                  children: [
+                    Text(
+                      '${widget.requiredCompleted} / ${widget.requiredTotal}',
+                      style: typography.regularNormal.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Flexible(
+                      child: Text(
+                        'settings.business_progress_required_completed'.tr(),
+                        style: typography.regularNormal.copyWith(
+                          color: colors.textSecondary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: AppSpacing.md),
+                Center(child: chevron),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The collapsible portion of [BusinessProgressSection]: a leading divider,
+/// the hidden-from-customers notice (only while the profile is not yet visible
+/// to customers), and the per-item checklist. Extracted so [AnimatedSize] swaps
+/// between this and an empty box on toggle.
+class _ExpandedBody extends StatelessWidget {
+  const _ExpandedBody({
+    required this.items,
+    required this.visibleToCustomers,
+  });
+
+  final List<BusinessProgressChecklistItem> items;
+  final bool visibleToCustomers;
+
+  @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final typography = context.appTypography;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        border: Border.all(color: colors.border),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0D101828),
-            blurRadius: 8,
-            offset: Offset(0, 4),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(height: AppSpacing.xl),
+        const AppDivider(),
+        SizedBox(height: AppSpacing.xl),
+        if (!visibleToCustomers) ...[
+          const _HiddenFromCustomersBadge(),
+          SizedBox(height: AppSpacing.xl),
+          Text(
+            'settings.business_progress_hidden_notice'.tr(),
+            style: typography.smallNormal.copyWith(
+              color: colors.textSecondary,
+              height: 18 / 13,
+            ),
           ),
+          SizedBox(height: AppSpacing.xl),
         ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
+        Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: 20,
+          spacing: AppSpacing.xxl,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    spacing: 12,
-                    children: [
-                      Text(
-                        'settings.business_progress_title'.tr(),
-                        style: typography.regularNone.copyWith(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      Text(
-                        'settings.business_progress_subtitle'.tr(),
-                        style: typography.smallNormal.copyWith(
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                _ProgressRing(percent: completionPercent),
-              ],
-            ),
-            const AppDivider(),
-            if (!visibleToCustomers) ...[
-              const _HiddenFromCustomersBadge(),
-              Text(
-                'settings.business_progress_hidden_notice'.tr(),
-                style: typography.smallNormal.copyWith(
-                  color: colors.textSecondary,
-                  height: 18 / 13,
-                ),
-              ),
-            ],
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: 24,
-              children: [
-                for (final item in items) _ChecklistRow(item: item),
-              ],
-            ),
-            const AppDivider(),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 4,
-              children: [
-                Text(
-                  '$requiredCompleted / $requiredTotal',
-                  style: typography.regularNormal.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  'settings.business_progress_required_completed'.tr(),
-                  style: typography.regularNormal.copyWith(
-                    color: colors.textSecondary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
+            for (final item in items) _ChecklistRow(item: item),
           ],
         ),
-      ),
+      ],
     );
   }
 }

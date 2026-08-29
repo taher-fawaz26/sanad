@@ -77,6 +77,9 @@ class _AppOtpFieldState extends State<AppOtpField> {
   FormFieldState<String>? _field;
   late String _lastText;
 
+  /// Guards the re-entrant notification raised by [_armSelection]'s own write.
+  bool _rearming = false;
+
   TextEditingController get _controller =>
       widget.controller ?? (_ownedController ??= TextEditingController());
 
@@ -126,10 +129,26 @@ class _AppOtpFieldState extends State<AppOtpField> {
   /// paste — reported through [AppOtpField.onChanged] too. Selection-only
   /// changes repaint the cells but must not be reported as value changes.
   void _handleControllerChanged() {
+    if (_rearming) return;
+
     final text = _controller.text;
-    final textChanged = text != _lastText;
-    final wasComplete = _lastText.length == widget.length;
+    final previous = _lastText;
+    final textChanged = text != previous;
+    final wasComplete = previous.length == widget.length;
     _lastText = text;
+
+    // A replacement leaves the platform cursor collapsed just after the digit
+    // it overwrote. Left alone, the NEXT keystroke composes against that caret
+    // — an insertion, which shifts every following digit right (and, on a full
+    // code, loses the tail to the length limiter). Re-arm a one-character
+    // selection on the digit the cursor advanced onto so that keystroke
+    // replaces it instead.
+    //
+    // Gated on the length being unchanged: a deletion must keep its ordinary
+    // collapsed caret, and an append already sits past the end. Deliberately
+    // runs BEFORE the `textChanged` guard — retyping a digit over itself is a
+    // no-op edit that must still advance and arm the next position.
+    if (text.length == previous.length) _armSelection();
 
     if (mounted) setState(() {});
     if (!textChanged) return;
@@ -140,6 +159,30 @@ class _AppOtpFieldState extends State<AppOtpField> {
     if (text.length == widget.length && !wasComplete) {
       widget.onCompleted?.call(text);
     }
+  }
+
+  /// Keeps the core OTP invariant true: **every cell is a fixed position**.
+  ///
+  /// While the field is focused and the caret is not past the end, a position
+  /// is always *selected*, so every keystroke replaces rather than inserts.
+  /// Idempotent, and clears any IME composing region so a pending composition
+  /// cannot re-anchor the edit back to insert semantics.
+  void _armSelection() {
+    final selection = _controller.selection;
+    if (!selection.isValid || !selection.isCollapsed) return;
+
+    final offset = selection.baseOffset;
+    if (offset < 0 || offset >= _controller.text.length) return;
+
+    final armed = TextSelection(baseOffset: offset, extentOffset: offset + 1);
+    if (selection == armed) return;
+
+    _rearming = true;
+    _controller.value = _controller.value.copyWith(
+      selection: armed,
+      composing: TextRange.empty,
+    );
+    _rearming = false;
   }
 
   void _handleFocusChanged() {
@@ -170,9 +213,15 @@ class _AppOtpFieldState extends State<AppOtpField> {
     void apply() {
       if (!mounted) return;
       final text = _controller.text;
-      _controller.selection = index < text.length
-          ? TextSelection(baseOffset: index, extentOffset: index + 1)
-          : TextSelection.collapsed(offset: text.length);
+      _rearming = true;
+      _controller.value = _controller.value.copyWith(
+        selection: index < text.length
+            ? TextSelection(baseOffset: index, extentOffset: index + 1)
+            : TextSelection.collapsed(offset: text.length),
+        composing: TextRange.empty,
+      );
+      _rearming = false;
+      if (mounted) setState(() {});
     }
 
     apply();
@@ -261,6 +310,10 @@ class _AppOtpFieldState extends State<AppOtpField> {
         keyboardType: TextInputType.number,
         textInputAction: TextInputAction.done,
         autofillHints: const [AutofillHints.oneTimeCode],
+        // No composing region, no autocorrect: a live composition would
+        // re-anchor an edit and defeat the fixed-position invariant.
+        autocorrect: false,
+        enableSuggestions: false,
         inputFormatters: [
           FilteringTextInputFormatter.digitsOnly,
           LengthLimitingTextInputFormatter(widget.length),

@@ -217,6 +217,7 @@ class AuthPage extends HookWidget {
                   controller: emailController,
                   label: 'auth.email'.tr(),
                   hint: 'registration.email_hint'.tr(),
+                  isLtr: true,
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.done,
                   autovalidateMode: AutovalidateMode.onUserInteraction,

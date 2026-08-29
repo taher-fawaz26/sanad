@@ -65,7 +65,10 @@ class ImagePickerCameraProvider implements CameraProvider {
     try {
       final file = await _picker.pickImage(
         source: ImageSource.camera,
-        imageQuality: options.shouldCompress ? options.imageQuality : null,
+        // When compression is deferred to after validation, acquire the
+        // untouched original so the validator gates on its true size.
+        imageQuality:
+            options.compressAtAcquisition ? options.imageQuality : null,
       );
       if (file == null) return const [];
       return [await _toPickedAsset(file, loadBytes: options.loadBytes)];
@@ -88,7 +91,10 @@ class ImagePickerGalleryProvider implements GalleryProvider {
   @override
   Future<List<PickedAsset>> pick(AssetPickerOptions options) async {
     try {
-      final quality = options.shouldCompress ? options.imageQuality : null;
+      // When compression is deferred to after validation, acquire untouched
+      // originals so the validator gates on their true size.
+      final quality =
+          options.compressAtAcquisition ? options.imageQuality : null;
       if (options.allowMultiple) {
         final files = await _picker.pickMultiImage(imageQuality: quality);
         final limit = options.effectiveMaxSelection;

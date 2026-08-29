@@ -58,3 +58,17 @@ final class IdentityHeaderMediaRemoved extends IdentityHeaderEvent {
   @override
   List<Object?> get props => [slot];
 }
+
+/// A non-retryable failure for [slot] (e.g. a failed removal, which has
+/// nothing to retry) has been surfaced to the user and should stop being
+/// carried in state — clears `status`/`failure` back to `initial` without
+/// touching `imageUrl`, so nothing stale is left for the UI to keep
+/// rendering.
+final class IdentityHeaderFailureAcknowledged extends IdentityHeaderEvent {
+  const IdentityHeaderFailureAcknowledged({required this.slot});
+
+  final OrganizationMediaSlot slot;
+
+  @override
+  List<Object?> get props => [slot];
+}

@@ -19,3 +19,4 @@ export 'src/domain/usecases/resend_verification_usecase.dart';
 export 'src/domain/usecases/verify_contact_usecase.dart';
 export 'src/domain/verifiers/contact_verification_verifier.dart';
 export 'src/module/contact_verification_module.dart';
+export 'src/presentation/widgets/contact_change_sheet.dart';

@@ -1,9 +1,9 @@
-import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/cubit/edit_category_cubit.dart';
+import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// A selectable category option shown inside [EditCategoryBottomSheet].
@@ -70,7 +70,6 @@ class _EditCategoryBottomSheetBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final typography = context.appTypography;
     final maxListHeight = MediaQuery.sizeOf(context).height * 0.5;
 
     return Column(
@@ -79,7 +78,7 @@ class _EditCategoryBottomSheetBody extends StatelessWidget {
       children: [
         _DragHandle(color: colors.border),
         SizedBox(height: AppSpacing.md),
-        _SheetHeader(colors: colors, typography: typography),
+        SettingsSheetTitle(title: 'settings.section_category'.tr()),
         SizedBox(height: AppSpacing.md),
         ConstrainedBox(
           constraints: BoxConstraints(maxHeight: maxListHeight),
@@ -159,37 +158,6 @@ class _DragHandle extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _SheetHeader extends StatelessWidget {
-  const _SheetHeader({required this.colors, required this.typography});
-
-  final AppColors colors;
-  final AppTypography typography;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AppSvgPicture.asset(
-          AppSvgs.tools,
-          width: 24,
-          height: 24,
-          colorFilter: ColorFilter.mode(colors.primary, BlendMode.srcIn),
-        ),
-        SizedBox(height: AppSpacing.md),
-        Text(
-          'settings.section_category'.tr(),
-          textAlign: TextAlign.center,
-          style: typography.title3.copyWith(
-            color: colors.primary,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
     );
   }
 }

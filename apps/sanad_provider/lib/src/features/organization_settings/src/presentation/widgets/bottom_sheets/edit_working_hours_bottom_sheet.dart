@@ -1,4 +1,3 @@
-import 'package:app_assets/app_assets.dart';
 import 'package:branches/branches.dart'
     show BranchScheduleFormatter, BranchTimeSlotEntity;
 import 'package:design_system/design_system.dart';
@@ -140,7 +139,7 @@ class _EditWorkingHoursSheetView extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _SheetHeader(title: 'settings.section_working_hours'.tr()),
+          SettingsSheetTitle(title: 'settings.section_working_hours'.tr()),
           SizedBox(height: AppSpacing.lg),
           Container(
             width: double.infinity,
@@ -231,39 +230,6 @@ class _RejectionBanner extends StatelessWidget {
       _rejectionMessage(context, rejection),
       style: typography.smallNormal.copyWith(color: colors.error),
       textAlign: TextAlign.start,
-    );
-  }
-}
-
-class _SheetHeader extends StatelessWidget {
-  const _SheetHeader({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final typography = context.appTypography;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AppSvgPicture.asset(
-          AppSvgs.tools,
-          width: AppDimension.iconMenu,
-          height: AppDimension.iconMenu,
-          colorFilter: ColorFilter.mode(colors.primary, BlendMode.srcIn),
-        ),
-        SizedBox(height: AppSpacing.md),
-        Text(
-          title,
-          style: typography.title3.copyWith(
-            color: colors.primary,
-            fontWeight: FontWeight.w600,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
     );
   }
 }

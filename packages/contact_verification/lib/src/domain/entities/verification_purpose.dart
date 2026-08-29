@@ -8,7 +8,8 @@ enum VerificationPurpose {
   changeOwnerEmail,
   changeOwnerPhone,
   changeBusinessEmail,
-  changeBusinessPhone;
+  changeBusinessPhone
+  ;
 
   /// The wire value the backend expects/returns (snake_case).
   String toApi() => switch (this) {

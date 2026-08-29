@@ -43,6 +43,7 @@ class AssetPickerOptions extends Equatable {
     this.imageQuality = 85,
     this.loadBytes = false,
     this.requireBothSides = false,
+    this.enforceSizeBeforeCompression = false,
     this.scannerConfig,
   }) : assert(maxSelection >= 1, 'maxSelection must be at least 1'),
        assert(
@@ -138,6 +139,19 @@ class AssetPickerOptions extends Equatable {
   /// Off by default to avoid holding large files in memory unnecessarily.
   final bool loadBytes;
 
+  /// Enforce [maxFileSize] against the **originally selected** file, before any
+  /// compression shrinks it.
+  ///
+  /// By default the compression pipeline runs *at acquisition* — `image_picker`
+  /// re-encodes the pick (see [imageQuality]) and the validator therefore sees
+  /// the already-smaller file, so an oversized original can slip under the
+  /// limit. When this is `true`, acquisition returns the untouched original so
+  /// `DefaultAssetValidator` gates on its true size, and the compression stage
+  /// (still governed by [shouldCompress]/[imageQuality]) runs **afterwards**,
+  /// only on assets that passed validation. Compression is not disabled — it is
+  /// merely deferred until after the size check.
+  final bool enforceSizeBeforeCompression;
+
   /// Request both document sides (front and back) in a single scan session.
   ///
   /// Only honoured by scanner providers that support multi-side capture
@@ -157,6 +171,17 @@ class AssetPickerOptions extends Equatable {
 
   /// Whether image compression should actually be applied.
   bool get shouldCompress => enableCompression && compressImages;
+
+  /// Compression happens at acquisition (the provider re-encodes the pick).
+  /// This is the default; it is skipped when [enforceSizeBeforeCompression] is
+  /// set so the validator can see the original file size.
+  bool get compressAtAcquisition =>
+      shouldCompress && !enforceSizeBeforeCompression;
+
+  /// Compression happens as a post-validation stage (after the size check),
+  /// leaving the originally-selected file for the validator to gate on.
+  bool get compressAfterValidation =>
+      shouldCompress && enforceSizeBeforeCompression;
 
   /// The set of allowed extensions this configuration resolves to, or `null`
   /// when the selection is unconstrained by extension. Combines
@@ -219,6 +244,7 @@ class AssetPickerOptions extends Equatable {
     int? imageQuality,
     bool? loadBytes,
     bool? requireBothSides,
+    bool? enforceSizeBeforeCompression,
     DocumentScannerConfig? scannerConfig,
   }) {
     return AssetPickerOptions(
@@ -247,6 +273,8 @@ class AssetPickerOptions extends Equatable {
       imageQuality: imageQuality ?? this.imageQuality,
       loadBytes: loadBytes ?? this.loadBytes,
       requireBothSides: requireBothSides ?? this.requireBothSides,
+      enforceSizeBeforeCompression:
+          enforceSizeBeforeCompression ?? this.enforceSizeBeforeCompression,
       scannerConfig: scannerConfig ?? this.scannerConfig,
     );
   }
@@ -278,6 +306,7 @@ class AssetPickerOptions extends Equatable {
     imageQuality,
     loadBytes,
     requireBothSides,
+    enforceSizeBeforeCompression,
     scannerConfig,
   ];
 }

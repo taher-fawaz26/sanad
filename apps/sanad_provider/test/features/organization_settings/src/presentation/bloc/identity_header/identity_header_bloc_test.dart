@@ -231,4 +231,62 @@ void main() {
       expect(bloc.state.cover.hasImage, isFalse);
     },
   );
+
+  blocTest<IdentityHeaderBloc, IdentityHeaderState>(
+    'a failed remove (SAN-699: no documented remove endpoint) surfaces as a '
+    'non-retryable failure and leaves the existing image untouched',
+    build: build,
+    seed: () => IdentityHeaderState(
+      cover: IdentityMediaSlotState(imageUrl: 'c.png'),
+    ),
+    setUp: () {
+      when(() => removeUseCase(any())).thenAnswer(
+        (_) => TaskEither.left(
+          const BusinessRuleFailure(
+            message: 'errors.remove_image_not_supported',
+          ),
+        ),
+      );
+    },
+    act: (bloc) =>
+        bloc.add(IdentityHeaderMediaRemoved(slot: OrganizationMediaSlot.cover)),
+    verify: (bloc) {
+      expect(bloc.state.cover.status, RequestStatus.failure);
+      expect(bloc.state.cover.hasError, isTrue);
+      // No `lastMedia` for a remove attempt — nothing to retry against, so
+      // `canRetry` must be false (this is what the header widget uses to
+      // decide the persistent on-image overlay must NOT render for this
+      // failure; see `_isNonRetryableFailure`).
+      expect(bloc.state.cover.canRetry, isFalse);
+      expect(bloc.state.cover.lastMedia, isNull);
+      // The image itself must be untouched by the failed removal.
+      expect(bloc.state.cover.imageUrl, 'c.png');
+    },
+  );
+
+  blocTest<IdentityHeaderBloc, IdentityHeaderState>(
+    'IdentityHeaderFailureAcknowledged clears status/failure back to '
+    'initial without touching imageUrl — used once a non-retryable failure '
+    '(e.g. a failed remove) has been shown to the user, so nothing about it '
+    'lingers in state and a navigate-away/back is never required to recover',
+    build: build,
+    seed: () => IdentityHeaderState(
+      cover: IdentityMediaSlotState(
+        status: RequestStatus.failure,
+        imageUrl: 'c.png',
+        failure: const BusinessRuleFailure(
+          message: 'errors.remove_image_not_supported',
+        ),
+      ),
+    ),
+    act: (bloc) => bloc.add(
+      IdentityHeaderFailureAcknowledged(slot: OrganizationMediaSlot.cover),
+    ),
+    verify: (bloc) {
+      expect(bloc.state.cover.status, RequestStatus.initial);
+      expect(bloc.state.cover.hasError, isFalse);
+      expect(bloc.state.cover.failure, isNull);
+      expect(bloc.state.cover.imageUrl, 'c.png');
+    },
+  );
 }

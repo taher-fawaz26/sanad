@@ -91,6 +91,7 @@ export 'src/widgets/app_weekly_schedule_day_card.dart';
 export 'src/widgets/main_nav_scroll_controller.dart';
 export 'src/widgets/media_upload/media_upload_tile.dart';
 export 'src/widgets/media_upload/media_upload_tile_data.dart';
+export 'src/widgets/settings_sheet_title.dart';
 export 'src/widgets/sheet_action_row.dart';
 export 'src/widgets/nav_visibility.dart';
 export 'src/widgets/nav_visibility_controller.dart';

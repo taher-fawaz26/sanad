@@ -30,47 +30,29 @@ class AccountDeletionBloc
   AccountDeletionBloc({
     required GetDeletionEligibilityUseCase getEligibility,
     required StartAccountDeletionUseCase startDeletion,
-    required VerifyDeletionOtpUseCase verifyOtp,
-    required ResendDeletionOtpUseCase resendOtp,
-    required GetDeletionResendInfoUseCase getResendInfo,
     required GetDeletionStatusUseCase getStatus,
     required CancelDeletionUseCase cancelDeletion,
     required GetCurrentUserUseCase getCurrentUser,
     required SessionManager sessionManager,
-    required AuthLogoutUseCase logout,
   }) : _getEligibility = getEligibility,
        _startDeletion = startDeletion,
-       _verifyOtp = verifyOtp,
-       _resendOtp = resendOtp,
-       _getResendInfo = getResendInfo,
        _getStatus = getStatus,
        _cancelDeletion = cancelDeletion,
        _getCurrentUser = getCurrentUser,
        _sessionManager = sessionManager,
-       _logout = logout,
        super(const AccountDeletionState()) {
     on<AccountDeletionEligibilityRequested>(_onEligibilityRequested);
     on<AccountDeletionStatusRequested>(_onStatusRequested);
     on<AccountDeletionStarted>(_onStarted, transformer: droppable());
-    on<AccountDeletionOtpVerified>(_onOtpVerified, transformer: droppable());
-    on<AccountDeletionOtpResendRequested>(
-      _onOtpResendRequested,
-      transformer: droppable(),
-    );
-    on<AccountDeletionResendInfoRequested>(_onResendInfoRequested);
     on<AccountDeletionCancelled>(_onCancelled, transformer: droppable());
   }
 
   final GetDeletionEligibilityUseCase _getEligibility;
   final StartAccountDeletionUseCase _startDeletion;
-  final VerifyDeletionOtpUseCase _verifyOtp;
-  final ResendDeletionOtpUseCase _resendOtp;
-  final GetDeletionResendInfoUseCase _getResendInfo;
   final GetDeletionStatusUseCase _getStatus;
   final CancelDeletionUseCase _cancelDeletion;
   final GetCurrentUserUseCase _getCurrentUser;
   final SessionManager _sessionManager;
-  final AuthLogoutUseCase _logout;
 
   Future<void> _onEligibilityRequested(
     AccountDeletionEligibilityRequested event,
@@ -140,95 +122,6 @@ class AccountDeletionBloc
         state.copyWith(
           mutationStatus: RequestStatus.success,
           activeRequest: request,
-        ),
-      ),
-    );
-  }
-
-  Future<void> _onOtpVerified(
-    AccountDeletionOtpVerified event,
-    Emitter<AccountDeletionState> emit,
-  ) async {
-    emit(
-      state.copyWith(
-        verifyStatus: RequestStatus.loading,
-        clearVerifyFailure: true,
-      ),
-    );
-    final result = await _verifyOtp(
-      VerifyDeletionOtpParams(otp: event.otp),
-    ).run();
-    await result.match(
-      (failure) async => emit(
-        state.copyWith(
-          verifyStatus: RequestStatus.failure,
-          verifyFailure: failure,
-        ),
-      ),
-      (request) async {
-        // Deletion is now scheduled — end the session exactly like a normal
-        // logout (AuthBloc._logout): the backend logout call is best-effort,
-        // local session is wiped unconditionally so the user is never left
-        // signed into an account that's scheduled for deletion. Emitted
-        // after the session is cleared so the OTP sheet only reacts once
-        // there's nothing left to navigate away from.
-        await _logout(const NoParams()).run();
-        await _sessionManager.clear();
-        emit(
-          state.copyWith(
-            verifyStatus: RequestStatus.success,
-            activeRequest: request,
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _onOtpResendRequested(
-    AccountDeletionOtpResendRequested event,
-    Emitter<AccountDeletionState> emit,
-  ) async {
-    emit(state.copyWith(resendStatus: RequestStatus.loading));
-    final result = await _resendOtp(const NoParams()).run();
-    result.fold(
-      (failure) => emit(
-        state.copyWith(
-          resendStatus: RequestStatus.failure,
-          mutationFailure: failure,
-        ),
-      ),
-      (request) => emit(
-        state.copyWith(
-          resendStatus: RequestStatus.success,
-          activeRequest: request,
-        ),
-      ),
-    );
-  }
-
-  Future<void> _onResendInfoRequested(
-    AccountDeletionResendInfoRequested event,
-    Emitter<AccountDeletionState> emit,
-  ) async {
-    emit(state.copyWith(resendInfoStatus: RequestStatus.loading));
-    final result = await _getResendInfo(const NoParams()).run();
-    result.fold(
-      // Best-effort: a failed cooldown fetch must not strand the user
-      // behind a resend button that can never be enabled.
-      (failure) => emit(
-        state.copyWith(
-          resendInfoStatus: RequestStatus.failure,
-          resendInfo: const DeletionResendInfo(
-            canResend: true,
-            remainingSeconds: 0,
-            attemptsLeft: 1,
-          ),
-        ),
-      ),
-      (info) => emit(
-        state.copyWith(
-          resendInfoStatus: RequestStatus.success,
-          resendInfo: info,
         ),
       ),
     );

@@ -7,8 +7,8 @@ sealed class OtpEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-/// Fired once when the flow mounts. Triggers the initial send when
-/// [OtpFlowConfig.autoSendOnStart] is true, then starts the countdown.
+/// Fired once when the flow mounts. Probes the server cooldown, then sends a
+/// code only if no session is already live.
 class OtpStarted extends OtpEvent {
   const OtpStarted();
 }
@@ -47,17 +47,20 @@ class OtpResendRequested extends OtpEvent {
   const OtpResendRequested();
 }
 
+/// One second of cooldown elapsed. Carries no payload: the bloc recomputes
+/// the remainder from the wall-clock anchor so a missed or late tick cannot
+/// desynchronise the countdown from the server.
 class OtpTimerTicked extends OtpEvent {
-  const OtpTimerTicked(this.secondsRemaining);
+  const OtpTimerTicked();
+}
 
-  final int secondsRemaining;
-
-  @override
-  List<Object?> get props => [secondsRemaining];
+/// Retry after an [OtpDispatchFailed] — the banner's action.
+class OtpDispatchRetried extends OtpEvent {
+  const OtpDispatchRetried();
 }
 
 /// The destination changed (e.g. user tapped "Change" and entered a new
-/// email/phone). Re-arms the send + timer against the new destination.
+/// email/phone). Restarts the flow cleanly against the new destination.
 class OtpDestinationChanged extends OtpEvent {
   const OtpDestinationChanged(this.destination);
 

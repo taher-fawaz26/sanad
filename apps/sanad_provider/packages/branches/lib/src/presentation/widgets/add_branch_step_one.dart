@@ -79,9 +79,13 @@ class _AddBranchStepOneState extends State<AddBranchStepOne> {
     if (_setupSeeded || state.setupStatus != RequestStatus.success) return;
     _setupSeeded = true;
 
-    context.read<AddBranchDraftCubit>().initializeCustomSchedule(
-      BranchScheduleFormatter.copyAvailability(state.companySchedule),
-    );
+    context.read<AddBranchDraftCubit>()
+      ..setCompanyHasWorkingHours(
+        hasHours: state.companySchedule.any((day) => day.slots.isNotEmpty),
+      )
+      ..initializeCustomSchedule(
+        BranchScheduleFormatter.copyAvailability(state.companySchedule),
+      );
   }
 
   void _onScheduleModeChanged(BranchScheduleMode mode) {
@@ -342,6 +346,30 @@ class _WorkingHoursSection extends StatelessWidget {
   final ValueChanged<BranchScheduleMode> onScheduleModeChanged;
   final bool showErrors;
 
+  /// Localized schedule error for the current draft, or `null` when the
+  /// working hours are valid. Company mode requires the company to actually
+  /// have hours to inherit; custom mode requires at least one added slot.
+  String? _scheduleError(
+    ({
+      BranchScheduleMode mode,
+      List<BranchAvailabilityEntity> customSchedule,
+      bool companyHasWorkingHours,
+      ScheduleSlotRejection? rejection,
+    })
+    draft,
+  ) {
+    switch (draft.mode) {
+      case BranchScheduleMode.company:
+        if (draft.companyHasWorkingHours) return null;
+        return 'branches.add_branch.schedule_company_empty'.tr();
+      case BranchScheduleMode.custom:
+        final hasHours =
+            draft.customSchedule.any((day) => day.slots.isNotEmpty);
+        if (hasHours) return null;
+        return 'branches.add_branch.schedule_required'.tr();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -351,6 +379,7 @@ class _WorkingHoursSection extends StatelessWidget {
           title: 'branches.add_branch.section_working_hours'.tr(),
           size: AppSectionSize.compact,
           tone: AppSectionTone.primary,
+          isRequired: true,
         ),
         Padding(
           padding: EdgeInsets.symmetric(
@@ -373,19 +402,21 @@ class _WorkingHoursSection extends StatelessWidget {
                     ({
                       BranchScheduleMode mode,
                       List<BranchAvailabilityEntity> customSchedule,
+                      bool companyHasWorkingHours,
                       ScheduleSlotRejection? rejection,
                     })
                   >(
                     selector: (state) => (
                       mode: state.scheduleMode,
                       customSchedule: state.customSchedule,
+                      companyHasWorkingHours: state.companyHasWorkingHours,
                       rejection: state.lastScheduleRejection,
                     ),
                     builder: (context, draft) {
                       final draftCubit = context.read<AddBranchDraftCubit>();
-                      final showScheduleError = showErrors &&
-                          draft.mode == BranchScheduleMode.custom &&
-                          draft.customSchedule.isEmpty;
+                      final scheduleError = showErrors
+                          ? _scheduleError(draft)
+                          : null;
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -403,10 +434,10 @@ class _WorkingHoursSection extends StatelessWidget {
                             ),
                             onRemoveSlot: draftCubit.removeScheduleSlot,
                           ),
-                          if (showScheduleError) ...[
+                          if (scheduleError != null) ...[
                             SizedBox(height: AppSpacing.xs),
                             Text(
-                              'branches.add_branch.schedule_required'.tr(),
+                              scheduleError,
                               style: context.appTypography.smallNormal
                                   .copyWith(
                                 color: context.appColors.error,

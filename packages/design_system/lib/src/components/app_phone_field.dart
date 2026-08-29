@@ -175,158 +175,166 @@ class _AppPhoneFieldState extends State<AppPhoneField> {
           suffix: widget.showVerifiedBadge ? const AppVerifiedBadge() : null,
         ),
         SizedBox(height: labelGap),
-        SizedBox(
-          height: fieldHeight,
-          child: TextField(
-            controller: _controller,
-            enabled: widget.enabled,
-            readOnly: widget.readOnly,
-            keyboardType: TextInputType.phone,
-            textInputAction: TextInputAction.next,
-            onChanged: (value) {
-              field.didChange(value);
-              widget.onChanged?.call(value);
-            },
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(10),
-            ],
-            style: FieldTokens.valueStyle(
-              typography,
-              colors,
-              brightness,
+        // Phone numbers are inherently LTR: the flag and dial-code prefix
+        // must always sit on the left and digits must always read left→right,
+        // regardless of app locale. Only the input row is forced — the label
+        // above and error below still follow the ambient locale direction.
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(
+            height: fieldHeight,
+            child: TextField(
+              controller: _controller,
+              textDirection: TextDirection.ltr,
               enabled: widget.enabled,
-            ),
-            decoration: InputDecoration(
-              hintText: widget.hint,
-              hintStyle: FieldTokens.hintStyle(
+              readOnly: widget.readOnly,
+              keyboardType: TextInputType.phone,
+              textInputAction: TextInputAction.next,
+              onChanged: (value) {
+                field.didChange(value);
+                widget.onChanged?.call(value);
+              },
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(10),
+              ],
+              style: FieldTokens.valueStyle(
                 typography,
                 colors,
                 brightness,
                 enabled: widget.enabled,
               ),
-              prefixIcon: GestureDetector(
-                onTap: widget.enabled ? widget.onCountryTap : null,
-                behavior: HitTestBehavior.opaque,
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    left: responsiveDimension(FieldTokens.horizontalPadding),
-                    right: AppSpacing.sm,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // The flag is a static default (not data-driven), so it
-                      // would otherwise render as-is under an active
-                      // Skeletonizer — flutter_svg paints via
-                      // Canvas.drawPicture, which the skeleton engine never
-                      // intercepts. Skeleton.replace swaps in a bone shape
-                      // instead of relying on paint-layer interception.
-                      Skeleton.replace(
-                        replacement: Bone.icon(size: iconSize),
-                        child: SvgPicture.asset(
-                          widget.countryFlagAsset,
-                          package: AppAssets.package,
-                          width: iconSize,
-                          height: iconSize,
+              decoration: InputDecoration(
+                hintText: widget.hint,
+                hintStyle: FieldTokens.hintStyle(
+                  typography,
+                  colors,
+                  brightness,
+                  enabled: widget.enabled,
+                ),
+                prefixIcon: GestureDetector(
+                  onTap: widget.enabled ? widget.onCountryTap : null,
+                  behavior: HitTestBehavior.opaque,
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      left: responsiveDimension(FieldTokens.horizontalPadding),
+                      right: AppSpacing.sm,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // The flag is a static default (not data-driven), so it
+                        // would otherwise render as-is under an active
+                        // Skeletonizer — flutter_svg paints via
+                        // Canvas.drawPicture, which the skeleton engine never
+                        // intercepts. Skeleton.replace swaps in a bone shape
+                        // instead of relying on paint-layer interception.
+                        Skeleton.replace(
+                          replacement: Bone.icon(size: iconSize),
+                          child: SvgPicture.asset(
+                            widget.countryFlagAsset,
+                            package: AppAssets.package,
+                            width: iconSize,
+                            height: iconSize,
+                          ),
                         ),
-                      ),
-                      SizedBox(
-                        width: responsiveSpacing(AppPhoneField._prefixGap),
-                      ),
-                      Text(
-                        widget.countryCode,
-                        style: typography.regularNone.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: widget.enabled
-                              ? dark.shade900
-                              : FieldTokens.valueColor(
-                                  colors,
-                                  brightness,
-                                  enabled: false,
-                                ),
+                        SizedBox(
+                          width: responsiveSpacing(AppPhoneField._prefixGap),
                         ),
-                      ),
-                    ],
+                        Text(
+                          widget.countryCode,
+                          style: typography.regularNone.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: widget.enabled
+                                ? dark.shade900
+                                : FieldTokens.valueColor(
+                                    colors,
+                                    brightness,
+                                    enabled: false,
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              prefixIconConstraints: BoxConstraints(
-                minWidth:
-                    responsiveDimension(FieldTokens.horizontalPadding) +
-                    iconSize +
-                    responsiveSpacing(AppPhoneField._prefixGap) +
-                    responsiveDimension(40) +
-                    AppSpacing.sm,
-                minHeight: fieldHeight,
-              ),
-              suffixIcon: widget.trailing != null
-                  ? Padding(
-                      padding: EdgeInsetsDirectional.only(
-                        end: responsiveDimension(FieldTokens.trailingPadding),
-                      ),
-                      child: Align(
-                        // See app_text_field.dart's identical fix: without
-                        // widthFactor, Align tries to fill all available
-                        // (unbounded) width and starves the editable digits
-                        // of space, rendering them invisible.
-                        widthFactor: 1,
-                        alignment: AlignmentDirectional.centerEnd,
-                        child: AppFieldTrailingView(
-                          trailing: widget.trailing!,
-                          enabled: widget.enabled,
+                prefixIconConstraints: BoxConstraints(
+                  minWidth:
+                      responsiveDimension(FieldTokens.horizontalPadding) +
+                      iconSize +
+                      responsiveSpacing(AppPhoneField._prefixGap) +
+                      responsiveDimension(40) +
+                      AppSpacing.sm,
+                  minHeight: fieldHeight,
+                ),
+                suffixIcon: widget.trailing != null
+                    ? Padding(
+                        padding: EdgeInsetsDirectional.only(
+                          end: responsiveDimension(FieldTokens.trailingPadding),
+                        ),
+                        child: Align(
+                          // See app_text_field.dart's identical fix: without
+                          // widthFactor, Align tries to fill all available
+                          // (unbounded) width and starves the editable digits
+                          // of space, rendering them invisible.
+                          widthFactor: 1,
+                          alignment: AlignmentDirectional.centerEnd,
+                          child: AppFieldTrailingView(
+                            trailing: widget.trailing!,
+                            enabled: widget.enabled,
+                          ),
+                        ),
+                      )
+                    : null,
+                suffixIconConstraints: widget.trailing != null
+                    ? FieldTokens.trailingSuffixConstraints()
+                    : null,
+                filled: true,
+                fillColor: FieldTokens.background(
+                  colors,
+                  brightness,
+                  enabled: widget.enabled,
+                ),
+                isDense: true,
+                contentPadding: widget.trailing != null
+                    ? EdgeInsets.fromLTRB(
+                        responsiveDimension(FieldTokens.trailingPadding),
+                        responsiveDimension(FieldTokens.trailingPadding),
+                        0,
+                        responsiveDimension(FieldTokens.trailingPadding),
+                      )
+                    : EdgeInsets.symmetric(
+                        horizontal: responsiveDimension(
+                          FieldTokens.horizontalPadding,
+                        ),
+                        vertical: responsiveDimension(
+                          FieldTokens.verticalPadding,
                         ),
                       ),
-                    )
-                  : null,
-              suffixIconConstraints: widget.trailing != null
-                  ? FieldTokens.trailingSuffixConstraints()
-                  : null,
-              filled: true,
-              fillColor: FieldTokens.background(
-                colors,
-                brightness,
-                enabled: widget.enabled,
-              ),
-              isDense: true,
-              contentPadding: widget.trailing != null
-                  ? EdgeInsets.fromLTRB(
-                      responsiveDimension(FieldTokens.trailingPadding),
-                      responsiveDimension(FieldTokens.trailingPadding),
-                      0,
-                      responsiveDimension(FieldTokens.trailingPadding),
-                    )
-                  : EdgeInsets.symmetric(
-                      horizontal: responsiveDimension(
-                        FieldTokens.horizontalPadding,
-                      ),
-                      vertical: responsiveDimension(
-                        FieldTokens.verticalPadding,
-                      ),
-                    ),
-              border: _border(
-                colors,
-                brightness,
-                focused: false,
-                error: hasError,
-              ),
-              enabledBorder: _border(
-                colors,
-                brightness,
-                focused: false,
-                error: hasError,
-              ),
-              focusedBorder: _border(
-                colors,
-                brightness,
-                focused: true,
-                error: hasError,
-              ),
-              disabledBorder: _border(
-                colors,
-                brightness,
-                focused: false,
-                disabled: true,
+                border: _border(
+                  colors,
+                  brightness,
+                  focused: false,
+                  error: hasError,
+                ),
+                enabledBorder: _border(
+                  colors,
+                  brightness,
+                  focused: false,
+                  error: hasError,
+                ),
+                focusedBorder: _border(
+                  colors,
+                  brightness,
+                  focused: true,
+                  error: hasError,
+                ),
+                disabledBorder: _border(
+                  colors,
+                  brightness,
+                  focused: false,
+                  disabled: true,
+                ),
               ),
             ),
           ),

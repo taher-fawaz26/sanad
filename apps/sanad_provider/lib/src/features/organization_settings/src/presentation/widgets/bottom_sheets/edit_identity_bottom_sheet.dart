@@ -1,8 +1,8 @@
-import 'package:app_assets/app_assets.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 import 'package:text_optimization/text_optimization.dart';
 
@@ -50,9 +50,6 @@ class _EditIdentitySheetBodyState extends State<_EditIdentitySheetBody> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final typography = context.appTypography;
-
     return SingleChildScrollView(
       padding: EdgeInsets.only(
         bottom: MediaQuery.viewInsetsOf(context).bottom,
@@ -63,7 +60,7 @@ class _EditIdentitySheetBodyState extends State<_EditIdentitySheetBody> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _Header(colors: colors, typography: typography),
+            SettingsSheetTitle(title: 'settings.section_identity'.tr()),
             SizedBox(height: AppSpacing.xxl),
             _BusinessDescriptionField(controller: _controller),
             SizedBox(height: AppSpacing.xl),
@@ -80,37 +77,6 @@ class _EditIdentitySheetBodyState extends State<_EditIdentitySheetBody> {
   void _submit() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     Navigator.of(context).pop(_controller.text);
-  }
-}
-
-class _Header extends StatelessWidget {
-  const _Header({required this.colors, required this.typography});
-
-  final AppColors colors;
-  final AppTypography typography;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AppSvgPicture.asset(
-          AppSvgs.registrationCity,
-          width: 24,
-          height: 24,
-          colorFilter: ColorFilter.mode(colors.primary, BlendMode.srcIn),
-        ),
-        SizedBox(height: AppSpacing.md),
-        Text(
-          'settings.section_identity'.tr(),
-          style: typography.title3.copyWith(
-            color: colors.primary,
-            fontWeight: FontWeight.w600,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
   }
 }
 

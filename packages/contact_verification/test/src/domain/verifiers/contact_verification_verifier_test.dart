@@ -1,14 +1,9 @@
-import 'package:contact_verification/src/domain/entities/verification_dispatch.dart';
-import 'package:contact_verification/src/domain/entities/verification_purpose.dart';
-import 'package:contact_verification/src/domain/entities/verification_result.dart';
-import 'package:contact_verification/src/domain/usecases/contact_verification_params.dart';
-import 'package:contact_verification/src/domain/usecases/request_verification_usecase.dart';
-import 'package:contact_verification/src/domain/usecases/resend_verification_usecase.dart';
-import 'package:contact_verification/src/domain/usecases/verify_contact_usecase.dart';
-import 'package:contact_verification/src/domain/verifiers/contact_verification_verifier.dart';
+import 'package:contact_verification/contact_verification.dart';
+import 'package:core/core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:mocktail/mocktail.dart' hide VerificationResult;
+import 'package:otp/otp.dart';
 
 class _MockRequestUseCase extends Mock implements RequestVerificationUseCase {}
 
@@ -16,20 +11,24 @@ class _MockResendUseCase extends Mock implements ResendVerificationUseCase {}
 
 class _MockVerifyUseCase extends Mock implements VerifyContactUseCase {}
 
+class _MockResendInfoUseCase extends Mock implements GetResendInfoUseCase {}
+
 void main() {
+  const purpose = VerificationPurpose.changeOwnerEmail;
+  const target = 'owner@example.com';
+
   late _MockRequestUseCase requestUseCase;
   late _MockResendUseCase resendUseCase;
   late _MockVerifyUseCase verifyUseCase;
+  late _MockResendInfoUseCase resendInfoUseCase;
   late ContactVerificationVerifier verifier;
-
-  const purpose = VerificationPurpose.changeBusinessEmail;
-  const target = 'new@biz.com';
 
   setUpAll(() {
     registerFallbackValue(
       const RequestVerificationParams(purpose: purpose, target: target),
     );
     registerFallbackValue(const ResendVerificationParams(purpose: purpose));
+    registerFallbackValue(const ResendInfoParams(purpose: purpose));
     registerFallbackValue(
       const VerifyContactParams(purpose: purpose, code: '000000'),
     );
@@ -39,58 +38,126 @@ void main() {
     requestUseCase = _MockRequestUseCase();
     resendUseCase = _MockResendUseCase();
     verifyUseCase = _MockVerifyUseCase();
+    resendInfoUseCase = _MockResendInfoUseCase();
     verifier = ContactVerificationVerifier(
       purpose: purpose,
       target: target,
       requestVerification: requestUseCase,
       resendVerification: resendUseCase,
       verifyContact: verifyUseCase,
+      getResendInfo: resendInfoUseCase,
     );
   });
 
-  test(
-    'requestCode calls request on the first call, resend afterwards',
-    () async {
-      when(() => requestUseCase(any())).thenAnswer(
-        (_) => TaskEither.right(const VerificationDispatch(message: 'sent')),
-      );
-      when(() => resendUseCase(any())).thenAnswer(
-        (_) =>
-            TaskEither.right(const VerificationDispatch(message: 'resent')),
-      );
-
-      final first = await verifier.requestCode().run();
-      final second = await verifier.requestCode().run();
-
-      expect(first.isRight(), isTrue);
-      expect(second.isRight(), isTrue);
-      verify(
-        () => requestUseCase(
-          const RequestVerificationParams(purpose: purpose, target: target),
-        ),
-      ).called(1);
-      verify(
-        () => resendUseCase(const ResendVerificationParams(purpose: purpose)),
-      ).called(1);
-    },
+  void stubRequest() => when(() => requestUseCase(any())).thenAnswer(
+    (_) => TaskEither.right(const VerificationDispatch(message: 'sent')),
+  );
+  void stubResend() => when(() => resendUseCase(any())).thenAnswer(
+    (_) => TaskEither.right(const VerificationDispatch(message: 'resent')),
   );
 
-  test('requestCode surfaces the target as the masked destination', () async {
-    when(() => requestUseCase(any())).thenAnswer(
-      (_) => TaskEither.right(const VerificationDispatch(message: 'sent')),
+  group('dispatch', () {
+    test(
+      'requestCode always opens a session via the request endpoint',
+      () async {
+        stubRequest();
+
+        await verifier.requestCode().run();
+        await verifier.requestCode().run();
+
+        verify(() => requestUseCase(any())).called(2);
+        verifyNever(() => resendUseCase(any()));
+      },
     );
 
-    final result = await verifier.requestCode().run();
+    test('resendCode uses the resend endpoint', () async {
+      stubResend();
 
-    result.match(
-      (_) => fail('expected success'),
-      (delivery) => expect(delivery.maskedDestination, target),
+      final result = await verifier.resendCode().run();
+
+      expect(result.isRight(), isTrue);
+      verify(() => resendUseCase(any())).called(1);
+      verifyNever(() => requestUseCase(any()));
+    });
+
+    test(
+      'a failed first send never leaves the verifier stuck on resend '
+      '(regression: an eagerly-set flag sent every retry to /resend against '
+      'a session that was never created)',
+      () async {
+        when(() => requestUseCase(any())).thenAnswer(
+          (_) => TaskEither.left(const ServerFailure(message: 'boom')),
+        );
+
+        final first = await verifier.requestCode().run();
+        expect(first.isLeft(), isTrue);
+
+        stubRequest();
+        final second = await verifier.requestCode().run();
+
+        expect(second.isRight(), isTrue);
+        verifyNever(() => resendUseCase(any()));
+      },
     );
+
+    test(
+      'resend falls back to opening a session when none is live (400)',
+      () async {
+        when(() => resendUseCase(any())).thenAnswer(
+          (_) => TaskEither.left(
+            const ValidationFailure(message: 'No active session'),
+          ),
+        );
+        stubRequest();
+
+        final result = await verifier.resendCode().run();
+
+        expect(result.isRight(), isTrue, reason: 'recovered, not stranded');
+        verify(() => resendUseCase(any())).called(1);
+        verify(() => requestUseCase(any())).called(1);
+      },
+    );
+
+    test('a non-recoverable resend failure is surfaced as-is', () async {
+      when(() => resendUseCase(any())).thenAnswer(
+        (_) => TaskEither.left(const RateLimitFailure(message: 'cooldown')),
+      );
+
+      final result = await verifier.resendCode().run();
+
+      expect(result.isLeft(), isTrue);
+      verifyNever(() => requestUseCase(any()));
+    });
   });
 
-  test(
-    'verifyCode delegates to VerifyContactUseCase with the given code',
-    () async {
+  group('cooldown', () {
+    test('maps resend-info onto the engine cooldown', () async {
+      when(() => resendInfoUseCase(any())).thenAnswer(
+        (_) => TaskEither.right(
+          const VerificationResendInfo(
+            canResend: false,
+            remainingSeconds: 42,
+            attemptsLeft: 3,
+          ),
+        ),
+      );
+
+      final result = await verifier.cooldown()!.run();
+
+      expect(
+        result.getOrElse((_) => OtpCooldown.unknown),
+        const OtpCooldown(
+          canResend: false,
+          remainingSeconds: 42,
+          // attemptsLeft counts RESENDS, not wrong-code tries.
+          resendsLeft: 3,
+        ),
+      );
+    });
+  });
+
+  group('verification', () {
+    test('verifyCode passes the code through to the use case', () async {
       when(() => verifyUseCase(any())).thenAnswer(
         (_) => TaskEither.right(
           const VerificationResult(
@@ -109,6 +176,6 @@ void main() {
           const VerifyContactParams(purpose: purpose, code: '123456'),
         ),
       ).called(1);
-    },
-  );
+    });
+  });
 }

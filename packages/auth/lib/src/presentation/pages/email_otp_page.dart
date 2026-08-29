@@ -5,37 +5,34 @@ import 'package:auth/src/domain/entities/login_result_entity.dart';
 import 'package:auth/src/domain/enums/auth_account_status.dart';
 import 'package:auth/src/domain/enums/auth_flow_intent.dart';
 import 'package:auth/src/domain/usecases/get_current_user_usecase.dart';
-import 'package:auth/src/domain/usecases/usecase_params.dart';
+import 'package:auth/src/domain/usecases/get_resend_info_usecase.dart';
+import 'package:auth/src/domain/usecases/request_login_otp_usecase.dart';
+import 'package:auth/src/domain/usecases/request_signup_otp_usecase.dart';
+import 'package:auth/src/domain/usecases/resend_otp_usecase.dart';
 import 'package:auth/src/domain/usecases/verify_login_otp_usecase.dart';
 import 'package:auth/src/domain/usecases/verify_signup_otp_usecase.dart';
-import 'package:auth/src/presentation/bloc/auth/auth_bloc.dart';
+import 'package:auth/src/domain/verifiers/auth_otp_verifiers.dart';
 import 'package:auth/src/routes/auth_routes.dart';
 import 'package:auth/src/session/complete_active_login.dart';
 import 'package:auth/src/session/session_manager.dart';
 import 'package:core/core.dart' show sl;
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
+import 'package:otp/otp.dart';
 import 'package:shared_ui/shared_ui.dart';
 
 /// Shared passwordless OTP screen (Figma `sign in` / OTP, `3026:19710`).
 ///
 /// Reached identically from Sign In and Sign Up, disambiguated by [intent].
-/// Requesting the initial/resend code still goes through [AuthBloc]
-/// (`AuthRequestOtpEvent` / `AuthResendOtpEvent` /
-/// `AuthResendInfoRequestedEvent`). Verifying the code calls the
-/// signup/login verify use case directly (chosen by [intent]) rather than
-/// through a Bloc event or the old shared `AuthOtpVerifier` — the two verify
-/// endpoints have different response shapes (`OnboardingAuthResponseDto` vs
-/// `LoginResponseDto`) that no longer fit a single generic verifier
-/// contract, and calling the use cases straight from the page keeps that
-/// branching in one obvious place.
-class EmailOtpPage extends HookWidget {
+/// The screen itself is the shared `otp` package's `OtpView` — this widget
+/// contributes only the intent-specific verifier and what to do with the
+/// result. The two verify endpoints return different shapes
+/// (`AuthResponseEntity` vs `LoginResult`), which is why there are two typed
+/// verifiers rather than one generic one.
+class EmailOtpPage extends StatefulWidget {
   const EmailOtpPage({
     required this.email,
     required this.intent,
@@ -54,298 +51,150 @@ class EmailOtpPage extends HookWidget {
   final VoidCallback? onChangeEmail;
 
   @override
-  Widget build(BuildContext context) {
-    final controller = useTextEditingController();
-    final secondsLeft = useState(0);
-    final canResend = useState(false);
-    final isVerifying = useState(false);
-    final colors = context.appColors;
-    final typography = context.appTypography;
+  State<EmailOtpPage> createState() => _EmailOtpPageState();
+}
 
-    useEffect(() {
-      // Server-driven cooldown (replaces the old hardcoded 60s timer).
-      context.read<AuthBloc>().add(AuthResendInfoRequestedEvent(email));
-      return null;
-    }, [email]);
-
-    useEffect(() {
-      final timer = Timer.periodic(const Duration(seconds: 1), (t) {
-        if (secondsLeft.value <= 1) {
-          t.cancel();
-          secondsLeft.value = 0;
-          canResend.value = true;
-        } else {
-          secondsLeft.value--;
-        }
-      });
-      return timer.cancel;
-    }, const []);
-
-    void changeEmail() {
-      if (onChangeEmail != null) {
-        onChangeEmail!();
-      } else if (context.canPop()) {
-        context.pop();
-      }
+class _EmailOtpPageState extends State<EmailOtpPage> {
+  void _changeEmail() {
+    if (widget.onChangeEmail != null) {
+      widget.onChangeEmail!();
+    } else if (context.canPop()) {
+      context.pop();
     }
+  }
 
-    Future<void> submit() async {
-      if (controller.text.trim().length < kDefaultOtpLength) {
-        showAppErrorSnackbar(
-          context: context,
-          title: 'auth.otp_invalid'.tr(),
-        );
-        return;
+  OtpFlowConfig<T> _config<T>(OtpVerifier<T> verifier) =>
+      OtpFlowConfig<T>.email(
+        destination: widget.email,
+        verifier: verifier,
+        purpose: OtpPurpose.login,
+        // Verification is intentionally NOT auto-triggered on completion
+        // (SAN-539). Re-editing a digit of an already-full code would
+        // otherwise re-fire the verify call, burning OTP attempts and risking
+        // the rate limit. The user must explicitly tap "Verify".
+        autoSubmit: false,
+        // Auth owns its own success routing; a confirmation screen here would
+        // sit between the user and the app they just signed in to.
+        showSuccessScreen: false,
+        onChangeDestination: (_) async {
+          _changeEmail();
+          return null;
+        },
+      );
+
+  void _handleSignupResult(OtpResult<AuthResponseEntity> result) {
+    if (result case OtpVerified<AuthResponseEntity>(:final data)) {
+      switch (data) {
+        case AuthSessionEntity():
+          widget.onAuthenticated();
+        case OnboardingAuthEntity(:final onboardingToken, :final user):
+          widget.onOnboarding(user.email, onboardingToken);
       }
-      if (isVerifying.value) return;
-      isVerifying.value = true;
-      final code = controller.text.trim();
+      return;
+    }
+    _reportAndLeave(result);
+  }
 
-      switch (intent) {
-        case AuthFlowIntent.createAccount:
-          final result = await sl<VerifySignupOtpUseCase>()
-              .call(VerifyEmailOtpParams(email: email, otp: code))
-              .run();
-          if (!context.mounted) return;
-          isVerifying.value = false;
-          result.match(
+  /// Branches on `LoginResponseDto.status`. ACTIVE requires a follow-up
+  /// `GET /me` (see [completeActiveLogin]) since `LoginResponseDto` carries
+  /// only tokens; INCOMPLETE hands off to onboarding with the email already
+  /// known (unlike the Google flow); SUSPENDED and SCHEDULED_FOR_DELETION go
+  /// to their dedicated routes.
+  Future<void> _handleLoginResult(OtpResult<LoginResult> result) async {
+    if (result case OtpVerified<LoginResult>(data: final loginResult)) {
+      switch (loginResult.status) {
+        case AuthAccountStatus.active:
+          final accessToken = loginResult.accessToken;
+          final refreshToken = loginResult.refreshToken;
+          if (accessToken == null || refreshToken == null) {
+            _showMalformed();
+            return;
+          }
+          final userResult = await completeActiveLogin(
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            getCurrentUser: sl<GetCurrentUserUseCase>(),
+            sessionManager: sl<SessionManager>(),
+          ).run();
+          if (!mounted) return;
+          userResult.match(
             (failure) => showAppErrorSnackbar(
               context: context,
               title: failure.localizedMessage(),
             ),
-            (response) {
-              switch (response) {
-                case AuthSessionEntity():
-                  onAuthenticated();
-                case OnboardingAuthEntity(:final onboardingToken, :final user):
-                  onOnboarding(user.email, onboardingToken);
-              }
-            },
+            (_) => widget.onAuthenticated(),
           );
-        case AuthFlowIntent.signIn:
-          final result = await sl<VerifyLoginOtpUseCase>()
-              .call(VerifyEmailOtpParams(email: email, otp: code))
-              .run();
-          if (!context.mounted) return;
-          await result.match(
-            (failure) async {
-              isVerifying.value = false;
-              showAppErrorSnackbar(
-                context: context,
-                title: failure.localizedMessage(),
-              );
-            },
-            (loginResult) => _handleLoginResult(
-              context: context,
-              email: email,
-              loginResult: loginResult,
-              isVerifying: isVerifying,
-              onAuthenticated: onAuthenticated,
-              onOnboarding: onOnboarding,
-            ),
-          );
+        case AuthAccountStatus.incomplete:
+          final onboardingToken = loginResult.accessToken;
+          if (onboardingToken == null) {
+            _showMalformed();
+            return;
+          }
+          widget.onOnboarding(widget.email, onboardingToken);
+        case AuthAccountStatus.suspended:
+          context.go(AuthRoutes.suspended);
+        case AuthAccountStatus.scheduledForDeletion:
+          context.go(AuthRoutes.scheduledForDeletion);
       }
+      return;
     }
+    _reportAndLeave(result);
+  }
 
-    void resend() {
-      if (!canResend.value) return;
-      canResend.value = false;
-      controller.clear();
-      context.read<AuthBloc>().add(AuthResendOtpEvent(email));
-    }
-
-    final minutes = (secondsLeft.value ~/ 60).toString().padLeft(2, '0');
-    final seconds = (secondsLeft.value % 60).toString().padLeft(2, '0');
-
-    return BlocListener<AuthBloc, AuthState>(
-      listener: (context, state) {
-        switch (state) {
-          case AuthOtpSentState():
-            showAppSnackbar(
-              context: context,
-              title: 'auth.otp_resent'.tr(),
-              color: AppSnackbarColor.primary,
-            );
-          case AuthOtpRequestFailureState(:final failure):
-            showAppErrorSnackbar(
-              context: context,
-              title: failure.localizedMessage(),
-            );
-          case AuthResendInfoState(:final resendInfo):
-            secondsLeft.value = resendInfo.remainingSeconds;
-            canResend.value = resendInfo.canResend;
-          case AuthResendInfoFailureState():
-            // Best-effort: fall back to allowing resend rather than
-            // stranding the user behind a cooldown the server never
-            // confirmed.
-            canResend.value = true;
-          default:
-            break;
-        }
-      },
-      child: AuthScreenShell(
-        onBack: changeEmail,
-        title: 'auth.otp_title'.tr(),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'auth.otp_title'.tr(),
-                textAlign: TextAlign.center,
-                style: typography.title2.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: colors.textPrimary,
-                ),
-              ),
-              SizedBox(height: responsiveDimension(AppSpacing.sm)),
-              Text.rich(
-                textAlign: TextAlign.center,
-                TextSpan(
-                  style: typography.regularNormal.copyWith(
-                    color: colors.textSecondary,
-                  ),
-                  children: [
-                    TextSpan(text: '${'auth.otp_subtitle'.tr()}\n'),
-                    TextSpan(
-                      text: email,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const TextSpan(text: ' '),
-                    TextSpan(
-                      text: 'common.change'.tr(),
-                      style: TextStyle(
-                        color: colors.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      recognizer: TapGestureRecognizer()..onTap = changeEmail,
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
-              Center(
-                child: AppOtpField(
-                  controller: controller,
-                  autofocus: true,
-                  // Verification is intentionally NOT auto-triggered on
-                  // completion (SAN-539). Re-editing a single digit of an
-                  // already-full code would otherwise re-fire the verify call
-                  // on every keystroke, burning OTP attempts and risking the
-                  // rate limit. The user must explicitly tap "Verify".
-                  onSubmitted: (_) => submit(),
-                ),
-              ),
-              SizedBox(height: responsiveDimension(AppSpacing.xl)),
-              AppButton(
-                label: 'auth.verify'.tr(),
-                isLoading: isVerifying.value,
-                onPressed: isVerifying.value ? null : submit,
-              ),
-              SizedBox(height: responsiveDimension(AppSpacing.xl)),
-              if (!canResend.value)
-                Center(
-                  child: Text(
-                    '$minutes:$seconds',
-                    style: typography.regularNormal.copyWith(
-                      color: colors.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              SizedBox(height: responsiveDimension(AppSpacing.xl)),
-              Center(
-                child: Text.rich(
-                  TextSpan(
-                    style: typography.regularNormal.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                    children: [
-                      TextSpan(text: 'auth.otp_not_received'.tr()),
-                      TextSpan(
-                        text: 'common.resend'.tr(),
-                        style: TextStyle(
-                          color: canResend.value
-                              ? colors.primary
-                              : colors.textMuted,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        recognizer: canResend.value
-                            ? (TapGestureRecognizer()..onTap = resend)
-                            : null,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+  void _showMalformed() {
+    if (!mounted) return;
+    showAppErrorSnackbar(
+      context: context,
+      title: 'auth.malformed_login_response'.tr(),
     );
   }
 
-  /// Branches on `LoginResponseDto.status` for the OTP sign-in path. ACTIVE
-  /// requires a follow-up `GET /me` (see [completeActiveLogin]) since
-  /// `LoginResponseDto` carries only tokens; INCOMPLETE hands off to
-  /// onboarding with the email already known (unlike the Google flow); the
-  /// account being SUSPENDED sends the user to the dedicated route.
-  static Future<void> _handleLoginResult({
-    required BuildContext context,
-    required String email,
-    required LoginResult loginResult,
-    required ValueNotifier<bool> isVerifying,
-    required VoidCallback onAuthenticated,
-    required void Function(String email, String onboardingToken) onOnboarding,
-  }) async {
-    switch (loginResult.status) {
-      case AuthAccountStatus.active:
-        final accessToken = loginResult.accessToken;
-        final refreshToken = loginResult.refreshToken;
-        if (accessToken == null || refreshToken == null) {
-          isVerifying.value = false;
-          if (context.mounted) {
-            showAppErrorSnackbar(
-              context: context,
-              title: 'auth.malformed_login_response'.tr(),
-            );
-          }
-          return;
-        }
-        final userResult = await completeActiveLogin(
-          accessToken: accessToken,
-          refreshToken: refreshToken,
-          getCurrentUser: sl<GetCurrentUserUseCase>(),
-          sessionManager: sl<SessionManager>(),
-        ).run();
-        isVerifying.value = false;
-        if (!context.mounted) return;
-        userResult.match(
-          (failure) => showAppErrorSnackbar(
-            context: context,
-            title: failure.localizedMessage(),
-          ),
-          (_) => onAuthenticated(),
-        );
-      case AuthAccountStatus.incomplete:
-        isVerifying.value = false;
-        final onboardingToken = loginResult.accessToken;
-        if (onboardingToken == null) {
-          if (context.mounted) {
-            showAppErrorSnackbar(
-              context: context,
-              title: 'auth.malformed_login_response'.tr(),
-            );
-          }
-          return;
-        }
-        onOnboarding(email, onboardingToken);
-      case AuthAccountStatus.suspended:
-        isVerifying.value = false;
-        if (context.mounted) context.go(AuthRoutes.suspended);
-      case AuthAccountStatus.scheduledForDeletion:
-        isVerifying.value = false;
-        if (context.mounted) context.go(AuthRoutes.scheduledForDeletion);
+  /// A dismissal returns the user to the email step; a hard failure says why
+  /// first. Either way this screen has nothing left to show.
+  void _reportAndLeave(OtpResult<Object?> result) {
+    if (result case OtpFailed(:final failure)) {
+      showAppErrorSnackbar(
+        context: context,
+        title: failure.localizedMessage(),
+      );
     }
+    _changeEmail();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Hosted inline rather than pushed: this IS the auth OTP screen, so it
+    // keeps the auth chrome instead of stacking a second route on top of a
+    // blank one.
+    return AuthScreenShell(
+      onBack: _changeEmail,
+      title: 'auth.otp_title'.tr(),
+      child: switch (widget.intent) {
+        AuthFlowIntent.createAccount => OtpHost<AuthResponseEntity>(
+          config: _config<AuthResponseEntity>(
+            SignupOtpVerifier(
+              email: widget.email,
+              requestOtp: sl<RequestSignupOtpUseCase>(),
+              verifyOtp: sl<VerifySignupOtpUseCase>(),
+              resendOtp: sl<ResendOtpUseCase>(),
+              getResendInfo: sl<GetResendInfoUseCase>(),
+            ),
+          ),
+          onResult: _handleSignupResult,
+        ),
+        AuthFlowIntent.signIn => OtpHost<LoginResult>(
+          config: _config<LoginResult>(
+            LoginOtpVerifier(
+              email: widget.email,
+              requestOtp: sl<RequestLoginOtpUseCase>(),
+              verifyOtp: sl<VerifyLoginOtpUseCase>(),
+              resendOtp: sl<ResendOtpUseCase>(),
+              getResendInfo: sl<GetResendInfoUseCase>(),
+            ),
+          ),
+          onResult: (result) => unawaited(_handleLoginResult(result)),
+        ),
+      },
+    );
   }
 }

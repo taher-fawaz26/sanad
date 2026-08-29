@@ -4,6 +4,7 @@ import 'package:deep_linking/deep_linking.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -106,6 +107,46 @@ class _SanadProviderAppState extends State<SanadProviderApp>
                           darkTheme: AppTheme.dark(),
                           themeMode: _resolveThemeMode(themeState),
                           routerConfig: _router,
+                          // SAN-581. Android (with
+                          // `enableOnBackInvokedCallback=true`, set in our
+                          // manifest) decides whether to even ASK Flutter
+                          // about a back gesture from a latched boolean,
+                          // pushed here via `setFrameworkHandlesBack`.
+                          //
+                          // `NavigationNotification`s bubble UP the widget
+                          // tree, and the listener that corrects a `false`
+                          // into a `true` lives INSIDE `NavigatorState.build`
+                          // — a DESCENDANT of that navigator's own element
+                          // (flutter/widgets/navigator.dart). But
+                          // `_handleHistoryChanged` dispatches at the
+                          // navigator's OWN context, so a navigator's history
+                          // change bypasses its own corrector and every
+                          // nested navigator below it.
+                          //
+                          // Our root navigator holds exactly one page (the
+                          // StatefulShellRoute shell), so its `canPop()` is
+                          // false and it emits `canHandlePop:false`.
+                          // `SheetNavigator` pushes sheets onto THAT root
+                          // navigator, so closing one emits that `false`
+                          // last — latching "Flutter can't handle back" even
+                          // though the shell branch has a deep, poppable
+                          // stack (e.g. List > Details > Edit). Android then
+                          // exits the app without ever calling into Flutter,
+                          // which is why no PopScope or go_router change can
+                          // rescue it.
+                          //
+                          // go_router's own `canPop()` walks the shell
+                          // branches the framework's notification skips, so
+                          // OR-ing it in restores the truth. The OR also
+                          // preserves PopScope interception, which reports
+                          // `canHandlePop:true` precisely when it wants to
+                          // block a pop.
+                          onNavigationNotification: (notification) {
+                            SystemNavigator.setFrameworkHandlesBack(
+                              notification.canHandlePop || _router.canPop(),
+                            );
+                            return true;
+                          },
                         );
                       },
                     ),

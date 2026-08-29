@@ -44,14 +44,21 @@ class _ParentWithControllerListenerState
   }
 }
 
-Future<void> _pump(WidgetTester tester, Widget child) async {
+Future<void> _pump(
+  WidgetTester tester,
+  Widget child, {
+  TextDirection ambient = TextDirection.ltr,
+}) async {
   await tester.pumpWidget(
     ScreenUtilInit(
       designSize: const Size(360, 800),
       minTextAdapt: true,
       builder: (_, _) => MaterialApp(
         theme: AppTheme.light(),
-        home: Scaffold(body: child),
+        home: Directionality(
+          textDirection: ambient,
+          child: Scaffold(body: child),
+        ),
       ),
     ),
   );
@@ -208,6 +215,69 @@ void main() {
       expect(isValid, isFalse);
       expect(find.text('Required'), findsOneWidget);
     });
+  });
+
+  group('AppPhoneField direction', () {
+    testWidgets('forces the input row to LTR under an RTL ambient (Arabic)', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        AppPhoneField(
+          label: 'رقم الهاتف',
+          controller: TextEditingController(text: '501234567'),
+        ),
+        ambient: TextDirection.rtl,
+      );
+
+      expect(
+        Directionality.of(tester.element(find.byType(TextField))),
+        TextDirection.ltr,
+      );
+      final field = tester.widget<TextField>(find.byType(TextField));
+      expect(field.textDirection, TextDirection.ltr);
+    });
+
+    testWidgets('keeps the input row LTR under an LTR ambient (English)', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        AppPhoneField(
+          label: 'Phone number',
+          controller: TextEditingController(text: '501234567'),
+        ),
+      );
+
+      expect(
+        Directionality.of(tester.element(find.byType(TextField))),
+        TextDirection.ltr,
+      );
+    });
+
+    testWidgets(
+      'flag + dial code sit on the visual left of the input under RTL',
+      (tester) async {
+        await _pump(
+          tester,
+          AppPhoneField(
+            label: 'رقم الهاتف',
+            controller: TextEditingController(text: '501234567'),
+          ),
+          ambient: TextDirection.rtl,
+        );
+
+        final dialCodeCenter = tester.getCenter(find.text('+971'));
+        final fieldCenter = tester.getCenter(find.byType(TextField));
+        expect(
+          dialCodeCenter.dx,
+          lessThan(fieldCenter.dx),
+          reason:
+              'Phone field is inherently LTR: the flag and +971 prefix must '
+              'always sit on the visual left, even under an RTL locale.',
+        );
+      },
+    );
   });
 
   group('AppPhoneField skeleton', () {

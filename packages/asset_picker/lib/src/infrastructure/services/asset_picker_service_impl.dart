@@ -5,6 +5,7 @@ import 'package:asset_picker/src/domain/enums/asset_source.dart';
 import 'package:asset_picker/src/domain/failures/asset_picker_exception.dart';
 import 'package:asset_picker/src/domain/services/asset_picker_service.dart';
 import 'package:asset_picker/src/domain/validation/asset_validator.dart';
+import 'package:asset_picker/src/infrastructure/compression/asset_image_compressor.dart';
 import 'package:asset_picker/src/infrastructure/providers/camera_provider.dart';
 import 'package:asset_picker/src/infrastructure/providers/file_provider.dart';
 import 'package:asset_picker/src/infrastructure/providers/gallery_provider.dart';
@@ -28,17 +29,20 @@ class AssetPickerServiceImpl implements AssetPickerService {
     FileProvider? fileProvider,
     ScannerProvider? scannerProvider,
     AssetValidator validator = const DefaultAssetValidator(),
+    AssetImageCompressor compressor = const ImagePackageAssetCompressor(),
   }) : _cameraProvider = cameraProvider,
        _galleryProvider = galleryProvider,
        _fileProvider = fileProvider,
        _scannerProvider = scannerProvider,
-       _validator = validator;
+       _validator = validator,
+       _compressor = compressor;
 
   final CameraProvider? _cameraProvider;
   final GalleryProvider? _galleryProvider;
   final FileProvider? _fileProvider;
   final ScannerProvider? _scannerProvider;
   final AssetValidator _validator;
+  final AssetImageCompressor _compressor;
 
   @override
   Future<AssetPickerResult> pickFrom(
@@ -48,10 +52,31 @@ class AssetPickerServiceImpl implements AssetPickerService {
     final assets = await _acquire(source, options);
     if (assets.isEmpty) return const AssetPickerResult.cancelled();
 
+    // Validation runs on whatever the provider returned. With
+    // `enforceSizeBeforeCompression`, that is the untouched original, so an
+    // oversized file is rejected here — before the compression stage below can
+    // shrink it under the limit.
     final errors = _validator.validate(assets, options);
     if (errors.isNotEmpty) throw AssetValidationException(errors);
 
-    return AssetPickerResult.success(assets: assets, source: source);
+    final delivered = options.compressAfterValidation
+        ? await _compress(assets, options.imageQuality)
+        : assets;
+
+    return AssetPickerResult.success(assets: delivered, source: source);
+  }
+
+  /// Post-validation compression stage (see [AssetImageCompressor]). Only image
+  /// assets are re-encoded; anything else passes through untouched.
+  Future<List<PickedAsset>> _compress(
+    List<PickedAsset> assets,
+    int quality,
+  ) async {
+    final out = <PickedAsset>[];
+    for (final asset in assets) {
+      out.add(await _compressor.compress(asset, quality: quality));
+    }
+    return out;
   }
 
   @override

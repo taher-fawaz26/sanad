@@ -32,6 +32,7 @@ class IdentityHeaderBloc
     on<IdentityHeaderUploadRetried>(_onRetried);
     on<IdentityHeaderUploadCancelled>(_onCancelled);
     on<IdentityHeaderMediaRemoved>(_onRemoved);
+    on<IdentityHeaderFailureAcknowledged>(_onFailureAcknowledged);
   }
 
   final UploadOrganizationMediaUseCase _uploadUseCase;
@@ -185,6 +186,19 @@ class IdentityHeaderBloc
               lastMedia: null,
             ),
       ),
+    );
+  }
+
+  void _onFailureAcknowledged(
+    IdentityHeaderFailureAcknowledged event,
+    Emitter<IdentityHeaderState> emit,
+  ) {
+    _emitSlot(
+      emit,
+      event.slot,
+      state
+          .slot(event.slot)
+          .copyWith(status: RequestStatus.initial, clearFailure: true),
     );
   }
 

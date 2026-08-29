@@ -38,6 +38,30 @@ Future<void> _tapCell(WidgetTester tester, int index) async {
 Map<String, dynamic> _imeState(WidgetTester tester) =>
     tester.testTextInput.editingState!;
 
+/// Applies the edit a real IME performs for a keystroke: replace whatever
+/// range is currently selected **on the platform side**, then collapse the
+/// caret after the inserted character.
+///
+/// Reading the selection from [_imeState] (rather than hardcoding it) is the
+/// whole point — it is what the platform would compose against, so these tests
+/// fail if the widget stops re-arming a position after an edit.
+Future<void> _typeDigit(WidgetTester tester, String digit) async {
+  final state = _imeState(tester);
+  final text = state['text'] as String;
+  final base = state['selectionBase'] as int;
+  final extent = state['selectionExtent'] as int;
+  final start = base < extent ? base : extent;
+  final end = base < extent ? extent : base;
+
+  tester.testTextInput.updateEditingValue(
+    TextEditingValue(
+      text: text.replaceRange(start, end, digit),
+      selection: TextSelection.collapsed(offset: start + digit.length),
+    ),
+  );
+  await tester.pump();
+}
+
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 void main() {
@@ -111,7 +135,10 @@ void main() {
       'so the next keystroke replaces it instead of appending',
       (tester) async {
         final controller = TextEditingController(text: '066555');
-        await _pump(tester, AppOtpField(controller: controller, autofocus: true));
+        await _pump(
+          tester,
+          AppOtpField(controller: controller, autofocus: true),
+        );
 
         await _tapCell(tester, 2);
 
@@ -174,29 +201,293 @@ void main() {
     });
   });
 
-  group('AppOtpField backspace', () {
-    testWidgets('deleting from a mid-string cursor removes the previous digit', (
+  // The core OTP invariant: every cell is a FIXED position. Editing an
+  // existing digit must replace it and advance one position - never insert,
+  // never shift the following digits, never change the length.
+  //
+  // These differ from the `AppOtpField replacement` group above in one
+  // decisive way: they tap ONCE and then type consecutively, which is what
+  // real users do. Re-tapping before every keystroke masks the bug.
+  group('AppOtpField replacement semantics (fixed-position invariant)', () {
+    Future<TextEditingController> setUp6(WidgetTester tester) async {
+      final controller = TextEditingController(text: '123456');
+      await _pump(tester, AppOtpField(controller: controller, autofocus: true));
+      return controller;
+    }
+
+    testWidgets('1. 123456 tap #2 type 9 -> 193456', (tester) async {
+      final c = await setUp6(tester);
+      await _tapCell(tester, 1);
+      await _typeDigit(tester, '9');
+      expect(c.text, '193456');
+    });
+
+    testWidgets('2. 123456 tap #2 type 9 then 8 -> 198456 (no re-tap)', (
       tester,
     ) async {
-      final controller = TextEditingController(text: '066555');
+      final c = await setUp6(tester);
+      await _tapCell(tester, 1);
+      await _typeDigit(tester, '9');
+      await _typeDigit(tester, '8');
+      expect(
+        c.text,
+        '198456',
+        reason:
+            'the second keystroke must replace position 3, not insert at the '
+            'collapsed caret (which yields 198345)',
+      );
+    });
+
+    testWidgets('3. 123456 tap #4 type 9 -> 123956', (tester) async {
+      final c = await setUp6(tester);
+      await _tapCell(tester, 3);
+      await _typeDigit(tester, '9');
+      expect(c.text, '123956');
+    });
+
+    testWidgets('4. 123456 tap #1 type 9 -> 923456', (tester) async {
+      final c = await setUp6(tester);
+      await _tapCell(tester, 0);
+      await _typeDigit(tester, '9');
+      expect(c.text, '923456');
+    });
+
+    testWidgets('5. following digits never shift, at every position', (
+      tester,
+    ) async {
+      for (var i = 0; i < kDefaultOtpLength; i++) {
+        final c = TextEditingController(text: '123456');
+        await _pump(tester, AppOtpField(controller: c, autofocus: true));
+        await _tapCell(tester, i);
+        await _typeDigit(tester, '0');
+
+        expect(
+          c.text,
+          '123456'.replaceRange(i, i + 1, '0'),
+          reason: 'replacing position ${i + 1}',
+        );
+        expect(
+          c.text.substring(i + 1),
+          '123456'.substring(i + 1),
+          reason: 'the tail after position ${i + 1} must be untouched',
+        );
+      }
+    });
+
+    testWidgets('6. length stays exactly 6 across a run of replacements', (
+      tester,
+    ) async {
+      final c = await setUp6(tester);
+      await _tapCell(tester, 0);
+      for (final d in ['9', '8', '7', '6', '5', '4']) {
+        await _typeDigit(tester, d);
+        expect(c.text.length, kDefaultOtpLength);
+      }
+      expect(c.text, '987654');
+    });
+
+    testWidgets('7. the caret auto-advances and arms the next position', (
+      tester,
+    ) async {
+      final c = await setUp6(tester);
+      await _tapCell(tester, 1);
+      await _typeDigit(tester, '9');
+
+      expect(
+        c.selection,
+        const TextSelection(baseOffset: 2, extentOffset: 3),
+        reason: 'advanced onto position 3 and selected it',
+      );
+      // And the platform sees the same, so the next keystroke replaces.
+      expect(_imeState(tester)['selectionBase'], 2);
+      expect(_imeState(tester)['selectionExtent'], 3);
+    });
+
+    testWidgets('7b. the last position collapses instead of arming', (
+      tester,
+    ) async {
+      final c = await setUp6(tester);
+      await _tapCell(tester, 5);
+      await _typeDigit(tester, '9');
+
+      expect(c.text, '123459');
+      expect(
+        c.selection,
+        const TextSelection.collapsed(offset: 6),
+        reason: 'nothing left to replace - appending resumes',
+      );
+    });
+
+    testWidgets('8. same behaviour inside a bottom sheet', (tester) async {
+      final c = TextEditingController(text: '123456');
       await _pump(
         tester,
-        AppOtpField(controller: controller, autofocus: true),
+        Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () => showModalBottomSheet<void>(
+              context: context,
+              builder: (_) => AppOtpField(controller: c, autofocus: true),
+            ),
+            child: const Text('open'),
+          ),
+        ),
       );
+      await tester.tap(find.text('open'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
 
-      await _tapCell(tester, 2);
-      // Backspace over the selected digit clears that digit.
+      await _tapCell(tester, 1);
+      await _typeDigit(tester, '9');
+      await _typeDigit(tester, '8');
+      expect(c.text, '198456');
+    });
+
+    testWidgets('9. same behaviour in an RTL (Arabic) layout', (tester) async {
+      final c = TextEditingController(text: '123456');
+      await _pump(
+        tester,
+        Directionality(
+          textDirection: TextDirection.rtl,
+          child: AppOtpField(controller: c, autofocus: true),
+        ),
+      );
+      await _tapCell(tester, 1);
+      await _typeDigit(tester, '9');
+      await _typeDigit(tester, '8');
+      expect(c.text, '198456', reason: 'digits stay LTR and positions hold');
+    });
+
+    testWidgets('10. a pending IME composing region does not re-anchor', (
+      tester,
+    ) async {
+      final c = await setUp6(tester);
+      await _tapCell(tester, 1);
+
+      // An IME that reports a live composition over the edited range.
       tester.testTextInput.updateEditingValue(
         const TextEditingValue(
-          text: '06555',
+          text: '193456',
           selection: TextSelection.collapsed(offset: 2),
+          composing: TextRange(start: 1, end: 2),
         ),
       );
       await tester.pump();
 
-      expect(controller.text, '06555');
-      expect(controller.selection, const TextSelection.collapsed(offset: 2));
+      expect(c.value.composing, TextRange.empty);
+      await _typeDigit(tester, '8');
+      expect(c.text, '198456');
     });
+
+    testWidgets('11. replacement survives a changing keyboard inset', (
+      tester,
+    ) async {
+      final c = TextEditingController(text: '123456');
+
+      Future<void> pumpWithInset(double inset) async {
+        await tester.pumpWidget(
+          ScreenUtilInit(
+            designSize: const Size(2000, 3000),
+            minTextAdapt: true,
+            builder: (_, _) => MaterialApp(
+              theme: AppTheme.light(),
+              home: MediaQuery(
+                data: MediaQueryData(
+                  viewInsets: EdgeInsets.only(bottom: inset),
+                ),
+                child: Scaffold(
+                  body: Center(
+                    child: AppOtpField(controller: c, autofocus: true),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+      }
+
+      await pumpWithInset(0);
+      await _tapCell(tester, 1);
+      await _typeDigit(tester, '9');
+
+      // Keyboard animates in mid-edit.
+      await pumpWithInset(120);
+      await pumpWithInset(280);
+
+      await _typeDigit(tester, '8');
+      expect(c.text, '198456');
+    });
+
+    testWidgets('12. paste still replaces the whole code, not a position', (
+      tester,
+    ) async {
+      final c = await setUp6(tester);
+      await _tapCell(tester, 1);
+
+      tester.testTextInput.updateEditingValue(
+        const TextEditingValue(
+          text: '987654',
+          selection: TextSelection.collapsed(offset: 6),
+        ),
+      );
+      await tester.pump();
+
+      expect(c.text, '987654');
+      expect(c.text.length, kDefaultOtpLength);
+    });
+
+    testWidgets('editing a complete code does not re-fire onCompleted', (
+      tester,
+    ) async {
+      final c = TextEditingController(text: '123456');
+      var completions = 0;
+      await _pump(
+        tester,
+        AppOtpField(
+          controller: c,
+          autofocus: true,
+          onCompleted: (_) => completions++,
+        ),
+      );
+
+      await _tapCell(tester, 1);
+      await _typeDigit(tester, '9');
+      await _typeDigit(tester, '8');
+
+      expect(
+        completions,
+        0,
+        reason: 'SAN-539: in-place edits must not re-trigger verification',
+      );
+    });
+  });
+
+  group('AppOtpField backspace', () {
+    testWidgets(
+      'deleting from a mid-string cursor removes the previous digit',
+      (
+        tester,
+      ) async {
+        final controller = TextEditingController(text: '066555');
+        await _pump(
+          tester,
+          AppOtpField(controller: controller, autofocus: true),
+        );
+
+        await _tapCell(tester, 2);
+        // Backspace over the selected digit clears that digit.
+        tester.testTextInput.updateEditingValue(
+          const TextEditingValue(
+            text: '06555',
+            selection: TextSelection.collapsed(offset: 2),
+          ),
+        );
+        await tester.pump();
+
+        expect(controller.text, '06555');
+        expect(controller.selection, const TextSelection.collapsed(offset: 2));
+      },
+    );
 
     testWidgets('deleting at the end removes the last digit', (tester) async {
       final controller = TextEditingController(text: '066555');
@@ -300,18 +591,19 @@ void main() {
             matching: find.byType(Container),
           ),
         );
-        final tappedDecoration =
-            tappedContainer.decoration! as BoxDecoration;
+        final tappedDecoration = tappedContainer.decoration! as BoxDecoration;
         expect(
           tappedDecoration.border,
-          isNot(equals(
-            Border.all(
-              color: FieldTokens.errorBorder(
-                colors,
-                Brightness.light,
+          isNot(
+            equals(
+              Border.all(
+                color: FieldTokens.errorBorder(
+                  colors,
+                  Brightness.light,
+                ),
               ),
             ),
-          )),
+          ),
           reason: 'selected cell must not use the error border',
         );
         expect(
@@ -327,8 +619,7 @@ void main() {
             matching: find.byType(Container),
           ),
         );
-        final otherDecoration =
-            otherContainer.decoration! as BoxDecoration;
+        final otherDecoration = otherContainer.decoration! as BoxDecoration;
         expect(
           otherDecoration.border?.top.color,
           FieldTokens.errorBorder(colors, Brightness.light),
@@ -727,7 +1018,8 @@ void main() {
         expect(
           gaps[i],
           closeTo(expected, 0.5),
-          reason: 'gap ${i - 1}->$i (${gaps[i]}) differs from gap 0 ($expected)',
+          reason:
+              'gap ${i - 1}->$i (${gaps[i]}) differs from gap 0 ($expected)',
         );
       }
     });
@@ -770,10 +1062,12 @@ void main() {
         // The wrapping DefaultSelectionStyle overrides the ambient theme's
         // selection color for this subtree.
         final style = tester.widget<DefaultSelectionStyle>(
-          find.ancestor(
-            of: find.byType(EditableText),
-            matching: find.byType(DefaultSelectionStyle),
-          ).first,
+          find
+              .ancestor(
+                of: find.byType(EditableText),
+                matching: find.byType(DefaultSelectionStyle),
+              )
+              .first,
         );
         expect(style.selectionColor, Colors.transparent);
         expect(style.cursorColor, Colors.transparent);
@@ -834,5 +1128,4 @@ void main() {
       }
     });
   });
-
 }

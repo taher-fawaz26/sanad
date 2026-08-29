@@ -760,4 +760,181 @@ void main() {
       },
     );
   });
+
+  // ── SAN-580 regressions ────────────────────────────────────────────────
+  //
+  // The provider services page reads the "no services added yet" onboarding
+  // state from a strict predicate (see `services_page.dart::_showEmpty`):
+  //   status == success && services.isEmpty && searchQuery.trim().isEmpty
+  //     && statusFilter == all && selectedCategoryId == null.
+  //
+  // Before the SAN-580 follow-up fix, `_onSearchChanged` split the
+  // transition into two emits: the query update landed FIRST, and only
+  // ~350ms later did `onQueryChanged` flip pagination to loading. That
+  // opened a window in which items were the stale `[]` from a no-results
+  // search and `searchQuery` was already `''`, so the predicate matched —
+  // briefly rendering the onboarding "no services added" state during an
+  // in-progress refresh.
+  bool matchesOnboardingEmptyPredicate(ServicesListState s) =>
+      s.status == RequestStatus.success &&
+      s.services.isEmpty &&
+      s.searchQuery.trim().isEmpty &&
+      s.statusFilter == ProviderServiceStatus.all &&
+      s.selectedCategoryId == null;
+
+  group('ServicesListBloc — SAN-580 no-transient-onboarding', () {
+    blocTest<ServicesListBloc, ServicesListState>(
+      'clearing a no-results search never emits a state matching the '
+      'onboarding predicate (even for one frame) while the fresh fetch is '
+      'in flight',
+      setUp: () {
+        when(
+          () => repo.listProviderServices(
+            page: 1,
+            limit: 10,
+            search: 'z',
+            status: null,
+          ),
+        ).thenAnswer(
+          (_) => TaskEither.of(_page([], currentPage: 1, totalPages: 0)),
+        );
+        when(
+          () => repo.listProviderServices(
+            page: 1,
+            limit: 10,
+            search: null,
+            status: null,
+          ),
+        ).thenAnswer(
+          (_) => TaskEither.of(
+            _page(['1', '2', '3'], currentPage: 1, totalPages: 1),
+          ),
+        );
+      },
+      build: buildBloc,
+      seed: () => const ServicesListState(
+        searchQuery: 'z',
+        pagination: PaginationData<ProviderServiceEntity>(
+          status: RequestStatus.success,
+          items: [],
+        ),
+      ),
+      act: (bloc) => bloc.add(const ServicesListSearchChangedEvent('')),
+      wait: const Duration(milliseconds: 400),
+      verify: (bloc) {
+        expect(bloc.state.services.map((s) => s.id), ['1', '2', '3']);
+      },
+      expect: () => [
+        predicate<ServicesListState>(
+          (s) =>
+              s.searchQuery == '' &&
+              s.pagination.status == RequestStatus.loading &&
+              !matchesOnboardingEmptyPredicate(s),
+          'atomic: query cleared + pagination reset to loading',
+        ),
+        predicate<ServicesListState>(
+          (s) =>
+              s.services.length == 3 &&
+              s.status == RequestStatus.success &&
+              !matchesOnboardingEmptyPredicate(s),
+          'terminal populated list',
+        ),
+      ],
+    );
+
+    blocTest<ServicesListBloc, ServicesListState>(
+      'a genuinely empty provider — successful fetch returning zero items — '
+      'still ends in the state that renders the onboarding empty page',
+      setUp: () =>
+          when(
+            () => repo.listProviderServices(
+              page: 1,
+              limit: 10,
+              search: null,
+              status: null,
+            ),
+          ).thenAnswer(
+            (_) => TaskEither.of(_page([], currentPage: 1, totalPages: 0)),
+          ),
+      build: buildBloc,
+      act: (bloc) => bloc.add(const ServicesListFetchEvent()),
+      verify: (bloc) {
+        expect(matchesOnboardingEmptyPredicate(bloc.state), isTrue);
+      },
+    );
+
+    blocTest<ServicesListBloc, ServicesListState>(
+      'existing "search returns no results" behavior — the terminal state '
+      'is NOT the onboarding empty (searchQuery is non-empty, so '
+      '`_showEmpty` is false and the in-list "no search results" indicator '
+      'renders instead)',
+      setUp: () =>
+          when(
+            () => repo.listProviderServices(
+              page: 1,
+              limit: 10,
+              search: 'z',
+              status: null,
+            ),
+          ).thenAnswer(
+            (_) => TaskEither.of(_page([], currentPage: 1, totalPages: 0)),
+          ),
+      build: buildBloc,
+      act: (bloc) => bloc.add(const ServicesListSearchChangedEvent('z')),
+      wait: const Duration(milliseconds: 400),
+      verify: (bloc) {
+        expect(bloc.state.searchQuery, 'z');
+        expect(bloc.state.services, isEmpty);
+        expect(bloc.state.status, RequestStatus.success);
+        expect(matchesOnboardingEmptyPredicate(bloc.state), isFalse);
+      },
+    );
+
+    blocTest<ServicesListBloc, ServicesListState>(
+      'clearing search from a NON-empty results state also atomically '
+      'flips to loading (no window where old items + new empty query '
+      'coexist)',
+      setUp: () {
+        when(
+          () => repo.listProviderServices(
+            page: 1,
+            limit: 10,
+            search: null,
+            status: null,
+          ),
+        ).thenAnswer(
+          (_) => TaskEither.of(
+            _page(['a', 'b'], currentPage: 1, totalPages: 1),
+          ),
+        );
+      },
+      build: buildBloc,
+      seed: () => ServicesListState(
+        searchQuery: 'car',
+        pagination: PaginationData<ProviderServiceEntity>(
+          status: RequestStatus.success,
+          items: [_service('carwash')],
+        ),
+      ),
+      act: (bloc) => bloc.add(const ServicesListSearchChangedEvent('')),
+      wait: const Duration(milliseconds: 400),
+      verify: (bloc) {
+        expect(bloc.state.services.map((s) => s.id), ['a', 'b']);
+      },
+      expect: () => [
+        predicate<ServicesListState>(
+          (s) =>
+              s.searchQuery == '' &&
+              s.services.isEmpty &&
+              s.pagination.status == RequestStatus.loading,
+          'atomic: query cleared and items cleared to loading',
+        ),
+        predicate<ServicesListState>(
+          (s) =>
+              s.services.length == 2 && s.status == RequestStatus.success,
+          'terminal populated list',
+        ),
+      ],
+    );
+  });
 }

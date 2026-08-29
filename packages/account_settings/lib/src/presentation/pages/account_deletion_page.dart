@@ -69,7 +69,7 @@ class _AccountDeletionPageState extends State<AccountDeletionPage> {
     if (_otpSheetOpen) return;
     _otpSheetOpen = true;
     final bloc = context.read<AccountDeletionBloc>();
-    final verified = await showDeletionOtpSheet(context: context, bloc: bloc);
+    final verified = await showDeletionOtpSheet(context: context);
     _otpSheetOpen = false;
     if ((verified ?? false) && mounted) {
       context.go(AuthRoutes.login);

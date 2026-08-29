@@ -10,6 +10,7 @@ import 'package:services/src/domain/constants/service_image_limits.dart';
 import 'package:services/src/domain/entities/provider_service_image_entity.dart';
 import 'package:services/src/presentation/bloc/service_images/service_images_bloc.dart';
 import 'package:services/src/presentation/models/service_image_tile.dart';
+import 'package:services/src/presentation/utils/service_image_picker_options.dart';
 import 'package:services/src/presentation/widgets/service_images_editor.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
@@ -168,17 +169,7 @@ class ManageServiceImagesSection extends StatelessWidget {
     try {
       result = await AssetPicker.pick(
         context,
-        options: AssetPickerOptions(
-          allowFiles: false,
-          allowMultiple: true,
-          maxSelection: remaining,
-          // Rejects an oversized file immediately — before it's returned
-          // here, so no upload, progress, or `MediaUploadBloc` item is
-          // ever created for it. `MediaUploadConfig.maxFileSize` (set on
-          // this screen's bloc) is a second, defensive check for anything
-          // that reaches it another way.
-          maxFileSize: FileSizePolicy.maxBytes,
-        ),
+        options: serviceImagePickerOptions(remaining: remaining),
       );
     } on AssetValidationException catch (e) {
       if (context.mounted) _showValidationError(context, e);

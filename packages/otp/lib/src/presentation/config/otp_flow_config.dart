@@ -1,8 +1,20 @@
-import 'package:design_system/design_system.dart' show kDefaultOtpLength;
+import 'package:core/core.dart' show Failure;
+import 'package:design_system/design_system.dart'
+    show AppDurations, kDefaultOtpLength;
 import 'package:flutter/widgets.dart';
 import 'package:otp/src/domain/contracts/otp_verifier.dart';
 import 'package:otp/src/domain/enums/otp_channel.dart';
 import 'package:otp/src/domain/enums/otp_purpose.dart';
+
+/// How the OTP screen is hosted. The *contents* are identical either way —
+/// only the surrounding container differs, so there is exactly one OTP UI.
+enum OtpPresentation {
+  /// Full-page route. The canonical presentation (matches the auth screen).
+  page,
+
+  /// Hosted in a `SheetNavigator` bottom sheet.
+  sheet,
+}
 
 /// The single knob-set for an OTP verification run. Immutable; the common
 /// call only needs `destination`, `channel`, and `verifier` — everything else
@@ -15,15 +27,18 @@ class OtpFlowConfig<T> {
     required this.verifier,
     this.purpose = OtpPurpose.custom,
     this.length = kDefaultOtpLength,
-    this.resendCooldown,
+    this.fallbackCooldown = AppDurations.otpResendCooldown,
+    this.probeCooldownOnStart = true,
     this.autoSendOnStart = true,
     this.autoSubmit = true,
+    this.autofocus = true,
     this.showSuccessScreen = true,
     this.successAutoCloseDelay = const Duration(seconds: 2),
     this.onChangeDestination,
-    this.presentAsSheet = true,
+    this.presentation = OtpPresentation.sheet,
     this.titleBuilder,
     this.subtitleBuilder,
+    this.dispatchErrorResolver,
   });
 
   /// Verify an email address. [purpose] defaults to [OtpPurpose.verifyEmail].
@@ -32,15 +47,18 @@ class OtpFlowConfig<T> {
     required this.verifier,
     this.purpose = OtpPurpose.verifyEmail,
     this.length = kDefaultOtpLength,
-    this.resendCooldown,
+    this.fallbackCooldown = AppDurations.otpResendCooldown,
+    this.probeCooldownOnStart = true,
     this.autoSendOnStart = true,
     this.autoSubmit = true,
+    this.autofocus = true,
     this.showSuccessScreen = true,
     this.successAutoCloseDelay = const Duration(seconds: 2),
     this.onChangeDestination,
-    this.presentAsSheet = true,
+    this.presentation = OtpPresentation.sheet,
     this.titleBuilder,
     this.subtitleBuilder,
+    this.dispatchErrorResolver,
   }) : channel = OtpChannel.email;
 
   /// Verify a phone number. [purpose] defaults to [OtpPurpose.verifyPhone].
@@ -49,34 +67,52 @@ class OtpFlowConfig<T> {
     required this.verifier,
     this.purpose = OtpPurpose.verifyPhone,
     this.length = kDefaultOtpLength,
-    this.resendCooldown,
+    this.fallbackCooldown = AppDurations.otpResendCooldown,
+    this.probeCooldownOnStart = true,
     this.autoSendOnStart = true,
     this.autoSubmit = true,
+    this.autofocus = true,
     this.showSuccessScreen = true,
     this.successAutoCloseDelay = const Duration(seconds: 2),
     this.onChangeDestination,
-    this.presentAsSheet = true,
+    this.presentation = OtpPresentation.sheet,
     this.titleBuilder,
     this.subtitleBuilder,
+    this.dispatchErrorResolver,
   }) : channel = OtpChannel.phone;
 
   final OtpChannel channel;
 
-  /// Display value shown in the subtitle (e.g. `+20 123 456 7890`).
+  /// Display value shown in the subtitle (e.g. `+971 5X XXX XXXX`).
   final String destination;
 
   final OtpVerifier<T> verifier;
   final OtpPurpose purpose;
   final int length;
 
-  /// Defaults to `AppDurations.otpResendCooldown` when null.
-  final Duration? resendCooldown;
+  /// Countdown used **only** when the verifier exposes no `cooldown()` — or
+  /// when that probe fails after a code has demonstrably been sent.
+  ///
+  /// Never the primary source: a flow whose backend has a `resend-info`
+  /// endpoint always shows the server's own `remainingSeconds`.
+  final Duration fallbackCooldown;
 
-  /// Whether `requestCode()` fires automatically when the flow starts (set
-  /// false if the caller already sent the code before opening the flow).
+  /// Whether to read `cooldown()` before dispatching. Leave true: it is what
+  /// stops a reopened flow from provoking a 429 against a live session.
+  final bool probeCooldownOnStart;
+
+  /// Whether the flow sends a code on start (set false if the caller already
+  /// sent one before opening the flow).
   final bool autoSendOnStart;
 
+  /// Submit as soon as the final digit lands.
+  ///
+  /// Leave false where a wrong code is costly: re-editing a digit of an
+  /// already-full code would otherwise re-fire verification and burn attempts
+  /// (SAN-539).
   final bool autoSubmit;
+
+  final bool autofocus;
   final bool showSuccessScreen;
   final Duration successAutoCloseDelay;
 
@@ -85,12 +121,17 @@ class OtpFlowConfig<T> {
   /// destination.
   final Future<String?> Function(BuildContext context)? onChangeDestination;
 
-  /// True (default) presents via `SheetNavigator`; false pushes a plain page
-  /// route instead.
-  final bool presentAsSheet;
+  final OtpPresentation presentation;
+
+  bool get presentAsSheet => presentation == OtpPresentation.sheet;
 
   final String Function(BuildContext context, OtpFlowConfig<T> config)?
   titleBuilder;
   final String Function(BuildContext context, OtpFlowConfig<T> config)?
   subtitleBuilder;
+
+  /// Flow-specific copy for a delivery failure (a 409 on a taken address, a
+  /// 403 on a forbidden purpose). Returning null falls back to the failure's
+  /// own localized message.
+  final String? Function(Failure failure)? dispatchErrorResolver;
 }

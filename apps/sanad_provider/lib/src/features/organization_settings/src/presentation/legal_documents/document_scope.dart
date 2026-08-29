@@ -9,7 +9,8 @@ import 'package:document_flow/document_flow.dart';
 /// slots are shown, regardless of what else happens to be on file.
 enum DocumentScope {
   emiratesId,
-  tradeLicense;
+  tradeLicense
+  ;
 
   /// Slots required to consider *this scope* complete.
   ///

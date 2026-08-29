@@ -266,6 +266,7 @@ class WorkerFormBodyState extends State<WorkerFormBody> {
             controller: emailController,
             label: 'workers.add_worker.email_label'.tr(),
             hint: 'workers.add_worker.email_hint'.tr(),
+            isLtr: true,
             keyboardType: TextInputType.emailAddress,
             readOnly: widget.emailReadOnly,
             enabled: !widget.emailReadOnly,

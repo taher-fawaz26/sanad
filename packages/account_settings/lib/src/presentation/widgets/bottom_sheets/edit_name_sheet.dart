@@ -2,6 +2,7 @@ import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Shows the edit-name sheet.
@@ -69,21 +70,11 @@ class _EditNameSheetBodyState extends State<_EditNameSheetBody> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final typography = context.appTypography;
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          'settings.edit_name_title'.tr(),
-          textAlign: TextAlign.center,
-          style: typography.title3.copyWith(
-            color: colors.primary,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        SettingsSheetTitle(title: 'settings.edit_name_title'.tr()),
         SizedBox(height: AppSpacing.xxl),
         AppTextField(
           label: 'settings.name'.tr(),

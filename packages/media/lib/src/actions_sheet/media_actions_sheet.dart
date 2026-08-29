@@ -31,6 +31,17 @@ class MediaActionsSheet extends StatelessWidget {
       MediaActionsSheet(hasMedia: hasMedia, allowRemove: allowRemove),
       settings: SheetRouteSettings(
         title: title,
+        // Every row pops this sheet immediately, and the caller always
+        // proceeds to something else next (permission prompt, confirmation
+        // sheet, editor page) — this sheet is never intentionally left
+        // visible under a new route. Without this, a route pushed in that
+        // handoff (before this sheet's own exit transition/finalizeRoute
+        // actually removes it — Route.didPop resolves its Future
+        // synchronously, well ahead of the animation) makes this sheet
+        // morph to fullscreen while it's simultaneously reversing closed,
+        // corrupting the next sheet's rendering (e.g. the Remove-photo
+        // confirmation appearing without its solid card background).
+        expandPreviousToFullscreen: false,
       ),
     );
   }

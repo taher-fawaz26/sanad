@@ -62,5 +62,44 @@ void main() {
       expect(updated.maxSelection, 3);
       expect(updated.allowCamera, base.allowCamera);
     });
+
+    group('enforceSizeBeforeCompression', () {
+      test('defaults to off — compression happens at acquisition', () {
+        const options = AssetPickerOptions();
+        expect(options.enforceSizeBeforeCompression, isFalse);
+        expect(options.compressAtAcquisition, isTrue);
+        expect(options.compressAfterValidation, isFalse);
+      });
+
+      test(
+        'when set, defers compression to after validation without disabling '
+        'it',
+        () {
+          const options = AssetPickerOptions(
+            enforceSizeBeforeCompression: true,
+          );
+          // compressImages is still on — compression is deferred, not removed.
+          expect(options.shouldCompress, isTrue);
+          expect(options.compressAtAcquisition, isFalse);
+          expect(options.compressAfterValidation, isTrue);
+        },
+      );
+
+      test('compressAfterValidation is false when compression is off', () {
+        const options = AssetPickerOptions(
+          compressImages: false,
+          enforceSizeBeforeCompression: true,
+        );
+        expect(options.compressAfterValidation, isFalse);
+        expect(options.compressAtAcquisition, isFalse);
+      });
+
+      test('is carried through copyWith', () {
+        const base = AssetPickerOptions();
+        final updated = base.copyWith(enforceSizeBeforeCompression: true);
+        expect(updated.enforceSizeBeforeCompression, isTrue);
+        expect(base.enforceSizeBeforeCompression, isFalse);
+      });
+    });
   });
 }

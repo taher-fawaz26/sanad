@@ -1,11 +1,11 @@
 import 'package:asset_picker/asset_picker.dart';
-import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:media_upload/media_upload.dart';
 import 'package:services/src/presentation/models/service_image_tile.dart';
+import 'package:services/src/presentation/utils/service_image_picker_options.dart';
 import 'package:services/src/presentation/widgets/service_images_editor.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
@@ -106,21 +106,7 @@ class _AddServiceImagesFieldState extends State<AddServiceImagesField> {
     try {
       result = await AssetPicker.pick(
         context,
-        options: AssetPickerOptions(
-          allowFiles: false,
-          allowMultiple: true,
-          // Without this, `maxSelection` defaults to 1 and the gallery
-          // provider silently truncates a multi-select down to the first
-          // asset — bound it to the remaining slots instead so a batch
-          // pick can never exceed `maxFiles` either.
-          maxSelection: remaining,
-          // Rejects an oversized file immediately — before it's returned
-          // here, so no upload, progress, or `MediaUploadBloc` item is ever
-          // created for it. `MediaUploadConfig.maxFileSize` (set on this
-          // screen's bloc) is a second, defensive check for anything that
-          // reaches it another way (e.g. `MediaUploadReplaceRequested`).
-          maxFileSize: FileSizePolicy.maxBytes,
-        ),
+        options: serviceImagePickerOptions(remaining: remaining),
       );
     } on AssetValidationException catch (e) {
       if (context.mounted) _showValidationError(context, e);

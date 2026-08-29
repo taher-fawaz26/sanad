@@ -31,27 +31,37 @@ class SettingsSocialFieldView extends StatelessWidget {
     return SettingsVerifiedFieldView(
       label: label,
       showVerifiedBadge: false,
-      child: Row(
-        children: [
-          if (iconAsset != null) ...[
-            AppSvgPicture.asset(iconAsset!, width: 24, height: 24),
-            SizedBox(width: AppSpacing.sm),
-          ],
-          if (value != null)
-            Expanded(
-              child: Text(
-                value!,
-                style: typography.regularNone.copyWith(
-                  color: FieldTokens.hintColor(
-                    colors,
-                    brightness,
-                    enabled: true,
+      // Social profile values (URLs, handles) are inherently LTR: the icon
+      // must always sit on the visual left and the value must read
+      // left-to-right, regardless of app locale. Only the value row is
+      // forced — the surrounding label + section header keep the ambient
+      // locale direction. Mirrors the `isLtr` rule the editable social
+      // fields opt into on [AppTextField].
+      child: Directionality(
+        textDirection: TextDirection.ltr,
+        child: Row(
+          children: [
+            if (iconAsset != null) ...[
+              AppSvgPicture.asset(iconAsset!, width: 24, height: 24),
+              SizedBox(width: AppSpacing.sm),
+            ],
+            if (value != null)
+              Expanded(
+                child: Text(
+                  value!,
+                  textDirection: TextDirection.ltr,
+                  style: typography.regularNone.copyWith(
+                    color: FieldTokens.hintColor(
+                      colors,
+                      brightness,
+                      enabled: true,
+                    ),
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-                overflow: TextOverflow.ellipsis,
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -68,6 +68,14 @@ class AddBranchDraftCubit extends Cubit<AddBranchDraft> {
     emit(state.copyWith(customSchedule: schedule));
   }
 
+  /// Records whether the company (parent) schedule has any working slots, so
+  /// [AddBranchDraft.isStepOneComplete] can block company-mode branches when
+  /// the company has no hours set yet.
+  void setCompanyHasWorkingHours({required bool hasHours}) {
+    if (state.companyHasWorkingHours == hasHours) return;
+    emit(state.copyWith(companyHasWorkingHours: hasHours));
+  }
+
   /// Attempts to add a `[from, to)` slot to `dayId`'s custom schedule.
   ///
   /// Mirrors `EditWorkingHoursCubit.addSlot` (organization_settings) via

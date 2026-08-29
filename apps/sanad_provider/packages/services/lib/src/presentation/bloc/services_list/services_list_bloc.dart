@@ -90,7 +90,25 @@ class ServicesListBloc extends Bloc<ServicesListEvent, ServicesListState>
     ServicesListSearchChangedEvent event,
     Emitter<ServicesListState> emit,
   ) async {
-    emit(state.copyWith(searchQuery: event.query));
+    // Atomic transition: update the query AND flip pagination to loading in
+    // ONE emit, so no downstream selector ever observes the pair
+    // `(items: <old, stale>, searchQuery: <new>)`. The UI's onboarding
+    // "no services added yet" predicate — status:success + items:[] +
+    // searchQuery:'' + no filters — was previously satisfied for one frame
+    // when the user cleared a no-results query (SAN-580 follow-up): the
+    // old items were still `[]` from the failed search, the new
+    // `searchQuery` was already `''`, and `status` had not yet been reset
+    // to loading (that happens 350ms later inside `onQueryChanged`).
+    // Emitting the reset up-front closes that window without any UI-side
+    // guards or delays.
+    emit(
+      state.copyWith(
+        searchQuery: event.query,
+        pagination: const PaginationData<ProviderServiceEntity>(
+          status: RequestStatus.loading,
+        ),
+      ),
+    );
     await Future<void>.delayed(_searchDebounce);
     await onQueryChanged(emit);
   }
@@ -99,7 +117,17 @@ class ServicesListBloc extends Bloc<ServicesListEvent, ServicesListState>
     ServicesListStatusChangedEvent event,
     Emitter<ServicesListState> emit,
   ) async {
-    emit(state.copyWith(statusFilter: event.status));
+    // Same atomic transition as `_onSearchChanged`: reset pagination to
+    // loading in the SAME emit that updates the filter, so a
+    // status/category change never briefly renders a partly-updated state.
+    emit(
+      state.copyWith(
+        statusFilter: event.status,
+        pagination: const PaginationData<ProviderServiceEntity>(
+          status: RequestStatus.loading,
+        ),
+      ),
+    );
     await onQueryChanged(emit);
   }
 

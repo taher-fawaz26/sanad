@@ -61,6 +61,7 @@ class _VerifiedEmailFieldState extends State<VerifiedEmailField> {
       hint: label,
       controller: _controller,
       readOnly: true,
+      isLtr: true,
       showVerifiedBadge: _isAdded && widget.verified,
       trailing: _isAdded
           ? AppFieldTextLinkTrailing(

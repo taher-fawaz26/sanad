@@ -19,7 +19,7 @@ import 'package:sanad_provider/src/features/organization_settings/src/presentati
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/bottom_sheets/edit_identity_bottom_sheet.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/bottom_sheets/edit_social_profiles_bottom_sheet.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/bottom_sheets/edit_working_hours_bottom_sheet.dart';
-import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/header/organization_header.dart';
+import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/header/organization_profile_sliver_header.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/sections/business_progress_section.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/sections/category_section.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/presentation/widgets/sections/compliance_documents_section.dart';
@@ -41,12 +41,12 @@ final _skeletonProfile = OrganizationProfileEntity(
   updatedAt: DateTime(2024),
 );
 
-final _skeletonCompletion = ProviderCompletionEntity(
+const _skeletonCompletion = ProviderCompletionEntity(
   percentage: 40,
   requiredCompleted: 2,
   requiredTotal: 5,
   visibleToCustomers: false,
-  items: const [],
+  items: [],
 );
 
 /// General organization settings view-mode page.
@@ -255,7 +255,22 @@ class _GeneralSettingsView extends StatelessWidget {
                     const OrganizationSettingsRefreshed(),
                   ),
                 )
-              else
+              else ...[
+                // Facebook-style collapsing identity header — a pinned
+                // SliverPersistentHeader that collapses continuously on scroll.
+                // Kept outside the skeletonizer group below: it renders its own
+                // cover/avatar/name shimmer via `isLoading`.
+                OrganizationProfileSliverHeader(
+                  name: profile.businessName,
+                  coverUrl: profile.coverImage?.url,
+                  logoUrl: profile.profileImage?.url,
+                  status: organizationHeaderStatus(profile, completion),
+                  isLoading: isInitialLoad,
+                  onMediaUpdated: (slot, url) =>
+                      context.read<OrganizationSettingsBloc>().add(
+                        OrganizationSettingsMediaUpdated(slot: slot, url: url),
+                      ),
+                ),
                 AppSliverPadding(
                   padding: EdgeInsets.symmetric(
                     horizontal: AppSpacing.xl,
@@ -265,35 +280,16 @@ class _GeneralSettingsView extends StatelessWidget {
                     enabled: isInitialLoad,
                     child: SliverMainAxisGroup(
                       slivers: [
-                        AppSliverBox(
-                          child: OrganizationHeader(
-                            name: profile.businessName,
-                            coverUrl: profile.coverImage?.url,
-                            logoUrl: profile.profileImage?.url,
-                            status: organizationHeaderStatus(
-                              profile,
-                              completion,
-                            ),
-                            onMediaUpdated: (slot, url) =>
-                                context.read<OrganizationSettingsBloc>().add(
-                                  OrganizationSettingsMediaUpdated(
-                                    slot: slot,
-                                    url: url,
-                                  ),
-                                ),
-                          ),
-                        ),
                         if (profile.status == BusinessProfileStatus.inReview &&
                             profile.rejectionReason != null) ...[
-                          const AppSliverGap(sectionSpacing),
                           AppSliverBox(
                             child: AppAlert(
                               type: AppAlertType.rejected,
                               message: profile.rejectionReason!,
                             ),
                           ),
+                          const AppSliverGap(sectionSpacing),
                         ],
-                        const AppSliverGap(sectionSpacing),
                         if (completion != null)
                           AppSliverBox(
                             child: BusinessProgressSection(
@@ -409,6 +405,7 @@ class _GeneralSettingsView extends StatelessWidget {
                     ),
                   ),
                 ),
+              ],
             ],
           );
         },

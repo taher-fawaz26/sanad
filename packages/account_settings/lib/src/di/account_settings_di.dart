@@ -86,14 +86,10 @@ abstract final class AccountSettingsDI {
         () => AccountDeletionBloc(
           getEligibility: sl<GetDeletionEligibilityUseCase>(),
           startDeletion: sl<StartAccountDeletionUseCase>(),
-          verifyOtp: sl<VerifyDeletionOtpUseCase>(),
-          resendOtp: sl<ResendDeletionOtpUseCase>(),
-          getResendInfo: sl<GetDeletionResendInfoUseCase>(),
           getStatus: sl<GetDeletionStatusUseCase>(),
           cancelDeletion: sl<CancelDeletionUseCase>(),
           getCurrentUser: sl<GetCurrentUserUseCase>(),
           sessionManager: sl<SessionManager>(),
-          logout: sl<AuthLogoutUseCase>(),
         ),
       );
   }

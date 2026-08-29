@@ -44,26 +44,26 @@ class EditServicePage extends StatefulWidget {
 
 class _EditServicePageState extends State<EditServicePage> {
   final _contentKey = GlobalKey<_EditServiceContentState>();
-  final _hasUnsavedInput = ValueNotifier<bool>(false);
-
-  @override
-  void dispose() {
-    _hasUnsavedInput.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: _hasUnsavedInput,
-      builder: (context, hasUnsaved, scaffold) => PopScope(
-        canPop: !hasUnsaved,
-        onPopInvokedWithResult: (didPop, result) {
-          if (didPop) return;
-          _onBackPressed(context);
-        },
-        child: scaffold!,
-      ),
+    return PopScope(
+      // The Edit route lives inside the bottom-nav shell branch's nested
+      // navigator, pushed above the details route. Reporting `canPop: true`
+      // let a system/predictive swipe-back gesture fall through to the root
+      // navigator, which popped the entire shell and exited the app to the
+      // home screen (SAN-581) instead of returning to Service Detail.
+      //
+      // Keeping `canPop: false` makes this route the authoritative owner of
+      // the back gesture (mirroring the sheet-navigation fix): every back
+      // intent is routed through [_onBackPressed] → go_router's
+      // `context.pop`, which targets the correct (branch) navigator and still
+      // runs the discard-unsaved-changes guard.
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _onBackPressed(context);
+      },
       child: Scaffold(
         backgroundColor: context.appColors.surface,
         body: SafeArea(
@@ -129,7 +129,6 @@ class _EditServicePageState extends State<EditServicePage> {
           child: _EditServiceContent(
             key: _contentKey,
             service: service,
-            onUnsavedChanged: (unsaved) => _hasUnsavedInput.value = unsaved,
           ),
         );
       },
@@ -247,12 +246,10 @@ class _EditServiceSkeleton extends StatelessWidget {
 class _EditServiceContent extends StatefulWidget {
   const _EditServiceContent({
     required this.service,
-    required this.onUnsavedChanged,
     super.key,
   });
 
   final ProviderServiceEntity service;
-  final ValueChanged<bool> onUnsavedChanged;
 
   @override
   State<_EditServiceContent> createState() => _EditServiceContentState();
@@ -292,7 +289,6 @@ class _EditServiceContentState extends State<_EditServiceContent> {
                     service: widget.service,
                     onCompletenessChanged: (complete) =>
                         _isFormComplete.value = complete,
-                    onUnsavedChanged: widget.onUnsavedChanged,
                   ),
                   SizedBox(height: AppSpacing.xl),
                   const ManageServiceImagesSection(),

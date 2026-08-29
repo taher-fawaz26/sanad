@@ -249,6 +249,26 @@ void main() {
           ),
         ],
       );
+
+      blocTest<AddBranchDraftCubit, AddBranchDraft>(
+        'setCompanyHasWorkingHours records the flag',
+        build: () => cubit,
+        act: (c) => c.setCompanyHasWorkingHours(hasHours: true),
+        expect: () => [
+          isA<AddBranchDraft>().having(
+            (d) => d.companyHasWorkingHours,
+            'companyHasWorkingHours',
+            isTrue,
+          ),
+        ],
+      );
+
+      blocTest<AddBranchDraftCubit, AddBranchDraft>(
+        'setCompanyHasWorkingHours is a no-op when unchanged',
+        build: () => cubit,
+        act: (c) => c.setCompanyHasWorkingHours(hasHours: false),
+        expect: () => <AddBranchDraft>[],
+      );
     });
 
     group('addScheduleSlot / removeScheduleSlot (SAN-592)', () {
@@ -590,6 +610,7 @@ void main() {
           branchAddress: '123 Main St',
           pickedPosition: LatLng(25.0, 55.0),
           selectedManager: testManager,
+          companyHasWorkingHours: true,
         );
         expect(complete.isStepOneComplete, isTrue);
       });
@@ -602,6 +623,7 @@ void main() {
           branchAddress: '123 Main St',
           pickedPosition: LatLng(25.0, 55.0),
           selectedManager: testManager,
+          companyHasWorkingHours: true,
         );
         expect(draft.isStepOneComplete, isFalse);
       });
@@ -613,6 +635,7 @@ void main() {
           branchAddress: '123 Main St',
           pickedPosition: LatLng(25.0, 55.0),
           selectedManager: testManager,
+          companyHasWorkingHours: true,
         );
         expect(draft.isStepOneComplete, isFalse);
       });
@@ -629,6 +652,7 @@ void main() {
             phone: '0501234567',
             branchAddress: '123 Main St',
             pickedPosition: LatLng(25.0, 55.0),
+            companyHasWorkingHours: true,
           );
           expect(draft.isStepOneComplete, isFalse);
 
@@ -646,6 +670,7 @@ void main() {
           branchAddress: '123 Main St',
           pickedPosition: LatLng(25.0, 55.0),
           selectedManager: testManager,
+          companyHasWorkingHours: true,
         );
         expect(draft.isStepOneComplete, isFalse);
       });
@@ -659,6 +684,7 @@ void main() {
             branchAddress: '123 Main St',
             pickedPosition: const LatLng(25.0, 55.0),
             selectedManager: testManager,
+            companyHasWorkingHours: true,
           );
           expect(draft.isStepOneComplete, isFalse, reason: '$phone must fail');
         }
@@ -672,6 +698,7 @@ void main() {
           branchAddress: '123 Main St',
           pickedPosition: LatLng(25.0, 55.0),
           selectedManager: testManager,
+          companyHasWorkingHours: true,
         );
         expect(draft.isStepOneComplete, isFalse);
       });
@@ -703,8 +730,8 @@ void main() {
       );
 
       test(
-        'isStepOneComplete passes with company schedule mode regardless of '
-        'custom schedule',
+        'isStepOneComplete fails in custom mode when every day has been '
+        'stripped of its slots (SAN-701)',
         () {
           const draft = AddBranchDraft(
             branchName: 'Branch',
@@ -713,9 +740,33 @@ void main() {
             branchAddress: '123 Main St',
             pickedPosition: LatLng(25.0, 55.0),
             selectedManager: testManager,
-            scheduleMode: BranchScheduleMode.company,
+            scheduleMode: BranchScheduleMode.custom,
+            customSchedule: [
+              BranchAvailabilityEntity(day: 'monday', slots: []),
+            ],
           );
-          expect(draft.isStepOneComplete, isTrue);
+          expect(draft.isStepOneComplete, isFalse);
+        },
+      );
+
+      test(
+        'isStepOneComplete fails in company mode when the company has no '
+        'working hours set yet (SAN-701)',
+        () {
+          const draft = AddBranchDraft(
+            branchName: 'Branch',
+            selectedCity: testCity,
+            phone: '0501234567',
+            branchAddress: '123 Main St',
+            pickedPosition: LatLng(25.0, 55.0),
+            selectedManager: testManager,
+          );
+          expect(draft.isStepOneComplete, isFalse);
+
+          final withCompanyHours = draft.copyWith(
+            companyHasWorkingHours: true,
+          );
+          expect(withCompanyHours.isStepOneComplete, isTrue);
         },
       );
 

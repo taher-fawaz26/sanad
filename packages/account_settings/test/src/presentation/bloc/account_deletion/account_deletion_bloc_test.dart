@@ -136,14 +136,10 @@ void main() {
   AccountDeletionBloc build() => AccountDeletionBloc(
     getEligibility: getEligibility,
     startDeletion: startDeletion,
-    verifyOtp: verifyOtp,
-    resendOtp: resendOtp,
-    getResendInfo: getResendInfo,
     getStatus: getStatus,
     cancelDeletion: cancelDeletion,
     getCurrentUser: getCurrentUser,
     sessionManager: sessionManager,
-    logout: logout,
   );
 
   group('eligibility', () {
@@ -314,149 +310,6 @@ void main() {
           RequestStatus.failure,
         ),
       ],
-    );
-
-    blocTest<AccountDeletionBloc, AccountDeletionState>(
-      'verify with a valid OTP schedules the deletion',
-      build: () {
-        const scheduled = AccountDeletionRequest(
-          id: 'req-1',
-          status: AccountDeletionStatus.scheduled,
-          initiator: DeletionInitiator.self,
-          verificationRequired: false,
-          scheduledExecutionDate: null,
-          gracePeriodDays: 14,
-          message: 'Scheduled',
-          createdAt: null,
-          updatedAt: null,
-        );
-        when(
-          () => verifyOtp(any()),
-        ).thenAnswer((_) => TaskEither.right(scheduled));
-        return build();
-      },
-      act: (bloc) => bloc.add(const AccountDeletionOtpVerified('123456')),
-      expect: () => [
-        isA<AccountDeletionState>().having(
-          (s) => s.verifyStatus,
-          'verifyStatus',
-          RequestStatus.loading,
-        ),
-        isA<AccountDeletionState>()
-            .having(
-              (s) => s.verifyStatus,
-              'verifyStatus',
-              RequestStatus.success,
-            )
-            .having(
-              (s) => s.activeRequest?.status,
-              'status',
-              AccountDeletionStatus.scheduled,
-            ),
-      ],
-      verify: (_) {
-        // A successful verify ends the session exactly like a normal
-        // logout — this is a self-service destructive action, the user
-        // must never be left signed into an account scheduled for deletion.
-        verify(() => logout(any())).called(1);
-        verify(() => sessionManager.clear()).called(1);
-      },
-    );
-
-    blocTest<AccountDeletionBloc, AccountDeletionState>(
-      'verify with an invalid OTP surfaces the failure on verifyStatus, '
-      'leaving mutationStatus untouched',
-      build: () {
-        when(
-          () => verifyOtp(any()),
-        ).thenAnswer((_) => TaskEither.left(_tFailure));
-        return build();
-      },
-      act: (bloc) => bloc.add(const AccountDeletionOtpVerified('000000')),
-      expect: () => [
-        isA<AccountDeletionState>().having(
-          (s) => s.verifyStatus,
-          'verifyStatus',
-          RequestStatus.loading,
-        ),
-        isA<AccountDeletionState>()
-            .having(
-              (s) => s.verifyStatus,
-              'verifyStatus',
-              RequestStatus.failure,
-            )
-            .having((s) => s.verifyFailure, 'verifyFailure', _tFailure)
-            .having(
-              (s) => s.mutationStatus,
-              'mutationStatus',
-              RequestStatus.initial,
-            ),
-      ],
-      verify: (_) {
-        // A failed verify must never end the session — the user is still
-        // legitimately signed in and hasn't confirmed deletion.
-        verifyNever(() => logout(any()));
-        verifyNever(() => sessionManager.clear());
-      },
-    );
-
-    blocTest<AccountDeletionBloc, AccountDeletionState>(
-      'resend emits [loading, success] on its own resendStatus',
-      build: () {
-        when(
-          () => resendOtp(any()),
-        ).thenAnswer((_) => TaskEither.right(_tRequest));
-        return build();
-      },
-      act: (bloc) => bloc.add(const AccountDeletionOtpResendRequested()),
-      expect: () => [
-        isA<AccountDeletionState>().having(
-          (s) => s.resendStatus,
-          'resendStatus',
-          RequestStatus.loading,
-        ),
-        isA<AccountDeletionState>().having(
-          (s) => s.resendStatus,
-          'resendStatus',
-          RequestStatus.success,
-        ),
-      ],
-    );
-
-    blocTest<AccountDeletionBloc, AccountDeletionState>(
-      'resend-info reflects canResend / attemptsLeft from the server',
-      build: () {
-        when(() => getResendInfo(any())).thenAnswer(
-          (_) => TaskEither.right(
-            const DeletionResendInfo(
-              canResend: false,
-              remainingSeconds: 45,
-              attemptsLeft: 1,
-            ),
-          ),
-        );
-        return build();
-      },
-      act: (bloc) => bloc.add(const AccountDeletionResendInfoRequested()),
-      verify: (bloc) {
-        expect(bloc.state.resendInfo!.canResend, isFalse);
-        expect(bloc.state.resendInfo!.attemptsLeft, 1);
-      },
-    );
-
-    blocTest<AccountDeletionBloc, AccountDeletionState>(
-      'a resend-info failure falls back to an unblocked cooldown rather than '
-      'stranding the user',
-      build: () {
-        when(
-          () => getResendInfo(any()),
-        ).thenAnswer((_) => TaskEither.left(_tFailure));
-        return build();
-      },
-      act: (bloc) => bloc.add(const AccountDeletionResendInfoRequested()),
-      verify: (bloc) {
-        expect(bloc.state.resendInfo!.canResend, isTrue);
-      },
     );
 
     blocTest<AccountDeletionBloc, AccountDeletionState>(

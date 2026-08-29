@@ -97,6 +97,7 @@ class ContinueWithEmailPage extends HookWidget {
                         controller: controller,
                         label: 'onboarding.email_label'.tr(),
                         hint: 'onboarding.email_hint'.tr(),
+                        isLtr: true,
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.done,
                         onSubmitted: (_) {

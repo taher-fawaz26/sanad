@@ -1,6 +1,7 @@
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Shows the language preferences sheet — Figma `3821:19032`.
@@ -54,7 +55,6 @@ class _LanguagePreferencesBottomSheetState
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final typography = context.appTypography;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -62,13 +62,8 @@ class _LanguagePreferencesBottomSheetState
       children: [
         _DragHandle(color: colors.border),
         SizedBox(height: AppSpacing.md),
-        Text(
-          'settings.section_language_preferences'.tr(),
-          textAlign: TextAlign.center,
-          style: typography.title3.copyWith(
-            color: colors.primary,
-            fontWeight: FontWeight.w600,
-          ),
+        SettingsSheetTitle(
+          title: 'settings.section_language_preferences'.tr(),
         ),
         SizedBox(height: AppSpacing.md),
         for (var i = 0; i < _options.length; i++) ...[

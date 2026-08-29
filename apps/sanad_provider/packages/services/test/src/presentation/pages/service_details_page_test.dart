@@ -87,7 +87,7 @@ void main() {
               BlocProvider<ServiceActionBloc>.value(value: actionBloc),
               BlocProvider<ServiceDetailsBloc>.value(value: detailsBloc),
             ],
-            child: const ServiceDetailsPage(),
+            child: const ServiceDetailsPage(isOwner: true),
           ),
         ),
       ),

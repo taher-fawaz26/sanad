@@ -63,12 +63,17 @@ class AppSection extends StatelessWidget {
     this.trailingWidget,
     this.onTrailingTap,
     this.padding,
+    this.isRequired = false,
   });
 
   final String title;
   final String? caption;
   final AppSectionSize size;
   final AppSectionTone tone;
+
+  /// When `true`, appends a red `*` after the title — matching the required
+  /// indicator on [AppFieldLabel].
+  final bool isRequired;
 
   /// Trailing slot — none / icon / button / custom.
   final AppSectionTrailing trailing;
@@ -101,6 +106,7 @@ class AppSection extends StatelessWidget {
               trailingButtonLabel: trailingButtonLabel,
               trailingWidget: trailingWidget,
               onTrailingTap: onTrailingTap,
+              isRequired: isRequired,
             )
           : _LargeSection(
               title: title,
@@ -137,6 +143,7 @@ class _CompactSection extends StatelessWidget {
     this.trailingButtonLabel,
     this.trailingWidget,
     this.onTrailingTap,
+    this.isRequired = false,
   });
 
   final String title;
@@ -147,6 +154,7 @@ class _CompactSection extends StatelessWidget {
   final String? trailingButtonLabel;
   final Widget? trailingWidget;
   final VoidCallback? onTrailingTap;
+  final bool isRequired;
 
   bool get _hasCaption => caption != null && caption!.isNotEmpty;
 
@@ -175,12 +183,28 @@ class _CompactSection extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                title,
-                style: titleStyle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
+              if (isRequired)
+                Text.rich(
+                  TextSpan(
+                    style: titleStyle,
+                    children: [
+                      TextSpan(text: title),
+                      TextSpan(
+                        text: ' *',
+                        style: TextStyle(color: colors.error),
+                      ),
+                    ],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                )
+              else
+                Text(
+                  title,
+                  style: titleStyle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               if (_hasCaption) ...[
                 SizedBox(height: AppSpacing.xs),
                 Text(
