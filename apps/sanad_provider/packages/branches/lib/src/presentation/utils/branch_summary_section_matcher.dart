@@ -46,5 +46,8 @@ const _sectionKeywords = <BranchSummarySection, List<String>>{
     'branch type',
     'branchtype',
     'city',
+    'locationplaceid',
+    'location',
+    'map pin',
   ],
 };

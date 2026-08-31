@@ -141,5 +141,72 @@ void main() {
 
       expect(failure, isA<ServerFailure>());
     });
+
+    test('503 (AI service unavailable) maps to ServerFailure', () {
+      final failure = ErrorMapper.mapError(
+        badResponse(503, <String, dynamic>{
+          'message': 'Service temporarily unavailable',
+        }),
+      );
+
+      expect(failure, isA<ServerFailure>());
+      expect(failure.code, '503');
+    });
+  });
+
+  group('ErrorMapper — requestId preservation', () {
+    // The enhance-text (and every) error body carries `requestId`; it must
+    // survive into Failure.metadata so support/debug can identify the request.
+    test('400 validation preserves requestId in metadata', () {
+      final failure = ErrorMapper.mapError(
+        badResponse(400, <String, dynamic>{
+          'statusCode': 400,
+          'message': <String>[
+            'text must be longer than or equal to 5 characters',
+          ],
+          'error': 'Bad Request',
+          'requestId': 'req-400',
+        }),
+      );
+
+      expect(failure, isA<ValidationFailure>());
+      expect(failure.metadata?['requestId'], 'req-400');
+    });
+
+    test('401 preserves requestId in metadata', () {
+      final failure = ErrorMapper.mapError(
+        badResponse(401, <String, dynamic>{
+          'message': 'Token expired',
+          'requestId': 'req-401',
+        }),
+      );
+
+      expect(failure, isA<UnauthorizedFailure>());
+      expect(failure.metadata?['requestId'], 'req-401');
+    });
+
+    test('429 preserves requestId in metadata', () {
+      final failure = ErrorMapper.mapError(
+        badResponse(429, <String, dynamic>{
+          'message': 'Too many requests',
+          'requestId': 'req-429',
+        }),
+      );
+
+      expect(failure, isA<RateLimitFailure>());
+      expect(failure.metadata?['requestId'], 'req-429');
+    });
+
+    test('503 preserves requestId in metadata', () {
+      final failure = ErrorMapper.mapError(
+        badResponse(503, <String, dynamic>{
+          'message': 'AI service unavailable',
+          'requestId': 'req-503',
+        }),
+      );
+
+      expect(failure, isA<ServerFailure>());
+      expect(failure.metadata?['requestId'], 'req-503');
+    });
   });
 }

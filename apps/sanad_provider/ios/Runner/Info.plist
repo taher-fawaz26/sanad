@@ -75,6 +75,9 @@
 		<string>Sanad Provider uses your location to help you set the branch location on the map.</string>
 		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 		<string>Sanad Provider uses your location to help you set the branch location on the map.</string>
+		<!-- Face ID — required for the local biometric/device unlock gate. -->
+		<key>NSFaceIDUsageDescription</key>
+		<string>Sanad Provider uses Face ID to unlock the app and protect your account.</string>
 		<!-- Camera / photo usage strings — required to capture and upload identity documents during registration -->
 		<key>NSCameraUsageDescription</key>
 		<string>Sanad Provider uses the camera to capture your Emirates ID and trade licence during registration.</string>

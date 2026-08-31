@@ -28,11 +28,28 @@ class GoogleAuthDataSourceImpl implements GoogleAuthDataSource {
     FirebaseAuth? firebaseAuth,
   }) : _apiClient = apiClient,
        _googleSignIn = googleSignIn ?? GoogleSignIn(),
-       _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance;
+       _firebaseAuth = firebaseAuth;
 
   final BaseApiClient _apiClient;
   final GoogleSignIn _googleSignIn;
-  final FirebaseAuth _firebaseAuth;
+
+  /// Injected in tests; `null` in production, where Firebase is resolved
+  /// lazily by [_auth].
+  final FirebaseAuth? _firebaseAuth;
+
+  /// Resolved on first use, never in the constructor.
+  ///
+  /// `FirebaseAuth.instance` throws `[core/no-app]` when
+  /// `Firebase.initializeApp()` has not run — and `sanad_client` has no
+  /// Firebase configuration at all. Touching it from the constructor made an
+  /// app without Firebase fail to build `AuthRepository`, which took every
+  /// auth use case down with it, including the email and phone OTP flows that
+  /// need no Firebase whatsoever.
+  ///
+  /// Reading it here instead keeps the blast radius to Google sign-in: the
+  /// throw happens inside [_obtainFirebaseToken]'s `tryCatch` and maps to
+  /// `errors.google_sign_in_failed` like any other SDK-level failure.
+  FirebaseAuth get _auth => _firebaseAuth ?? FirebaseAuth.instance;
 
   TaskEither<Failure, String> _obtainFirebaseToken() =>
       TaskEither<Failure, String>.tryCatch(
@@ -48,7 +65,7 @@ class GoogleAuthDataSourceImpl implements GoogleAuthDataSource {
             accessToken: googleAuth.accessToken,
             idToken: idToken,
           );
-          final userCred = await _firebaseAuth.signInWithCredential(credential);
+          final userCred = await _auth.signInWithCredential(credential);
           final firebaseToken = await userCred.user?.getIdToken();
           if (firebaseToken == null) throw const _CancelledException();
 

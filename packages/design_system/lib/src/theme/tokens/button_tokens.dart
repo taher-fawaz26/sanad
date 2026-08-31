@@ -39,6 +39,12 @@ enum AppButtonIntent {
 
   /// Destructive CTA — red palette (e.g. delete).
   destructive,
+
+  /// Plain gray tonal fill with a near-black label — Figma `6974:25087`
+  /// (client OAuth screen: Continue with Email / Google / Phone). Distinct
+  /// from [standard]'s brand-tinted soft fill, which reads too green for a
+  /// neutral secondary action on that screen.
+  neutral,
 }
 
 /// Figma button size tier (`30:1738`).
@@ -172,6 +178,11 @@ abstract final class ButtonTokens {
         fillDefault: 600,
         fillPressed: 700,
       ),
+      AppButtonIntent.neutral => _IntentPalette(
+        scale: colors.palettes.dark,
+        fillDefault: 900,
+        fillPressed: 950,
+      ),
     };
   }
 
@@ -254,6 +265,16 @@ abstract final class ButtonTokens {
       return ButtonSurfaceColors(
         background: isDark ? scale.shade100 : scale.shade50,
         foreground: isDark ? scale.shade700 : scale.shade600,
+        border: Colors.transparent,
+      );
+    }
+    if (intent == AppButtonIntent.neutral) {
+      // Figma `6974:25087` — gray fill with a near-black label; the generic
+      // branch below (mid-shade foreground) reads as too washed-out for a
+      // secondary CTA that isn't brand-tinted.
+      return ButtonSurfaceColors(
+        background: isPressed ? scale.shade200 : scale.shade100,
+        foreground: scale.shade900,
         border: Colors.transparent,
       );
     }

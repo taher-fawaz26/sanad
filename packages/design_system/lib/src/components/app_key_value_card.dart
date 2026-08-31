@@ -1,6 +1,7 @@
 import 'package:design_system/src/theme/colors/app_colors.dart';
 import 'package:design_system/src/theme/tokens/key_value_card_tokens.dart';
 import 'package:design_system/src/theme/typography/app_typography.dart';
+import 'package:design_system/src/utils/ltr_isolate.dart';
 import 'package:flutter/material.dart';
 
 /// Figma schedule info row (`347:14680`) — bordered key/value card.
@@ -11,12 +12,19 @@ class AppKeyValueCard extends StatelessWidget {
     super.key,
     this.valueColor,
     this.onTap,
+    this.isLtr = false,
   });
 
   final String title;
   final String value;
   final Color? valueColor;
   final VoidCallback? onTap;
+
+  /// Whether [value] is inherently left-to-right (phone, email, URL). When
+  /// true it is wrapped in a Unicode LTR isolate so it reads correctly — e.g.
+  /// a leading `+` stays at the visual start — under an RTL layout. See
+  /// [LtrIsolate].
+  final bool isLtr;
 
   @override
   Widget build(BuildContext context) {
@@ -53,7 +61,7 @@ class AppKeyValueCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  value,
+                  isLtr ? value.ltrIsolated : value,
                   style: spec.valueStyle.copyWith(color: valueColor),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

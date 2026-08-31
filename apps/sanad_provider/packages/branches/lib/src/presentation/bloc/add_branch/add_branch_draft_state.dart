@@ -39,10 +39,10 @@ class AddBranchDraft extends Equatable {
   const AddBranchDraft({
     this.branchName = '',
     this.branchType = BranchType.mainBranch,
-    this.selectedCity,
     this.phone = '',
     this.branchAddress,
     this.pickedPosition,
+    this.locationPlaceId,
     this.selectedManager,
     this.scheduleMode = BranchScheduleMode.company,
     this.customSchedule = const [],
@@ -56,10 +56,12 @@ class AddBranchDraft extends Equatable {
 
   final String branchName;
   final BranchType branchType;
-  final CityEntity? selectedCity;
   final String phone;
   final String? branchAddress;
   final LatLng? pickedPosition;
+
+  /// Google Places Autocomplete place ID for the branch location.
+  final String? locationPlaceId;
   final BranchManagerEntity? selectedManager;
   final BranchScheduleMode scheduleMode;
   final List<BranchAvailabilityEntity> customSchedule;
@@ -92,7 +94,6 @@ class AddBranchDraft extends Equatable {
   bool hasChangesFrom(AddBranchDraft baseline) =>
       branchName.trim() != baseline.branchName.trim() ||
       branchType != baseline.branchType ||
-      selectedCity != baseline.selectedCity ||
       phone.trim() != baseline.phone.trim() ||
       branchAddress != baseline.branchAddress ||
       pickedPosition != baseline.pickedPosition ||
@@ -109,9 +110,9 @@ class AddBranchDraft extends Equatable {
   /// backend contract requires it, so it gates Step 1 here too.
   bool get isStepOneComplete =>
       branchName.trim().isNotEmpty &&
-      selectedCity != null &&
       branchAddress != null &&
       pickedPosition != null &&
+      locationPlaceId != null &&
       UaePhoneValidator.isMobile(phone) &&
       selectedManager != null &&
       _isScheduleComplete;
@@ -141,10 +142,10 @@ class AddBranchDraft extends Equatable {
   AddBranchDraft copyWith({
     String? branchName,
     BranchType? branchType,
-    CityEntity? Function()? selectedCity,
     String? phone,
     String? Function()? branchAddress,
     LatLng? Function()? pickedPosition,
+    String? Function()? locationPlaceId,
     BranchManagerEntity? Function()? selectedManager,
     BranchScheduleMode? scheduleMode,
     List<BranchAvailabilityEntity>? customSchedule,
@@ -157,12 +158,14 @@ class AddBranchDraft extends Equatable {
   }) => AddBranchDraft(
     branchName: branchName ?? this.branchName,
     branchType: branchType ?? this.branchType,
-    selectedCity: selectedCity != null ? selectedCity() : this.selectedCity,
     phone: phone ?? this.phone,
     branchAddress: branchAddress != null ? branchAddress() : this.branchAddress,
     pickedPosition: pickedPosition != null
         ? pickedPosition()
         : this.pickedPosition,
+    locationPlaceId: locationPlaceId != null
+        ? locationPlaceId()
+        : this.locationPlaceId,
     selectedManager: selectedManager != null
         ? selectedManager()
         : this.selectedManager,
@@ -185,10 +188,10 @@ class AddBranchDraft extends Equatable {
   List<Object?> get props => [
     branchName,
     branchType,
-    selectedCity,
     phone,
     branchAddress,
     pickedPosition,
+    locationPlaceId,
     selectedManager,
     scheduleMode,
     customSchedule,

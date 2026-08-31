@@ -66,5 +66,6 @@ abstract final class IconButtonTokens {
         AppButtonIntent.standard => colors.textSecondary,
         AppButtonIntent.warning => colors.warning,
         AppButtonIntent.destructive => colors.error,
+        AppButtonIntent.neutral => colors.textPrimary,
       };
 }

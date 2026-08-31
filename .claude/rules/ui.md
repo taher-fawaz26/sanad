@@ -18,6 +18,15 @@ Decision: [`docs/adr/0003-design-system-tokens.md`](../../docs/adr/0003-design-s
 - Respect RTL: rely on directional widgets/`EdgeInsetsDirectional`; only force
   `TextDirection.ltr` for intrinsically-LTR content (e.g. OTP digits) as done in
   `AppOtpField`.
+- Displaying an inherently-LTR **value** (phone number, email, URL, handle) as
+  read-only text under an RTL layout: wrap it with `String.ltrIsolated`
+  (`design_system`) so a bidi-neutral leading `+` renders at the visual start,
+  not the end (the recurring SAN-770/771/775 bug). For a whole read-only field
+  or a key/value row, prefer the component flags that do this for you —
+  `AppTextField(isLtr: true)` / `AppPhoneField`, `AppKeyValueCard(isLtr: true)`,
+  `GroupedKeyValueItem(isLtr: true)`. Prefer `ltrIsolated` over a bare
+  `TextDirection.ltr`: the isolate also stops the value from reordering adjacent
+  Arabic text.
 - Keep feature widgets under the feature's `presentation/widgets/`; promote a
   widget to `shared_ui`/`design_system` only when it is genuinely reusable.
 - Present bottom sheets/modals via `SheetNavigator` (`packages/sheet_navigation`),

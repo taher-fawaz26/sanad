@@ -25,7 +25,9 @@ class AuthAccountSettingsEntity extends Equatable {
   /// Nullable per `AuthSessionResponseDto.accountSettings.name`.
   final String? name;
 
-  final String email;
+  /// Nullable for phone-registered clients — `client/profile`'s
+  /// `accountSettings.email` is no longer guaranteed (see client-auth update).
+  final String? email;
 
   /// Null until verified via the contact-verification flow.
   final String? phone;

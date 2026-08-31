@@ -30,6 +30,7 @@ class LocationPickerState extends Equatable {
     this.searchError,
     this.searchQuery = '',
     this.hasLocationPermission = false,
+    this.selectedPlaceId,
   });
 
   /// Country the picked location must belong to (the UAE).
@@ -54,6 +55,11 @@ class LocationPickerState extends Equatable {
   /// `myLocationEnabled` so the MyLocation layer is never requested before
   /// permission is actually granted.
   final bool hasLocationPermission;
+
+  /// Google Places Autocomplete place ID from the most recent prediction
+  /// selection. Cleared when the user drags the map or uses forward geocode,
+  /// because those flows produce coordinates without a Google Place ID.
+  final String? selectedPlaceId;
 
   /// True only when the pin is *known* to be in another country — a null
   /// geocode never blocks a legitimate in-country point.
@@ -97,10 +103,12 @@ class LocationPickerState extends Equatable {
     String? searchError,
     String? searchQuery,
     bool? hasLocationPermission,
+    String? Function()? selectedPlaceId,
     bool clearFailure = false,
     bool clearAddress = false,
     bool clearPredictions = false,
     bool clearSearchError = false,
+    bool clearSelectedPlaceId = false,
   }) {
     return LocationPickerState(
       status: status ?? this.status,
@@ -123,6 +131,11 @@ class LocationPickerState extends Equatable {
       searchQuery: searchQuery ?? this.searchQuery,
       hasLocationPermission:
           hasLocationPermission ?? this.hasLocationPermission,
+      selectedPlaceId: clearSelectedPlaceId
+          ? null
+          : (selectedPlaceId != null
+              ? selectedPlaceId()
+              : this.selectedPlaceId),
     );
   }
 
@@ -139,5 +152,6 @@ class LocationPickerState extends Equatable {
     searchError,
     searchQuery,
     hasLocationPermission,
+    selectedPlaceId,
   ];
 }

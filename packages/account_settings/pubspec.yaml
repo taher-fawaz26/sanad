@@ -16,12 +16,16 @@ dependencies:
   auth:
     path: ../auth
   bloc_concurrency: ^0.3.0
+  config:
+    path: ../config
   contact_verification:
     path: ../contact_verification
   core:
     path: ../core
   design_system:
     path: ../design_system
+  device:
+    path: ../device
   easy_localization: ^3.0.8
   equatable: ^2.1.0
   flutter:
@@ -39,6 +43,8 @@ dependencies:
     path: ../shared_ui
   sheet_navigation:
     path: ../sheet_navigation
+  storage:
+    path: ../storage
 
 dev_dependencies:
   bloc_test: ^10.0.0
@@ -47,4 +53,6 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   mocktail: ^1.0.4
+  testing:
+    path: ../testing
   very_good_analysis: ^9.0.0

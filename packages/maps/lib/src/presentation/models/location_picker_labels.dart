@@ -14,6 +14,7 @@ class LocationPickerLabels {
     required this.outsideCountry,
     this.title,
     this.subtitle,
+    this.placeIdRequiredHint,
   });
 
   /// Optional sheet header title (e.g. "Branch location").
@@ -40,4 +41,10 @@ class LocationPickerLabels {
 
   /// Shown when the picked location is outside the supported country (UAE).
   final String outsideCountry;
+
+  /// Shown below the address field when `MapLocationPicker.requirePlaceId` is
+  /// true but the current selection has no Google Place ID (e.g. the pin was
+  /// dragged or the location came from GPS/plain geocoding). Prompts the user
+  /// to pick a location from the search-autocomplete results instead.
+  final String? placeIdRequiredHint;
 }

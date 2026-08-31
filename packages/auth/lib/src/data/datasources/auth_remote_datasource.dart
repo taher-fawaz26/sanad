@@ -1,14 +1,22 @@
 import 'package:auth/src/data/endpoints/auth_api_paths.dart';
 import 'package:auth/src/data/models/auth_response_model.dart';
+import 'package:auth/src/data/models/requests/client_otp_request.dart';
 import 'package:auth/src/data/models/requests/email_otp_request.dart';
+import 'package:auth/src/data/models/requests/update_client_profile_request.dart';
+import 'package:auth/src/data/models/requests/verify_client_otp_request.dart';
 import 'package:auth/src/data/models/requests/verify_email_otp_request.dart';
+import 'package:auth/src/data/models/responses/client_profile_response_dto.dart';
+import 'package:auth/src/data/models/responses/client_verify_response_dto.dart';
 import 'package:auth/src/data/models/responses/login_response_dto.dart';
 import 'package:auth/src/data/models/responses/me_response_dto.dart';
 import 'package:auth/src/data/models/responses/resend_info_response_dto.dart';
 import 'package:auth/src/domain/entities/auth_identity_entity.dart';
 import 'package:auth/src/domain/entities/auth_response_entity.dart';
+import 'package:auth/src/domain/entities/client_profile_entity.dart';
+import 'package:auth/src/domain/entities/client_verify_result_entity.dart';
 import 'package:auth/src/domain/entities/login_result_entity.dart';
 import 'package:auth/src/domain/entities/resend_info_entity.dart';
+import 'package:auth/src/domain/enums/client_auth_method.dart';
 import 'package:core/core.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:network/network.dart';
@@ -46,6 +54,27 @@ abstract class AuthRemoteDataSource {
   TaskEither<Failure, AuthIdentity> getCurrentUser();
 
   TaskEither<Failure, void> logout();
+
+  // ── Unified client sign-in ─────────────────────────────────────────────
+
+  /// `POST auth/client/request-otp` — dispatch (and resend) a client code.
+  TaskEither<Failure, void> requestClientOtp(ClientOtpRequest model);
+
+  /// `GET auth/client/resend-info?method=&value=` — client resend cooldown.
+  TaskEither<Failure, ResendInfo> getClientResendInfo(
+    ClientAuthMethod method,
+    String value,
+  );
+
+  /// `POST auth/client/verify` — verify a client code; branch on `status`.
+  TaskEither<Failure, ClientVerifyResult> verifyClientOtp(
+    VerifyClientOtpRequest model,
+  );
+
+  /// `PATCH clients/me` — set client display name / preferred language.
+  TaskEither<Failure, ClientProfile> updateClientProfile(
+    UpdateClientProfileRequest model,
+  );
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -124,5 +153,47 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     path: AuthApiPaths.logout,
     method: RequestMethod.post,
     parser: (_) {},
+  );
+
+  @override
+  TaskEither<Failure, void> requestClientOtp(ClientOtpRequest model) =>
+      _apiClient.request<void>(
+        path: AuthApiPaths.clientRequestOtp,
+        method: RequestMethod.post,
+        body: model.toMap(),
+        parser: (_) {},
+      );
+
+  @override
+  TaskEither<Failure, ResendInfo> getClientResendInfo(
+    ClientAuthMethod method,
+    String value,
+  ) => _apiClient.request<ResendInfo>(
+    path: AuthApiPaths.clientResendInfo,
+    method: RequestMethod.get,
+    query: {'method': method.value, 'value': value},
+    parser: (data) => ResendInfoModel.fromJson(data as Map<String, dynamic>),
+  );
+
+  @override
+  TaskEither<Failure, ClientVerifyResult> verifyClientOtp(
+    VerifyClientOtpRequest model,
+  ) => _apiClient.request<ClientVerifyResult>(
+    path: AuthApiPaths.clientVerify,
+    method: RequestMethod.post,
+    body: model.toMap(),
+    parser: (data) =>
+        ClientVerifyResponseModel.fromJson(data as Map<String, dynamic>),
+  );
+
+  @override
+  TaskEither<Failure, ClientProfile> updateClientProfile(
+    UpdateClientProfileRequest model,
+  ) => _apiClient.request<ClientProfile>(
+    path: AuthApiPaths.clientsMe,
+    method: RequestMethod.patch,
+    body: model.toMap(),
+    parser: (data) =>
+        ClientProfileResponseModel.fromJson(data as Map<String, dynamic>),
   );
 }

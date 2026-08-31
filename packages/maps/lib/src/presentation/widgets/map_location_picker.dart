@@ -36,6 +36,7 @@ class MapLocationPicker extends StatefulWidget {
     this.showControls = true,
     this.showConfirmButton = true,
     this.showAddressField = true,
+    this.requirePlaceId = false,
     this.onLocationChanged,
     this.onConfirmed,
     super.key,
@@ -58,6 +59,14 @@ class MapLocationPicker extends StatefulWidget {
   final bool showControls;
   final bool showConfirmButton;
   final bool showAddressField;
+
+  /// When true, the location cannot be confirmed unless the current selection
+  /// carries a Google Place ID — i.e. it was chosen from search autocomplete.
+  /// Dragging the pin, using GPS, or plain geocoding produces coordinates
+  /// without a Place ID (see [LocationPickerState.selectedPlaceId]), which some
+  /// backends (e.g. branch creation) reject. Off by default so consumers that
+  /// only need coordinates keep the existing free-pin behavior.
+  final bool requirePlaceId;
   final ValueChanged<LocationPickerResult>? onLocationChanged;
   final ValueChanged<LocationPickerResult>? onConfirmed;
 
@@ -191,6 +200,7 @@ class MapLocationPickerState extends State<MapLocationPicker> {
               LocationPickerResult(
                 position: state.position!,
                 address: state.address!,
+                placeId: state.selectedPlaceId,
               ),
             );
           }
@@ -285,13 +295,23 @@ class MapLocationPickerState extends State<MapLocationPicker> {
     return BlocSelector<
       LocationPickerBloc,
       LocationPickerState,
-      ({bool canConfirm, bool isOutsideCountry})
+      ({bool canConfirm, bool isOutsideCountry, bool hasPlaceId})
     >(
       selector: (state) => (
         canConfirm: state.canConfirm,
         isOutsideCountry: state.isOutsideCountry,
+        hasPlaceId: state.selectedPlaceId != null,
       ),
       builder: (context, rec) {
+        final enabled =
+            rec.canConfirm && (!widget.requirePlaceId || rec.hasPlaceId);
+        // Prompt to pick from search only when everything else is valid but the
+        // selection lacks the required Place ID (dragged pin / GPS / geocode).
+        final showPlaceIdHint =
+            widget.requirePlaceId &&
+            rec.canConfirm &&
+            !rec.hasPlaceId &&
+            widget.labels.placeIdRequiredHint != null;
         return Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -306,18 +326,33 @@ class MapLocationPickerState extends State<MapLocationPicker> {
               ),
               SizedBox(height: AppSpacing.sm),
             ],
+            if (showPlaceIdHint) ...[
+              Text(
+                widget.labels.placeIdRequiredHint!,
+                textAlign: TextAlign.center,
+                style: context.appTypography.smallNormal.copyWith(
+                  color: context.appColors.textSecondary,
+                ),
+              ),
+              SizedBox(height: AppSpacing.sm),
+            ],
             AppButton(
               label: widget.labels.confirm,
-              onPressed: rec.canConfirm
+              onPressed: enabled
                   ? () {
                       final state = context.read<LocationPickerBloc>().state;
                       final position = state.position;
                       final address = state.address;
                       if (position == null || address == null) return;
+                      if (widget.requirePlaceId &&
+                          state.selectedPlaceId == null) {
+                        return;
+                      }
                       widget.onConfirmed?.call(
                         LocationPickerResult(
                           position: position,
                           address: address,
+                          placeId: state.selectedPlaceId,
                         ),
                       );
                     }

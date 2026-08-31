@@ -16,6 +16,7 @@ Future<LocationPickerResult?> showLocationPickerSheet(
   String? initialAddress,
   MapConfiguration configuration = const MapConfiguration(),
   Widget? pinMarker,
+  bool requirePlaceId = false,
 }) {
   appLogger.d('[showLocationPickerSheet] opening sheet');
   return SheetNavigator.push<LocationPickerResult>(
@@ -55,6 +56,7 @@ Future<LocationPickerResult?> showLocationPickerSheet(
               initialAddress: initialAddress,
               configuration: configuration,
               pinMarker: pinMarker,
+              requirePlaceId: requirePlaceId,
               onConfirmed: (result) => Navigator.of(sheetContext).pop(result),
             ),
           ],

@@ -16,6 +16,7 @@ class BranchDto {
     required this.availabilityMode,
     this.branchType = BranchType.mainBranch,
     this.cityId,
+    this.locationPlaceId,
     this.branchManagerId,
     this.branchManagerName,
     this.lat,
@@ -162,6 +163,7 @@ class BranchDto {
       ),
       branchType: BranchType.fromApiString(json['type'] as String?),
       cityId: cityId,
+      locationPlaceId: json['locationPlaceId'] as String?,
       branchManagerId: managerId,
       branchManagerName: managerName,
       lat: _numericField(json['lat']),
@@ -191,6 +193,7 @@ class BranchDto {
   final BranchAvailabilityMode availabilityMode;
   final BranchType branchType;
   final String? cityId;
+  final String? locationPlaceId;
   final String? branchManagerId;
   final String? branchManagerName;
   final double? lat;
@@ -217,6 +220,7 @@ class BranchDto {
     availabilityMode: availabilityMode,
     branchType: branchType,
     cityId: cityId,
+    locationPlaceId: locationPlaceId,
     branchManagerId: branchManagerId,
     branchManagerName: branchManagerName,
     lat: lat,

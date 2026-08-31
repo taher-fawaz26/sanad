@@ -97,3 +97,5 @@ export 'src/theme/typography/arabic_type_scale.dart';
 export 'src/theme/typography/device_class.dart';
 export 'src/theme/typography/responsive_font_scale.dart';
 export 'src/theme/typography/type_scale.dart';
+// Utils — bidi LTR-isolate wrapper for phone/email/URL values.
+export 'src/utils/ltr_isolate.dart';

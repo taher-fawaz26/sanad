@@ -1,0 +1,42 @@
+name: ai_ui_renderer
+description: >
+  Renders a validated SANAD Chat UI Protocol document as native SANAD Design
+  System widgets, and dispatches its actions through a compile-time allowlist.
+  This is the only layer that can act on an AI payload — the protocol package
+  itself is inert data.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+  flutter: ">=3.19.0"
+
+dependencies:
+  ai_ui_protocol:
+    path: ../ai_ui_protocol
+  app_assets:
+    path: ../app_assets
+  app_logger:
+    path: ../app_logger
+  design_system:
+    path: ../design_system
+  equatable: ^2.1.0
+  flutter:
+    sdk: flutter
+  intl: ^0.20.2
+  shared_ui:
+    path: ../shared_ui
+
+dev_dependencies:
+  flutter_screenutil: ^5.9.3
+  flutter_test:
+    sdk: flutter
+  mocktail: ^1.0.4
+  testing:
+    path: ../testing
+  very_good_analysis: ^9.0.0
+
+flutter:
+  # Renderers use Material icons (e.g. document_card's leading glyph).
+  uses-material-design: true

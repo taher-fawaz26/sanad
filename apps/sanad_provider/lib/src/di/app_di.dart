@@ -4,10 +4,12 @@ import 'package:app_logger/app_logger.dart';
 import 'package:asset_picker/asset_picker.dart';
 import 'package:auth/auth.dart';
 import 'package:branches/branches.dart';
+import 'package:config/config.dart';
 import 'package:contact_verification/contact_verification.dart';
 import 'package:core/core.dart';
 import 'package:deep_linking/deep_linking.dart';
 import 'package:design_system/design_system.dart';
+import 'package:device/device.dart';
 import 'package:document_validation/document_validation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -32,6 +34,9 @@ late final ModuleRegistry moduleRegistry;
 
 /// Registers all application-level dependencies with the service locator.
 Future<void> configureDependencies() async {
+  // ── Build-time feature flags ─────────────────────────────────────────────
+  sl.registerLazySingleton<FeatureFlags>(() => AppConfig.featureFlags);
+
   // ── Storage ──────────────────────────────────────────────────────────────
   sl
     ..registerLazySingleton(() => const FlutterSecureStorage())
@@ -45,6 +50,12 @@ Future<void> configureDependencies() async {
     )
     ..registerLazySingleton<TokenStorage>(
       () => TokenStorageImpl(sl<FlutterSecureStorage>()),
+    )
+    // Keychain/Keystore-backed key/value store. Used for security-sensitive
+    // local preferences that must not live in the plaintext Hive default box
+    // — currently the app-lock (biometric unlock) preference.
+    ..registerLazySingleton<SecureLocalStorage>(
+      () => SecureLocalStorage(sl<FlutterSecureStorage>()),
     )
     // ── Localization & Theme ─────────────────────────────────────────────────
     ..registerLazySingleton(TranslateBloc.new)
@@ -98,6 +109,10 @@ Future<void> configureDependencies() async {
 
   // ── Feature modules ────────────────────────────────────────────────────────
   moduleRegistry = ModuleRegistry([
+    // Device capability gateway (biometrics, connectivity, clipboard, share,
+    // device/app info). Registered first: it declares no dependencies and
+    // other modules resolve its services lazily.
+    DeviceModule(),
     MapsModule(
       config: const MapsConfig(
         placesApiKey: String.fromEnvironment('MAPS_API_KEY'),

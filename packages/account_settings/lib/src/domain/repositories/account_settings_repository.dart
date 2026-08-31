@@ -12,8 +12,11 @@ import 'package:fpdart/fpdart.dart';
 /// ([getAccountProfile]). The session (`SessionManager`) is still the
 /// screen's instant-render cache; see `AccountSettingsBloc`.
 abstract interface class AccountSettingsRepository {
+  /// Persists a partial update for [userType]'s persona-appropriate endpoint
+  /// (clients → `clients/me`, others → `account-settings`).
   TaskEither<Failure, AccountSettingsEntity> updateAccountSettings(
     UpdateAccountSettingsParams params,
+    UserType userType,
   );
 
   /// Fetches the authoritative account settings for [userType] from its

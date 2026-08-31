@@ -14,7 +14,7 @@ class UpdateBranchRequest extends Equatable {
     required this.branchAddress,
     required this.branchPhone,
     this.branchType,
-    this.cityId,
+    this.locationPlaceId,
     this.branchManagerId,
     this.lat,
     this.lng,
@@ -35,8 +35,9 @@ class UpdateBranchRequest extends Equatable {
   /// Only serialized when changing the branch type.
   final BranchType? branchType;
 
-  /// Only serialized when changing the branch city.
-  final String? cityId;
+  /// Google Places Autocomplete place ID. When non-null, [lat] and [lng] are
+  /// serialized together with it — the backend requires all three as a unit.
+  final String? locationPlaceId;
 
   final String? branchManagerId;
   final double? lat;
@@ -59,10 +60,12 @@ class UpdateBranchRequest extends Equatable {
       'branchPhone': branchPhone,
     };
     if (branchType != null) body['type'] = branchType!.toApiString();
-    if (cityId != null) body['cityId'] = cityId;
+    if (locationPlaceId != null) {
+      body['locationPlaceId'] = locationPlaceId;
+      if (lat != null) body['lat'] = lat;
+      if (lng != null) body['lng'] = lng;
+    }
     if (branchManagerId != null) body['branchManagerId'] = branchManagerId;
-    if (lat != null) body['lat'] = lat;
-    if (lng != null) body['lng'] = lng;
     if (radiusKm != null) body['radiusKm'] = radiusKm;
     if (googleMapsLink != null) body['googleMapsLink'] = googleMapsLink;
     if (socialMediaLink != null) body['socialMediaLink'] = socialMediaLink;
@@ -88,7 +91,7 @@ class UpdateBranchRequest extends Equatable {
     branchAddress,
     branchPhone,
     branchType,
-    cityId,
+    locationPlaceId,
     branchManagerId,
     lat,
     lng,

@@ -60,7 +60,7 @@ behavioral claims as `NEEDS_CONFIRMATION` until a dedicated page is written.
 |---------|---------|-----|
 | `otp` | OTP verification view/bloc (login & registration) | **[detailed](otp.md)** |
 | `auth` | Authentication vertical (login, session, splash) | **[detailed](auth.md)** |
-| `account_settings` | Account credentials & settings shared UI | location only |
+| `account_settings` | Account credentials & settings shared UI; also hosts the app-lock gate | **[detailed](app-lock.md)** (app lock only) |
 | `contact_verification` | Phone/email verification | location only |
 | `document_flow` | Generic document capture/extraction/review pipeline | **[detailed](document-flow.md)** |
 | `media_upload` / `media` | Multipart upload pipeline & media types | location only |

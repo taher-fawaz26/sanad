@@ -415,6 +415,59 @@ void main() {
           ),
         ],
       );
+
+      blocTest<LocationPickerBloc, LocationPickerState>(
+        'captures the prediction place id (required for branch creation)',
+        build: () {
+          when(
+            () => getPlaceDetails(any()),
+          ).thenReturn(TaskEither.right(_tPosition));
+          when(
+            () => reverseGeocode(any()),
+          ).thenReturn(TaskEither.right(_tGeocoded));
+          return buildBloc(withPlaces: true);
+        },
+        act: (bloc) => bloc.add(
+          LocationPickerPredictionSelected(_tPrediction),
+        ),
+        verify: (bloc) {
+          expect(bloc.state.selectedPlaceId, _tPrediction.placeId);
+        },
+      );
+    });
+
+    group('LocationPickerCameraIdle', () {
+      blocTest<LocationPickerBloc, LocationPickerState>(
+        'dragging the map clears the place id (coordinates without a '
+        'Google Place ID), forcing a new autocomplete selection',
+        build: () {
+          when(
+            () => reverseGeocode(any()),
+          ).thenReturn(TaskEither.right(_tGeocoded));
+          return buildBloc();
+        },
+        seed: () => const LocationPickerState(
+          status: LocationPickerStatus.ready,
+          position: _tPosition,
+          address: _tAddress,
+          selectedPlaceId: 'abc',
+        ),
+        act: (bloc) => bloc.add(
+          const LocationPickerCameraIdle(LatLng(26.0, 56.0)),
+        ),
+        expect: () => [
+          isA<LocationPickerState>()
+              .having(
+                (s) => s.status,
+                'status',
+                LocationPickerStatus.geocoding,
+              )
+              .having((s) => s.selectedPlaceId, 'selectedPlaceId', isNull),
+          isA<LocationPickerState>()
+              .having((s) => s.status, 'status', LocationPickerStatus.ready)
+              .having((s) => s.selectedPlaceId, 'selectedPlaceId', isNull),
+        ],
+      );
     });
 
     group('LocationPickerPermissionChecked', () {

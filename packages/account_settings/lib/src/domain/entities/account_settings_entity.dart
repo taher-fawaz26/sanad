@@ -16,7 +16,8 @@ class AccountSettingsEntity extends Equatable {
   /// Nullable per `AccountSettingsDto.name` (backend field is `nullable: true`).
   final String? name;
 
-  final String email;
+  /// Nullable for phone-registered clients (email not guaranteed).
+  final String? email;
   final String? phone;
   final PreferredLanguage preferredLanguage;
 

@@ -1,6 +1,7 @@
 import 'package:account_settings/src/data/datasources/account_settings_remote_datasource.dart';
 import 'package:account_settings/src/data/endpoints/account_settings_api_paths.dart';
 import 'package:account_settings/src/data/models/account_settings_response.dart';
+import 'package:account_settings/src/data/models/requests/update_account_settings_request.dart';
 import 'package:account_settings/src/domain/enums/preferred_language.dart';
 import 'package:auth/auth.dart' show UserType;
 import 'package:flutter_test/flutter_test.dart';
@@ -32,6 +33,25 @@ void main() {
   setUpAll(() {
     registerFallbackValue(RequestMethod.get);
   });
+
+  // Stubs `apiClient.request` to run the caller's parser against [payload] and
+  // returns the resulting response; use with `verify` to assert the path.
+  void stubRequest(Map<String, dynamic> payload) {
+    when(
+      () => apiClient.request<AccountSettingsResponse>(
+        path: any(named: 'path'),
+        method: any(named: 'method'),
+        body: any<dynamic>(named: 'body'),
+        parser: any(named: 'parser'),
+        query: any(named: 'query'),
+      ),
+    ).thenAnswer((invocation) {
+      final parser =
+          invocation.namedArguments[#parser]
+              as AccountSettingsResponse Function(dynamic);
+      return TaskEither.right(parser(payload));
+    });
+  }
 
   setUp(() {
     apiClient = _MockBaseApiClient();
@@ -77,6 +97,79 @@ void main() {
         () => apiClient.request<AccountSettingsResponse>(
           path: AccountSettingsApiPaths.serviceProviderProfile,
           method: RequestMethod.get,
+          body: any<dynamic>(named: 'body'),
+          parser: any(named: 'parser'),
+          query: any(named: 'query'),
+        ),
+      ).called(1);
+    },
+  );
+
+  test(
+    'updateAccountSettings PATCHes clients/me for a client account',
+    () async {
+      stubRequest(<String, dynamic>{
+        'id': 'client-1',
+        'name': 'Mohamed',
+        'email': null,
+        'phone': '+971501234567',
+        'preferredLanguage': 'en',
+      });
+
+      final result = await dataSource
+          .updateAccountSettings(
+            const UpdateAccountSettingsRequest(name: 'Mohamed'),
+            UserType.client,
+          )
+          .run();
+
+      expect(result.isRight(), isTrue);
+      // A phone-only client's email is null and must parse without throwing.
+      result.match(
+        (failure) => fail('expected a right, got $failure'),
+        (response) {
+          expect(response.email, isNull);
+          expect(response.phone, '+971501234567');
+        },
+      );
+
+      verify(
+        () => apiClient.request<AccountSettingsResponse>(
+          path: AccountSettingsApiPaths.clientsMe,
+          method: RequestMethod.patch,
+          body: any<dynamic>(named: 'body'),
+          parser: any(named: 'parser'),
+          query: any(named: 'query'),
+        ),
+      ).called(1);
+    },
+  );
+
+  test(
+    'updateAccountSettings PATCHes account-settings for a provider account',
+    () async {
+      stubRequest(<String, dynamic>{
+        'id': 'e3521ee5-3f43-4af1-819b-8c0f1f164a5f',
+        'name': 'Layla Al Mansoori',
+        'email': 'seed-company-provider-1@sanad.test',
+        'preferredLanguage': 'ar',
+      });
+
+      final result = await dataSource
+          .updateAccountSettings(
+            const UpdateAccountSettingsRequest(
+              preferredLanguage: PreferredLanguage.ar,
+            ),
+            UserType.organizationProvider,
+          )
+          .run();
+
+      expect(result.isRight(), isTrue);
+
+      verify(
+        () => apiClient.request<AccountSettingsResponse>(
+          path: AccountSettingsApiPaths.accountSettings,
+          method: RequestMethod.patch,
           body: any<dynamic>(named: 'body'),
           parser: any(named: 'parser'),
           query: any(named: 'query'),

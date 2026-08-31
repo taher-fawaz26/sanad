@@ -9,11 +9,29 @@ class AppProgressBar extends StatelessWidget {
     super.key,
     this.min = 0,
     this.max = 1,
+    this.height,
+    this.trackColor,
+    this.fillColor,
+    this.borderRadius,
   });
 
   final double value;
   final double min;
   final double max;
+
+  /// Overrides the token-resolved bar height. Omit to use the default
+  /// (`ProgressTokens.height`).
+  final double? height;
+
+  /// Overrides the token-resolved track color. Omit to use the theme default.
+  final Color? trackColor;
+
+  /// Overrides the token-resolved fill color. Omit to use `colors.primary`.
+  final Color? fillColor;
+
+  /// Overrides the token-resolved corner radius. Omit to use the theme
+  /// default (pill-shaped).
+  final BorderRadius? borderRadius;
 
   @override
   Widget build(BuildContext context) {
@@ -27,15 +45,15 @@ class AppProgressBar extends StatelessWidget {
     final fraction = ((value - min) / (max - min)).clamp(0.0, 1.0);
 
     return ClipRRect(
-      borderRadius: spec.borderRadius,
+      borderRadius: borderRadius ?? spec.borderRadius,
       child: SizedBox(
-        height: spec.height,
+        height: height ?? spec.height,
         child: Stack(
           children: [
-            Container(color: spec.trackColor),
+            Container(color: trackColor ?? spec.trackColor),
             FractionallySizedBox(
               widthFactor: fraction,
-              child: Container(color: spec.fillColor),
+              child: Container(color: fillColor ?? spec.fillColor),
             ),
           ],
         ),

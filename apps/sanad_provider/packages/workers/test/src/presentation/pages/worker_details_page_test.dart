@@ -31,7 +31,13 @@ const _worker = WorkerEntity(
   role: 'worker',
   initials: 'SW',
   status: WorkerStatus.active,
+  phone: '+971588888888',
+  email: '0j2e251jb@lnovic.com',
 );
+
+// U+2066 LEFT-TO-RIGHT ISOLATE … U+2069 POP DIRECTIONAL ISOLATE — the wrapper
+// that keeps a `+`-prefixed phone / an email reading LTR under an RTL layout.
+String _ltrIsolate(String value) => '\u{2066}$value\u{2069}';
 
 void main() {
   setUp(() {
@@ -91,6 +97,25 @@ void main() {
 
       expect(find.text('workers.edit_profile'), findsOneWidget);
     });
+
+    testWidgets(
+      'contact phone/email are LTR-isolated and rendered on a single line '
+      '(SAN-771: `+` was drawn at the end and the email wrapped to two lines)',
+      (tester) async {
+        await pump(tester, isOwner: true);
+
+        // Values are wrapped in an LTR isolate so `+` reads at the start.
+        expect(find.text(_ltrIsolate('+971588888888')), findsOneWidget);
+
+        final emailFinder = find.text(_ltrIsolate('0j2e251jb@lnovic.com'));
+        expect(emailFinder, findsOneWidget);
+
+        // The email value is capped to one line (no awkward mid-word wrap).
+        final emailText = tester.widget<Text>(emailFinder);
+        expect(emailText.maxLines, 1);
+        expect(emailText.overflow, TextOverflow.ellipsis);
+      },
+    );
 
     testWidgets(
       'shows the "more actions" kebab (SAN: Suspend/Delete were previously '

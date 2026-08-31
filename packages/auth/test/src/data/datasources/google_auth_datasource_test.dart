@@ -42,6 +42,25 @@ void main() {
   });
 
   test(
+    'constructs without Firebase initialised',
+    () {
+      // Regression: the constructor used to read `FirebaseAuth.instance`,
+      // which throws `[core/no-app]` in an app that never calls
+      // `Firebase.initializeApp()` — as sanad_client does not. That took down
+      // AuthRepository and with it every OTP use case, none of which need
+      // Firebase. Firebase must not be touched until a Google sign-in is
+      // actually attempted.
+      expect(
+        () => GoogleAuthDataSourceImpl(
+          apiClient: apiClient,
+          googleSignIn: googleSignIn,
+        ),
+        returnsNormally,
+      );
+    },
+  );
+
+  test(
     'dismissing the account picker (null result) maps to the cancellation '
     'i18n key',
     () async {

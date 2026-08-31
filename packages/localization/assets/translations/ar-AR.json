@@ -37,7 +37,8 @@
     "enhance_with_ai": "تحسين بالذكاء الاصطناعي",
     "enhance_with_ai_error_title": "تعذّر تحسين النص",
     "enhance_with_ai_empty_input_error": "يرجى كتابة نص قبل التحسين بالذكاء الاصطناعي.",
-    "enhance_with_ai_empty_result_error": "تعذّر على الذكاء الاصطناعي اقتراح نص لهذا المحتوى."
+    "enhance_with_ai_empty_result_error": "تعذّر على الذكاء الاصطناعي اقتراح نص لهذا المحتوى.",
+    "skip": "تخطٍ"
   },
   "media": {
     "edit_cover": "تعديل صورة الغلاف",
@@ -189,7 +190,28 @@
         "alert_under_review": "طلب التجديد الخاص بك قيد المراجعة. سنُعلمك فور اكتمال المعالجة.",
         "alert_rejected": "تم رفض طلب التجديد الخاص بك. يُرجى مراجعة الملاحظات وإعادة رفع المستندات."
       }
-    }
+    },
+    "section_security": "الأمان",
+    "app_lock": "قفل التطبيق",
+    "app_lock_caption_face": "افتح سند باستخدام بصمة الوجه",
+    "app_lock_caption_fingerprint": "افتح سند باستخدام بصمة الإصبع",
+    "app_lock_caption_generic": "افتح سند باستخدام القياسات الحيوية",
+    "app_lock_caption_unsupported": "هذا الجهاز لا يدعم الفتح بالقياسات الحيوية",
+    "app_lock_enabled_message": "تم تفعيل قفل التطبيق",
+    "app_lock_disabled_message": "تم إيقاف قفل التطبيق",
+    "app_lock_offer_title": "اقفل سند عند مغادرتك",
+    "app_lock_offer_body": "اطلب الفتح بالقياسات الحيوية في كل مرة تفتح فيها التطبيق.",
+    "app_lock_offer_enable": "تفعيل",
+    "app_lock_offer_not_now": "ليس الآن",
+    "app_lock_screen_title": "سند مقفل",
+    "app_lock_screen_subtitle": "افتح القفل للمتابعة.",
+    "app_lock_screen_unlock": "فتح القفل",
+    "biometric_unlock_reason": "افتح سند",
+    "biometric_enable_reason": "أكّد هويتك لتفعيل قفل التطبيق",
+    "biometric_disable_reason": "أكّد هويتك لإيقاف قفل التطبيق",
+    "biometric_error_not_available": "الفتح بالقياسات الحيوية غير متاح على هذا الجهاز.",
+    "biometric_error_locked_out": "محاولات كثيرة. حاول لاحقاً أو استخدم رمز مرور جهازك.",
+    "biometric_error_generic": "تعذّر التحقق من هويتك. يرجى المحاولة مرة أخرى."
   },
   "branches": {
     "title": "الفروع",
@@ -752,7 +774,8 @@
       "one": "محاولة إرسال واحدة متبقية",
       "other": "{} محاولات إرسال متبقية"
     },
-    "dispatch_failed": "تعذّر إرسال الرمز."
+    "dispatch_failed": "تعذّر إرسال الرمز.",
+    "resend_countdown": "إعادة الإرسال خلال {time}"
   },
   "empty_states": {
     "network_title": "لا يوجد اتصال بالإنترنت",
@@ -973,5 +996,74 @@
     "action_add_branch": "إضافة فرع",
     "action_invite_member": "دعوة عضو",
     "action_new_request": "طلب جديد"
+  },
+  "ai_chat": {
+    "title": "مساعد سند",
+    "composer_hint": "اسأل عن الخدمات أو الحجوزات أو الفروع",
+    "send": "إرسال",
+    "typing": "المساعد يكتب",
+    "empty_title": "اسأل المساعد عن أي شيء",
+    "empty_description": "جرّب «ابحث عن خدمة» أو «اعرض موعدي» أو «ما هي الفروع القريبة مني».",
+    "unsupported_content": "محتوى غير مدعوم",
+    "unit_metres": "م",
+    "unit_kilometres": "كم",
+    "action_resolved": "إجراء: {action}",
+    "copied": "تم النسخ",
+    "scenario_auto": "تلقائي"
+  },
+  "enter_name": {
+    "title": "ما اسمك؟",
+    "subtitle": "نستخدم هذا لتخصيص تجربتك.",
+    "field_label": "الاسم الكامل"
+  },
+  "get_notified": {
+    "title": "ابقَ على اطلاع",
+    "subtitle": "فعّل الإشعارات حتى لا تفوتك أي مستجدات حول طلباتك وعروضك ومستنداتك.",
+    "turn_on_button": "تفعيل الإشعارات",
+    "helper_text": "يمكنك تغيير ذلك في أي وقت من الإعدادات.",
+    "preview_document_title": "تمت الموافقة على المستند",
+    "preview_document_body": "تم التحقق من الرخصة التجارية.",
+    "preview_document_time": "الآن",
+    "preview_offer_title": "عرض جديد",
+    "preview_offer_body": "خصم ٢٠٪ على صيانة المكيفات هذا الأسبوع.",
+    "preview_offer_time": "قبل دقيقتين",
+    "preview_id_title": "تم التحقق من الهوية",
+    "preview_id_body": "تم تأكيد هويتك الإماراتية.",
+    "preview_id_time": "قبل ساعة"
+  },
+  "oauth": {
+    "get_started_title": "مرحباً بك في سند",
+    "get_started_subtitle": "سجّل الدخول أو أنشئ حساباً للبدء.",
+    "continue_uae_pass": "المتابعة عبر الهوية الرقمية",
+    "continue_email": "المتابعة بالبريد الإلكتروني",
+    "continue_google": "جوجل",
+    "continue_phone": "الهاتف",
+    "continue_to_sanad": "المتابعة إلى سند",
+    "terms_prefix": "بالمتابعة فإنك توافق على ",
+    "terms_link": "الشروط وسياسة الخصوصية",
+    "next": "التالي",
+    "email_title": "أدخل بريدك الإلكتروني",
+    "email_subtitle": "سنرسل لك رمز تحقق.",
+    "email_label": "البريد الإلكتروني",
+    "email_hint": "name@example.com",
+    "phone_title": "أدخل رقم هاتفك",
+    "phone_subtitle": "سنرسل لك رمز تحقق.",
+    "phone_number_label": "رقم الهاتف",
+    "phone_hint": "50 123 4567",
+    "otp_subtitle_email": "أدخل الرمز الذي أرسلناه إلى بريدك الإلكتروني.",
+    "otp_subtitle_phone": "أدخل الرمز الذي أرسلناه إلى هاتفك.",
+    "uae_pass_title": "المتابعة عبر الهوية الرقمية",
+    "uae_pass_subtitle": "سيتم تحويلك إلى تطبيق الهوية الرقمية للتحقق من هويتك.",
+    "open_uae_pass": "فتح الهوية الرقمية",
+    "open_uae_pass_again": "فتح الهوية الرقمية مرة أخرى",
+    "uae_pass_waiting_title": "في انتظار الهوية الرقمية",
+    "uae_pass_waiting_subtitle": "أكمل التحقق في تطبيق الهوية الرقمية ثم عد إلى هنا.",
+    "uae_pass_collecting_title": "أكّد بياناتك",
+    "uae_pass_collecting_card_title": "من الهوية الرقمية",
+    "uae_pass_success_title": "تم التحقق من الهوية",
+    "uae_pass_success_card_title": "تم التحقق عبر الهوية الرقمية",
+    "uae_pass_detail_full_name_label": "الاسم الكامل",
+    "uae_pass_detail_verified_identity_label": "الهوية الإماراتية",
+    "uae_pass_detail_mobile_number_label": "رقم الهاتف المتحرك"
   }
 }

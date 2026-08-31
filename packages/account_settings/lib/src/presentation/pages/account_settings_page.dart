@@ -1,6 +1,7 @@
 import 'package:account_settings/src/domain/enums/preferred_language.dart';
 import 'package:account_settings/src/domain/usecases/account_settings_params.dart';
 import 'package:account_settings/src/presentation/bloc/account_settings/account_settings_bloc.dart';
+import 'package:account_settings/src/presentation/bloc/security/security_bloc.dart';
 import 'package:account_settings/src/presentation/widgets/bottom_sheets/add_or_change_owner_email_sheet.dart';
 import 'package:account_settings/src/presentation/widgets/bottom_sheets/add_or_change_owner_phone_sheet.dart';
 import 'package:account_settings/src/presentation/widgets/bottom_sheets/edit_name_sheet.dart';
@@ -8,11 +9,13 @@ import 'package:account_settings/src/presentation/widgets/bottom_sheets/language
 import 'package:account_settings/src/presentation/widgets/sections/account_credentials_section.dart';
 import 'package:account_settings/src/presentation/widgets/sections/help_support_section.dart';
 import 'package:account_settings/src/presentation/widgets/sections/language_preferences_section.dart';
+import 'package:account_settings/src/presentation/widgets/sections/security_section.dart';
 import 'package:account_settings/src/routes/account_settings_routes.dart';
 import 'package:app_assets/app_assets.dart';
 import 'package:auth/auth.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
+import 'package:device/device.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -140,6 +143,8 @@ class AccountSettingsPage extends StatelessWidget {
                                   onTap: () => _openLanguageSheet(context),
                                 ),
                               ),
+                              AppSliverGap(AppSpacing.lg),
+                              const AppSliverBox(child: _SecuritySliver()),
                               AppSliverGap(AppSpacing.lg),
                               AppSliverBox(
                                 child: HelpSupportSection(
@@ -275,6 +280,76 @@ class AccountSettingsPage extends StatelessWidget {
     showAppSnackbar(
       context: context,
       title: 'settings.coming_soon'.tr(),
+    );
+  }
+}
+
+/// Security section, wired to its own bloc.
+///
+/// Scoped to its own [BlocBuilder] so an in-flight biometric prompt repaints
+/// this row only, and never the rest of the settings page.
+///
+/// `SecuritySection` resolves its labels with `.tr()`, which reads the active
+/// locale at build time but does *not* subscribe the widget to locale changes.
+/// This sliver is intentionally `const`, so it is never rebuilt by an ancestor
+/// repaint on a language switch — that is why the row alone used to stay in the
+/// previous language until the page was re-entered. The inner
+/// `BlocBuilder<TranslateBloc>` fixes that at the root: [TranslateBloc] is the
+/// app-wide source of truth for language and emits a new state on every
+/// switch, so this self-subscribing builder rebuilds `SecuritySection`
+/// (re-running its `.tr()` lookups) immediately, without touching
+/// [SecurityBloc] — the biometric capability/lock/loading state is preserved
+/// across the locale change.
+class _SecuritySliver extends StatelessWidget {
+  const _SecuritySliver();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<SecurityBloc, SecurityState>(
+      listenWhen: (previous, current) =>
+          previous.toggleStatus != current.toggleStatus,
+      listener: (context, state) {
+        if (state.toggleStatus == RequestStatus.failure) {
+          showAppErrorSnackbar(
+            context: context,
+            title: switch (state.lastFailure) {
+              BiometricAuthStatus.lockedOut =>
+                'settings.biometric_error_locked_out'.tr(),
+              BiometricAuthStatus.notAvailable ||
+              BiometricAuthStatus.notEnrolled ||
+              BiometricAuthStatus.passcodeNotSet =>
+                'settings.biometric_error_not_available'.tr(),
+              _ => 'settings.biometric_error_generic'.tr(),
+            },
+          );
+          return;
+        }
+        if (state.toggleStatus == RequestStatus.success) {
+          showAppSnackbar(
+            context: context,
+            title: state.enabled
+                ? 'settings.app_lock_enabled_message'.tr()
+                : 'settings.app_lock_disabled_message'.tr(),
+          );
+        }
+      },
+      builder: (context, state) {
+        // Rebuild the localized labels when the app language changes, keeping
+        // the biometric state (`state`) from SecurityBloc untouched.
+        return BlocBuilder<TranslateBloc, TranslateState>(
+          builder: (context, _) {
+            return SecuritySection(
+              enabled: state.enabled,
+              capability: state.capability,
+              availableBiometrics: state.availableBiometrics,
+              busy: state.toggleStatus == RequestStatus.loading,
+              onToggle: (enable) => context.read<SecurityBloc>().add(
+                SecurityAppLockToggled(enable: enable),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

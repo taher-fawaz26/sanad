@@ -39,6 +39,8 @@ class OtpFlowConfig<T> {
     this.titleBuilder,
     this.subtitleBuilder,
     this.dispatchErrorResolver,
+    this.verifyLabel,
+    this.pinActionToBottom = false,
   });
 
   /// Verify an email address. [purpose] defaults to [OtpPurpose.verifyEmail].
@@ -59,6 +61,8 @@ class OtpFlowConfig<T> {
     this.titleBuilder,
     this.subtitleBuilder,
     this.dispatchErrorResolver,
+    this.verifyLabel,
+    this.pinActionToBottom = false,
   }) : channel = OtpChannel.email;
 
   /// Verify a phone number. [purpose] defaults to [OtpPurpose.verifyPhone].
@@ -79,6 +83,8 @@ class OtpFlowConfig<T> {
     this.titleBuilder,
     this.subtitleBuilder,
     this.dispatchErrorResolver,
+    this.verifyLabel,
+    this.pinActionToBottom = false,
   }) : channel = OtpChannel.phone;
 
   final OtpChannel channel;
@@ -134,4 +140,23 @@ class OtpFlowConfig<T> {
   /// 403 on a forbidden purpose). Returning null falls back to the failure's
   /// own localized message.
   final String? Function(Failure failure)? dispatchErrorResolver;
+
+  /// Overrides the verify button's default `otp.verify` ("Verify") label.
+  ///
+  /// Some flows (a linear sign-up/sign-in wizard) want "Next" instead of
+  /// "Verify" — a wording choice specific to that flow's product copy, not a
+  /// generic OTP-screen default other consumers (account deletion, invitation
+  /// acceptance) should inherit.
+  final String? verifyLabel;
+
+  /// Pins the verify button to the bottom of the available space, with the
+  /// scrollable content (icon/title/field/resend) filling everything above
+  /// it, instead of flowing inline after the resend row.
+  ///
+  /// Defaults to `false` (today's behavior, unchanged for every existing
+  /// consumer). Only turn this on when the host gives `OtpView` *bounded*
+  /// height — a full-screen `Scaffold.body` — since it wraps the scrollable
+  /// content in an `Expanded`, which asserts against an unbounded-height
+  /// ancestor (e.g. a content-sized bottom sheet).
+  final bool pinActionToBottom;
 }

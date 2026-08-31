@@ -6,6 +6,15 @@ abstract final class AccountSettingsApiPaths {
 
   static const String accountSettings = 'account-settings';
 
+  /// `PATCH` — client display name / preferred language. Clients must use this
+  /// instead of [accountSettings] (which returns 403 for client accounts).
+  static const String clientsMe = 'clients/me';
+
+  /// The persona-appropriate profile-**update** endpoint for [userType]:
+  /// clients patch `clients/me`; every other persona patches `account-settings`.
+  static String updatePathFor(UserType userType) =>
+      userType == UserType.client ? clientsMe : accountSettings;
+
   /// `GET` — full account details for provider-owner accounts (individual
   /// and organization) and their workers/managers.
   static const String serviceProviderProfile = 'service-provider/profile';

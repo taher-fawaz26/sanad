@@ -31,10 +31,6 @@ class AddBranchDraftCubit extends Cubit<AddBranchDraft> {
     );
   }
 
-  void updateCity(CityEntity city) {
-    emit(state.copyWith(selectedCity: () => city));
-  }
-
   void updateBranchType(BranchType type) {
     emit(state.copyWith(branchType: type));
   }
@@ -42,11 +38,13 @@ class AddBranchDraftCubit extends Cubit<AddBranchDraft> {
   void updateLocation({
     required String? address,
     required LatLng? position,
+    String? placeId,
   }) {
     emit(
       state.copyWith(
         branchAddress: () => address,
         pickedPosition: () => position,
+        locationPlaceId: () => placeId,
       ),
     );
   }
@@ -147,6 +145,7 @@ class AddBranchDraftCubit extends Cubit<AddBranchDraft> {
     required LatLng? position,
     required double? radiusKm,
     required List<ServingArea> servingAreas,
+    String? placeId,
   }) {
     emit(
       state.copyWith(
@@ -154,6 +153,7 @@ class AddBranchDraftCubit extends Cubit<AddBranchDraft> {
         pickedPosition: () => position,
         coverageRadiusKm: () => radiusKm,
         servingAreas: servingAreas,
+        locationPlaceId: placeId != null ? () => placeId : null,
       ),
     );
   }

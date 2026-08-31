@@ -2,7 +2,7 @@ name: text_optimization
 description: >
   Shared AI text-optimization ("Enhance with AI") flow — a single domain
   contract and cubit that every description field's AI-enhance affordance
-  consumes, backed by the third-party `/api/v1/optimize` service.
+  consumes, backed by the authenticated `/api/v1/agent/enhance-text` endpoint.
 version: 0.1.0
 publish_to: none
 resolution: workspace

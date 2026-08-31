@@ -1,9 +1,14 @@
 import 'package:auth/src/data/datasources/auth_remote_datasource.dart';
 import 'package:auth/src/data/datasources/google_auth_datasource.dart';
+import 'package:auth/src/data/models/requests/client_otp_request.dart';
 import 'package:auth/src/data/models/requests/email_otp_request.dart';
+import 'package:auth/src/data/models/requests/update_client_profile_request.dart';
+import 'package:auth/src/data/models/requests/verify_client_otp_request.dart';
 import 'package:auth/src/data/models/requests/verify_email_otp_request.dart';
 import 'package:auth/src/domain/entities/auth_identity_entity.dart';
 import 'package:auth/src/domain/entities/auth_response_entity.dart';
+import 'package:auth/src/domain/entities/client_profile_entity.dart';
+import 'package:auth/src/domain/entities/client_verify_result_entity.dart';
 import 'package:auth/src/domain/entities/login_result_entity.dart';
 import 'package:auth/src/domain/entities/resend_info_entity.dart';
 import 'package:auth/src/domain/repositories/auth_repository.dart';
@@ -66,4 +71,35 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   TaskEither<Failure, void> logout() => _remoteDataSource.logout();
+
+  @override
+  TaskEither<Failure, void> requestClientOtp(ClientOtpParams params) =>
+      _remoteDataSource.requestClientOtp(
+        ClientOtpRequest(method: params.method, value: params.value),
+      );
+
+  @override
+  TaskEither<Failure, ResendInfo> getClientResendInfo(ClientOtpParams params) =>
+      _remoteDataSource.getClientResendInfo(params.method, params.value);
+
+  @override
+  TaskEither<Failure, ClientVerifyResult> verifyClientOtp(
+    VerifyClientOtpParams params,
+  ) => _remoteDataSource.verifyClientOtp(
+    VerifyClientOtpRequest(
+      method: params.method,
+      value: params.value,
+      otp: params.otp,
+    ),
+  );
+
+  @override
+  TaskEither<Failure, ClientProfile> updateClientProfile(
+    UpdateClientProfileParams params,
+  ) => _remoteDataSource.updateClientProfile(
+    UpdateClientProfileRequest(
+      name: params.name,
+      preferredLanguage: params.preferredLanguage,
+    ),
+  );
 }

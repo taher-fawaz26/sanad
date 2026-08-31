@@ -61,14 +61,16 @@ class ClientProfileModel extends AuthProfileModel {
     return ClientProfileModel(
       id: json['id'] as String,
       fullName: json['fullName'] as String,
-      email: json['email'] as String,
+      email: json['email'] as String?,
       emiratesId: json['emiratesId'] as String,
     );
   }
 
   final String id;
   final String fullName;
-  final String email;
+
+  /// `null` for phone-registered clients (email is no longer guaranteed).
+  final String? email;
   final String emiratesId;
 
   @override

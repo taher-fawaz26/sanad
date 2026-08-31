@@ -1,5 +1,7 @@
 import 'package:auth/src/domain/entities/auth_identity_entity.dart';
 import 'package:auth/src/domain/entities/auth_response_entity.dart';
+import 'package:auth/src/domain/entities/client_profile_entity.dart';
+import 'package:auth/src/domain/entities/client_verify_result_entity.dart';
 import 'package:auth/src/domain/entities/login_result_entity.dart';
 import 'package:auth/src/domain/entities/resend_info_entity.dart';
 import 'package:auth/src/domain/usecases/usecase_params.dart';
@@ -37,4 +39,22 @@ abstract class AuthRepository {
   TaskEither<Failure, AuthIdentity> getCurrentUser();
 
   TaskEither<Failure, void> logout();
+
+  // ── Unified client sign-in ─────────────────────────────────────────────
+
+  /// Dispatch (or resend) a client OTP for `{method, value}`.
+  TaskEither<Failure, void> requestClientOtp(ClientOtpParams params);
+
+  /// Server-driven client resend cooldown for `{method, value}`.
+  TaskEither<Failure, ResendInfo> getClientResendInfo(ClientOtpParams params);
+
+  /// Verify a client OTP, resolving to a [ClientVerifyResult] to branch on.
+  TaskEither<Failure, ClientVerifyResult> verifyClientOtp(
+    VerifyClientOtpParams params,
+  );
+
+  /// Set the client display name / preferred language (`PATCH clients/me`).
+  TaskEither<Failure, ClientProfile> updateClientProfile(
+    UpdateClientProfileParams params,
+  );
 }

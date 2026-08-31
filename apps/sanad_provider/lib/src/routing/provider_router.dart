@@ -50,7 +50,12 @@ GoRouter buildProviderRouter() {
               AuthRoutes.otp,
               extra: AuthOtpRouteArgs(email: email, intent: intent),
             ),
-            onAuthenticated: () => context.go(AppRoutes.home),
+            onAuthenticated: () {
+              context.go(AppRoutes.home);
+              // The non-OTP sign-in path is a fresh login too, so it gets the
+              // same one-time offer.
+              maybeOfferAppLock(context).ignore();
+            },
             onOnboarding: (email, token) => context.go(
               RegistrationRoutes.selectAccountType,
               extra: OnboardingArgs(
@@ -122,7 +127,12 @@ GoRouter buildProviderRouter() {
             isOwner: () => sl<SessionManager>().isProviderOwner,
           ),
           AuthShell.otpRoute(
-            onAuthenticated: (context) => context.go(AppRoutes.home),
+            onAuthenticated: (context) {
+              context.go(AppRoutes.home);
+              // Fresh sign-in only — never on session restore. Non-blocking:
+              // the user is already on Home when this appears.
+              maybeOfferAppLock(context).ignore();
+            },
             onOnboarding: (context, email, onboardingToken) => context.go(
               RegistrationRoutes.selectAccountType,
               extra: OnboardingArgs(

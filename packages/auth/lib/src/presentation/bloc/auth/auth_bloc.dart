@@ -221,7 +221,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       case OnboardingAuthEntity(:final onboardingToken, :final user):
         emit(
           AuthOnboardingRequiredState(
-            email: user.email,
+            // Onboarding is exclusively the email-signup hand-off, so
+            // `user.email` is always present here — the `?? ''` only satisfies
+            // the now-nullable `UserEntity.email` (phone-only clients, which
+            // never reach this provider path). See client-auth nullability
+            // migration.
+            email: user.email ?? '',
             onboardingToken: onboardingToken,
           ),
         );

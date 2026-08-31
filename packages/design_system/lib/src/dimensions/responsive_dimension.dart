@@ -161,8 +161,22 @@ abstract final class AppDimension {
   static double get fieldHeightMd => responsiveDimension(40);
   static double get fieldHeightLg => responsiveDimension(48);
 
-  /// 60 dp — OTP pin cell (Figma `685:15193`).
-  static double get otpCellSize => responsiveDimension(60);
+  /// 45.01 dp — OTP pin cell width/height (Figma `7305:1726` / `7324:7328` /
+  /// `7055:27323` — supersedes the older `685:15193` spec).
+  static double get otpCellSize => responsiveDimension(45.01);
+
+  /// 13.209 dp — gap between OTP pin cells (same Figma nodes as
+  /// [otpCellSize]).
+  static double get otpCellGap => responsiveDimension(13.209);
+
+  /// 9.907 dp — OTP pin cell corner radius (same Figma nodes as
+  /// [otpCellSize]).
+  static double get otpCellRadius => responsiveDimension(9.907);
+
+  /// 1.407 dp — OTP pin cell border width, uniform across empty/filled/error
+  /// states — Figma does not thicken the border for the error state (same
+  /// Figma nodes as [otpCellSize]).
+  static double get otpCellBorderWidth => responsiveDimension(1.407);
 
   /// Add-service section tabs outer height (Figma `174:9788`).
   static double get segmentedSectionTabsHeight => responsiveDimension(36);

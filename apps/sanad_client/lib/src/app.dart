@@ -1,4 +1,5 @@
-﻿import 'package:core/core.dart';
+import 'package:account_settings/account_settings.dart';
+import 'package:core/core.dart';
 import 'package:deep_linking/deep_linking.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -8,6 +9,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
 import 'package:network/network.dart';
+import 'package:sanad_client/src/lock/app_lock_binding.dart';
 import 'package:sanad_client/src/routing/client_router.dart';
 
 /// The root widget of the sanad_client application.
@@ -19,10 +21,13 @@ class SanadClientApp extends StatefulWidget {
   State<SanadClientApp> createState() => _SanadClientAppState();
 }
 
-class _SanadClientAppState extends State<SanadClientApp> {
+class _SanadClientAppState extends State<SanadClientApp>
+    with WidgetsBindingObserver {
   late final GoRouter _router;
   late final ConnectivityController _connectivity;
   late final DeepLinkDispatcher _deepLinkDispatcher;
+  late final AppLockController _appLock;
+  late final AppLockBinding _appLockBinding;
 
   @override
   void initState() {
@@ -34,10 +39,19 @@ class _SanadClientAppState extends State<SanadClientApp> {
       onNavigate: _router.go,
     );
     _deepLinkDispatcher.start().ignore();
+    _appLock = sl<AppLockController>();
+    _appLockBinding = AppLockBinding(_appLock);
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appLockBinding.onLifecycleStateChanged(state);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _deepLinkDispatcher.stop().ignore();
     _router.dispose();
     super.dispose();
@@ -73,16 +87,23 @@ class _SanadClientAppState extends State<SanadClientApp> {
                       minTextAdapt: true,
                       splitScreenMode: true,
                       builder: (_, _) {
-                        return MaterialApp.router(
-                          debugShowCheckedModeBanner: false,
-                          localizationsDelegates:
-                              context.localizationDelegates,
+                        return AppLockGate(
+                          controller: _appLock,
+                          themeMode: _resolveThemeMode(themeState),
+                          localizationsDelegates: context.localizationDelegates,
                           supportedLocales: context.supportedLocales,
                           locale: locale,
-                          theme: AppTheme.light(),
-                          darkTheme: AppTheme.dark(),
-                          themeMode: _resolveThemeMode(themeState),
-                          routerConfig: _router,
+                          child: MaterialApp.router(
+                            debugShowCheckedModeBanner: false,
+                            localizationsDelegates:
+                                context.localizationDelegates,
+                            supportedLocales: context.supportedLocales,
+                            locale: locale,
+                            theme: AppTheme.light(),
+                            darkTheme: AppTheme.dark(),
+                            themeMode: _resolveThemeMode(themeState),
+                            routerConfig: _router,
+                          ),
                         );
                       },
                     ),

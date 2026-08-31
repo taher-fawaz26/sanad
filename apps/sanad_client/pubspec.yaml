@@ -8,6 +8,10 @@ environment:
   sdk: ">=3.11.0 <4.0.0"
 
 dependencies:
+  ai_ui_protocol:
+    path: ../../packages/ai_ui_protocol
+  ai_ui_renderer:
+    path: ../../packages/ai_ui_renderer
   app_animations:
     path: ../../packages/app_animations
   app_assets:
@@ -18,13 +22,18 @@ dependencies:
     path: ../../packages/account_settings
   auth:
     path: ../../packages/auth
+  config:
+    path: ../../packages/config
   core:
     path: ../../packages/core
+  bloc_concurrency: ^0.3.0
   cupertino_icons: ^1.0.8
   deep_linking:
     path: ../../packages/deep_linking
   design_system:
     path: ../../packages/design_system
+  device:
+    path: ../../packages/device
   shared_ui:
     path: ../../packages/shared_ui
   dio: ^5.10.0
@@ -37,6 +46,7 @@ dependencies:
   flutter_screenutil: ^5.9.3
   flutter_secure_storage: ^10.3.1
   flutter_svg: ^2.0.9
+  fpdart: ^1.2.0
   go_router: ^17.3.0
   hive_ce: ^2.10.1
   hydrated_bloc: ^11.0.0
@@ -44,6 +54,8 @@ dependencies:
     path: ../../packages/localization
   network:
     path: ../../packages/network
+  otp:
+    path: ../../packages/otp
   path_provider: ^2.1.5
   storage:
     path: ../../packages/storage
@@ -53,6 +65,8 @@ dev_dependencies:
   flutter_native_splash: ^2.4.6
   flutter_test:
     sdk: flutter
+  testing:
+    path: ../../packages/testing
   very_good_analysis: ^9.0.0
 
 flutter_launcher_icons:

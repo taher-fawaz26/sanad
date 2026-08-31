@@ -107,10 +107,97 @@ void main() {
       expect(r.status, BiometricAuthStatus.passcodeNotSet);
     });
 
+    test('otherOperatingSystem maps to notAvailable', () async {
+      stub(
+        () async =>
+            throw PlatformException(code: auth_error.otherOperatingSystem),
+      );
+      final r = await provider.authenticate(reason: 'r');
+      expect(r.status, BiometricAuthStatus.notAvailable);
+    });
+
+    test('biometricOnlyNotSupported maps to error', () async {
+      stub(
+        () async => throw PlatformException(
+          code: auth_error.biometricOnlyNotSupported,
+        ),
+      );
+      final r = await provider.authenticate(reason: 'r');
+      expect(r.status, BiometricAuthStatus.error);
+    });
+
     test('unknown code maps to error', () async {
       stub(() async => throw PlatformException(code: 'SomethingElse'));
       final r = await provider.authenticate(reason: 'r');
       expect(r.status, BiometricAuthStatus.error);
+    });
+
+    test('carries the platform message as diagnostic detail', () async {
+      stub(
+        () async => throw PlatformException(
+          code: auth_error.lockedOut,
+          message: 'Too many attempts',
+        ),
+      );
+      final r = await provider.authenticate(reason: 'r');
+      expect(r.message, 'Too many attempts');
+    });
+
+    test(
+      'passes the caller reason and biometricOnly through to the plugin',
+      () async {
+        stub(() async => true);
+        await provider.authenticate(
+          reason: 'unlock sanad',
+          biometricOnly: true,
+        );
+
+        final captured = verify(
+          () => auth.authenticate(
+            localizedReason: captureAny(named: 'localizedReason'),
+            options: captureAny(named: 'options'),
+          ),
+        ).captured;
+
+        expect(captured[0], 'unlock sanad');
+        final options = captured[1] as AuthenticationOptions;
+        expect(options.biometricOnly, isTrue);
+        // stickyAuth keeps the OS prompt alive across a backgrounding instead
+        // of silently failing when the app returns to the foreground.
+        expect(options.stickyAuth, isTrue);
+      },
+    );
+
+    // Regression guard for a documented plugin limitation: `local_auth`
+    // defines no cancellation code, so nothing the plugin can emit may be
+    // mapped onto `BiometricAuthStatus.cancelled`. Any UI that branches on
+    // `cancelled` would be dead code. See BiometricProvider._mapError.
+    test('never produces cancelled for any plugin outcome', () async {
+      const codes = [
+        auth_error.notAvailable,
+        auth_error.notEnrolled,
+        auth_error.passcodeNotSet,
+        auth_error.lockedOut,
+        auth_error.permanentlyLockedOut,
+        auth_error.otherOperatingSystem,
+        auth_error.biometricOnlyNotSupported,
+        'SomethingElse',
+      ];
+      for (final code in codes) {
+        stub(() async => throw PlatformException(code: code));
+        final r = await provider.authenticate(reason: 'r');
+        expect(
+          r.status,
+          isNot(BiometricAuthStatus.cancelled),
+          reason: 'code "$code" must not map to cancelled',
+        );
+      }
+
+      for (final answer in [true, false]) {
+        stub(() async => answer);
+        final r = await provider.authenticate(reason: 'r');
+        expect(r.status, isNot(BiometricAuthStatus.cancelled));
+      }
     });
   });
 
@@ -120,9 +207,27 @@ void main() {
       expect(await provider.isSupported(), isTrue);
     });
 
+    test('returns false when the device is unsupported', () async {
+      when(auth.isDeviceSupported).thenAnswer((_) async => false);
+      expect(await provider.isSupported(), isFalse);
+    });
+
     test('returns false on PlatformException', () async {
       when(auth.isDeviceSupported).thenThrow(PlatformException(code: 'x'));
       expect(await provider.isSupported(), isFalse);
+    });
+  });
+
+  group('cancel', () {
+    test('delegates to stopAuthentication', () async {
+      when(auth.stopAuthentication).thenAnswer((_) async => true);
+      await provider.cancel();
+      verify(auth.stopAuthentication).called(1);
+    });
+
+    test('swallows PlatformException (cancellation is best-effort)', () async {
+      when(auth.stopAuthentication).thenThrow(PlatformException(code: 'x'));
+      await expectLater(provider.cancel(), completes);
     });
   });
 }

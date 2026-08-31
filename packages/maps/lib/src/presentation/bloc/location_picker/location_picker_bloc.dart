@@ -119,6 +119,7 @@ class LocationPickerBloc
         cameraSource: LocationPickerCameraSource.user,
         clearFailure: true,
         clearPredictions: true,
+        clearSelectedPlaceId: true,
       ),
     );
 
@@ -151,6 +152,7 @@ class LocationPickerBloc
         status: LocationPickerStatus.geocoding,
         clearFailure: true,
         clearPredictions: true,
+        clearSelectedPlaceId: true,
       ),
     );
 
@@ -259,17 +261,19 @@ class LocationPickerBloc
     }
 
     final token = _geocodeOp.begin();
+    final placeId = event.prediction.placeId;
     _searchRunner.cancelPending();
     emit(
       state.copyWith(
         status: LocationPickerStatus.geocoding,
         clearPredictions: true,
         clearFailure: true,
+        selectedPlaceId: () => placeId,
       ),
     );
 
     final result = await useCase(
-      GetPlaceDetailsParams(placeId: event.prediction.placeId),
+      GetPlaceDetailsParams(placeId: placeId),
     ).run();
     if (!_geocodeOp.isCurrent(token)) return;
 

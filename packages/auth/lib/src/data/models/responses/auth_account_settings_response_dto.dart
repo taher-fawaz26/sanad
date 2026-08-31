@@ -22,7 +22,7 @@ class AuthAccountSettingsModel extends AuthAccountSettingsEntity {
     }
     return AuthAccountSettingsModel(
       id: json['id'] as String,
-      email: json['email'] as String,
+      email: json['email'] as String?,
       name: json['name'] as String?,
       phone: json['phone'] as String?,
       preferredLanguage: preferredLanguage,

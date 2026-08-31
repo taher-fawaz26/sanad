@@ -53,8 +53,12 @@ deleted_packages:
 # --strict mode (see tools/bin/validate_deps.dart) requires every workspace
 # package to appear here; adding a new feature without a tier is a build error.
 layer_order:
+  # ai_ui_protocol is tier 0 because it depends on nothing: it is pure Dart
+  # data + validation for AI-generated UI, with no Flutter dependency at all.
+  # That is what makes "an AI payload is inert until a renderer acts on it" a
+  # structural property rather than a policy — see packages/ai_ui_protocol.
   - tier: 0
-    packages: [core, app_assets, app_animations, config, utilities]
+    packages: [core, app_assets, app_animations, config, utilities, ai_ui_protocol]
   - tier: 1
     packages: [design_system, app_logger, localization, shared_ui, bottom_nav_bar, authorization]
   - tier: 2
@@ -71,7 +75,7 @@ layer_order:
       - test_verify
       - sheet_navigation
   - tier: 3
-    packages: [maps, asset_picker, otp, text_optimization]
+    packages: [maps, asset_picker, otp, text_optimization, ai_ui_renderer]
   - tier: 4
     packages:
       [auth, services, workers, document_flow, contact_verification, media_upload, media, activity_logs]

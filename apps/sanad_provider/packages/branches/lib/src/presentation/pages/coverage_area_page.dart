@@ -147,11 +147,13 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
     final address = state.address;
     if (center == null || address == null) return;
 
+    final placeId = context.read<LocationPickerBloc>().state.selectedPlaceId;
     context.pop(
       CoverageAreaResult(
         position: center,
         address: address,
         radiusKm: state.radiusKm,
+        placeId: placeId,
         autoAreas: state.autoAreas,
         extraAreas: state.extraAreas,
       ),

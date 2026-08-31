@@ -9,15 +9,9 @@ import 'package:otp/src/presentation/bloc/otp/otp_bloc.dart';
 /// of most of these tests: *not* sending is the fix for the reopened-sheet
 /// error, so "no request was issued" has to be assertable.
 class _RecordingVerifier extends OtpVerifierBase<String> {
-  _RecordingVerifier({
-    this.onRequest,
-    this.onResend,
-    this.onCooldown,
-    this.onVerify,
-  });
+  _RecordingVerifier({this.onRequest, this.onCooldown, this.onVerify});
 
   final TaskEither<Failure, OtpDelivery> Function()? onRequest;
-  final TaskEither<Failure, OtpDelivery> Function()? onResend;
   final TaskEither<Failure, OtpCooldown> Function()? onCooldown;
   final TaskEither<Failure, String> Function(String code)? onVerify;
 
@@ -38,8 +32,7 @@ class _RecordingVerifier extends OtpVerifierBase<String> {
     resends++;
     // Distinct from requestCode so the two counters stay independent - the
     // point of these tests is which endpoint the engine chose.
-    return onResend?.call() ??
-        TaskEither.right(const OtpDelivery(maskedDestination: 'u***@e.com'));
+    return TaskEither.right(const OtpDelivery(maskedDestination: 'u***@e.com'));
   }
 
   @override
@@ -199,7 +192,6 @@ void main() {
           _RecordingVerifier(
             onCooldown: () => _cool(canResend: false, remainingSeconds: 17),
           ),
-          fallbackCooldown: const Duration(seconds: 60),
         ),
       ),
       act: (bloc) => bloc.add(const OtpStarted()),
@@ -351,6 +343,26 @@ void main() {
     );
 
     blocTest<OtpBloc<String>, OtpState<String>>(
+      'a rejected code reported as a plain business-rule failure (a '
+      'hand-written backend rejection, not a class-validator array) is STILL '
+      'an invalid-code field error, not a dispatch banner (regression: this '
+      'used to fall through to OtpDispatchFailed)',
+      build: () => OtpBloc<String>(
+        config: _config(
+          _RecordingVerifier(
+            onVerify: (_) => TaskEither.left(
+              const BusinessRuleFailure(message: 'Invalid code'),
+            ),
+          ),
+          autoSendOnStart: false,
+        ),
+      ),
+      act: (bloc) => bloc.add(const OtpSubmitted('123456')),
+      wait: const Duration(milliseconds: 50),
+      verify: (bloc) => expect(bloc.state.phase, isA<OtpInvalidCode>()),
+    );
+
+    blocTest<OtpBloc<String>, OtpState<String>>(
       'an OTP_EXPIRED code maps to the expired phase',
       build: () => OtpBloc<String>(
         config: _config(
@@ -470,7 +482,6 @@ void main() {
       const seeded = OtpState<String>(
         maskedDestination: 'u***@e.com',
         verifiedData: 'session',
-        cooldownEndsAt: null,
       );
       final cleared = seeded.copyWith(
         clearMaskedDestination: true,

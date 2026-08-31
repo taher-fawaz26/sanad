@@ -18,6 +18,14 @@ abstract final class StorageKeys {
   static const String invitationsSwipeHintSeen =
       'invitations_swipe_hint_seen_v1';
 
+  // ── Secure storage (app lock) ─────────────────────────────────────────────
+  // Deliberately NOT in the Hive default box: that box is unencrypted, and a
+  // security toggle that can be flipped by editing a plaintext file on a
+  // rooted device is not a security toggle. These live in
+  // Keychain/Keystore via SecureLocalStorage.
+  static const String appLockEnabled = 'app_lock_enabled_v1';
+  static const String appLockOffered = 'app_lock_offered_v1';
+
   // ── Hive — registration ───────────────────────────────────────────────────
   static const String registrationProgressPrefix = 'reg_progress_v1_';
   static const String lookupProviderTypes = 'lookup_provider_types_v1';

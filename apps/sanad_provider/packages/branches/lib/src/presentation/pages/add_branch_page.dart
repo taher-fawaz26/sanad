@@ -147,15 +147,19 @@ class _AddBranchPageState extends State<AddBranchPage>
         searchEmpty: 'branches.location_picker.no_results'.tr(),
         searchRetry: 'common.retry'.tr(),
         outsideCountry: 'branches.location_picker.outside_uae'.tr(),
+        placeIdRequiredHint: 'branches.add_branch.location_select_from_search'
+            .tr(),
       ),
       existingLocation: draft.pickedPosition,
       initialAddress: draft.branchAddress,
+      requirePlaceId: true,
     );
     if (!mounted || result == null) return;
 
     context.read<AddBranchDraftCubit>().updateLocation(
       address: result.address,
       position: result.position,
+      placeId: result.placeId,
     );
   }
 
@@ -188,6 +192,7 @@ class _AddBranchPageState extends State<AddBranchPage>
         position: result.position,
         radiusKm: result.radiusKm,
         servingAreas: result.servingAreas,
+        placeId: result.placeId,
       );
 
     // Coverage confirmed → auto-advance to services step.
@@ -350,15 +355,14 @@ class _AddBranchPageState extends State<AddBranchPage>
             child: Scaffold(
               backgroundColor: context.appColors.surface,
               body: SafeArea(
-                child:
-                    BlocBuilder<AddBranchWizardCubit, AddBranchWizardState>(
-                      builder: (context, wizard) {
-                        if (wizard.currentStep == _reviewStep) {
-                          return _buildReviewScreen();
-                        }
-                        return _buildWizardScreen(wizard);
-                      },
-                    ),
+                child: BlocBuilder<AddBranchWizardCubit, AddBranchWizardState>(
+                  builder: (context, wizard) {
+                    if (wizard.currentStep == _reviewStep) {
+                      return _buildReviewScreen();
+                    }
+                    return _buildWizardScreen(wizard);
+                  },
+                ),
               ),
             ),
           ),

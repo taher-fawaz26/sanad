@@ -596,12 +596,7 @@ void main() {
           tappedDecoration.border,
           isNot(
             equals(
-              Border.all(
-                color: FieldTokens.errorBorder(
-                  colors,
-                  Brightness.light,
-                ),
-              ),
+              Border.all(color: colors.palettes.red.shade500),
             ),
           ),
           reason: 'selected cell must not use the error border',
@@ -622,8 +617,8 @@ void main() {
         final otherDecoration = otherContainer.decoration! as BoxDecoration;
         expect(
           otherDecoration.border?.top.color,
-          FieldTokens.errorBorder(colors, Brightness.light),
-          reason: 'non-selected cells keep error border',
+          colors.palettes.red.shade500,
+          reason: 'non-selected cells keep the Figma error border color',
         );
       },
     );
@@ -1128,4 +1123,149 @@ void main() {
       }
     });
   });
+
+  group(
+    'AppOtpField Figma cell states (7305:1726 / 7324:7328 / 7055:27323)',
+    () {
+      testWidgets('cells are square, matching the Figma-specified cell size', (
+        tester,
+      ) async {
+        await _pump(
+          tester,
+          AppOtpField(controller: TextEditingController(text: '066555')),
+        );
+
+        final size = tester.getSize(find.byKey(otpCellKey(0)));
+        expect(size.width, size.height, reason: 'Figma cells are square');
+        expect(size.width, closeTo(AppDimension.otpCellSize, 0.5));
+      });
+
+      testWidgets('an empty, unfocused cell shows the "_" placeholder', (
+        tester,
+      ) async {
+        await _pump(tester, AppOtpField(controller: TextEditingController()));
+
+        expect(find.text('_'), findsNWidgets(kDefaultOtpLength));
+      });
+
+      testWidgets(
+        'the focused (next-to-type) cell shows a caret instead of the '
+        'placeholder, and every later cell keeps the placeholder',
+        (tester) async {
+          final controller = TextEditingController(text: '06');
+          await _pump(
+            tester,
+            AppOtpField(controller: controller, autofocus: true),
+          );
+
+          // Positions 0-1 are filled digits, position 2 is the caret (next to
+          // type), positions 3-5 stay as "_" placeholders.
+          expect(find.text('_'), findsNWidgets(3));
+          expect(
+            find.descendant(
+              of: find.byKey(otpCellKey(2)),
+              matching: find.byType(FadeTransition),
+            ),
+            findsOneWidget,
+            reason: 'the next-to-type cell renders the caret',
+          );
+        },
+      );
+
+      testWidgets(
+        'a filled digit renders in the primary color, not a placeholder',
+        (
+          tester,
+        ) async {
+          final colors = AppTheme.light().extension<AppColors>()!;
+          await _pump(
+            tester,
+            AppOtpField(controller: TextEditingController(text: '066555')),
+          );
+
+          final digitText = tester.widget<Text>(
+            find.descendant(
+              of: find.byKey(otpCellKey(0)),
+              matching: find.text('0'),
+            ),
+          );
+          expect(digitText.style?.color, colors.primary);
+        },
+      );
+
+      testWidgets(
+        'every cell uses the exact Figma error border color uniformly, even '
+        'when fully filled',
+        (tester) async {
+          final colors = AppTheme.light().extension<AppColors>()!;
+          await _pump(
+            tester,
+            AppOtpField(
+              controller: TextEditingController(text: '066555'),
+              errorText: 'Incorrect verification code',
+            ),
+          );
+
+          for (var i = 0; i < kDefaultOtpLength; i++) {
+            final container = tester.widget<Container>(
+              find.descendant(
+                of: find.byKey(otpCellKey(i)),
+                matching: find.byType(Container),
+              ),
+            );
+            final decoration = container.decoration! as BoxDecoration;
+            expect(
+              decoration.border?.top.color,
+              colors.palettes.red.shade500,
+              reason: 'cell $i should use the Figma red/500 error color',
+            );
+            expect(
+              decoration.border?.top.width,
+              closeTo(AppDimension.otpCellBorderWidth, 0.5),
+              reason:
+                  'Figma keeps the error border the same width as every '
+                  'other state',
+            );
+          }
+        },
+      );
+
+      testWidgets(
+        'a filled digit turns red in the error state too, not just the border',
+        (tester) async {
+          final colors = AppTheme.light().extension<AppColors>()!;
+          await _pump(
+            tester,
+            AppOtpField(
+              controller: TextEditingController(text: '066555'),
+              errorText: 'Incorrect verification code',
+            ),
+          );
+
+          final digitText = tester.widget<Text>(
+            find.descendant(
+              of: find.byKey(otpCellKey(0)),
+              matching: find.text('0'),
+            ),
+          );
+          expect(digitText.style?.color, colors.palettes.red.shade500);
+        },
+      );
+
+      testWidgets('an empty cell uses the Figma-specified empty border color', (
+        tester,
+      ) async {
+        await _pump(tester, AppOtpField(controller: TextEditingController()));
+
+        final container = tester.widget<Container>(
+          find.descendant(
+            of: find.byKey(otpCellKey(0)),
+            matching: find.byType(Container),
+          ),
+        );
+        final decoration = container.decoration! as BoxDecoration;
+        expect(decoration.border?.top.color, const Color(0xFFEEEEEE));
+      });
+    },
+  );
 }

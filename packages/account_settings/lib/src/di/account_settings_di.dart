@@ -2,8 +2,10 @@ import 'package:account_settings/src/data/datasources/account_deletion_remote_da
 import 'package:account_settings/src/data/datasources/account_settings_remote_datasource.dart';
 import 'package:account_settings/src/data/repositories/account_deletion_repository_impl.dart';
 import 'package:account_settings/src/data/repositories/account_settings_repository_impl.dart';
+import 'package:account_settings/src/data/repositories/app_lock_repository_impl.dart';
 import 'package:account_settings/src/domain/repositories/account_deletion_repository.dart';
 import 'package:account_settings/src/domain/repositories/account_settings_repository.dart';
+import 'package:account_settings/src/domain/repositories/app_lock_repository.dart';
 import 'package:account_settings/src/domain/usecases/cancel_deletion_usecase.dart';
 import 'package:account_settings/src/domain/usecases/get_deletion_eligibility_usecase.dart';
 import 'package:account_settings/src/domain/usecases/get_deletion_resend_info_usecase.dart';
@@ -15,10 +17,15 @@ import 'package:account_settings/src/domain/usecases/update_account_settings_use
 import 'package:account_settings/src/domain/usecases/verify_deletion_otp_usecase.dart';
 import 'package:account_settings/src/presentation/bloc/account_deletion/account_deletion_bloc.dart';
 import 'package:account_settings/src/presentation/bloc/account_settings/account_settings_bloc.dart';
+import 'package:account_settings/src/presentation/bloc/security/security_bloc.dart';
+import 'package:account_settings/src/presentation/lock/app_lock_controller.dart';
 import 'package:auth/auth.dart'
     show AuthLogoutUseCase, GetCurrentUserUseCase, SessionManager;
+import 'package:config/config.dart';
 import 'package:core/core.dart';
+import 'package:device/device.dart';
 import 'package:network/network.dart';
+import 'package:storage/storage.dart';
 
 /// Dependency registration for account_settings.
 abstract final class AccountSettingsDI {
@@ -27,6 +34,34 @@ abstract final class AccountSettingsDI {
   /// Registers account_settings dependencies with GetIt.
   static void init() {
     sl
+      // ── App lock (local biometric/device authentication) ─────────────────
+      // Repository and controller are lazy singletons on purpose: the gate at
+      // the root of the widget tree and the Security settings toggle must
+      // observe the *same* instance, or the two would disagree about whether
+      // the lock is on. The capability probe is memoised inside the
+      // repository, so both share one platform round-trip.
+      ..registerLazySingleton<AppLockRepository>(
+        () => AppLockRepositoryImpl(
+          // Keychain/Keystore, not the plaintext Hive default box.
+          secureStorage: sl<SecureLocalStorage>(),
+          biometrics: sl<BiometricService>(),
+        ),
+      )
+      ..registerLazySingleton<AppLockController>(
+        () => AppLockController(
+          repository: sl<AppLockRepository>(),
+          biometrics: sl<BiometricService>(),
+          sessionManager: sl<SessionManager>(),
+          featureEnabled: sl<FeatureFlags>().enableBiometricLogin,
+        ),
+      )
+      ..registerFactory(
+        () => SecurityBloc(
+          repository: sl<AppLockRepository>(),
+          biometrics: sl<BiometricService>(),
+          controller: sl<AppLockController>(),
+        ),
+      )
       ..registerLazySingleton<AccountSettingsRemoteDataSource>(
         () => AccountSettingsRemoteDataSourceImpl(sl<BaseApiClient>()),
       )

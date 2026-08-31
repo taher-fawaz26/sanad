@@ -294,4 +294,43 @@ abstract final class AppSvgs {
 
   /// Send/mail icon — Continue with Email screen icon circle (`7002:27956`).
   static const String sendMail = '$_base/send_mail.svg';
+
+  /// Dotted connector + link glyph between the phone/laptop mocks on the
+  /// "Continue in UAE PASS" screen (`7030:28401`).
+  static const String uaePassConnectionBridge =
+      '$_base/uae_pass_connection_bridge.svg';
+
+  /// OTP screen icon — a message with a text cursor (`7063:25588`).
+  static const String otpPasswordCursor = '$_base/password_cursor.svg';
+
+  /// Sparkle mark shown inside the phone mock on the "Continue in UAE PASS"
+  /// screen (`7030:28417`) — distinct from [onboardingSplashMark] (different
+  /// colors/shape, a separate Figma illustration).
+  static const String uaePassDeviceSparkle =
+      '$_base/uae_pass_device_sparkle.svg';
+
+  // ── UAE PASS flow — Waiting / Collecting / Success (Figma `7039:28597` /
+  // `7020:28255` / `7043:28742`) ──────────────────────────────────────────
+
+  /// Large sparkle + checkmark mark — "Waiting for UAE PASS" screen
+  /// (`7076:29215`). A separate export from [uaePassDeviceSparkle]: same
+  /// motif, different aspect ratio and a slightly different accent shade, so
+  /// kept as its own asset rather than reusing/rescaling that one.
+  static const String uaePassWaitingMark = '$_base/uae_pass_waiting_mark.svg';
+
+  /// Scalloped success seal + checkmark — "You're all set!" screen
+  /// (`7081:29231`).
+  static const String uaePassSuccessSeal = '$_base/uae_pass_success_seal.svg';
+
+  /// Per-row loading arc — "We collect data from UAE PASS" details card,
+  /// in-progress row indicator (`7042:28718`).
+  static const String uaePassLoadingArc = '$_base/uae_pass_loading_arc.svg';
+
+  /// Document/notes icon — details card "Verified identity" row
+  /// (`7020:28367`).
+  static const String uaePassVerifiedIdentity =
+      '$_base/uae_pass_verified_identity.svg';
+
+  /// Phone-with-plus icon — details card "Mobile number" row (`7020:28373`).
+  static const String uaePassMobileNumber = '$_base/uae_pass_mobile_number.svg';
 }

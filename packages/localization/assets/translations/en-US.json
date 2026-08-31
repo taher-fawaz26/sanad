@@ -37,7 +37,8 @@
     "enhance_with_ai": "Enhance with AI",
     "enhance_with_ai_error_title": "Couldn't enhance your text",
     "enhance_with_ai_empty_input_error": "Type something before enhancing with AI.",
-    "enhance_with_ai_empty_result_error": "AI couldn't generate a suggestion for this text."
+    "enhance_with_ai_empty_result_error": "AI couldn't generate a suggestion for this text.",
+    "skip": "Skip"
   },
   "media": {
     "edit_cover": "Edit cover photo",
@@ -189,7 +190,28 @@
         "alert_under_review": "Your renewal is under review. We will update you once processing is complete.",
         "alert_rejected": "Your renewal has been rejected. Please review the comments and resubmit your documents."
       }
-    }
+    },
+    "section_security": "Security",
+    "app_lock": "App lock",
+    "app_lock_caption_face": "Unlock SANAD with Face ID",
+    "app_lock_caption_fingerprint": "Unlock SANAD with your fingerprint",
+    "app_lock_caption_generic": "Unlock SANAD with biometrics",
+    "app_lock_caption_unsupported": "This device does not support biometric unlock",
+    "app_lock_enabled_message": "App lock is on",
+    "app_lock_disabled_message": "App lock is off",
+    "app_lock_offer_title": "Lock SANAD when you leave",
+    "app_lock_offer_body": "Require biometric unlock each time you open the app.",
+    "app_lock_offer_enable": "Turn on",
+    "app_lock_offer_not_now": "Not now",
+    "app_lock_screen_title": "SANAD is locked",
+    "app_lock_screen_subtitle": "Unlock to continue.",
+    "app_lock_screen_unlock": "Unlock",
+    "biometric_unlock_reason": "Unlock SANAD",
+    "biometric_enable_reason": "Confirm your identity to turn on app lock",
+    "biometric_disable_reason": "Confirm your identity to turn off app lock",
+    "biometric_error_not_available": "Biometric unlock is not available on this device.",
+    "biometric_error_locked_out": "Too many attempts. Try again later or use your device passcode.",
+    "biometric_error_generic": "We could not verify your identity. Please try again."
   },
   "branches": {
     "title": "Branches",
@@ -752,7 +774,8 @@
       "one": "1 resend left",
       "other": "{} resends left"
     },
-    "dispatch_failed": "We couldn't send the code."
+    "dispatch_failed": "We couldn't send the code.",
+    "resend_countdown": "Resend in {time}"
   },
   "empty_states": {
     "network_title": "No Internet Connection",
@@ -973,5 +996,74 @@
     "action_add_branch": "Add Branch",
     "action_invite_member": "Invite Member",
     "action_new_request": "New Request"
+  },
+  "ai_chat": {
+    "title": "SANAD Assistant",
+    "composer_hint": "Ask about services, bookings or branches",
+    "send": "Send",
+    "typing": "The assistant is typing",
+    "empty_title": "Ask the assistant anything",
+    "empty_description": "Try \"find me a service\", \"show my appointment\", or \"which branches are near me\".",
+    "unsupported_content": "Unsupported content",
+    "unit_metres": "m",
+    "unit_kilometres": "km",
+    "action_resolved": "Action: {action}",
+    "copied": "Copied",
+    "scenario_auto": "Auto"
+  },
+  "enter_name": {
+    "title": "What is your name?",
+    "subtitle": "We use this to personalise your experience.",
+    "field_label": "Full name"
+  },
+  "get_notified": {
+    "title": "Stay in the loop",
+    "subtitle": "Turn on notifications so you never miss an update about your requests, offers and documents.",
+    "turn_on_button": "Turn on notifications",
+    "helper_text": "You can change this any time in Settings.",
+    "preview_document_title": "Document approved",
+    "preview_document_body": "Your trade licence has been verified.",
+    "preview_document_time": "now",
+    "preview_offer_title": "New offer",
+    "preview_offer_body": "AC Maintenance is 20% off this week.",
+    "preview_offer_time": "2m ago",
+    "preview_id_title": "Identity verified",
+    "preview_id_body": "Your Emirates ID has been confirmed.",
+    "preview_id_time": "1h ago"
+  },
+  "oauth": {
+    "get_started_title": "Welcome to SANAD",
+    "get_started_subtitle": "Sign in or create an account to get started.",
+    "continue_uae_pass": "Continue with UAE PASS",
+    "continue_email": "Continue with email",
+    "continue_google": "Google",
+    "continue_phone": "Phone",
+    "continue_to_sanad": "Continue to SANAD",
+    "terms_prefix": "By continuing you agree to our ",
+    "terms_link": "Terms and Privacy Policy",
+    "next": "Next",
+    "email_title": "Enter your email",
+    "email_subtitle": "We will send you a verification code.",
+    "email_label": "Email address",
+    "email_hint": "name@example.com",
+    "phone_title": "Enter your phone number",
+    "phone_subtitle": "We will send you a verification code.",
+    "phone_number_label": "Phone number",
+    "phone_hint": "50 123 4567",
+    "otp_subtitle_email": "Enter the code we sent to your email.",
+    "otp_subtitle_phone": "Enter the code we sent to your phone.",
+    "uae_pass_title": "Continue with UAE PASS",
+    "uae_pass_subtitle": "You will be taken to UAE PASS to verify your identity.",
+    "open_uae_pass": "Open UAE PASS",
+    "open_uae_pass_again": "Open UAE PASS again",
+    "uae_pass_waiting_title": "Waiting for UAE PASS",
+    "uae_pass_waiting_subtitle": "Complete the verification in the UAE PASS app, then return here.",
+    "uae_pass_collecting_title": "Confirm your details",
+    "uae_pass_collecting_card_title": "From UAE PASS",
+    "uae_pass_success_title": "Identity verified",
+    "uae_pass_success_card_title": "Verified with UAE PASS",
+    "uae_pass_detail_full_name_label": "Full name",
+    "uae_pass_detail_verified_identity_label": "Emirates ID",
+    "uae_pass_detail_mobile_number_label": "Mobile number"
   }
 }

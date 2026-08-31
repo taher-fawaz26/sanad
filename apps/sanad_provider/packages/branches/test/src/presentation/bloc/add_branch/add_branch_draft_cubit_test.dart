@@ -13,7 +13,6 @@ import 'package:services/services.dart';
 import 'package:workers/workers.dart';
 
 void main() {
-  const testCity = CityEntity(id: 'city-1', name: 'Dubai');
   const testManager = BranchManagerEntity(
     id: 'mgr-1',
     fullName: 'Test Manager',
@@ -33,7 +32,7 @@ void main() {
       expect(cubit.state, const AddBranchDraft());
       expect(cubit.state.branchType, BranchType.mainBranch);
       expect(cubit.state.branchName, '');
-      expect(cubit.state.selectedCity, isNull);
+      expect(cubit.state.locationPlaceId, isNull);
       expect(cubit.state.phone, '');
       expect(cubit.state.branchAddress, isNull);
       expect(cubit.state.pickedPosition, isNull);
@@ -77,43 +76,18 @@ void main() {
       blocTest<AddBranchDraftCubit, AddBranchDraft>(
         'preserves unmentioned fields',
         build: () => cubit,
-        seed: () => const AddBranchDraft(selectedCity: testCity),
+        seed: () => const AddBranchDraft(
+          locationPlaceId: 'ChIJvRmU9K1DXz4RYKyuhY6v0wM',
+        ),
         act: (c) => c.updateBasicInfo(branchName: 'New'),
         expect: () => [
           isA<AddBranchDraft>()
               .having((d) => d.branchName, 'branchName', 'New')
-              .having((d) => d.selectedCity, 'city', testCity),
-        ],
-      );
-    });
-
-    group('updateCity', () {
-      blocTest<AddBranchDraftCubit, AddBranchDraft>(
-        'sets selected city entity',
-        build: () => cubit,
-        act: (c) => c.updateCity(testCity),
-        expect: () => [
-          isA<AddBranchDraft>().having(
-            (d) => d.selectedCity,
-            'selectedCity',
-            testCity,
-          ),
-        ],
-      );
-
-      blocTest<AddBranchDraftCubit, AddBranchDraft>(
-        'replaces previous city',
-        build: () => cubit,
-        seed: () => const AddBranchDraft(selectedCity: testCity),
-        act: (c) => c.updateCity(
-          const CityEntity(id: 'city-2', name: 'Abu Dhabi'),
-        ),
-        expect: () => [
-          isA<AddBranchDraft>().having(
-            (d) => d.selectedCity?.id,
-            'cityId',
-            'city-2',
-          ),
+              .having(
+                (d) => d.locationPlaceId,
+                'placeId',
+                'ChIJvRmU9K1DXz4RYKyuhY6v0wM',
+              ),
         ],
       );
     });
@@ -157,6 +131,43 @@ void main() {
                 'position',
                 const LatLng(25.0, 55.0),
               ),
+        ],
+      );
+
+      blocTest<AddBranchDraftCubit, AddBranchDraft>(
+        'sets placeId when provided (autocomplete selection)',
+        build: () => cubit,
+        act: (c) => c.updateLocation(
+          address: '123 Main St',
+          position: const LatLng(25.0, 55.0),
+          placeId: 'ChIJvRmU9K1DXz4RYKyuhY6v0wM',
+        ),
+        expect: () => [
+          isA<AddBranchDraft>()
+              .having(
+                (d) => d.locationPlaceId,
+                'placeId',
+                'ChIJvRmU9K1DXz4RYKyuhY6v0wM',
+              ),
+        ],
+      );
+
+      blocTest<AddBranchDraftCubit, AddBranchDraft>(
+        'clears placeId when null (map drag)',
+        build: () => cubit,
+        seed: () => const AddBranchDraft(
+          locationPlaceId: 'ChIJvRmU9K1DXz4RYKyuhY6v0wM',
+        ),
+        act: (c) => c.updateLocation(
+          address: 'Dragged location',
+          position: const LatLng(25.1, 55.1),
+        ),
+        expect: () => [
+          isA<AddBranchDraft>().having(
+            (d) => d.locationPlaceId,
+            'placeId',
+            isNull,
+          ),
         ],
       );
     });
@@ -605,7 +616,7 @@ void main() {
 
         const complete = AddBranchDraft(
           branchName: 'Branch',
-          selectedCity: testCity,
+          locationPlaceId: 'ChIJvRmU9K1DXz4RYKyuhY6v0wM',
           phone: '0501234567',
           branchAddress: '123 Main St',
           pickedPosition: LatLng(25.0, 55.0),
@@ -618,7 +629,7 @@ void main() {
       test('isStepOneComplete fails with empty trimmed name', () {
         const draft = AddBranchDraft(
           branchName: '   ',
-          selectedCity: testCity,
+          locationPlaceId: 'ChIJvRmU9K1DXz4RYKyuhY6v0wM',
           phone: '0501234567',
           branchAddress: '123 Main St',
           pickedPosition: LatLng(25.0, 55.0),
@@ -628,7 +639,7 @@ void main() {
         expect(draft.isStepOneComplete, isFalse);
       });
 
-      test('isStepOneComplete fails without selected city', () {
+      test('isStepOneComplete fails without locationPlaceId', () {
         const draft = AddBranchDraft(
           branchName: 'Branch',
           phone: '0501234567',
@@ -648,7 +659,7 @@ void main() {
         () {
           const draft = AddBranchDraft(
             branchName: 'Branch',
-            selectedCity: testCity,
+            locationPlaceId: 'ChIJvRmU9K1DXz4RYKyuhY6v0wM',
             phone: '0501234567',
             branchAddress: '123 Main St',
             pickedPosition: LatLng(25.0, 55.0),
@@ -666,7 +677,7 @@ void main() {
       test('isStepOneComplete fails with an empty phone', () {
         const draft = AddBranchDraft(
           branchName: 'Branch',
-          selectedCity: testCity,
+          locationPlaceId: 'ChIJvRmU9K1DXz4RYKyuhY6v0wM',
           branchAddress: '123 Main St',
           pickedPosition: LatLng(25.0, 55.0),
           selectedManager: testManager,
@@ -679,7 +690,7 @@ void main() {
         for (final phone in ['666666666', '66666666', '123']) {
           final draft = AddBranchDraft(
             branchName: 'Branch',
-            selectedCity: testCity,
+            locationPlaceId: 'ChIJvRmU9K1DXz4RYKyuhY6v0wM',
             phone: phone,
             branchAddress: '123 Main St',
             pickedPosition: const LatLng(25.0, 55.0),
@@ -693,7 +704,7 @@ void main() {
       test('isStepOneComplete fails with a landline (mobile-only)', () {
         const draft = AddBranchDraft(
           branchName: 'Branch',
-          selectedCity: testCity,
+          locationPlaceId: 'ChIJvRmU9K1DXz4RYKyuhY6v0wM',
           phone: '043334444',
           branchAddress: '123 Main St',
           pickedPosition: LatLng(25.0, 55.0),
@@ -708,7 +719,7 @@ void main() {
         () {
           const draft = AddBranchDraft(
             branchName: 'Branch',
-            selectedCity: testCity,
+            locationPlaceId: 'ChIJvRmU9K1DXz4RYKyuhY6v0wM',
             phone: '0501234567',
             branchAddress: '123 Main St',
             pickedPosition: LatLng(25.0, 55.0),
@@ -735,7 +746,7 @@ void main() {
         () {
           const draft = AddBranchDraft(
             branchName: 'Branch',
-            selectedCity: testCity,
+            locationPlaceId: 'ChIJvRmU9K1DXz4RYKyuhY6v0wM',
             phone: '0501234567',
             branchAddress: '123 Main St',
             pickedPosition: LatLng(25.0, 55.0),
@@ -755,7 +766,7 @@ void main() {
         () {
           const draft = AddBranchDraft(
             branchName: 'Branch',
-            selectedCity: testCity,
+            locationPlaceId: 'ChIJvRmU9K1DXz4RYKyuhY6v0wM',
             phone: '0501234567',
             branchAddress: '123 Main St',
             pickedPosition: LatLng(25.0, 55.0),
@@ -818,11 +829,11 @@ void main() {
     group('data survives step transitions', () {
       test('all draft fields persist across cubit lifetime', () {
         cubit.updateBasicInfo(branchName: 'Branch', phone: '050');
-        cubit.updateCity(testCity);
         cubit.updateBranchType(BranchType.headquarters);
         cubit.updateLocation(
           address: 'Addr',
           position: const LatLng(25.0, 55.0),
+          placeId: 'ChIJvRmU9K1DXz4RYKyuhY6v0wM',
         );
         cubit.updateManager(testManager);
         cubit.updateScheduleMode(BranchScheduleMode.custom);
@@ -860,7 +871,7 @@ void main() {
         final draft = cubit.state;
         expect(draft.branchName, 'Branch');
         expect(draft.branchType, BranchType.headquarters);
-        expect(draft.selectedCity, testCity);
+        expect(draft.locationPlaceId, 'ChIJvRmU9K1DXz4RYKyuhY6v0wM');
         expect(draft.phone, '050');
         expect(draft.branchAddress, 'Coverage Addr');
         expect(draft.pickedPosition, const LatLng(25.1, 55.1));

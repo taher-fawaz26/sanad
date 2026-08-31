@@ -106,7 +106,7 @@ class _BranchReviewBodyState extends State<BranchReviewBody> {
               branchTypeLabel: branchTypeLabel(draft.branchType),
               position: position,
               address: draft.branchAddress,
-              cityName: draft.selectedCity?.name,
+              cityName: null,
               phone: draft.phone,
               managerName: draft.selectedManager?.fullName,
               isCustomSchedule: draft.scheduleMode == BranchScheduleMode.custom,
@@ -161,14 +161,12 @@ class _BranchReviewBodyState extends State<BranchReviewBody> {
       context: context,
       initialName: draft.branchName,
       initialType: draft.branchType,
-      initialCity: draft.selectedCity,
     );
     if (result == null || !context.mounted) return;
 
-    final draftCubit = context.read<AddBranchDraftCubit>()
+    context.read<AddBranchDraftCubit>()
       ..updateBasicInfo(branchName: result.branchName)
       ..updateBranchType(result.branchType);
-    if (result.city != null) draftCubit.updateCity(result.city!);
   }
 
   Future<void> _openContactEdit(BuildContext context) async {

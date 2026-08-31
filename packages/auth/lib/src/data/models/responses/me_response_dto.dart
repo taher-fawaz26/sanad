@@ -21,7 +21,7 @@ class MeResponseModel extends AuthIdentity {
     return MeResponseModel(
       id: json['id'] as String,
       name: json['name'] as String?,
-      email: json['email'] as String,
+      email: json['email'] as String?,
       userType: UserType.fromString(rawUserType),
       permissions: _parsePermissions(json['permissions']),
     );

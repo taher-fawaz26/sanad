@@ -15,7 +15,9 @@ class AuthIdentity extends Equatable {
 
   final String id;
   final String? name;
-  final String email;
+
+  /// `null` for phone-registered clients — `GET /me` now omits it for them.
+  final String? email;
   final UserType userType;
   final List<String> permissions;
 

@@ -42,6 +42,7 @@ need to scan source broadly.
 | [`DEPENDENCY_GRAPH.md`](DEPENDENCY_GRAPH.md) | Package dependency edges |
 | [`CONFIGURATION.md`](CONFIGURATION.md) / [`FLAVORS.md`](FLAVORS.md) | Env config, dart-defines, flavors |
 | [`adr/`](adr/) | Why key decisions were made (see Decisions below) |
+| [`ai-chat/`](ai-chat/) | AI chat: wire protocol, agent contract, renderer architecture |
 | DI wiring | [`adr/0008-get-it-di.md`](adr/0008-get-it-di.md) + `apps/<app>/lib/src/di/app_di.dart` + each feature's `src/module/*_module.dart` |
 
 ## Features
@@ -49,11 +50,13 @@ need to scan source broadly.
 | Doc | Consult for |
 |-----|-------------|
 | [`features/README.md`](features/README.md) | Index of all client & provider features with locations |
+| [`features/app-lock.md`](features/app-lock.md) | Local biometric/device unlock gate over an authenticated session |
 | [`features/auth.md`](features/auth.md) | Shared authentication/session vertical |
 | [`features/document-flow.md`](features/document-flow.md) | Shared document upload/OCR/review/submit pipeline |
 | [`features/organization-settings.md`](features/organization-settings.md) | Provider business-profile / settings flow |
 | [`features/registration.md`](features/registration.md) | Provider onboarding + document OCR flow |
 | [`features/otp.md`](features/otp.md) | Shared OTP verification widget/flow |
+| [`features/ai-chat.md`](features/ai-chat.md) | AI assistant chat with structured UI (**prototype**, dev-only route) |
 
 ## API
 
@@ -81,6 +84,7 @@ need to scan source broadly.
 | [0006](adr/0006-bloc-state-management.md) | BLoC state management |
 | [0007](adr/0007-go-router.md) | go_router navigation |
 | [0008](adr/0008-get-it-di.md) | get_it dependency injection |
+| [0009](adr/0009-ai-chat-ui-protocol.md) | Bespoke semantic UI protocol for AI chat |
 
 New ADRs use [`templates/ADR_TEMPLATE.md`](templates/ADR_TEMPLATE.md).
 

@@ -260,23 +260,17 @@ class _BranchDetailsContent extends StatelessWidget {
   }
 
   Future<void> _openBranchInfoEdit(BuildContext context) async {
-    final initialCity = branch.cityId == null
-        ? null
-        : CityEntity(id: branch.cityId!, name: branch.city);
-
     final result = await showBranchInfoEditSheet(
       context: context,
       initialName: branch.branchName,
       initialType: branch.branchType,
-      initialCity: initialCity,
+      cityDisplayName: branch.city.isNotEmpty ? branch.city : null,
     );
     if (result == null || !context.mounted) return;
 
     final updated = branch.copyWith(
       branchName: result.branchName,
       branchType: result.branchType,
-      cityId: result.city?.id,
-      city: result.city?.name ?? branch.city,
     );
     context.read<BranchDetailsBloc>().add(
       BranchSectionUpdated(AddBranchParamsMapper.fromBranch(updated)),
@@ -377,6 +371,7 @@ class _BranchDetailsContent extends StatelessWidget {
       lat: result.position.latitude,
       lng: result.position.longitude,
       radiusKm: result.radiusKm,
+      locationPlaceId: result.placeId ?? branch.locationPlaceId,
       servingAreas: result.servingAreas,
       servingAreaPlaceIds: result.servingAreaPlaceIds,
       servingAreaNames: [for (final area in result.servingAreas) area.name],

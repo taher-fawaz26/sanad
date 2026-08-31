@@ -71,9 +71,22 @@ class BiometricProvider {
     };
   }
 
+  /// Maps a `local_auth` `PlatformException.code` onto a domain status.
+  ///
+  /// `local_auth` 2.3.0 defines no cancellation code (see
+  /// `package:local_auth/error_codes.dart`): a user who dismisses the sheet
+  /// and a user whose biometric simply does not match both surface as
+  /// `authenticate() == false`, never as an exception. Cancellation is
+  /// therefore not representable here, and
+  /// [BiometricAuthStatus.cancelled] is unreachable by design — callers must
+  /// treat [BiometricAuthStatus.failed] as "did not authenticate", without
+  /// claiming to know why.
   BiometricAuthStatus _mapError(String code) {
     return switch (code) {
-      auth_error.notAvailable => BiometricAuthStatus.notAvailable,
+      auth_error.notAvailable ||
+      // The OS itself cannot perform local authentication — indistinguishable
+      // from missing hardware as far as any caller is concerned.
+      auth_error.otherOperatingSystem => BiometricAuthStatus.notAvailable,
       auth_error.notEnrolled => BiometricAuthStatus.notEnrolled,
       auth_error.passcodeNotSet => BiometricAuthStatus.passcodeNotSet,
       auth_error.lockedOut ||

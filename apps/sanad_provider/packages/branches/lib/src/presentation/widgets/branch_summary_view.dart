@@ -428,6 +428,7 @@ class _ContactSection extends StatelessWidget {
               GroupedKeyValueItem(
                 title: 'branches.details.branch_phone'.tr(),
                 value: data.phone,
+                isLtr: true,
               ),
               if (data.managerName != null)
                 GroupedKeyValueItem(

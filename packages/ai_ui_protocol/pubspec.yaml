@@ -1,0 +1,22 @@
+name: ai_ui_protocol
+description: >
+  SANAD Chat UI Protocol v1 — transport-agnostic models, codec, validator and
+  diagnostics for AI-generated structured UI. Pure Dart by design: this package
+  deliberately does NOT depend on Flutter, so an AI payload can never reach a
+  Widget, a route, or the network without passing through a renderer that owns
+  those concerns.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+
+dependencies:
+  equatable: ^2.1.0
+  meta: ^1.16.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: ^9.0.0

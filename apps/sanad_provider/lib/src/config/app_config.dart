@@ -1,3 +1,4 @@
+import 'package:config/config.dart';
 import 'package:deep_linking/deep_linking.dart';
 import 'package:network/network.dart';
 
@@ -20,6 +21,17 @@ abstract final class AppConfig {
 
   /// Whether this build targets the production environment.
   static bool get isProduction => _env == 'prod';
+
+  /// Build-time feature toggles.
+  ///
+  /// `enableBiometricLogin` is the kill switch for the local app-lock gate:
+  /// with it off the gate stays open, the Security row is hidden, and no
+  /// biometric prompt is ever raised. It is on in every environment — the
+  /// switch exists so the feature can be disabled in a hotfix build without
+  /// reverting code, not to stage a rollout.
+  static FeatureFlags get featureFlags => const FeatureFlags(
+    enableBiometricLogin: true,
+  );
 
   /// The network configuration used by the app.
   static NetworkConfig get network => switch (_env) {

@@ -20,7 +20,6 @@ abstract final class AddBranchParamsMapper {
     final isCustom = draft.scheduleMode == BranchScheduleMode.custom;
     final schedule = isCustom ? draft.customSchedule : companySchedule;
 
-    final city = draft.selectedCity!;
     final position = draft.pickedPosition!;
     final radiusKm = draft.coverageRadiusKm!;
     final servingAreaPlaceIds = _servingAreaPlaceIds(draft);
@@ -29,7 +28,7 @@ abstract final class AddBranchParamsMapper {
       branchName: draft.branchName.trim(),
       branchType: draft.branchType,
       branchAddress: draft.branchAddress ?? '',
-      cityId: city.id,
+      locationPlaceId: draft.locationPlaceId!,
       branchPhone: _normalizePhone(draft.phone),
       branchManagerId: draft.selectedManager?.id,
       lat: position.latitude,
@@ -100,7 +99,7 @@ abstract final class AddBranchParamsMapper {
       branchAddress: branch.branchAddress,
       branchPhone: _normalizePhone(branch.branchPhone),
       branchType: branch.branchType,
-      cityId: branch.cityId,
+      locationPlaceId: branch.locationPlaceId,
       branchManagerId: branch.branchManagerId,
       lat: branch.lat,
       lng: branch.lng,

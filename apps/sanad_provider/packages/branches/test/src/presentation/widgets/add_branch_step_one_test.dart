@@ -326,12 +326,6 @@ void main() {
         );
         expect(
           tester
-              .widget<CitySelectField>(find.byType(CitySelectField))
-              .isRequired,
-          isTrue,
-        );
-        expect(
-          tester
               .widget<BranchLocationField>(find.byType(BranchLocationField))
               .isRequired,
           isTrue,
@@ -391,6 +385,70 @@ void main() {
 
         expect(
           find.text('branches.add_branch.branch_manager_required'),
+          findsNothing,
+        );
+      },
+    );
+  });
+
+  group('location — Place ID required (branch-create backend contract)', () {
+    const address = 'Dubai Marina Mall, Marina Promenade';
+    const position = LatLng(25.0772, 55.1401);
+
+    testWidgets(
+      'address set without a Place ID shows the select-from-search error '
+      'even before a Next attempt (Next stays disabled, so the failed-Next '
+      'reveal never fires)',
+      (tester) async {
+        await pump(tester);
+
+        draftCubit.updateLocation(address: address, position: position);
+        await tester.pump();
+        await tester.pump();
+
+        expect(
+          find.text('branches.add_branch.location_select_from_search'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'address set with a Place ID shows no location error',
+      (tester) async {
+        await pump(tester);
+
+        draftCubit.updateLocation(
+          address: address,
+          position: position,
+          placeId: 'place-123',
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(
+          find.text('branches.add_branch.location_select_from_search'),
+          findsNothing,
+        );
+        expect(
+          find.text('branches.add_branch.location_required'),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      'empty address shows the required error only after validation errors '
+      'are surfaced, not the select-from-search error',
+      (tester) async {
+        await pump(tester, showValidationErrors: true);
+
+        expect(
+          find.text('branches.add_branch.location_required'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('branches.add_branch.location_select_from_search'),
           findsNothing,
         );
       },

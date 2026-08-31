@@ -63,14 +63,15 @@ class HomeQuickActionTile extends StatelessWidget {
                   ),
                 ),
               ),
-              Transform.flip(
-                key: const ValueKey('home_quick_action_tile_chevron_flip'),
-                flipX: Directionality.of(context) == TextDirection.rtl,
-                child: Icon(
-                  Icons.chevron_right,
-                  size: 24,
-                  color: colors.textMuted,
-                ),
+              // `Icons.chevron_right` has `matchTextDirection: true`, so the
+              // framework's `Icon` already mirrors it (→ points left) under
+              // RTL. Do NOT wrap it in a manual `Transform.flip`: that second
+              // flip cancels the framework's and the chevron wrongly points
+              // right again in Arabic (the SAN-768 double-mirror bug).
+              Icon(
+                Icons.chevron_right,
+                size: 24,
+                color: colors.textMuted,
               ),
             ],
           ),

@@ -39,7 +39,7 @@ class CreateBranchParams extends Equatable {
     required this.branchName,
     required this.branchType,
     required this.branchAddress,
-    required this.cityId,
+    required this.locationPlaceId,
     required this.branchPhone,
     required this.lat,
     required this.lng,
@@ -57,7 +57,7 @@ class CreateBranchParams extends Equatable {
   final String branchName;
   final BranchType branchType;
   final String branchAddress;
-  final String cityId;
+  final String locationPlaceId;
   final String branchPhone;
   final String? branchManagerId;
   final double lat;
@@ -79,7 +79,7 @@ class CreateBranchParams extends Equatable {
     branchName,
     branchType,
     branchAddress,
-    cityId,
+    locationPlaceId,
     branchPhone,
     branchManagerId,
     lat,
@@ -106,7 +106,7 @@ class UpdateBranchParams extends Equatable {
     required this.branchAddress,
     required this.branchPhone,
     this.branchType,
-    this.cityId,
+    this.locationPlaceId,
     this.branchManagerId,
     this.lat,
     this.lng,
@@ -128,8 +128,10 @@ class UpdateBranchParams extends Equatable {
   /// Optional during PATCH. Provide only when changing the branch type.
   final BranchType? branchType;
 
-  /// Optional during PATCH. Provide only when changing the branch city.
-  final String? cityId;
+  /// Google Places Autocomplete place ID. When non-null, must be sent
+  /// together with [lat] and [lng] — the backend derives the branch's city
+  /// from this value.
+  final String? locationPlaceId;
 
   final String? branchManagerId;
   final double? lat;
@@ -152,7 +154,7 @@ class UpdateBranchParams extends Equatable {
     branchAddress,
     branchPhone,
     branchType,
-    cityId,
+    locationPlaceId,
     branchManagerId,
     lat,
     lng,

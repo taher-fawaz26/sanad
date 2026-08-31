@@ -13,6 +13,45 @@ import 'package:flutter/services.dart';
 /// aligned to that contract (the source of truth), not to any mock design.
 const int kDefaultOtpLength = 6;
 
+// ─── Figma `7305:1726` / `7324:7328` / `7055:27323` — one-off cell values ──
+//
+// These belong to this single widget, not the shared design system: the
+// digit/placeholder font sizes and caret geometry aren't reusable "type
+// scale" or "dimension" tokens (see `AppDimension.otpCell*` for the values
+// that ARE shared-dimension concerns — cell size/gap/radius/border-width).
+//
+// The empty-border and placeholder/caret colors below come from a legacy
+// Figma variable collection ("02 - Dark/Color - Gray - *") distinct from the
+// current `DarkPalette` — no existing design-system token matches their
+// literal hex values (`#EEEEEE` sits between `DarkPalette.shade100` and
+// `shade200`; `#A5A5A5` between `shade300` and `shade400`).
+
+/// OTP filled-digit font size.
+const double _kOtpDigitFontSize = 11.87;
+
+/// OTP filled-digit line height ratio (17.313 / 11.87).
+const double _kOtpDigitLineHeight = 17.313 / _kOtpDigitFontSize;
+
+/// OTP empty-cell placeholder ("_") font size — larger than the digit size
+/// so the placeholder reads as a baseline dash, not a tiny mark.
+const double _kOtpPlaceholderFontSize = 25.32;
+
+/// OTP placeholder line height ratio (35.166 / 25.32).
+const double _kOtpPlaceholderLineHeight = 35.166 / _kOtpPlaceholderFontSize;
+
+/// OTP focused-cell caret height (Figma node `7305:1731`).
+const double _kOtpCaretHeight = 21.1;
+
+/// OTP focused-cell caret stroke width (Figma node `7305:1731`).
+const double _kOtpCaretWidth = 0.703;
+
+/// Empty-cell border color — Figma legacy `02 - Dark/Color - Gray - 100`.
+const Color _kOtpEmptyBorderColor = Color(0xFFEEEEEE);
+
+/// Placeholder text + caret color — Figma legacy `02 - Dark/Color - Gray -
+/// 300`.
+const Color _kOtpNeutralAccentColor = Color(0xFFA5A5A5);
+
 /// Key for the tappable region of the OTP cell at [index] (0-based).
 ///
 /// Exposed so tests can target a specific digit position.
@@ -44,6 +83,7 @@ class AppOtpField extends StatefulWidget {
     this.autofocus = false,
     this.forceErrorState = false,
     this.errorText,
+    this.errorTextStyle,
     this.validator,
     this.onChanged,
     this.onCompleted,
@@ -59,6 +99,13 @@ class AppOtpField extends StatefulWidget {
   final bool autofocus;
   final bool forceErrorState;
   final String? errorText;
+
+  /// Overrides the error message's default [FieldTokens.errorStyle]. Every
+  /// other field in the app shares that one error color; a caller only needs
+  /// this when its own Figma spec calls for a genuinely different one (e.g.
+  /// the OTP screen's caption red, distinct from both the shared field-error
+  /// red and this field's own cell-border error red).
+  final TextStyle? errorTextStyle;
   final FormFieldValidator<String>? validator;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onCompleted;
@@ -278,12 +325,14 @@ class _AppOtpFieldState extends State<AppOtpField> {
               SizedBox(height: AppSpacing.sm),
               Text(
                 resolvedError,
-                textAlign: TextAlign.center,
-                style: FieldTokens.errorStyle(
-                  typography,
-                  colors,
-                  Theme.of(context).brightness,
-                ),
+                textAlign: TextAlign.start,
+                style:
+                    widget.errorTextStyle ??
+                    FieldTokens.errorStyle(
+                      typography,
+                      colors,
+                      Theme.of(context).brightness,
+                    ),
               ),
             ],
           ],
@@ -349,7 +398,7 @@ class _AppOtpFieldState extends State<AppOtpField> {
 
   Widget _buildCells({required bool hasError}) {
     final designedCellSize = AppDimension.otpCellSize;
-    final gap = AppSpacing.lg;
+    final gap = AppDimension.otpCellGap;
     return LayoutBuilder(
       builder: (context, constraints) {
         // Derive one `cellSize` for all six cells from the available width.
@@ -400,8 +449,12 @@ class _AppOtpFieldState extends State<AppOtpField> {
     final colors = context.appColors;
     final typography = context.appTypography;
     final brightness = Theme.of(context).brightness;
-    final defaultWidth = responsiveDimension(FieldTokens.borderWidthDefault);
-    final emphasisWidth = responsiveDimension(FieldTokens.borderWidthEmphasis);
+    final defaultWidth = responsiveDimension(AppDimension.otpCellBorderWidth);
+    // No Figma-defined "selected for replacement" state exists (a static
+    // frame can't show a tap interaction) — this affordance predates the
+    // redesign and is preserved at proportionally the same 2x emphasis the
+    // old shared field-border tokens used.
+    final emphasisWidth = defaultWidth * 2;
 
     final text = _controller.text;
     final selection = _controller.selection;
@@ -418,8 +471,43 @@ class _AppOtpFieldState extends State<AppOtpField> {
         selection.isValid &&
         selection.isCollapsed &&
         selection.baseOffset == index;
+    final showPlaceholder = !hasDigit && !isCaretHere;
 
-    final baseTextStyle = typography.largeNormal.copyWith(
+    // Border color, border width, and (for a filled digit) text color all
+    // follow the same precedence: a cell targeted for replacement always
+    // shows the primary color, even in an error state, so the user can see
+    // which cell their next keystroke will hit; otherwise error beats plain
+    // filled beats empty.
+    final Color borderColor;
+    final Color filledDigitColor;
+    var borderWidth = defaultWidth;
+    if (!widget.enabled) {
+      borderColor = FieldTokens.disabledBorder(colors, brightness);
+      filledDigitColor = FieldTokens.valueColor(
+        colors,
+        brightness,
+        enabled: false,
+      );
+    } else if (isSelectedDigit) {
+      borderColor = colors.primary;
+      filledDigitColor = colors.primary;
+      borderWidth = emphasisWidth;
+    } else if (hasError) {
+      // Figma's error cells keep the same border width as every other
+      // state — only the color changes, for both the border and the digit.
+      borderColor = colors.palettes.red.shade500;
+      filledDigitColor = colors.palettes.red.shade500;
+    } else if (hasDigit) {
+      borderColor = colors.primary;
+      filledDigitColor = colors.primary;
+    } else {
+      borderColor = _kOtpEmptyBorderColor;
+      filledDigitColor = colors.primary;
+    }
+
+    final baseTextStyle = typography.regularNormal.copyWith(
+      fontSize: responsiveDimension(_kOtpDigitFontSize),
+      height: _kOtpDigitLineHeight,
       fontWeight: FontWeight.w500,
       letterSpacing: 0,
       color: FieldTokens.valueColor(
@@ -428,34 +516,22 @@ class _AppOtpFieldState extends State<AppOtpField> {
         enabled: widget.enabled,
       ),
     );
-    // Filled digits use the primary teal colour.
-    final filledTextStyle = baseTextStyle.copyWith(color: colors.primary);
+    final filledTextStyle = baseTextStyle.copyWith(color: filledDigitColor);
+    final placeholderTextStyle = baseTextStyle.copyWith(
+      fontSize: responsiveDimension(_kOtpPlaceholderFontSize),
+      height: _kOtpPlaceholderLineHeight,
+      color: _kOtpNeutralAccentColor,
+    );
 
-    final Color borderColor;
-    var borderWidth = defaultWidth;
-    if (!widget.enabled) {
-      borderColor = FieldTokens.disabledBorder(colors, brightness);
-    } else if (isSelectedDigit) {
-      // Targeted for replacement — emphasise even in error state
-      // so the user sees which cell gets their next keystroke.
-      borderColor = colors.primary;
-      borderWidth = emphasisWidth;
-    } else if (hasError) {
-      borderColor = FieldTokens.errorBorder(colors, brightness);
-      borderWidth = emphasisWidth;
-    } else if (hasDigit) {
-      borderColor = colors.primary;
-    } else {
-      borderColor = FieldTokens.borderDefault(colors, brightness);
-    }
-
-    final caretHeight =
-        (baseTextStyle.fontSize ?? responsiveDimension(20)) * 1.2;
-    final caret = _OtpCaret(color: colors.primary, height: caretHeight);
+    final caret = _OtpCaret(
+      color: _kOtpNeutralAccentColor,
+      height: responsiveDimension(_kOtpCaretHeight),
+      width: responsiveDimension(_kOtpCaretWidth),
+    );
 
     return Container(
       width: cellSize,
-      height: cellSize * 1.5,
+      height: cellSize,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: FieldTokens.background(
@@ -463,14 +539,18 @@ class _AppOtpFieldState extends State<AppOtpField> {
           brightness,
           enabled: widget.enabled,
         ),
-        // --corner/large from the design system: 13.631 dp → 14 dp
-        borderRadius: BorderRadius.circular(responsiveDimension(14)),
+        borderRadius: BorderRadius.circular(
+          responsiveDimension(AppDimension.otpCellRadius),
+        ),
         border: Border.all(color: borderColor, width: borderWidth),
       ),
       child: Stack(
         alignment: Alignment.center,
         children: [
-          if (hasDigit) Text(text[index], style: filledTextStyle),
+          if (hasDigit)
+            Text(text[index], style: filledTextStyle)
+          else if (showPlaceholder)
+            Text('_', style: placeholderTextStyle),
           if (isCaretHere)
             // On a filled cell the caret sits at the leading edge, so a
             // cursor placed *between* digits reads correctly.
@@ -494,10 +574,15 @@ class _AppOtpFieldState extends State<AppOtpField> {
 /// Note: this animation repeats indefinitely, so tests must use bounded
 /// `pump()` calls rather than `pumpAndSettle()` while the field has focus.
 class _OtpCaret extends StatefulWidget {
-  const _OtpCaret({required this.color, required this.height});
+  const _OtpCaret({
+    required this.color,
+    required this.height,
+    required this.width,
+  });
 
   final Color color;
   final double height;
+  final double width;
 
   @override
   State<_OtpCaret> createState() => _OtpCaretState();
@@ -522,7 +607,7 @@ class _OtpCaretState extends State<_OtpCaret>
 
   @override
   Widget build(BuildContext context) {
-    final width = responsiveDimension(2);
+    final width = widget.width;
     return FadeTransition(
       opacity: _controller,
       child: Container(

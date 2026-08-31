@@ -16,6 +16,7 @@ class BranchEntity extends Equatable {
     required this.availabilityMode,
     this.branchType = BranchType.mainBranch,
     this.cityId,
+    this.locationPlaceId,
     this.branchManagerId,
     this.branchManagerName,
     this.lat,
@@ -48,8 +49,14 @@ class BranchEntity extends Equatable {
 
   final BranchType branchType;
 
-  /// Backend city identifier (needed to prefill / update the branch's city).
+  /// Backend city identifier, parsed from the response's `city.id`. Read-only
+  /// — never sent back in create/update requests (city is derived by the
+  /// backend from [locationPlaceId]).
   final String? cityId;
+
+  /// Google Places Autocomplete place ID for the branch location. The backend
+  /// derives the branch's city from this value.
+  final String? locationPlaceId;
 
   final String? branchManagerId;
   final String? branchManagerName;
@@ -97,6 +104,7 @@ class BranchEntity extends Equatable {
     BranchAvailabilityMode? availabilityMode,
     BranchType? branchType,
     String? cityId,
+    String? locationPlaceId,
     String? branchManagerId,
     String? branchManagerName,
     double? lat,
@@ -122,6 +130,7 @@ class BranchEntity extends Equatable {
     availabilityMode: availabilityMode ?? this.availabilityMode,
     branchType: branchType ?? this.branchType,
     cityId: cityId ?? this.cityId,
+    locationPlaceId: locationPlaceId ?? this.locationPlaceId,
     branchManagerId: branchManagerId ?? this.branchManagerId,
     branchManagerName: branchManagerName ?? this.branchManagerName,
     lat: lat ?? this.lat,
@@ -150,6 +159,7 @@ class BranchEntity extends Equatable {
     availabilityMode,
     branchType,
     cityId,
+    locationPlaceId,
     branchManagerId,
     branchManagerName,
     lat,

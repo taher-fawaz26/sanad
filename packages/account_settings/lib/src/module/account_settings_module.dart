@@ -1,6 +1,7 @@
 import 'package:account_settings/src/di/account_settings_di.dart';
 import 'package:account_settings/src/presentation/bloc/account_deletion/account_deletion_bloc.dart';
 import 'package:account_settings/src/presentation/bloc/account_settings/account_settings_bloc.dart';
+import 'package:account_settings/src/presentation/bloc/security/security_bloc.dart';
 import 'package:account_settings/src/presentation/pages/account_deletion_page.dart';
 import 'package:account_settings/src/presentation/pages/account_settings_page.dart';
 import 'package:account_settings/src/presentation/pages/deletion_scheduled_page.dart';
@@ -19,7 +20,12 @@ class AccountSettingsModule extends FeatureModule {
   String get version => '0.1.0';
 
   @override
-  List<String> get dependencies => const ['auth', 'contact_verification'];
+  List<String> get dependencies => const [
+    'auth',
+    'contact_verification',
+    // Security section + app-lock gate resolve BiometricService.
+    'device',
+  ];
 
   @override
   void registerDependencies() => AccountSettingsDI.init();
@@ -28,9 +34,16 @@ class AccountSettingsModule extends FeatureModule {
   List<RouteBase> routes(FeatureRouteContext context) => [
     GoRoute(
       path: AccountSettingsRoutes.hub,
-      builder: (context, state) => BlocProvider<AccountSettingsBloc>(
-        create: (_) =>
-            sl<AccountSettingsBloc>()..add(const AccountSettingsLoaded()),
+      builder: (context, state) => MultiBlocProvider(
+        providers: [
+          BlocProvider<AccountSettingsBloc>(
+            create: (_) =>
+                sl<AccountSettingsBloc>()..add(const AccountSettingsLoaded()),
+          ),
+          BlocProvider<SecurityBloc>(
+            create: (_) => sl<SecurityBloc>()..add(const SecurityLoaded()),
+          ),
+        ],
         child: const AccountSettingsPage(),
       ),
     ),

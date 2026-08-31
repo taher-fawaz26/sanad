@@ -14,6 +14,7 @@ Lightweight documentation capturing the **why** behind major architecture decisi
 | [0006](0006-bloc-state-management.md) | BLoC State Management | Accepted |
 | [0007](0007-go-router.md) | GoRouter Navigation | Accepted |
 | [0008](0008-get-it-di.md) | GetIt Dependency Injection | Accepted |
+| [0009](0009-ai-chat-ui-protocol.md) | Bespoke Semantic UI Protocol for AI Chat | Accepted |
 
 ## When to Create an ADR
 

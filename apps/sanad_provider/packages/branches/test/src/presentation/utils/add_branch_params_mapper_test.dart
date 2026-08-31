@@ -30,7 +30,6 @@ void main() {
     ),
   ];
 
-  const testCity = CityEntity(id: 'city-1', name: 'Dubai');
   const testManager = BranchManagerEntity(
     id: 'mgr-1',
     fullName: 'Test Manager',
@@ -40,7 +39,7 @@ void main() {
   const completeDraft = AddBranchDraft(
     branchName: ' Test Branch ',
     branchType: BranchType.headquarters,
-    selectedCity: testCity,
+    locationPlaceId: 'ChIJvRmU9K1DXz4RYKyuhY6v0wM',
     phone: ' 0501234567 ',
     branchAddress: '123 Main St',
     pickedPosition: LatLng(25.0, 55.0),
@@ -78,7 +77,7 @@ void main() {
 
       expect(params.branchName, 'Test Branch');
       expect(params.branchType, BranchType.headquarters);
-      expect(params.cityId, 'city-1');
+      expect(params.locationPlaceId, 'ChIJvRmU9K1DXz4RYKyuhY6v0wM');
       expect(params.branchPhone, '+971501234567');
       expect(params.branchAddress, '123 Main St');
       expect(params.branchManagerId, 'mgr-1');
@@ -328,6 +327,7 @@ void main() {
       branchAddress: '123 Main St',
       city: 'Dubai',
       cityId: 'city-1',
+      locationPlaceId: 'ChIJvRmU9K1DXz4RYKyuhY6v0wM',
       branchPhone: '+971501234567',
       isAvailable: true,
       availabilityMode: BranchAvailabilityMode.custom,
@@ -363,7 +363,7 @@ void main() {
       expect(params.branchAddress, '123 Main St');
       expect(params.branchPhone, '+971501234567');
       expect(params.branchType, BranchType.headquarters);
-      expect(params.cityId, 'city-1');
+      expect(params.locationPlaceId, 'ChIJvRmU9K1DXz4RYKyuhY6v0wM');
       expect(params.branchManagerId, 'mgr-1');
       expect(params.lat, 25.0);
       expect(params.lng, 55.0);
@@ -383,19 +383,16 @@ void main() {
 
     test(
       'editing one section preserves every other field '
-      '(Branch Info: name/type/city change only)',
+      '(Branch Info: name/type change only)',
       () {
         final updated = completeBranch.copyWith(
           branchName: 'Renamed Branch',
           branchType: BranchType.mainStore,
-          cityId: 'city-2',
-          city: 'Abu Dhabi',
         );
         final params = AddBranchParamsMapper.fromBranch(updated);
 
         expect(params.branchName, 'Renamed Branch');
         expect(params.branchType, BranchType.mainStore);
-        expect(params.cityId, 'city-2');
         // Everything else must be untouched.
         expect(params.branchAddress, completeBranch.branchAddress);
         expect(params.branchPhone, completeBranch.branchPhone);
@@ -427,7 +424,7 @@ void main() {
         expect(params.branchManagerId, 'mgr-2');
         expect(params.branchName, completeBranch.branchName);
         expect(params.branchAddress, completeBranch.branchAddress);
-        expect(params.cityId, completeBranch.cityId);
+        expect(params.locationPlaceId, completeBranch.locationPlaceId);
         expect(params.branchType, completeBranch.branchType);
         expect(params.lat, completeBranch.lat);
         expect(params.lng, completeBranch.lng);

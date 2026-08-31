@@ -32,7 +32,7 @@ const _validParams = CreateBranchParams(
   branchName: 'x',
   branchType: BranchType.mainBranch,
   branchAddress: 'x',
-  cityId: 'x',
+  locationPlaceId: 'ChIJvRmU9K1DXz4RYKyuhY6v0wM',
   branchPhone: 'x',
   branchManagerId: 'x',
   lat: 0,

@@ -4,7 +4,7 @@ import 'package:account_settings/src/domain/enums/preferred_language.dart';
 import 'package:account_settings/src/domain/usecases/account_settings_params.dart';
 import 'package:account_settings/src/domain/usecases/refresh_account_profile_usecase.dart';
 import 'package:account_settings/src/domain/usecases/update_account_settings_usecase.dart';
-import 'package:auth/auth.dart' show SessionManager;
+import 'package:auth/auth.dart' show SessionManager, UserType;
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
@@ -100,7 +100,12 @@ class AccountSettingsBloc
       state.copyWith(saveStatus: RequestStatus.loading, clearSaveFailure: true),
     );
 
-    final result = await _updateAccountSettings(event.params).run();
+    // Persona decides the endpoint: clients patch `clients/me`, everyone else
+    // `account-settings`. A signed-in session always carries a `userType`; the
+    // `?? client` fallback is unreachable in practice (a provider session
+    // always resolves a concrete non-client type).
+    final userType = _sessionManager.userType ?? UserType.client;
+    final result = await _updateAccountSettings(event.params, userType).run();
 
     await result.fold(
       (failure) async => emit(

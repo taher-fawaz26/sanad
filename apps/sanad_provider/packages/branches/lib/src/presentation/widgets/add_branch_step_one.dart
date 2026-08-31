@@ -15,7 +15,6 @@ import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:maps/maps.dart';
 
 class AddBranchStepOne extends StatefulWidget {
   const AddBranchStepOne({
@@ -221,41 +220,40 @@ class _MainInfoSection extends StatelessWidget {
                 },
               ),
               SizedBox(height: AppSpacing.md),
-              BlocSelector<AddBranchDraftCubit, AddBranchDraft, CityEntity?>(
-                selector: (state) => state.selectedCity,
-                builder: (context, selectedCity) {
-                  return CitySelectField(
-                    label: 'branches.add_branch.city'.tr(),
-                    hint: 'branches.add_branch.city_select_hint'.tr(),
-                    pickerTitle: 'branches.add_branch.city'.tr(),
-                    searchHint: 'branches.add_branch.city_search_hint'.tr(),
-                    emptyLabel: 'branches.add_branch.city_empty'.tr(),
-                    retryLabel: 'common.cancel'.tr(),
-                    selectedCity: selectedCity,
-                    isRequired: true,
-                    errorText: showErrors && selectedCity == null
-                        ? 'branches.add_branch.city_required'.tr()
-                        : null,
-                    onCitySelected: (city) {
-                      context.read<AddBranchDraftCubit>().updateCity(city);
-                    },
-                  );
-                },
-              ),
-              SizedBox(height: AppSpacing.md),
-              BlocSelector<AddBranchDraftCubit, AddBranchDraft, String?>(
-                selector: (state) => state.branchAddress,
-                builder: (context, address) {
+              BlocSelector<
+                AddBranchDraftCubit,
+                AddBranchDraft,
+                ({String? address, bool hasPlaceId})
+              >(
+                selector: (state) => (
+                  address: state.branchAddress,
+                  hasPlaceId: state.locationPlaceId != null,
+                ),
+                builder: (context, location) {
+                  final address = location.address;
+                  final isEmpty = address == null || address.isEmpty;
                   return BranchLocationField(
                     label: 'branches.add_branch.location'.tr(),
                     value: address,
                     hint: 'branches.add_branch.location_hint'.tr(),
                     actionLabel: 'branches.add_branch.location_set'.tr(),
                     isRequired: true,
-                    errorText:
-                        showErrors && (address == null || address.isEmpty)
-                        ? 'branches.add_branch.location_required'.tr()
-                        : null,
+                    // An address without a Place ID (dragged pin / GPS) is
+                    // rejected by branch creation, so flag it and point the
+                    // user back to search. Shown unconditionally (not just
+                    // after a Next attempt) because Next stays disabled while
+                    // Step 1 is incomplete — so the failed-Next reveal never
+                    // fires, and the location would otherwise look filled in
+                    // with no reason given for the disabled button.
+                    errorText: isEmpty
+                        ? (showErrors
+                              ? 'branches.add_branch.location_required'.tr()
+                              : null)
+                        : location.hasPlaceId
+                        ? null
+                        : 'branches.add_branch'
+                                  '.location_select_from_search'
+                              .tr(),
                     onActionTap: onPickLocation,
                   );
                 },
@@ -363,8 +361,9 @@ class _WorkingHoursSection extends StatelessWidget {
         if (draft.companyHasWorkingHours) return null;
         return 'branches.add_branch.schedule_company_empty'.tr();
       case BranchScheduleMode.custom:
-        final hasHours =
-            draft.customSchedule.any((day) => day.slots.isNotEmpty);
+        final hasHours = draft.customSchedule.any(
+          (day) => day.slots.isNotEmpty,
+        );
         if (hasHours) return null;
         return 'branches.add_branch.schedule_required'.tr();
     }
@@ -428,18 +427,17 @@ class _WorkingHoursSection extends StatelessWidget {
                             onModeChanged: onScheduleModeChanged,
                             onAddSlot: (dayId, from, to) =>
                                 draftCubit.addScheduleSlot(
-                              dayId: dayId,
-                              from: from,
-                              to: to,
-                            ),
+                                  dayId: dayId,
+                                  from: from,
+                                  to: to,
+                                ),
                             onRemoveSlot: draftCubit.removeScheduleSlot,
                           ),
                           if (scheduleError != null) ...[
                             SizedBox(height: AppSpacing.xs),
                             Text(
                               scheduleError,
-                              style: context.appTypography.smallNormal
-                                  .copyWith(
+                              style: context.appTypography.smallNormal.copyWith(
                                 color: context.appColors.error,
                               ),
                             ),

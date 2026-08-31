@@ -72,6 +72,16 @@ android {
     }
 }
 
+dependencies {
+    // Required by the AppCompat launch/normal themes (see res/values/styles.xml).
+    // `local_auth` hosts BiometricPrompt in a FragmentActivity, and on API 24-27
+    // androidx.biometric falls back to an AppCompat AlertDialog, which resolves
+    // only under a Theme.AppCompat descendant. androidx.biometric pulls appcompat
+    // in transitively; it is declared here explicitly so the theme's requirement
+    // is not silently dependent on a transitive dependency.
+    implementation("androidx.appcompat:appcompat:1.7.0")
+}
+
 flutter {
     source = "../.."
 }

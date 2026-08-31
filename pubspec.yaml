@@ -7,6 +7,8 @@ environment:
 
 workspace:
   - apps/sanad_provider/packages/activity_logs
+  - packages/ai_ui_protocol
+  - packages/ai_ui_renderer
   - packages/text_optimization
   - packages/deep_linking
   - packages/contact_verification

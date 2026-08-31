@@ -36,6 +36,7 @@ class AuthScreenShell extends StatelessWidget {
     this.onBack,
     this.title,
     this.footer,
+    this.horizontalPadding,
   });
 
   final Widget child;
@@ -50,11 +51,18 @@ class AuthScreenShell extends StatelessWidget {
   /// form) instead of scrolling away with [child].
   final Widget? footer;
 
+  /// Overrides the card's default horizontal inset around [child].
+  ///
+  /// Only needed when [child] already applies its own horizontal padding
+  /// (e.g. `OtpView`, whose `AppSpacing.xl` padding is otherwise doubled up
+  /// with this shell's) — pass `0` in that case so the two don't stack.
+  final double? horizontalPadding;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final topPadding = MediaQuery.of(context).padding.top;
-    final hPad = responsiveDimension(_kHorizontalPadding);
+    final hPad = horizontalPadding ?? responsiveDimension(_kHorizontalPadding);
     final vPad = responsiveDimension(_kVerticalPadding);
     final cardRadius = responsiveDimension(_kCardTopRadius);
     final expandedHeight = responsiveDimension(_kExpandedHeight);

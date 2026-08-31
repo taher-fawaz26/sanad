@@ -50,10 +50,13 @@ import 'package:network/src/token/token_manager_impl.dart';
 abstract final class NetworkDI {
   NetworkDI._();
 
-  /// `GetIt` instance name for the [BaseApiClient] wired to the third-party
-  /// text-optimization host ([TextOptimizationApiConfig]) — deliberately a
-  /// separate, unauthenticated client so the user's session token is never
-  /// sent to that external host. Consumed by the `text_optimization` package.
+  /// `GetIt` instance name for the [BaseApiClient] used by the "Enhance with
+  /// AI" flow ([TextOptimizationApiConfig]) — a dedicated, *authenticated*
+  /// client on the Sanad backend that shares the app's `TokenManager` and
+  /// `AuthInterceptor` but uses a long receive timeout, since an AI
+  /// enhancement can run for minutes. Kept separate from the default
+  /// [BaseApiClient] only so that long timeout never affects other requests.
+  /// Consumed by the `text_optimization` package.
   static const textOptimizationApiClientInstanceName =
       'textOptimizationApiClient';
 
@@ -121,20 +124,32 @@ abstract final class NetworkDI {
       ..registerLazySingleton<BaseApiClient>(
         () => ApiClientImpl(sl<SecureDioClient>(), sl<NetworkGuard>()),
       )
-      // Text-optimization Dio — a separate unauthenticated client scoped to
-      // the fixed third-party host (SAN-578). No AuthInterceptor: this host
-      // is not the Sanad backend and must never receive the session token.
+      // Text-optimization Dio — a dedicated *authenticated* client on the
+      // Sanad backend for `POST /api/v1/agent/enhance-text`. It shares the
+      // app's TokenManager + AuthInterceptor (so the session bearer token and
+      // 401 refresh work exactly as elsewhere) but overrides the receive
+      // timeout: an AI enhancement can take minutes, far beyond the default
+      // 15s. The long timeout is scoped to this client so unrelated requests
+      // stay bounded by NetworkConfig's timeouts.
       ..registerLazySingleton<Dio>(
         () {
+          final config = sl<NetworkConfig>();
           final dio = Dio(
-            BaseOptions(
-              baseUrl: TextOptimizationApiConfig.baseUrl,
+            config.dioBaseOptions.copyWith(
               connectTimeout: TextOptimizationApiConfig.connectTimeout,
               receiveTimeout: TextOptimizationApiConfig.receiveTimeout,
-              headers: const {'Accept': 'application/json'},
             ),
           );
           dio.interceptors.addAll([
+            AcceptLanguageInterceptor(
+              resolveLanguageCode: resolveLanguageCode,
+            ),
+            AuthInterceptor(
+              dio: dio,
+              tokenManager: sl<TokenManager>(),
+              refreshTokenPath: config.refreshTokenPath,
+              onUnauthorized: onUnauthorized,
+            ),
             TimeoutErrorInterceptor(),
             LoggingInterceptor(logger: logger),
           ]);

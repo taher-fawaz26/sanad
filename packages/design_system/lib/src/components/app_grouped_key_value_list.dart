@@ -1,6 +1,7 @@
 import 'package:design_system/src/theme/colors/app_colors.dart';
 import 'package:design_system/src/theme/tokens/grouped_key_value_list_tokens.dart';
 import 'package:design_system/src/theme/typography/app_typography.dart';
+import 'package:design_system/src/utils/ltr_isolate.dart';
 import 'package:flutter/material.dart';
 
 /// Figma grouped key/value rows in one rounded container (`365:14910`).
@@ -70,7 +71,7 @@ class _GroupedKeyValueRow extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  item.value,
+                  item.isLtr ? item.value.ltrIsolated : item.value,
                   style: spec.valueStyle.copyWith(color: item.valueColor),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

@@ -11,7 +11,10 @@ class UserEntity extends Equatable {
   });
 
   final String id;
-  final String email;
+
+  /// The account email — `null` for phone-registered clients (a phone-only
+  /// client has `phone` set and no email). Providers/workers always have one.
+  final String? email;
   final bool isVerified;
   final bool? isActive;
 

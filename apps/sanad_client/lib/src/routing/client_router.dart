@@ -1,14 +1,30 @@
+import 'package:account_settings/account_settings.dart';
 import 'package:auth/auth.dart';
 import 'package:core/core.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:network/network.dart';
 import 'package:sanad_client/src/di/app_di.dart';
+import 'package:sanad_client/src/features/account_setup/account_setup_cubit.dart';
+import 'package:sanad_client/src/features/account_setup/account_setup_routes.dart';
+import 'package:sanad_client/src/features/account_setup/enter_name_page.dart';
+import 'package:sanad_client/src/features/account_setup/get_notified_page.dart';
+import 'package:sanad_client/src/features/ai_chat/src/presentation/pages/ai_chat_screen.dart';
 import 'package:sanad_client/src/features/home/home_page.dart';
-import 'package:sanad_client/src/features/onboarding/continue_with_email_page.dart';
-import 'package:sanad_client/src/features/onboarding/get_started_page.dart';
-import 'package:sanad_client/src/features/onboarding/onboarding_routes.dart';
-import 'package:sanad_client/src/features/onboarding/splash_page.dart';
+import 'package:sanad_client/src/features/oauth/oauth_email_page.dart';
+import 'package:sanad_client/src/features/oauth/oauth_otp_page.dart';
+import 'package:sanad_client/src/features/oauth/oauth_otp_route_args.dart';
+import 'package:sanad_client/src/features/oauth/oauth_phone_page.dart';
+import 'package:sanad_client/src/features/oauth/oauth_routes.dart';
+import 'package:sanad_client/src/features/oauth/oauth_screen.dart';
+import 'package:sanad_client/src/features/oauth/oauth_splash_page.dart';
+import 'package:sanad_client/src/features/oauth/oauth_uae_pass_collecting_page.dart';
+import 'package:sanad_client/src/features/oauth/oauth_uae_pass_page.dart';
+import 'package:sanad_client/src/features/oauth/oauth_uae_pass_success_page.dart';
+import 'package:sanad_client/src/features/oauth/oauth_uae_pass_waiting_page.dart';
+import 'package:sanad_client/src/features/oauth/uae_pass_collected_details.dart';
 import 'package:sanad_client/src/routing/client_routes.dart';
 import 'package:shared_ui/shared_ui.dart';
 
@@ -22,11 +38,11 @@ GoRouter buildClientRouter() {
 
   // AuthModule unconditionally registers '/' (packages/auth's SplashPage)
   // and '/login' (its combined AuthPage) — the client app renders its own
-  // onboarding flow (OnboardingSplashPage / GetStartedPage /
-  // ContinueWithEmailPage) at those paths instead. packages/auth stays
-  // unmodified (sanad_provider still uses its screens as-is; this app still
-  // needs AuthModule for AuthBloc/session/OTP). Do not remove this filter:
-  // without it GoRouter throws GoError('Duplicate path') at startup.
+  // OAuth flow (OAuthSplashPage / OAuthScreen / OAuthEmailPage) at those
+  // paths instead. packages/auth stays unmodified (sanad_provider still uses
+  // its screens as-is; this app still needs AuthModule for AuthBloc/session/
+  // OTP). Do not remove this filter: without it GoRouter throws
+  // GoError('Duplicate path') at startup.
   const authOverriddenPaths = {AuthRoutes.splash, AuthRoutes.login};
   final moduleRoutes = moduleRegistry.allRoutes(routeContext);
   final filteredModuleRoutes = moduleRoutes
@@ -60,32 +76,104 @@ GoRouter buildClientRouter() {
       AuthShell.buildShellRoute(
         children: [
           GoRoute(
-            path: OnboardingRoutes.splash,
-            builder: (context, state) => const OnboardingSplashPage(),
+            path: OAuthRoutes.splash,
+            builder: (context, state) => const OAuthSplashPage(),
           ),
           GoRoute(
-            path: OnboardingRoutes.getStarted,
-            builder: (context, state) => const GetStartedPage(),
+            path: OAuthRoutes.screen,
+            builder: (context, state) => const OAuthScreen(),
           ),
           GoRoute(
-            path: OnboardingRoutes.continueWithEmail,
-            builder: (context, state) => const ContinueWithEmailPage(),
+            path: OAuthRoutes.email,
+            builder: (context, state) => const OAuthEmailPage(),
+          ),
+          GoRoute(
+            path: OAuthRoutes.phone,
+            builder: (context, state) => const OAuthPhonePage(),
+          ),
+          GoRoute(
+            path: OAuthRoutes.uaePass,
+            builder: (context, state) => const OAuthUaePassPage(),
+          ),
+          GoRoute(
+            path: OAuthRoutes.uaePassWaiting,
+            builder: (context, state) => const OAuthUaePassWaitingPage(),
+          ),
+          GoRoute(
+            path: OAuthRoutes.uaePassCollecting,
+            builder: (context, state) => const OAuthUaePassCollectingPage(),
+          ),
+          GoRoute(
+            path: OAuthRoutes.uaePassSuccess,
+            builder: (context, state) => OAuthUaePassSuccessPage(
+              details: state.extra is UaePassCollectedDetails
+                  ? state.extra! as UaePassCollectedDetails
+                  : null,
+            ),
+          ),
+          GoRoute(
+            path: OAuthRoutes.otp,
+            // Navigating here without a valid extra bounces back to the
+            // OAuth entry screen, mirroring AuthShell.otpRoute's own
+            // defensive redirect for the real auth OTP route.
+            redirect: (context, state) =>
+                state.extra is OAuthOtpRouteArgs ? null : OAuthRoutes.screen,
+            builder: (context, state) => buildOAuthOtpRoutePage(
+              context,
+              state.extra! as OAuthOtpRouteArgs,
+            ),
           ),
           ...filteredModuleRoutes,
           AuthShell.otpRoute(
             // No post-signup onboarding token flow for the client app yet
-            // (unrelated to the pre-auth features/onboarding screens above);
-            // a brand-new account returns to login (sign-up lives in the
-            // provider app).
-            onAuthenticated: (context) => context.go(ClientRoutes.home),
+            // (unrelated to the pre-auth OAuth screens above); a brand-new
+            // account returns to login (sign-up lives in the provider app).
+            onAuthenticated: (context) {
+              context.go(ClientRoutes.home);
+              // Fresh sign-in only — never on session restore. Non-blocking:
+              // the user is already on Home when this appears.
+              maybeOfferAppLock(context).ignore();
+            },
             onOnboarding: (context, email, onboardingToken) =>
                 context.go(AuthRoutes.login),
           ),
         ],
       ),
+      // Post-authentication setup (Enter Name, Get Notified) — reached from
+      // OAuth's OTP screen for both Email and Phone, but not itself part of
+      // authentication-method selection, so it is its own shell rather than
+      // nested under AuthShell (needs no AuthBloc/session infrastructure).
+      ShellRoute(
+        builder: (context, state, child) => BlocProvider(
+          create: (_) => AccountSetupCubit(
+            updateProfile: sl<UpdateClientProfileUseCase>(),
+            sessionManager: sl<SessionManager>(),
+          ),
+          child: child,
+        ),
+        routes: [
+          GoRoute(
+            path: AccountSetupRoutes.enterName,
+            builder: (context, state) => const EnterNamePage(),
+          ),
+          GoRoute(
+            path: AccountSetupRoutes.getNotified,
+            builder: (context, state) => const GetNotifiedPage(),
+          ),
+        ],
+      ),
       GoRoute(
         path: ClientRoutes.home,
-        builder: (context, state) => const ClientHomePage(),
+        // Prototype affordance: in a debug build Home *is* the AI chat, so
+        // the feature can be exercised on a device without navigating to
+        // the dev-only `/dev/ai-chat` path. Release builds always get the
+        // real ClientHomePage — `kReleaseMode` is a compile-time constant,
+        // so the chat screen is tree-shaken out of a release binary.
+        //
+        // Remove this branch once Home has real content, or once the chat
+        // has a permanent entry point.
+        builder: (context, state) =>
+            kReleaseMode ? const ClientHomePage() : const AiChatScreen(),
       ),
       GoRoute(
         path: ClientRoutes.offline,

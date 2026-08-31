@@ -1,3 +1,4 @@
+import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart' hide TextDirection;
 import 'package:flutter/gestures.dart';
@@ -41,7 +42,7 @@ class _OtpViewState<T> extends State<OtpView<T>> {
   Widget build(BuildContext context) {
     final config = widget.config;
 
-    return SingleChildScrollView(
+    final scrollableContent = SingleChildScrollView(
       padding: EdgeInsets.symmetric(
         horizontal: AppSpacing.xl,
         vertical: AppSpacing.lg,
@@ -51,17 +52,79 @@ class _OtpViewState<T> extends State<OtpView<T>> {
         mainAxisSize: MainAxisSize.min,
         children: [
           _OtpDispatchBanner<T>(config: config),
+          const _OtpIcon(),
+          SizedBox(height: responsiveDimension(AppSpacing.xxl)),
           _OtpHeader<T>(config: config),
-          SizedBox(height: responsiveDimension(AppSpacing.xxxl)),
+          SizedBox(height: responsiveDimension(AppSpacing.xxl)),
           _OtpField<T>(config: config, controller: _controller),
-          SizedBox(height: responsiveDimension(AppSpacing.xl)),
-          _OtpVerifyButton<T>(config: config),
-          SizedBox(height: responsiveDimension(AppSpacing.xl)),
-          _OtpCountdown<T>(),
-          SizedBox(height: responsiveDimension(AppSpacing.md)),
-          _OtpResendRow<T>(),
-          _OtpAttemptsHint<T>(),
+          SizedBox(height: responsiveDimension(AppSpacing.xxl)),
+          _OtpResendSection<T>(),
+          // _OtpAttemptsHint<T>(),
+          if (!config.pinActionToBottom) ...[
+            SizedBox(height: responsiveDimension(AppSpacing.xl)),
+            _OtpVerifyButton<T>(config: config),
+          ],
         ],
+      ),
+    );
+
+    if (!config.pinActionToBottom) return scrollableContent;
+
+    // The Figma "Email OTP" flow pins the button to the bottom of the screen
+    // with the scrollable content filling the space above it, rather than
+    // flowing inline after the resend row — see
+    // `OtpFlowConfig.pinActionToBottom`.
+    return Column(
+      children: [
+        Expanded(child: scrollableContent),
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            responsiveDimension(AppSpacing.xl),
+            0,
+            responsiveDimension(AppSpacing.xl),
+            responsiveDimension(AppSpacing.lg),
+          ),
+          child: _OtpVerifyButton<T>(config: config),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Icon ─────────────────────────────────────────────────────────────────────
+
+/// Figma `7063:25587` — same `sky/100` circle + 24dp glyph pattern as the
+/// OAuth Email/Phone entry screens' own icon circles.
+class _OtpIcon extends StatelessWidget {
+  const _OtpIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    // The parent Column uses crossAxisAlignment.stretch (needed by the
+    // header/field/resend children below), which hands every direct child
+    // TIGHT width constraints — a plain Container's own `width: 56` request
+    // loses to that and gets stretched full-width. Align opts this one child
+    // back out: it forwards loose constraints, so the Container's requested
+    // size wins, exactly like the un-stretched Column (crossAxisAlignment:
+    // start) OAuthEmailPage/OAuthPhonePage use for the same icon circle.
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: Container(
+        width: responsiveDimension(56),
+        height: responsiveDimension(56),
+        decoration: BoxDecoration(
+          color: colors.palettes.sky.shade100,
+          borderRadius: AppRadius.circularXl,
+        ),
+        child: Center(
+          child: AppSvgPicture.asset(
+            AppSvgs.otpPasswordCursor,
+            width: responsiveDimension(AppDimension.iconMenu),
+            height: responsiveDimension(AppDimension.iconMenu),
+          ),
+        ),
       ),
     );
   }
@@ -82,34 +145,43 @@ class _OtpHeader<T> extends StatelessWidget {
     return BlocBuilder<OtpBloc<T>, OtpState<T>>(
       buildWhen: (p, c) => p.displayDestination != c.displayDestination,
       builder: (context, state) {
+        final subtitle =
+            config.subtitleBuilder?.call(context, config) ??
+            'otp.subtitle'.tr();
+
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               config.titleBuilder?.call(context, config) ?? 'otp.title'.tr(),
-              textAlign: TextAlign.center,
-              style: typography.title2.copyWith(
-                fontWeight: FontWeight.w600,
+              style: typography.title3.copyWith(
+                fontSize: 28.rfs,
+                fontWeight: FontWeight.w700,
                 color: colors.textPrimary,
               ),
             ),
             SizedBox(height: responsiveDimension(AppSpacing.sm)),
             Text.rich(
-              textAlign: TextAlign.center,
               TextSpan(
                 style: typography.regularNormal.copyWith(
-                  color: colors.textSecondary,
+                  fontSize: 15.rfs,
+                  height: 1.4,
+                  color: colors.textMuted,
                 ),
                 children: [
+                  TextSpan(text: '$subtitle '),
                   TextSpan(
-                    text:
-                        config.subtitleBuilder?.call(context, config) ??
-                        'otp.subtitle'.tr(),
+                    // The destination (phone/email) is inherently LTR. Wrapped
+                    // in an LTR isolate so a leading `+` or digits render at
+                    // the visual start of the value, not the end, under an RTL
+                    // (Arabic) paragraph. See SAN-770.
+                    text: state.displayDestination.ltrIsolated,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: colors.textPrimary,
+                    ),
                   ),
-                  const TextSpan(text: '\n'),
-                  TextSpan(
-                    text: state.displayDestination,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
+                  const TextSpan(text: '.'),
                   if (config.onChangeDestination != null) ...[
                     const TextSpan(text: ' '),
                     TextSpan(
@@ -226,8 +298,17 @@ class _OtpField<T> extends StatelessWidget {
   final OtpFlowConfig<T> config;
   final TextEditingController controller;
 
+  /// Figma `7063:25609` — the OTP screen's own caption red, distinct from the
+  /// shared field-error red (`FieldTokens.errorBorder`) and the OTP cell's
+  /// own error border/text red (`colors.palettes.red.shade500`). Not bound to
+  /// any design-system or Figma variable, so there is no shared token to
+  /// reuse here.
+  static const _errorTextColor = Color(0xFFD93025);
+
   @override
   Widget build(BuildContext context) {
+    final typography = context.appTypography;
+
     return BlocBuilder<OtpBloc<T>, OtpState<T>>(
       buildWhen: (p, c) => p.phase != c.phase,
       builder: (context, state) {
@@ -246,6 +327,10 @@ class _OtpField<T> extends StatelessWidget {
             autofocus: config.autofocus,
             enabled: !busy,
             errorText: errorText,
+            errorTextStyle: typography.smallNormal.copyWith(
+              fontWeight: FontWeight.w500,
+              color: _errorTextColor,
+            ),
             onChanged: (value) => bloc.add(OtpCodeChanged(value)),
             onCompleted: config.autoSubmit
                 ? (value) => bloc.add(OtpSubmitted(value))
@@ -275,7 +360,7 @@ class _OtpVerifyButton<T> extends StatelessWidget {
             state.phase is! OtpVerifiedPhase;
 
         return AppButton(
-          label: 'otp.verify'.tr(),
+          label: config.verifyLabel ?? 'otp.verify'.tr(),
           isLoading: verifying,
           onPressed: ready && !verifying
               ? () => context.read<OtpBloc<T>>().add(const OtpSubmitted())
@@ -294,29 +379,33 @@ String _formatSeconds(int seconds) {
   return '$m:$s';
 }
 
-/// Scoped to the seconds value alone so the once-a-second tick repaints this
-/// `Text` and nothing else — in particular not the OTP field.
-class _OtpCountdown<T> extends StatelessWidget {
-  const _OtpCountdown();
+/// Figma `6979:27634` (counting down) / `6979:27585` & `7063:25563` (can
+/// resend) — these two states are mutually exclusive in the design (a single
+/// centered countdown caption, or the "Didn't receive it? Resend" row —
+/// never both at once), unlike the two independently-visible widgets this
+/// replaced.
+class _OtpResendSection<T> extends StatelessWidget {
+  const _OtpResendSection();
+
+  /// Figma `7063:1532` — "Resend code in 0:45"'s caption color. Bound to a
+  /// legacy `Text Color/text-grey` Figma variable distinct from the current
+  /// palette; no design-system token matches it.
+  static const _countdownColor = Color(0xFF9EA2AE);
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     final typography = context.appTypography;
 
     return BlocSelector<OtpBloc<T>, OtpState<T>, int>(
       selector: (state) => state.secondsRemaining,
       builder: (context, seconds) {
-        if (seconds <= 0) return const SizedBox.shrink();
+        if (seconds <= 0) return _OtpResendRow<T>();
         return Center(
           child: Text(
-            // Always LTR: a clock reads the same in Arabic.
-            _formatSeconds(seconds),
-            textDirection: TextDirection.ltr,
-            style: typography.regularNormal.copyWith(
-              color: colors.primary,
-              fontWeight: FontWeight.w600,
+            'otp.resend_countdown'.tr(
+              namedArgs: {'time': _formatSeconds(seconds)},
             ),
+            style: typography.smallNormal.copyWith(color: _countdownColor),
           ),
         );
       },
@@ -324,7 +413,6 @@ class _OtpCountdown<T> extends StatelessWidget {
   }
 }
 
-/// Always present, so the layout does not jump when the cooldown lapses.
 class _OtpResendRow<T> extends StatelessWidget {
   const _OtpResendRow();
 
@@ -336,30 +424,28 @@ class _OtpResendRow<T> extends StatelessWidget {
     return BlocSelector<OtpBloc<T>, OtpState<T>, bool>(
       selector: (state) => state.canResend,
       builder: (context, canResend) {
-        return Center(
-          child: Text.rich(
-            textAlign: TextAlign.center,
-            TextSpan(
-              style: typography.regularNormal.copyWith(
-                color: colors.textSecondary,
-              ),
-              children: [
-                TextSpan(text: '${'otp.not_received'.tr()} '),
-                TextSpan(
-                  text: 'otp.send_again'.tr(),
-                  style: TextStyle(
-                    color: canResend ? colors.primary : colors.textMuted,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  recognizer: canResend
-                      ? (TapGestureRecognizer()
-                          ..onTap = () => context.read<OtpBloc<T>>().add(
-                            const OtpResendRequested(),
-                          ))
-                      : null,
+        return Text.rich(
+          TextSpan(
+            style: typography.regularNormal.copyWith(
+              fontSize: 14.rfs,
+              color: colors.textMuted,
+            ),
+            children: [
+              TextSpan(text: '${'otp.not_received'.tr()} '),
+              TextSpan(
+                text: 'otp.send_again'.tr(),
+                style: TextStyle(
+                  color: canResend ? colors.primary : colors.textMuted,
+                  fontWeight: FontWeight.w600,
                 ),
-              ],
-            ),
+                recognizer: canResend
+                    ? (TapGestureRecognizer()
+                        ..onTap = () => context.read<OtpBloc<T>>().add(
+                          const OtpResendRequested(),
+                        ))
+                    : null,
+              ),
+            ],
           ),
         );
       },
@@ -367,42 +453,39 @@ class _OtpResendRow<T> extends StatelessWidget {
   }
 }
 
-/// Remaining **resends** — the backend's `attemptsLeft`. Shown only when the
-/// server reported it and it is running low.
-///
-/// Deliberately silent about wrong-code attempts: no OTP endpoint in the
-/// contract exposes a verification-attempt counter, and inventing one would
-/// put a number on screen the backend never agreed to.
-class _OtpAttemptsHint<T> extends StatelessWidget {
-  const _OtpAttemptsHint();
+// /// Remaining **resends** — the backend's `attemptsLeft`. Shown only when the
+// /// server reported it and it is running low.
+// ///
+// /// Deliberately silent about wrong-code attempts: no OTP endpoint in the
+// /// contract exposes a verification-attempt counter, and inventing one would
+// /// put a number on screen the backend never agreed to.
+// class _OtpAttemptsHint<T> extends StatelessWidget {
+//   const _OtpAttemptsHint();
 
-  /// Below this, the user is close enough to lockout to warrant a warning.
-  static const int _warnAtOrBelow = 2;
+//   /// Below this, the user is close enough to lockout to warrant a warning.
+//   static const int _warnAtOrBelow = 2;
 
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final typography = context.appTypography;
+//   @override
+//   Widget build(BuildContext context) {
+//     final colors = context.appColors;
+//     final typography = context.appTypography;
 
-    return BlocSelector<OtpBloc<T>, OtpState<T>, int>(
-      selector: (state) => state.cooldown.resendsLeft,
-      builder: (context, resendsLeft) {
-        if (resendsLeft < 0 || resendsLeft > _warnAtOrBelow) {
-          return const SizedBox.shrink();
-        }
-        return Padding(
-          padding: EdgeInsetsDirectional.only(
-            top: responsiveDimension(AppSpacing.sm),
-          ),
-          child: Center(
-            child: Text(
-              'otp.resends_left'.plural(resendsLeft),
-              textAlign: TextAlign.center,
-              style: typography.smallNormal.copyWith(color: colors.textMuted),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
+//     return BlocSelector<OtpBloc<T>, OtpState<T>, int>(
+//       selector: (state) => state.cooldown.resendsLeft,
+//       builder: (context, resendsLeft) {
+//         if (resendsLeft < 0 || resendsLeft > _warnAtOrBelow) {
+//           return const SizedBox.shrink();
+//         }
+//         return Padding(
+//           padding: EdgeInsetsDirectional.only(
+//             top: responsiveDimension(AppSpacing.sm),
+//           ),
+//           child: Text(
+//             'otp.resends_left'.plural(resendsLeft),
+//             style: typography.smallNormal.copyWith(color: colors.textMuted),
+//           ),
+//         );
+//       },
+//     );
+//   }
+// }

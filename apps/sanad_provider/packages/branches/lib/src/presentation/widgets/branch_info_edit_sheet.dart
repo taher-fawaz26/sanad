@@ -4,7 +4,6 @@ import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:maps/maps.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// Result of a confirmed [BranchInfoEditSheet] submission.
@@ -12,14 +11,10 @@ class BranchInfoEditResult {
   const BranchInfoEditResult({
     required this.branchName,
     required this.branchType,
-    this.city,
   });
 
   final String branchName;
   final BranchType branchType;
-
-  /// `null` only if the branch has no city and the user didn't pick one.
-  final CityEntity? city;
 }
 
 /// Opens the Branch Info section editor. Pops `null` when dismissed without
@@ -28,14 +23,14 @@ Future<BranchInfoEditResult?> showBranchInfoEditSheet({
   required BuildContext context,
   required String initialName,
   required BranchType initialType,
-  CityEntity? initialCity,
+  String? cityDisplayName,
 }) {
   return SheetNavigator.push<BranchInfoEditResult>(
     context,
     BranchInfoEditSheet(
       initialName: initialName,
       initialType: initialType,
-      initialCity: initialCity,
+      cityDisplayName: cityDisplayName,
     ),
     settings: SheetRouteSettings(
       title: 'branches.details.section_branch_info'.tr(),
@@ -43,19 +38,19 @@ Future<BranchInfoEditResult?> showBranchInfoEditSheet({
   );
 }
 
-/// Branch Info section editor — name, type, city. Shell-agnostic; pair with
-/// [SheetNavigator] (see [showBranchInfoEditSheet]).
+/// Branch Info section editor — name and type. City is displayed read-only
+/// (derived server-side from the branch location).
 class BranchInfoEditSheet extends StatefulWidget {
   const BranchInfoEditSheet({
     required this.initialName,
     required this.initialType,
-    this.initialCity,
+    this.cityDisplayName,
     super.key,
   });
 
   final String initialName;
   final BranchType initialType;
-  final CityEntity? initialCity;
+  final String? cityDisplayName;
 
   @override
   State<BranchInfoEditSheet> createState() => _BranchInfoEditSheetState();
@@ -64,13 +59,11 @@ class BranchInfoEditSheet extends StatefulWidget {
 class _BranchInfoEditSheetState extends State<BranchInfoEditSheet> {
   late final _nameController = TextEditingController(text: widget.initialName);
   late BranchType _type;
-  CityEntity? _city;
 
   @override
   void initState() {
     super.initState();
     _type = widget.initialType;
-    _city = widget.initialCity;
     _nameController.addListener(() => setState(() {}));
   }
 
@@ -87,8 +80,7 @@ class _BranchInfoEditSheetState extends State<BranchInfoEditSheet> {
 
   bool get _hasChanges =>
       _nameController.text.trim() != widget.initialName.trim() ||
-      _type != widget.initialType ||
-      _city?.id != widget.initialCity?.id;
+      _type != widget.initialType;
 
   /// Live inline error — the field starts pre-filled with a name that
   /// already satisfies the backend contract, so this only surfaces once the
@@ -125,17 +117,16 @@ class _BranchInfoEditSheetState extends State<BranchInfoEditSheet> {
           selectedType: _type,
           onTypeSelected: (type) => setState(() => _type = type),
         ),
-        SizedBox(height: AppSpacing.md),
-        CitySelectField(
-          label: 'branches.add_branch.city'.tr(),
-          hint: 'branches.add_branch.city_select_hint'.tr(),
-          pickerTitle: 'branches.add_branch.city'.tr(),
-          searchHint: 'branches.add_branch.city_search_hint'.tr(),
-          emptyLabel: 'branches.add_branch.city_empty'.tr(),
-          retryLabel: 'common.cancel'.tr(),
-          selectedCity: _city,
-          onCitySelected: (city) => setState(() => _city = city),
-        ),
+        if (widget.cityDisplayName != null &&
+            widget.cityDisplayName!.isNotEmpty) ...[
+          SizedBox(height: AppSpacing.md),
+          AppTextField(
+            controller: TextEditingController(text: widget.cityDisplayName),
+            label: 'branches.add_branch.city'.tr(),
+            readOnly: true,
+            enabled: false,
+          ),
+        ],
         SizedBox(height: AppSpacing.xl),
         AppButton(
           label: 'branches.edit_branch.save_button'.tr(),
@@ -150,7 +141,6 @@ class _BranchInfoEditSheetState extends State<BranchInfoEditSheet> {
       BranchInfoEditResult(
         branchName: _nameController.text.trim(),
         branchType: _type,
-        city: _city,
       ),
     );
   }

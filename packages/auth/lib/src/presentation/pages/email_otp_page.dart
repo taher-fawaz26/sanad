@@ -88,7 +88,9 @@ class _EmailOtpPageState extends State<EmailOtpPage> {
         case AuthSessionEntity():
           widget.onAuthenticated();
         case OnboardingAuthEntity(:final onboardingToken, :final user):
-          widget.onOnboarding(user.email, onboardingToken);
+          // Email-signup hand-off only — `user.email` is always present here;
+          // `?? ''` only satisfies the now-nullable `UserEntity.email`.
+          widget.onOnboarding(user.email ?? '', onboardingToken);
       }
       return;
     }
@@ -169,6 +171,10 @@ class _EmailOtpPageState extends State<EmailOtpPage> {
     return AuthScreenShell(
       onBack: _changeEmail,
       title: 'auth.otp_title'.tr(),
+      // OtpView applies its own AppSpacing.xl horizontal padding — without
+      // this override the shell's own inset stacks on top of it, shrinking
+      // the six-cell OTP field well below its designed size.
+      horizontalPadding: 0,
       child: switch (widget.intent) {
         AuthFlowIntent.createAccount => OtpHost<AuthResponseEntity>(
           config: _config<AuthResponseEntity>(

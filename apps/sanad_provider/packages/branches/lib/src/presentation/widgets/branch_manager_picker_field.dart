@@ -162,7 +162,6 @@ class _ManagerPickerSheetState extends State<_ManagerPickerSheet> {
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
@@ -194,14 +193,10 @@ class _ManagerPickerSheetState extends State<_ManagerPickerSheet> {
             ),
           ),
           SizedBox(height: AppSpacing.sm),
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.sizeOf(context).height * 0.5,
-            ),
+          Expanded(
             child: _isLoading
                 ? const Center(child: AppLoadingIndicator())
                 : ListView.builder(
-                    shrinkWrap: true,
                     itemCount:
                         _managers.length + (_meta?.hasMore == true ? 1 : 0),
                     itemBuilder: (context, index) {

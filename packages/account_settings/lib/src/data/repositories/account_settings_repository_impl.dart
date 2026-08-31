@@ -17,6 +17,7 @@ class AccountSettingsRepositoryImpl implements AccountSettingsRepository {
   @override
   TaskEither<Failure, AccountSettingsEntity> updateAccountSettings(
     UpdateAccountSettingsParams params,
+    UserType userType,
   ) => _networkGuard.execute(
     action: _remote
         .updateAccountSettings(
@@ -24,6 +25,7 @@ class AccountSettingsRepositoryImpl implements AccountSettingsRepository {
             name: params.name,
             preferredLanguage: params.preferredLanguage,
           ),
+          userType,
         )
         .map((response) => response.toEntity()),
   );

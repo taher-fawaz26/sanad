@@ -13,8 +13,11 @@ import 'package:network/network.dart';
 /// reads go through the persona-appropriate `GET /{persona}/profile`
 /// envelope (see [AccountSettingsApiPaths.profilePathFor]).
 abstract interface class AccountSettingsRemoteDataSource {
+  /// Persona-aware update: clients patch `clients/me`, every other persona
+  /// patches `account-settings` (which rejects clients with 403).
   TaskEither<Failure, AccountSettingsResponse> updateAccountSettings(
     UpdateAccountSettingsRequest request,
+    UserType userType,
   );
 
   /// Fetches the persona-appropriate profile envelope for [userType] and
@@ -33,8 +36,9 @@ class AccountSettingsRemoteDataSourceImpl
   @override
   TaskEither<Failure, AccountSettingsResponse> updateAccountSettings(
     UpdateAccountSettingsRequest request,
+    UserType userType,
   ) => _apiClient.request<AccountSettingsResponse>(
-    path: AccountSettingsApiPaths.accountSettings,
+    path: AccountSettingsApiPaths.updatePathFor(userType),
     method: RequestMethod.patch,
     body: request.toMap(),
     parser: (data) => AccountSettingsResponse.fromJson(

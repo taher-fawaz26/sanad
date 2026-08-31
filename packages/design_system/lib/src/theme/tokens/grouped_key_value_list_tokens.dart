@@ -12,12 +12,18 @@ class GroupedKeyValueItem {
     required this.value,
     this.valueColor,
     this.onTap,
+    this.isLtr = false,
   });
 
   final String title;
   final String value;
   final Color? valueColor;
   final VoidCallback? onTap;
+
+  /// Whether [value] is inherently left-to-right (phone, email, URL). When
+  /// true it is wrapped in a Unicode LTR isolate so it reads correctly — e.g.
+  /// a leading `+` stays at the visual start — under an RTL layout.
+  final bool isLtr;
 }
 
 /// Resolved styling for [AppGroupedKeyValueList].

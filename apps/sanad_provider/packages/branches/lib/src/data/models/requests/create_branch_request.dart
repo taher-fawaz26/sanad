@@ -9,7 +9,7 @@ class CreateBranchRequest extends Equatable {
     required this.branchName,
     required this.branchType,
     required this.branchAddress,
-    required this.cityId,
+    required this.locationPlaceId,
     required this.branchPhone,
     required this.lat,
     required this.lng,
@@ -27,7 +27,7 @@ class CreateBranchRequest extends Equatable {
   final String branchName;
   final BranchType branchType;
   final String branchAddress;
-  final String cityId;
+  final String locationPlaceId;
   final String branchPhone;
   final String? branchManagerId;
   final double lat;
@@ -46,7 +46,7 @@ class CreateBranchRequest extends Equatable {
       'branchName': branchName,
       'type': branchType.toApiString(),
       'branchAddress': branchAddress,
-      'cityId': cityId,
+      'locationPlaceId': locationPlaceId,
       'branchPhone': branchPhone,
       'lat': lat,
       'lng': lng,
@@ -74,7 +74,7 @@ class CreateBranchRequest extends Equatable {
     branchName,
     branchType,
     branchAddress,
-    cityId,
+    locationPlaceId,
     branchPhone,
     branchManagerId,
     lat,

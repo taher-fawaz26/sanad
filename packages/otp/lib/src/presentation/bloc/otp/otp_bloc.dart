@@ -219,12 +219,25 @@ class OtpBloc<T> extends Bloc<OtpEvent, OtpState<T>> {
   }
 
   /// Maps by failure *type*, never by parsing backend prose.
+  ///
+  /// Only ever called from [_onSubmitted] against `verifyCode()`'s result, so
+  /// this is scoped to "was the submitted code accepted?" — a verify-code
+  /// endpoint has no business rule to enforce beyond that, so a plain
+  /// [BusinessRuleFailure] here means the same thing a [ValidationFailure]
+  /// does: the code was rejected. (A hand-written backend rejection — e.g.
+  /// `{"message": "Invalid code"}` — maps to [BusinessRuleFailure], not
+  /// [ValidationFailure], because `ErrorMapper` only produces the latter for
+  /// a class-validator-shaped `message` array; treating them differently here
+  /// previously routed a wrong-code response into the dispatch banner instead
+  /// of the field.)
   OtpPhase _verifyFailurePhase(Failure failure) {
     if (kOtpExpiredFailureCodes.contains(failure.code)) {
       return const OtpExpiredPhase();
     }
     if (failure is ConflictFailure) return OtpConflict(failure);
-    if (failure is ValidationFailure) return OtpInvalidCode(failure);
+    if (failure is ValidationFailure || failure is BusinessRuleFailure) {
+      return OtpInvalidCode(failure);
+    }
     // Anything else (network, server, auth) is a delivery-side problem the
     // user cannot fix by retyping — it belongs in the banner.
     return OtpDispatchFailed(failure);

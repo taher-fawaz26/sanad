@@ -5,7 +5,7 @@ import 'package:account_settings/src/domain/usecases/refresh_account_profile_use
 import 'package:account_settings/src/domain/usecases/update_account_settings_usecase.dart';
 import 'package:account_settings/src/presentation/bloc/account_settings/account_settings_bloc.dart';
 import 'package:auth/auth.dart'
-    show AuthAccountSettingsEntity, AuthSessionEntity, SessionManager;
+    show AuthAccountSettingsEntity, AuthSessionEntity, SessionManager, UserType;
 import 'package:bloc_test/bloc_test.dart';
 import 'package:core/core.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -65,6 +65,7 @@ void main() {
     );
     registerFallbackValue(_identityBuilder);
     registerFallbackValue(const NoParams());
+    registerFallbackValue(UserType.client);
   });
 
   setUp(() {
@@ -189,7 +190,7 @@ void main() {
     'update persists settings, updates state, and syncs the session',
     build: build,
     setUp: () {
-      when(() => updateAccountSettings(any())).thenAnswer(
+      when(() => updateAccountSettings(any(), any())).thenAnswer(
         (_) => TaskEither.right(_refreshedSettings),
       );
     },
@@ -219,7 +220,7 @@ void main() {
     'update failure surfaces the failure',
     build: build,
     setUp: () {
-      when(() => updateAccountSettings(any())).thenAnswer(
+      when(() => updateAccountSettings(any(), any())).thenAnswer(
         (_) => TaskEither.left(const ServerFailure(message: 'boom')),
       );
     },

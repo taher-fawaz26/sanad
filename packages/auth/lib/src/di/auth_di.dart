@@ -5,14 +5,18 @@ import 'package:auth/src/data/datasources/google_auth_datasource.dart';
 import 'package:auth/src/data/repositories/auth_repository_impl.dart';
 import 'package:auth/src/domain/repositories/auth_repository.dart';
 import 'package:auth/src/domain/usecases/check_signin_status_usecase.dart';
+import 'package:auth/src/domain/usecases/get_client_resend_info_usecase.dart';
 import 'package:auth/src/domain/usecases/get_current_user_usecase.dart';
 import 'package:auth/src/domain/usecases/get_resend_info_usecase.dart';
 import 'package:auth/src/domain/usecases/logout_usecase.dart';
+import 'package:auth/src/domain/usecases/request_client_otp_usecase.dart';
 import 'package:auth/src/domain/usecases/request_login_otp_usecase.dart';
 import 'package:auth/src/domain/usecases/request_signup_otp_usecase.dart';
 import 'package:auth/src/domain/usecases/resend_otp_usecase.dart';
 import 'package:auth/src/domain/usecases/social_login_usecase.dart';
 import 'package:auth/src/domain/usecases/social_signup_usecase.dart';
+import 'package:auth/src/domain/usecases/update_client_profile_usecase.dart';
+import 'package:auth/src/domain/usecases/verify_client_otp_usecase.dart';
 import 'package:auth/src/domain/usecases/verify_login_otp_usecase.dart';
 import 'package:auth/src/domain/usecases/verify_signup_otp_usecase.dart';
 import 'package:auth/src/presentation/bloc/auth/auth_bloc.dart';
@@ -102,6 +106,19 @@ class AuthDI {
         () => GetCurrentUserUseCase(sl<AuthRepository>()),
       )
       ..registerLazySingleton(() => AuthLogoutUseCase(sl<AuthRepository>()))
+      // ── Unified client sign-in use cases ─────────────────────────────────
+      ..registerLazySingleton(
+        () => RequestClientOtpUseCase(sl<AuthRepository>()),
+      )
+      ..registerLazySingleton(
+        () => GetClientResendInfoUseCase(sl<AuthRepository>()),
+      )
+      ..registerLazySingleton(
+        () => VerifyClientOtpUseCase(sl<AuthRepository>()),
+      )
+      ..registerLazySingleton(
+        () => UpdateClientProfileUseCase(sl<AuthRepository>()),
+      )
       ..registerLazySingleton(
         () => AuthCheckSignInStatusUseCase(sl<SessionManager>()),
       )

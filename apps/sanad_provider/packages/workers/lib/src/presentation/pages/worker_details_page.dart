@@ -475,10 +475,12 @@ class _ContactDetailsCard extends StatelessWidget {
       _ContactDetailRow(
         label: 'workers.contact_phone'.tr(),
         value: _displayValue(worker.phone),
+        isLtr: true,
       ),
       _ContactDetailRow(
         label: 'workers.contact_email'.tr(),
         value: _displayValue(worker.email),
+        isLtr: true,
       ),
       _ContactDetailRow(
         label: 'workers.contact_type'.tr(),
@@ -639,10 +641,17 @@ class _ContactDetailRow extends StatelessWidget {
   const _ContactDetailRow({
     required this.label,
     required this.value,
+    this.isLtr = false,
   });
 
   final String label;
   final String value;
+
+  /// Whether [value] is inherently left-to-right (phone, email). Such values
+  /// are wrapped in a Unicode LTR isolate so a leading `+` or digits read at
+  /// the visual start even under an RTL (Arabic) layout, and are capped to a
+  /// single line so a long email doesn't wrap awkwardly. See SAN-771.
+  final bool isLtr;
 
   @override
   Widget build(BuildContext context) {
@@ -659,17 +668,19 @@ class _ContactDetailRow extends StatelessWidget {
             height: 16 / 14,
           ),
         ),
-        const Spacer(),
-        Flexible(
-          fit: FlexFit.tight,
-          flex: 2,
+        SizedBox(width: AppSpacing.md),
+        // The value takes all remaining width so a long value (email) reads on
+        // one line instead of wrapping. LTR values are isolated + single-line.
+        Expanded(
           child: Text(
-            value,
+            isLtr ? value.ltrIsolated : value,
             style: typography.smallNormal.copyWith(
               color: colors.textPrimary,
               height: 16 / 14,
             ),
             textAlign: TextAlign.end,
+            maxLines: isLtr ? 1 : null,
+            overflow: isLtr ? TextOverflow.ellipsis : null,
           ),
         ),
       ],

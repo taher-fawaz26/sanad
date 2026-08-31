@@ -49,6 +49,8 @@ dependencies:
     path: ../../packages/sheet_navigation
   workers:
     path: ./packages/workers
+  config:
+    path: ../../packages/config
   core:
     path: ../../packages/core
   cupertino_icons: ^1.0.8
@@ -57,6 +59,8 @@ dependencies:
   firebase_core: ^3.13.1
   design_system:
     path: ../../packages/design_system
+  device:
+    path: ../../packages/device
   shared_ui:
     path: ../../packages/shared_ui
   dio: ^5.10.0

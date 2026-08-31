@@ -78,7 +78,13 @@ abstract final class ErrorMapper {
         final data = e.response?.data;
         final message = _extractMessage(data) ?? ErrorMessages.serverError;
         if (statusCode == 401) {
-          return UnauthorizedFailure(message: message, code: '401');
+          // Keep the response body (which carries `requestId`) in metadata so
+          // the exact backend request stays identifiable for support/debug.
+          return UnauthorizedFailure(
+            message: message,
+            code: '401',
+            metadata: _coerceMap(data),
+          );
         }
         if (statusCode == 403) {
           final meta = _coerceMap(data);
@@ -172,7 +178,13 @@ abstract final class ErrorMapper {
           );
         }
         if (statusCode != null && statusCode >= 500) {
-          return ServerFailure(message: message, code: statusCode.toString());
+          // Preserve the response body (carrying `requestId`) in metadata —
+          // e.g. a 503 from the AI service still identifies the request.
+          return ServerFailure(
+            message: message,
+            code: statusCode.toString(),
+            metadata: _coerceMap(data),
+          );
         }
         return ServerFailure(
           message: message,
