@@ -12,8 +12,9 @@ class FakeBaseApiClient implements BaseApiClient {
   final Map<String, TaskEither<Failure, dynamic>> responses;
 
   /// Default response when no path-specific handler is registered.
-  TaskEither<Failure, dynamic> defaultResponse =
-      TaskEither.left(const NetworkFailure(message: 'not configured'));
+  TaskEither<Failure, dynamic> defaultResponse = TaskEither.left(
+    const NetworkFailure(message: 'not configured'),
+  );
 
   @override
   TaskEither<Failure, T> request<T>({
@@ -22,6 +23,7 @@ class FakeBaseApiClient implements BaseApiClient {
     required FutureOr<T> Function(dynamic data) parser,
     Map<String, dynamic>? query,
     dynamic body,
+    bool authRequired = true,
   }) {
     final handler = responses[path] ?? defaultResponse;
     return TaskEither(() async {

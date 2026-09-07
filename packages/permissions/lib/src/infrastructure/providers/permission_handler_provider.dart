@@ -61,6 +61,10 @@ class PermissionHandlerProvider {
             ? ph.Permission.photos
             : ph.Permission.manageExternalStorage,
       PermissionType.microphone => ph.Permission.microphone,
+      // One native permission covers both platforms: `Permission.speech` is
+      // RECORD_AUDIO on Android and `SFSpeechRecognizer` authorization on iOS,
+      // so no `Platform` branch is needed here.
+      PermissionType.speechRecognition => ph.Permission.speech,
       PermissionType.locationWhenInUse => ph.Permission.locationWhenInUse,
       PermissionType.locationAlways => ph.Permission.locationAlways,
       PermissionType.notifications => ph.Permission.notification,

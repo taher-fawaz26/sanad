@@ -1,5 +1,6 @@
 import 'package:account_settings/account_settings.dart';
 import 'package:app_logger/app_logger.dart';
+import 'package:asset_picker/asset_picker.dart';
 import 'package:auth/auth.dart';
 import 'package:config/config.dart';
 import 'package:contact_verification/contact_verification.dart';
@@ -9,7 +10,9 @@ import 'package:design_system/design_system.dart';
 import 'package:device/device.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:localization/localization.dart';
+import 'package:media_upload/media_upload.dart';
 import 'package:network/network.dart';
+import 'package:permissions/permissions.dart';
 import 'package:sanad_client/src/config/app_config.dart';
 import 'package:sanad_client/src/features/ai_chat/src/module/ai_chat_module.dart';
 import 'package:storage/storage.dart';
@@ -17,7 +20,11 @@ import 'package:storage/storage.dart';
 late final ModuleRegistry moduleRegistry;
 
 /// Registers all application-level dependencies with the service locator.
-Future<void> configureDependencies() async {
+/// [initialLanguage] seeds [TranslateBloc] only when it has no persisted
+/// record — a stored choice always wins. See `LegacyLocalePreference`.
+Future<void> configureDependencies({
+  AppLanguage initialLanguage = AppLanguage.defaultLanguage,
+}) async {
   // ── Build-time feature flags ─────────────────────────────────────────────
   sl.registerLazySingleton<FeatureFlags>(() => AppConfig.featureFlags);
 
@@ -42,7 +49,7 @@ Future<void> configureDependencies() async {
       () => SecureLocalStorage(sl<FlutterSecureStorage>()),
     )
     // ── Localization & Theme ─────────────────────────────────────────────────
-    ..registerLazySingleton(TranslateBloc.new)
+    ..registerLazySingleton(() => TranslateBloc(fallback: initialLanguage))
     ..registerLazySingleton(ThemeBloc.new)
     // ── Auth status ──────────────────────────────────────────────────────────
     ..registerLazySingleton(AuthStatusNotifier.new);
@@ -61,6 +68,12 @@ Future<void> configureDependencies() async {
     },
   );
 
+  // ── Media upload (shared multipart pipeline) ─────────────────────────────
+  // After `NetworkDI.init`, which registers the `SecureDioClient` this
+  // resolves. One repository for the whole app; the AI chat's attachment
+  // uploader is built on top of it rather than owning a second upload stack.
+  MediaUploadDI.init();
+
   // ── Deep linking (OS-level incoming URI → GoRouter location) ─────────────
   DeepLinkingDI.init(config: AppConfig.deepLinkConfig);
 
@@ -70,6 +83,16 @@ Future<void> configureDependencies() async {
     // device/app info). Registered first: it declares no dependencies and
     // other modules resolve its services lazily.
     DeviceModule(),
+    // Runtime permission gateway. Registered before anything that asks for a
+    // capability: `Permissions` resolves `PermissionService` from `sl`, so
+    // without this every `ensureCamera`/`ensureMicrophone` call would throw.
+    PermissionsModule(),
+    // Camera / gallery / file acquisition. The AI chat composer is the only
+    // client consumer today; the scanner source is left unregistered because
+    // the client has no document-scanning flow.
+    AssetPickerModule(
+      config: const AssetPickerConfig(registerScanner: false),
+    ),
     AuthModule(
       // Session-boundary hook: every module's dispose() runs whenever a
       // session begins or ends, so per-session in-memory state cannot
@@ -80,8 +103,8 @@ Future<void> configureDependencies() async {
     ),
     ContactVerificationModule(),
     AccountSettingsModule(),
-    // Prototype only: contributes a dev-gated route and registers nothing
-    // globally, so it cannot affect production flows.
+    // Prototype only: contributes dev-gated routes and registers only
+    // per-visit capability factories, so it cannot affect production flows.
     AiChatModule(),
   ]);
   await moduleRegistry.initAll();

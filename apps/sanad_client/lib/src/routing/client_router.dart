@@ -3,6 +3,7 @@ import 'package:auth/auth.dart';
 import 'package:core/core.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:network/network.dart';
@@ -11,7 +12,7 @@ import 'package:sanad_client/src/features/account_setup/account_setup_cubit.dart
 import 'package:sanad_client/src/features/account_setup/account_setup_routes.dart';
 import 'package:sanad_client/src/features/account_setup/enter_name_page.dart';
 import 'package:sanad_client/src/features/account_setup/get_notified_page.dart';
-import 'package:sanad_client/src/features/ai_chat/src/presentation/pages/ai_chat_screen.dart';
+import 'package:sanad_client/src/features/ai_chat/src/routes/ai_chat_routes.dart';
 import 'package:sanad_client/src/features/home/home_page.dart';
 import 'package:sanad_client/src/features/oauth/oauth_email_page.dart';
 import 'package:sanad_client/src/features/oauth/oauth_otp_page.dart';
@@ -25,6 +26,7 @@ import 'package:sanad_client/src/features/oauth/oauth_uae_pass_page.dart';
 import 'package:sanad_client/src/features/oauth/oauth_uae_pass_success_page.dart';
 import 'package:sanad_client/src/features/oauth/oauth_uae_pass_waiting_page.dart';
 import 'package:sanad_client/src/features/oauth/uae_pass_collected_details.dart';
+import 'package:sanad_client/src/features/profile/profile_page.dart';
 import 'package:sanad_client/src/routing/client_routes.dart';
 import 'package:shared_ui/shared_ui.dart';
 
@@ -118,10 +120,20 @@ GoRouter buildClientRouter() {
             // defensive redirect for the real auth OTP route.
             redirect: (context, state) =>
                 state.extra is OAuthOtpRouteArgs ? null : OAuthRoutes.screen,
-            builder: (context, state) => buildOAuthOtpRoutePage(
-              context,
-              state.extra! as OAuthOtpRouteArgs,
-            ),
+            builder: (context, state) {
+              // The route-level `redirect` above guards *navigation*, but not
+              // a background *rebuild*: when auth status flips to
+              // authenticated, `refreshListenable` makes go_router re-parse
+              // the whole stack, and the imperative `extra` is not retained on
+              // that pass. If this route is still in the back stack at that
+              // moment, its builder re-runs with a null `extra` while its
+              // redirect does not re-fire — so force-unwrapping here threw
+              // "Null check operator used on a null value". Degrade to an
+              // empty frame instead; the redirect moves us on the next parse.
+              final args = state.extra;
+              if (args is! OAuthOtpRouteArgs) return const SizedBox.shrink();
+              return buildOAuthOtpRoutePage(context, args);
+            },
           ),
           ...filteredModuleRoutes,
           AuthShell.otpRoute(
@@ -164,16 +176,24 @@ GoRouter buildClientRouter() {
       ),
       GoRoute(
         path: ClientRoutes.home,
-        // Prototype affordance: in a debug build Home *is* the AI chat, so
-        // the feature can be exercised on a device without navigating to
-        // the dev-only `/dev/ai-chat` path. Release builds always get the
-        // real ClientHomePage — `kReleaseMode` is a compile-time constant,
-        // so the chat screen is tree-shaken out of a release binary.
+        // Prototype affordance: in a debug build Home *is* the AI chat
+        // shell, so the feature can be exercised on a device without
+        // navigating to the dev-only `/dev/ai-chat` path directly. A
+        // redirect rather than building `AiChatScreen` inline: the chat now
+        // lives inside `AiHomeShell`'s `StatefulShellRoute`, and building it
+        // bare here would skip that shell's header entirely. Release builds
+        // always get the real `ClientHomePage` — `kReleaseMode` is a
+        // compile-time constant, so this redirect and the shell it points to
+        // are both tree-shaken out of a release binary.
         //
         // Remove this branch once Home has real content, or once the chat
         // has a permanent entry point.
-        builder: (context, state) =>
-            kReleaseMode ? const ClientHomePage() : const AiChatScreen(),
+        redirect: (context, state) => kReleaseMode ? null : AiChatRoutes.chat,
+        builder: (context, state) => const ClientHomePage(),
+      ),
+      GoRoute(
+        path: ClientRoutes.profile,
+        builder: (context, state) => const ClientProfilePage(),
       ),
       GoRoute(
         path: ClientRoutes.offline,

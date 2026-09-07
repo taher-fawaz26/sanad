@@ -1,8 +1,6 @@
 import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:localization/localization.dart';
 
 /// Language selector chip for the OAuth screen (Figma `6979:27141`).
@@ -10,18 +8,14 @@ import 'package:localization/localization.dart';
 /// Not a reuse of `packages/auth`'s `LanguageDropdown` — that widget renders
 /// a plain bordered box with no flag, which doesn't match this Figma chip,
 /// and it's out of scope to modify (shared with `sanad_provider`). This
-/// widget performs the same two-step locale sync `LanguageDropdown` does:
-/// `context.setLocale()` (drives `.tr()`/RTL) and [TranslateBloc] (source of
-/// truth for the network layer's `Accept-Language` header) — both are
-/// required, kept in sync at this one call site.
+/// Switching goes through `context.setAppLanguage`, the app's single language
+/// entry point — [TranslateBloc] owns the language and `AppLocaleSync` applies
+/// it to EasyLocalization. This widget never touches `setLocale` itself.
 ///
 /// Flag emoji only — no SVG flag assets, per the design brief.
 class OAuthLanguageSelector extends StatelessWidget {
   /// Creates an [OAuthLanguageSelector].
   const OAuthLanguageSelector({super.key});
-
-  static const _english = Locale('en', 'US');
-  static const _arabic = Locale('ar', 'AR');
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +28,7 @@ class OAuthLanguageSelector extends StatelessWidget {
     // same value at runtime with a softer dependency.
     final isArabic = Localizations.localeOf(context).languageCode == 'ar';
 
-    return PopupMenuButton<Locale>(
+    return PopupMenuButton<AppLanguage>(
       offset: const Offset(0, 48),
       shape: RoundedRectangleBorder(borderRadius: AppRadius.circularLg),
       child: Container(
@@ -69,20 +63,17 @@ class OAuthLanguageSelector extends StatelessWidget {
           ],
         ),
       ),
-      itemBuilder: (context) => [
-        const PopupMenuItem(value: _english, child: Text('🇬🇧  English')),
-        const PopupMenuItem(value: _arabic, child: Text('🇦🇪  العربية')),
+      itemBuilder: (context) => const [
+        PopupMenuItem(
+          value: AppLanguage.english,
+          child: Text('🇬🇧  English'),
+        ),
+        PopupMenuItem(
+          value: AppLanguage.arabic,
+          child: Text('🇦🇪  العربية'),
+        ),
       ],
-      onSelected: (locale) async {
-        // Two systems must stay in sync (mirrors LanguageDropdown):
-        //   1. EasyLocalization — drives `.tr()` and RTL/LTR rebuilds.
-        //   2. TranslateBloc     — source of truth for `Accept-Language`.
-        await context.setLocale(locale);
-        if (!context.mounted) return;
-        context.read<TranslateBloc>().add(
-          locale.languageCode == 'ar' ? TrArabicEvent() : TrEnglishEvent(),
-        );
-      },
+      onSelected: context.setAppLanguage,
     );
   }
 }

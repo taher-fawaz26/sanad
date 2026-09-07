@@ -19,9 +19,12 @@ import 'package:shared_ui/shared_ui.dart';
 
 final List<ProviderStatisticEntity> _skeletonStatistics = List.generate(
   4,
+  // `name` is skeleton-masked, never read as copy — BoneMock keeps it out of
+  // the localized surface entirely (same convention as the recent-activity
+  // section) instead of shipping a hardcoded English placeholder.
   (index) => ProviderStatisticEntity(
     key: 'skeleton_$index',
-    name: 'Loading',
+    name: BoneMock.words(2),
     value: 0,
   ),
 );

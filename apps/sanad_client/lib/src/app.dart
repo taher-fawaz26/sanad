@@ -9,6 +9,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
 import 'package:network/network.dart';
+import 'package:otp/otp.dart';
 import 'package:sanad_client/src/lock/app_lock_binding.dart';
 import 'package:sanad_client/src/routing/client_router.dart';
 
@@ -69,48 +70,64 @@ class _SanadClientAppState extends State<SanadClientApp>
             BlocProvider(create: (_) => sl<ThemeBloc>()),
             BlocProvider(create: (_) => sl<TranslateBloc>()),
           ],
-          child: BlocBuilder<ThemeBloc, ThemeState>(
-            builder: (context, themeState) {
-              return Builder(
-                builder: (context) {
-                  final locale = context.locale;
-                  final mediaQuery = MediaQuery.of(context);
-                  final systemScale = mediaQuery.textScaler.scale(1);
-                  final safeScale = systemScale.clamp(0.9, 1.3);
-                  return MediaQuery(
-                    data: mediaQuery.copyWith(
-                      textScaler: TextScaler.linear(safeScale),
-                    ),
-                    child: ScreenUtilInit(
-                      designSize: const Size(360, 800),
-                      useInheritedMediaQuery: true,
-                      minTextAdapt: true,
-                      splitScreenMode: true,
-                      builder: (_, _) {
-                        return AppLockGate(
-                          controller: _appLock,
-                          themeMode: _resolveThemeMode(themeState),
-                          localizationsDelegates: context.localizationDelegates,
-                          supportedLocales: context.supportedLocales,
-                          locale: locale,
-                          child: MaterialApp.router(
-                            debugShowCheckedModeBanner: false,
+          // The single place the app applies a locale to EasyLocalization.
+          // Mounted inside the TranslateBloc provider (so it can subscribe)
+          // and inside EasyLocalization (so it can call setLocale), above the
+          // router — so a language change rebuilds in place rather than
+          // recreating pages.
+          child: AppLocaleSync(
+            child: BlocBuilder<ThemeBloc, ThemeState>(
+              builder: (context, themeState) {
+                return Builder(
+                  builder: (context) {
+                    final locale = context.locale;
+                    final mediaQuery = MediaQuery.of(context);
+                    final systemScale = mediaQuery.textScaler.scale(1);
+                    final safeScale = systemScale.clamp(0.9, 1.3);
+                    return MediaQuery(
+                      data: mediaQuery.copyWith(
+                        textScaler: TextScaler.linear(safeScale),
+                      ),
+                      child: ScreenUtilInit(
+                        designSize: const Size(360, 800),
+                        useInheritedMediaQuery: true,
+                        minTextAdapt: true,
+                        splitScreenMode: true,
+                        builder: (_, _) {
+                          return AppLockGate(
+                            controller: _appLock,
+                            themeMode: _resolveThemeMode(themeState),
                             localizationsDelegates:
                                 context.localizationDelegates,
                             supportedLocales: context.supportedLocales,
                             locale: locale,
-                            theme: AppTheme.light(),
-                            darkTheme: AppTheme.dark(),
-                            themeMode: _resolveThemeMode(themeState),
-                            routerConfig: _router,
-                          ),
-                        );
-                      },
-                    ),
-                  );
-                },
-              );
-            },
+                            // The client app's OTP screens follow the client
+                            // Figma spec. Declared once here so the OTP call
+                            // sites inside shared packages (`auth` sign-in,
+                            // `account_settings` deletion) render this app's
+                            // design without taking a style parameter.
+                            child: OtpStyleScope(
+                              style: OtpVisualStyle.client,
+                              child: MaterialApp.router(
+                                debugShowCheckedModeBanner: false,
+                                localizationsDelegates:
+                                    context.localizationDelegates,
+                                supportedLocales: context.supportedLocales,
+                                locale: locale,
+                                theme: AppTheme.light(),
+                                darkTheme: AppTheme.dark(),
+                                themeMode: _resolveThemeMode(themeState),
+                                routerConfig: _router,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ),
       ),

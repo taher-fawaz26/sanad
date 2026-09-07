@@ -62,6 +62,13 @@ class _CollectingView extends StatelessWidget {
             children: [
               Expanded(
                 child: SingleChildScrollView(
+                  // No staggered entrance here (unlike the other UAE PASS
+                  // screens): this screen's continue-button enablement is
+                  // driven by `UaePassCollectionCubit`'s wall-clock timers, and
+                  // an entrance animation would make the harness's
+                  // `pumpAndSettle` advance that same clock, shifting the
+                  // staged reveal timing. The per-row loading→verified
+                  // crossfade (in `UaePassDetailsCard`) carries the motion.
                   child: Column(
                     children: [
                       SizedBox(height: responsiveDimension(AppSpacing.xxxxl)),

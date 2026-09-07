@@ -3,7 +3,7 @@ import 'package:branches/src/domain/entities/branch_manager_entity.dart';
 import 'package:branches/src/domain/entities/branch_schedule_mode.dart';
 import 'package:branches/src/domain/entities/branch_type.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
-import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_cubit.dart';
+import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_bloc.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_state.dart';
 import 'package:branches/src/presentation/utils/branch_schedule_formatter.dart';
 import 'package:branches/src/presentation/widgets/branch_location_field.dart';
@@ -47,12 +47,10 @@ class _AddBranchStepOneState extends State<AddBranchStepOne> {
   final _branchNameController = TextEditingController();
   final _phoneController = TextEditingController();
 
-  bool _setupSeeded = false;
-
   @override
   void initState() {
     super.initState();
-    final draft = context.read<AddBranchDraftCubit>().state;
+    final draft = context.read<AddBranchDraftBloc>().state;
     _branchNameController.text = draft.branchName;
     _phoneController.text = draft.phone;
 
@@ -68,17 +66,21 @@ class _AddBranchStepOneState extends State<AddBranchStepOne> {
   }
 
   void _pushBasicInfoToDraft() {
-    context.read<AddBranchDraftCubit>().updateBasicInfo(
+    context.read<AddBranchDraftBloc>().updateBasicInfo(
       branchName: _branchNameController.text,
       phone: _phoneController.text,
     );
   }
 
+  /// The widget-level "have we already seeded" latch is gone — both
+  /// [AddBranchDraftBloc.setCompanyHasWorkingHours] and
+  /// [AddBranchDraftBloc.initializeCustomSchedule] are idempotent (the
+  /// former no-ops on equal value, the latter no-ops when a custom schedule
+  /// already exists), so it is safe to call them on every setup-success
+  /// transition.
   void _seedFromSetup(AddBranchState state) {
-    if (_setupSeeded || state.setupStatus != RequestStatus.success) return;
-    _setupSeeded = true;
-
-    context.read<AddBranchDraftCubit>()
+    if (state.setupStatus != RequestStatus.success) return;
+    context.read<AddBranchDraftBloc>()
       ..setCompanyHasWorkingHours(
         hasHours: state.companySchedule.any((day) => day.slots.isNotEmpty),
       )
@@ -88,7 +90,7 @@ class _AddBranchStepOneState extends State<AddBranchStepOne> {
   }
 
   void _onScheduleModeChanged(BranchScheduleMode mode) {
-    final draftCubit = context.read<AddBranchDraftCubit>();
+    final draftCubit = context.read<AddBranchDraftBloc>();
     draftCubit.updateScheduleMode(mode);
 
     if (mode == BranchScheduleMode.custom &&
@@ -205,14 +207,14 @@ class _MainInfoSection extends StatelessWidget {
                 },
               ),
               SizedBox(height: AppSpacing.md),
-              BlocSelector<AddBranchDraftCubit, AddBranchDraft, BranchType>(
+              BlocSelector<AddBranchDraftBloc, AddBranchDraft, BranchType>(
                 selector: (state) => state.branchType,
                 builder: (context, selectedType) {
                   return BranchTypeSelectField(
                     selectedType: selectedType,
                     isRequired: true,
                     onTypeSelected: (type) {
-                      context.read<AddBranchDraftCubit>().updateBranchType(
+                      context.read<AddBranchDraftBloc>().updateBranchType(
                         type,
                       );
                     },
@@ -221,7 +223,7 @@ class _MainInfoSection extends StatelessWidget {
               ),
               SizedBox(height: AppSpacing.md),
               BlocSelector<
-                AddBranchDraftCubit,
+                AddBranchDraftBloc,
                 AddBranchDraft,
                 ({String? address, bool hasPlaceId})
               >(
@@ -304,10 +306,16 @@ class _ContactSection extends StatelessWidget {
                 hint: 'branches.add_branch.branch_phone_hint'.tr(),
                 isRequired: true,
                 validator: _phoneValidator,
+                // Validate live as the user types (not only after a failed
+                // "Next") so an invalid number (wrong prefix / repeated
+                // digits) surfaces an error immediately instead of sitting in
+                // the field with a valid-looking border (SAN-777). The field
+                // already caps input at 10 digits and requires a UAE mobile.
+                autovalidateMode: AutovalidateMode.onUserInteraction,
               ),
               SizedBox(height: AppSpacing.md),
               BlocSelector<
-                AddBranchDraftCubit,
+                AddBranchDraftBloc,
                 AddBranchDraft,
                 BranchManagerEntity?
               >(
@@ -320,7 +328,7 @@ class _ContactSection extends StatelessWidget {
                         ? 'branches.add_branch.branch_manager_required'.tr()
                         : null,
                     onManagerSelected: (manager) {
-                      context.read<AddBranchDraftCubit>().updateManager(
+                      context.read<AddBranchDraftBloc>().updateManager(
                         manager,
                       );
                     },
@@ -396,7 +404,7 @@ class _WorkingHoursSection extends StatelessWidget {
                     prev.companySchedule != curr.companySchedule,
                 builder: (context, blocState) {
                   return BlocSelector<
-                    AddBranchDraftCubit,
+                    AddBranchDraftBloc,
                     AddBranchDraft,
                     ({
                       BranchScheduleMode mode,
@@ -412,7 +420,7 @@ class _WorkingHoursSection extends StatelessWidget {
                       rejection: state.lastScheduleRejection,
                     ),
                     builder: (context, draft) {
-                      final draftCubit = context.read<AddBranchDraftCubit>();
+                      final draftCubit = context.read<AddBranchDraftBloc>();
                       final scheduleError = showErrors
                           ? _scheduleError(draft)
                           : null;

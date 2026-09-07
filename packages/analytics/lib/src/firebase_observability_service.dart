@@ -11,10 +11,10 @@ class FirebaseObservabilityService implements ObservabilityService {
     FirebaseCrashlytics? crashlytics,
     FirebaseRemoteConfig? remoteConfig,
     FirebasePerformance? performance,
-  })  : _analytics = analytics ?? FirebaseAnalytics.instance,
-        _crashlytics = crashlytics ?? FirebaseCrashlytics.instance,
-        _remoteConfig = remoteConfig ?? FirebaseRemoteConfig.instance,
-        _performance = performance ?? FirebasePerformance.instance;
+  }) : _analytics = analytics ?? FirebaseAnalytics.instance,
+       _crashlytics = crashlytics ?? FirebaseCrashlytics.instance,
+       _remoteConfig = remoteConfig ?? FirebaseRemoteConfig.instance,
+       _performance = performance ?? FirebasePerformance.instance;
 
   final FirebaseAnalytics _analytics;
   final FirebaseCrashlytics _crashlytics;

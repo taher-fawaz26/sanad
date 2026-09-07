@@ -116,7 +116,7 @@ void main() {
     whenListen(
       translateBloc = _MockTranslateBloc(),
       languageStates.stream,
-      initialState: const TranslateState(languageCode: 'en'),
+      initialState: const TranslateState(language: AppLanguage.english),
     );
 
     _SecuritySliverProbe.buildCount = 0;
@@ -171,7 +171,7 @@ void main() {
       final buildsAfterMount = _SecuritySliverProbe.buildCount;
 
       // English → Arabic, staying on the same page (no navigation).
-      languageStates.add(const TranslateState());
+      languageStates.add(const TranslateState(language: AppLanguage.arabic));
       await tester.pumpAndSettle();
 
       // The section rebuilt under the new locale...
@@ -187,7 +187,7 @@ void main() {
 
       // Arabic → English, again in place.
       final buildsAfterArabic = _SecuritySliverProbe.buildCount;
-      languageStates.add(const TranslateState(languageCode: 'en'));
+      languageStates.add(const TranslateState(language: AppLanguage.english));
       await tester.pumpAndSettle();
 
       expect(find.text('lang=en'), findsOneWidget);

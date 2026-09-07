@@ -81,7 +81,8 @@ void main() {
     test(
       'a single strong term alone (no corroborating signal) is not enough',
       () {
-        const text = 'This photo happens to mention United Arab Emirates '
+        const text =
+            'This photo happens to mention United Arab Emirates '
             'once but nothing else about it looks like an ID card.';
         expect(EmiratesIdSignalPolicy.evaluate(text), isFalse);
       },

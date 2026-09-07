@@ -81,8 +81,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            floatingActionButtonLocation:
-                BottomNavExpandableCenter.fabLocation,
+            floatingActionButtonLocation: BottomNavExpandableCenter.fabLocation,
             bottomNavigationBar: BottomNavBar<_Dest>(
               destinations: const [
                 BottomNavDestination(

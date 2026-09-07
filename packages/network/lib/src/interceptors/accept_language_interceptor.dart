@@ -27,8 +27,13 @@ class AcceptLanguageInterceptor extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    final raw = _resolve().toLowerCase();
-    final language = (raw == 'en' || raw == 'ar') ? raw : 'ar';
+    // Normalize to the primary subtag so a full locale tag (`en-US`, or
+    // Dart's `Locale.toString()` form `ar_AR`) still resolves — the backend
+    // only accepts a bare `ar`/`en` on `x-lang` and would silently default to
+    // English for anything else. Unknown codes fall back to `en`, the product
+    // default language.
+    final raw = _resolve().toLowerCase().split(RegExp('[-_]')).first;
+    final language = (raw == 'en' || raw == 'ar') ? raw : 'en';
     options.headers[_acceptLanguageHeader] = language;
     options.headers[_langHeader] = language;
     handler.next(options);

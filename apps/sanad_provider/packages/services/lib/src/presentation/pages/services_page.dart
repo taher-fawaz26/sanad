@@ -682,8 +682,7 @@ class _MyServicesContentState extends State<_MyServicesContent> {
                       AppSpacing.xl,
                       AppSpacing.xl,
                     ),
-                    separatorBuilder: (_, _) =>
-                        SizedBox(height: AppSpacing.md),
+                    separatorBuilder: (_, _) => SizedBox(height: AppSpacing.md),
                     itemBuilder: (context, service, index) =>
                         _showSwipeHintFor(index)
                         ? AppSwipeActionHint(

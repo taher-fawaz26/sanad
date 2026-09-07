@@ -20,6 +20,15 @@ class OtpVerificationPage<T> extends StatelessWidget {
       config: config,
       onResult: (result) {
         if (!context.mounted) return;
+        // Pop *this* route or nothing. A result can still arrive after the
+        // user dismissed the flow — the success screen auto-closes on a timer
+        // — and popping then removes whichever route is now on top instead.
+        // In the contact-change flow that is the caller's own sheet, whose
+        // result type is a `String`, so the stray pop crashed on
+        // `OtpVerified<T> is not a subtype of String?` rather than merely
+        // navigating somewhere unexpected.
+        final route = ModalRoute.of(context);
+        if (route == null || !route.isCurrent) return;
         Navigator.of(context).pop<OtpResult<T>>(result);
       },
     );

@@ -31,6 +31,13 @@ abstract class LocationService {
   /// first, same as [checkPermission].
   Future<LocationPermissionStatus> requestPermission();
 
-  /// Opens the OS app-settings screen.
+  /// Opens the OS app-settings screen. Recovery path when the app permission
+  /// is permanently denied.
   Future<bool> openAppSettings();
+
+  /// Opens the OS *device location* settings screen (the global GPS toggle).
+  /// Recovery path when location services are switched off — distinct from
+  /// [openAppSettings], which only exposes the app's own permission and cannot
+  /// turn the device radio on.
+  Future<bool> openLocationSettings();
 }

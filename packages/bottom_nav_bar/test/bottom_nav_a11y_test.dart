@@ -84,7 +84,9 @@ void main() {
       expect(tapped, isNull);
     });
 
-    testWidgets('dark theme colors resolve from BottomNavThemeData', (tester) async {
+    testWidgets('dark theme colors resolve from BottomNavThemeData', (
+      tester,
+    ) async {
       const darkTheme = BottomNavThemeData(
         barColor: Color(0xFF111111),
         selectedColor: Color(0xFF00FF00),
@@ -126,8 +128,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            floatingActionButtonLocation:
-                BottomNavExpandableCenter.fabLocation,
+            floatingActionButtonLocation: BottomNavExpandableCenter.fabLocation,
             floatingActionButton: BottomNavExpandableCenter<_Action>(
               actions: const [
                 BottomNavAction(

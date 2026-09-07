@@ -1,5 +1,6 @@
 import 'package:branches/src/data/models/branch_dto.dart';
-import 'package:branches/src/domain/entities/paginated_branches_entity.dart';
+import 'package:branches/src/domain/entities/branch_entity.dart';
+import 'package:core/core.dart';
 
 /// Parses the `/provider/branches` paginated response.
 ///
@@ -16,7 +17,7 @@ class BranchListResponseDto {
         .toList();
 
     final metaJson = json['meta'] as Map<String, dynamic>;
-    final meta = BranchPaginationMeta(
+    final meta = PageMeta(
       totalItems: metaJson['totalItems'] as int? ?? 0,
       itemCount: metaJson['itemCount'] as int? ?? 0,
       itemsPerPage: metaJson['itemsPerPage'] as int? ?? 10,
@@ -28,10 +29,10 @@ class BranchListResponseDto {
   }
 
   final List<BranchDto> branches;
-  final BranchPaginationMeta meta;
+  final PageMeta meta;
 
-  PaginatedBranchesEntity toDomain() => PaginatedBranchesEntity(
-    branches: branches.map((b) => b.toDomain()).toList(),
+  Page<BranchEntity> toPage() => Page<BranchEntity>(
+    items: branches.map((b) => b.toDomain()).toList(),
     meta: meta,
   );
 }

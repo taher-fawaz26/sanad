@@ -41,8 +41,7 @@ class BranchScheduleSection extends StatelessWidget {
   /// [BranchSchedulePolicy.upsertSlot]). The caller owns the actual
   /// persistence/state change; this widget only triggers the attempt and
   /// renders [rejection] when it fails.
-  final SlotValidation Function(String dayId, String from, String to)
-  onAddSlot;
+  final SlotValidation Function(String dayId, String from, String to) onAddSlot;
 
   /// Deletes exactly one slot — `dayId`'s slot at its own chronological
   /// `slotIndex` — never the whole day unless it was the last slot.

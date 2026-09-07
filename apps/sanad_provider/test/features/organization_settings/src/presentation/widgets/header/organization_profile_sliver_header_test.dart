@@ -421,12 +421,13 @@ void main() {
         await _pump(tester, coverUrl: _coverUrl, logoUrl: _logoUrl);
         await tester.pump();
 
-        final bloc = tester
-            .element(find.byType(MediaAvatar))
-            .read<IdentityHeaderBloc>()
-          ..add(
-            const IdentityHeaderMediaRemoved(slot: OrganizationMediaSlot.logo),
-          );
+        final bloc =
+            tester.element(find.byType(MediaAvatar)).read<IdentityHeaderBloc>()
+              ..add(
+                const IdentityHeaderMediaRemoved(
+                  slot: OrganizationMediaSlot.logo,
+                ),
+              );
         await tester.pump();
         await tester.pump();
 
@@ -485,12 +486,13 @@ void main() {
         await _pump(tester, coverUrl: _coverUrl, logoUrl: _logoUrl);
         await tester.pump();
 
-        final bloc = tester
-            .element(find.byType(MediaAvatar))
-            .read<IdentityHeaderBloc>()
-          ..add(
-            const IdentityHeaderMediaRemoved(slot: OrganizationMediaSlot.logo),
-          );
+        final bloc =
+            tester.element(find.byType(MediaAvatar)).read<IdentityHeaderBloc>()
+              ..add(
+                const IdentityHeaderMediaRemoved(
+                  slot: OrganizationMediaSlot.logo,
+                ),
+              );
         await tester.pump();
         await tester.pump();
 
@@ -518,14 +520,15 @@ void main() {
         await _pump(tester, coverUrl: _coverUrl, logoUrl: _logoUrl);
         await tester.pump();
 
-        final bloc = tester
-            .element(find.byType(MediaCoverPhoto))
-            .read<IdentityHeaderBloc>()
-          ..add(
-            const IdentityHeaderMediaRemoved(
-              slot: OrganizationMediaSlot.cover,
-            ),
-          );
+        final bloc =
+            tester
+                .element(find.byType(MediaCoverPhoto))
+                .read<IdentityHeaderBloc>()
+              ..add(
+                const IdentityHeaderMediaRemoved(
+                  slot: OrganizationMediaSlot.cover,
+                ),
+              );
         await tester.pump();
         await tester.pump();
 

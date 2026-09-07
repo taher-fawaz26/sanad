@@ -19,6 +19,18 @@ enum VerificationPurpose {
     VerificationPurpose.changeBusinessPhone => 'change_business_phone',
   };
 
+  /// Parses a wire value, or `null` when it is absent or unrecognized.
+  ///
+  /// Preferred wherever a bad value should not take down a flow that has
+  /// otherwise succeeded — see [fromApi] for the strict form.
+  static VerificationPurpose? tryFromApi(Object? value) => switch (value) {
+    'change_owner_email' => VerificationPurpose.changeOwnerEmail,
+    'change_owner_phone' => VerificationPurpose.changeOwnerPhone,
+    'change_business_email' => VerificationPurpose.changeBusinessEmail,
+    'change_business_phone' => VerificationPurpose.changeBusinessPhone,
+    _ => null,
+  };
+
   static VerificationPurpose fromApi(String value) => switch (value) {
     'change_owner_email' => VerificationPurpose.changeOwnerEmail,
     'change_owner_phone' => VerificationPurpose.changeOwnerPhone,

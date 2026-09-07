@@ -15,6 +15,7 @@ export 'src/domain/enums/otp_channel.dart';
 export 'src/domain/enums/otp_purpose.dart';
 export 'src/module/otp_module.dart';
 export 'src/presentation/config/otp_flow_config.dart';
+export 'src/presentation/config/otp_visual_style.dart';
 export 'src/presentation/flow/otp_flow.dart';
 export 'src/presentation/view/otp_host.dart';
 export 'src/presentation/view/otp_view.dart';

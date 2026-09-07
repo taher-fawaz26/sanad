@@ -33,7 +33,11 @@ import 'package:workers/workers.dart';
 late final ModuleRegistry moduleRegistry;
 
 /// Registers all application-level dependencies with the service locator.
-Future<void> configureDependencies() async {
+/// [initialLanguage] seeds [TranslateBloc] only when it has no persisted
+/// record — a stored choice always wins. See `LegacyLocalePreference`.
+Future<void> configureDependencies({
+  AppLanguage initialLanguage = AppLanguage.defaultLanguage,
+}) async {
   // ── Build-time feature flags ─────────────────────────────────────────────
   sl.registerLazySingleton<FeatureFlags>(() => AppConfig.featureFlags);
 
@@ -58,7 +62,7 @@ Future<void> configureDependencies() async {
       () => SecureLocalStorage(sl<FlutterSecureStorage>()),
     )
     // ── Localization & Theme ─────────────────────────────────────────────────
-    ..registerLazySingleton(TranslateBloc.new)
+    ..registerLazySingleton(() => TranslateBloc(fallback: initialLanguage))
     ..registerLazySingleton(ThemeBloc.new)
     // ── Auth status ──────────────────────────────────────────────────────────
     ..registerLazySingleton(AuthStatusNotifier.new);

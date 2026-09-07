@@ -1,3 +1,4 @@
+import 'package:app_animations/app_animations.dart';
 import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -43,7 +44,7 @@ class OAuthUaePassWaitingPage extends StatelessWidget {
                       constraints: BoxConstraints(
                         minHeight: constraints.maxHeight,
                       ),
-                      child: Column(
+                      child: AppStaggeredColumn(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           AppSvgPicture.asset(

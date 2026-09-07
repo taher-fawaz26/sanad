@@ -11,6 +11,7 @@ class GeocodedAddress extends Equatable {
     required this.formattedAddress,
     this.areaName,
     this.isoCountryCode,
+    this.placeId,
   });
 
   /// The full, comma-joined address (street, locality, country, ...).
@@ -25,6 +26,19 @@ class GeocodedAddress extends Equatable {
   /// selection inside the supported country.
   final String? isoCountryCode;
 
+  /// The Google `place_id` for the resolved location, when the reverse-geocode
+  /// came from a Google source (the REST Geocoding API). Null for the platform
+  /// geocoder, which does not expose a Place ID. This is what lets a
+  /// map-dragged / current-location point carry a real, submittable Place ID
+  /// — the same canonical id the backend requires — without forcing the user
+  /// to pick a search result (SAN-778 follow-up).
+  final String? placeId;
+
   @override
-  List<Object?> get props => [formattedAddress, areaName, isoCountryCode];
+  List<Object?> get props => [
+    formattedAddress,
+    areaName,
+    isoCountryCode,
+    placeId,
+  ];
 }

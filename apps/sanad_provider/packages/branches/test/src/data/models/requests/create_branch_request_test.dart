@@ -1,5 +1,9 @@
 import 'package:branches/src/data/models/requests/create_branch_request.dart';
+import 'package:branches/src/domain/entities/branch_availability_entity.dart';
+import 'package:branches/src/domain/entities/branch_availability_mode.dart';
+import 'package:branches/src/domain/entities/branch_time_slot_entity.dart';
 import 'package:branches/src/domain/entities/branch_type.dart';
+import 'package:branches/src/domain/entities/branch_weekdays.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -57,6 +61,43 @@ void main() {
       final map = baseRequest.toMap();
       expect(map['branchManagerId'], 'mgr-1');
     });
+
+    test(
+      'serializes canonical all-caps availability days as Title-case — the '
+      'backend rejects "SATURDAY" with 400 (SAN-780 write regression)',
+      () {
+        const request = CreateBranchRequest(
+          branchName: 'Downtown Branch',
+          branchType: BranchType.mainBranch,
+          branchAddress: 'Building 5, Sheikh Zayed Road',
+          locationPlaceId: 'ChIJvRmU9K1DXz4RYKyuhY6v0wM',
+          branchPhone: '+971501234567',
+          branchManagerId: 'mgr-1',
+          lat: 25.2048,
+          lng: 55.2708,
+          radiusKm: 5,
+          workerIds: ['w1'],
+          availabilityMode: BranchAvailabilityMode.custom,
+          availability: [
+            BranchAvailabilityEntity(
+              day: BranchWeekdays.saturday,
+              slots: [BranchTimeSlotEntity(from: '10:00', to: '14:00')],
+            ),
+            BranchAvailabilityEntity(
+              day: BranchWeekdays.friday,
+              slots: [BranchTimeSlotEntity(from: '09:00', to: '13:00')],
+            ),
+          ],
+        );
+
+        final map = request.toMap();
+        final availability = map['availability'] as List<dynamic>;
+        expect(
+          availability.map((e) => (e as Map<String, dynamic>)['day']),
+          ['Saturday', 'Friday'],
+        );
+      },
+    );
 
     test(
       'omits branchManagerId key entirely when null, never sends a null '

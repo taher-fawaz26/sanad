@@ -1,5 +1,5 @@
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
-import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_cubit.dart';
+import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_bloc.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_state.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -50,11 +50,10 @@ class AddBranchWizardFooter extends StatelessWidget {
       ),
       child: switch (currentStep) {
         1 => _StepOneButton(onNext: onNext),
-        2 when coverageAccessDenied && locationPermanentlyBlocked =>
-          AppButton(
-            label: 'common.open_settings'.tr(),
-            onPressed: onOpenLocationSettings,
-          ),
+        2 when coverageAccessDenied && locationPermanentlyBlocked => AppButton(
+          label: 'common.open_settings'.tr(),
+          onPressed: onOpenLocationSettings,
+        ),
         2 when coverageAccessDenied => AppButton(
           label: 'branches.add_branch.location_allow_access'.tr(),
           onPressed: onRequestLocationAgain,
@@ -84,7 +83,7 @@ class _StepOneButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocSelector<AddBranchDraftCubit, AddBranchDraft, bool>(
+    return BlocSelector<AddBranchDraftBloc, AddBranchDraft, bool>(
       selector: (state) => state.isStepOneComplete,
       builder: (context, canProceed) {
         return BlocSelector<
@@ -121,7 +120,7 @@ class _StepTwoButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocSelector<AddBranchDraftCubit, AddBranchDraft, bool>(
+    return BlocSelector<AddBranchDraftBloc, AddBranchDraft, bool>(
       selector: (state) => state.isStepTwoComplete,
       builder: (context, hasCoverage) {
         if (!hasCoverage) {
@@ -150,7 +149,7 @@ class _StepThreeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocSelector<AddBranchDraftCubit, AddBranchDraft, bool>(
+    return BlocSelector<AddBranchDraftBloc, AddBranchDraft, bool>(
       selector: (state) => state.isStepThreeComplete,
       builder: (context, hasServices) {
         if (!hasServices) {
@@ -179,7 +178,7 @@ class _StepFourButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocSelector<AddBranchDraftCubit, AddBranchDraft, bool>(
+    return BlocSelector<AddBranchDraftBloc, AddBranchDraft, bool>(
       selector: (state) => state.isStepFourComplete,
       builder: (context, hasWorkers) {
         if (!hasWorkers) {

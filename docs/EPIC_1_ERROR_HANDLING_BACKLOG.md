@@ -24,7 +24,7 @@ Legend: ✅ done · 🟡 partial · ⛔ backend-gated · ⬜ deferred.
 | EH-S3-02 | Refresh Lifecycle (staleness fixed) | ✅ |
 | EH-S4-01 | Backend stable error codes | ⛔ backend team — API still returns no `errorCode` |
 | EH-S4-02 | Client code→Failure + business taxonomy (`Conflict`/`BusinessRule`/`RateLimit`) | 🟡 status-mapping done; code→Failure & 403-sniffing removal gated on EH-S4-01 |
-| EH-S4-03 | Request-shape mismatches | 🟡 `cityId`/`status` resolved; manager mapping & `company/schedule` not re-verified |
+| EH-S4-03 | Request-shape mismatches | 🟡 `cityId` closed (city derived from `locationPlaceId`, never sent — SAN-774); `status` resolved; manager mapping & `company/schedule` not re-verified |
 
 Not-yet-scheduled cleanup remains open: **D9** (maps error regime), **D11** (dead code: `BaseRequestBloc`/`FailureMapper`/`ApiErrorResponse`/unused `packages/domain`/`API_GUIDE.md` drift), **D12** (TLS pinning, reachability, `CancelToken`). Consider a **Sprint 5 — Cleanup & Hardening**.
 
@@ -223,7 +223,7 @@ Sprint 4  API Error Codes ◄── Taxonomy (S1) ── (BACKEND + client codeg
 - **Dependencies.** EH-S4-01, EH-S1-01. **Effort.** L · **Risk.** Med.
 
 ### EH-S4-03 · Resolve open request-shape mismatches (D14)
-- **Scope.** Address the pre-existing request-body mismatches recorded in project memory (`city`→`cityId`, `isAvailable`→`status`, manager mapping, `company/schedule`→`profile/availability`).
+- **Scope.** Address the pre-existing request-body mismatches recorded in project memory (`city`→`cityId` — **closed the other way**: the backend derives the city from `locationPlaceId` and rejects `cityId`, so nothing is sent (SAN-774); `isAvailable`→`status`, manager mapping, `company/schedule`→`profile/availability`).
 - **Rationale (D14).** Orthogonal to error handling but naturally batched with the contract sprint.
 - **Acceptance criteria.** Branch create/update send correct fields; no silent 400s from shape drift.
 - **Dependencies.** EH-S4-01 (spec confirmation). **Effort.** M · **Risk.** Med.

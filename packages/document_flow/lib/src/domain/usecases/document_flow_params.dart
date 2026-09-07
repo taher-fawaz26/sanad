@@ -1,4 +1,10 @@
-import 'package:document_flow/document_flow.dart' show DocumentFlowRepository, ExtractDocumentsUseCase, FetchDocumentsUseCase, SubmitDocumentsUseCase, UploadMediaUseCase;
+import 'package:document_flow/document_flow.dart'
+    show
+        DocumentFlowRepository,
+        ExtractDocumentsUseCase,
+        FetchDocumentsUseCase,
+        SubmitDocumentsUseCase,
+        UploadMediaUseCase;
 import 'package:document_flow/src/domain/entities/document_flow_context.dart';
 import 'package:document_flow/src/domain/entities/document_type.dart';
 import 'package:document_flow/src/domain/entities/extracted_document.dart';

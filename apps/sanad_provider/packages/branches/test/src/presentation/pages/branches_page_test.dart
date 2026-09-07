@@ -1,15 +1,18 @@
 import 'package:auth/auth.dart';
-import 'package:branches/src/domain/entities/paginated_branches_entity.dart';
+import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/domain/repositories/branch_repository.dart';
-import 'package:branches/src/domain/usecases/branch_usecase_params.dart';
+import 'package:branches/src/domain/usecases/branches_query.dart';
 import 'package:branches/src/domain/usecases/delete_branch_usecase.dart';
 import 'package:branches/src/domain/usecases/get_branches_usecase.dart';
 import 'package:branches/src/domain/usecases/update_branch_status_usecase.dart';
 import 'package:branches/src/presentation/bloc/branches/branches_bloc.dart';
+import 'package:branches/src/presentation/bloc/swipe_hint/swipe_hint_bloc.dart';
 import 'package:branches/src/presentation/pages/branches_page.dart';
 import 'package:branches/src/routes/branch_permissions.dart';
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Page;
+import 'package:storage/storage.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -45,14 +48,21 @@ Future<void> _pump(WidgetTester tester, BranchesBloc bloc) async {
   await tester.binding.setSurfaceSize(_surfaceSize);
   addTearDown(() => tester.binding.setSurfaceSize(null));
 
+  final swipeHint = SwipeHintBloc(storage: sl<HiveLocalStorage>())
+    ..add(const SwipeHintLoadRequested());
+  addTearDown(swipeHint.close);
+
   await tester.pumpWidget(
     ScreenUtilInit(
       designSize: _surfaceSize,
       minTextAdapt: true,
       builder: (_, _) => MaterialApp(
         theme: AppTheme.light(),
-        home: BlocProvider<BranchesBloc>.value(
-          value: bloc,
+        home: MultiBlocProvider(
+          providers: [
+            BlocProvider<BranchesBloc>.value(value: bloc),
+            BlocProvider<SwipeHintBloc>.value(value: swipeHint),
+          ],
           // isOwner is irrelevant to this file's assertions (Add Branch is
           // permission-gated on branch:create, not persona) — false is the
           // fail-closed default; the Delete-persona case is covered by
@@ -66,6 +76,10 @@ Future<void> _pump(WidgetTester tester, BranchesBloc bloc) async {
 }
 
 void main() {
+  setUpAll(() {
+    registerFallbackValue(const BranchesQuery());
+  });
+
   late _MockRepo repo;
   late BranchesBloc bloc;
 
@@ -76,13 +90,11 @@ void main() {
       deleteBranchUseCase: DeleteBranchUseCase(repo),
       updateBranchStatusUseCase: UpdateBranchStatusUseCase(repo),
     );
-    when(
-      () => repo.getBranches(const GetBranchesParams(limit: 50)),
-    ).thenAnswer(
+    when(() => repo.getBranches(any())).thenAnswer(
       (_) => TaskEither.of(
-        const PaginatedBranchesEntity(
-          branches: [],
-          meta: BranchPaginationMeta(
+        const Page<BranchEntity>(
+          items: [],
+          meta: PageMeta(
             totalItems: 0,
             itemCount: 0,
             itemsPerPage: 20,

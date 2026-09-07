@@ -25,6 +25,20 @@ enum AiUiActionType {
   /// during validation, so a blocked URL never reaches a widget.
   openUrl('open_url', requiredParams: {'url'}),
   copyText('copy_text', requiredParams: {'text'}),
+
+  /// Asks the app to run its own location-sharing flow.
+  ///
+  /// The agent gets no device access from this action: it states an intent,
+  /// and the app owns the permission prompt, the lookup, and whether to
+  /// proceed at all. Emitted by the live agent as a `button` action.
+  requestLocationShare('request_location_share', requiredParams: {}),
+
+  /// Asks the app to run its own image picker / upload flow.
+  ///
+  /// Same contract as [requestLocationShare] — no filesystem or camera access
+  /// is granted to the agent. Emitted by the live agent as a `button` action.
+  requestImageUpload('request_image_upload', requiredParams: {}),
+
   dismiss('dismiss', requiredParams: {})
   ;
 

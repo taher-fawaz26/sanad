@@ -32,6 +32,12 @@ class MediaPickerConfig extends Equatable {
 
   /// Builds the `asset_picker` options for a single source pick. [loadBytes]
   /// is forced on so the editor/processor always has in-memory bytes.
+  ///
+  /// [AssetPickerOptions.enforceSizeBeforeCompression] is forced on so the
+  /// size limit is validated against the *original* picked file, before any
+  /// acquisition-time re-encoding shrinks an oversized image under the limit
+  /// — otherwise a ~7 MB gallery/camera pick is silently accepted (SAN-781,
+  /// same root cause as the services SAN-576 fix).
   AssetPickerOptions toAssetPickerOptions() => AssetPickerOptions(
     allowedAssetTypes: [
       for (final type in allowedTypes)
@@ -40,6 +46,7 @@ class MediaPickerConfig extends Equatable {
     allowedExtensions: allowedExtensions,
     maxFileSize: maxFileSize,
     loadBytes: true,
+    enforceSizeBeforeCompression: true,
   );
 
   @override

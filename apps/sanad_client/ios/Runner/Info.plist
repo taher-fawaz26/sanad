@@ -73,6 +73,19 @@
 	<string>Sanad uses your location to show you nearby services and help you select a location on the map.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Sanad uses your location to show you nearby services and help you select a location on the map.</string>
+	<!-- Camera / photo library — required to attach an image to an AI chat
+	     message. -->
+	<key>NSCameraUsageDescription</key>
+	<string>Sanad uses the camera so you can take a photo to send to the assistant.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Sanad needs access to your photos so you can attach them to a message for the assistant.</string>
+	<!-- Microphone — required to record a voice note and to run live voice. -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Sanad uses the microphone so you can record a voice message or talk to the assistant.</string>
+	<!-- Speech recognition — a separate iOS grant from the microphone, needed
+	     to turn dictation into text in the chat composer. -->
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Sanad uses speech recognition to turn what you say into a message you can edit before sending.</string>
 	<!-- Face ID — required for the local biometric/device unlock gate. -->
 	<key>NSFaceIDUsageDescription</key>
 	<string>Sanad uses Face ID to unlock the app and protect your account.</string>

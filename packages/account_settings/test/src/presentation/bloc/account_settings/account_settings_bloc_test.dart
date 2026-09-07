@@ -237,4 +237,105 @@ void main() {
       verifyNever(() => sessionManager.update(any()));
     },
   );
+
+  group('AccountSettingsLanguageSynced (best-effort background sync)', () {
+    blocTest<AccountSettingsBloc, AccountSettingsState>(
+      'never touches saveStatus, so no blocking progress dialog is shown',
+      build: () {
+        when(
+          () => sessionManager.userType,
+        ).thenReturn(UserType.organizationProvider);
+        when(
+          () => updateAccountSettings(any(), any()),
+        ).thenAnswer((_) => TaskEither.right(_refreshedSettings));
+        return build();
+      },
+      act: (bloc) =>
+          bloc.add(const AccountSettingsLanguageSynced(PreferredLanguage.en)),
+      expect: () => [
+        isA<AccountSettingsState>()
+            .having((s) => s.saveStatus, 'saveStatus', RequestStatus.initial)
+            .having((s) => s.languageSyncFailure, 'languageSyncFailure', isNull)
+            .having((s) => s.settings, 'settings', _refreshedSettings),
+      ],
+      verify: (_) => verify(() => sessionManager.update(any())).called(1),
+    );
+
+    blocTest<AccountSettingsBloc, AccountSettingsState>(
+      'a failed sync records languageSyncFailure and leaves saveStatus alone '
+      '— the language itself was already applied locally and is not rolled '
+      'back (a worker/manager gets 403 on PATCH /account-settings, and the '
+      'offline case behaves the same)',
+      build: () {
+        when(() => sessionManager.userType).thenReturn(UserType.worker);
+        when(() => updateAccountSettings(any(), any())).thenAnswer(
+          (_) => TaskEither.left(
+            const UnauthorizedRoleFailure(message: 'Forbidden'),
+          ),
+        );
+        return build();
+      },
+      act: (bloc) =>
+          bloc.add(const AccountSettingsLanguageSynced(PreferredLanguage.ar)),
+      expect: () => [
+        isA<AccountSettingsState>()
+            .having((s) => s.saveStatus, 'saveStatus', RequestStatus.initial)
+            .having(
+              (s) => s.languageSyncFailure?.message,
+              'languageSyncFailure',
+              'Forbidden',
+            ),
+      ],
+      verify: (_) => verifyNever(() => sessionManager.update(any())),
+    );
+
+    blocTest<AccountSettingsBloc, AccountSettingsState>(
+      'sends the requested language, not the session snapshot',
+      build: () {
+        when(
+          () => sessionManager.userType,
+        ).thenReturn(UserType.organizationProvider);
+        when(
+          () => updateAccountSettings(any(), any()),
+        ).thenAnswer((_) => TaskEither.right(_refreshedSettings));
+        return build();
+      },
+      act: (bloc) =>
+          bloc.add(const AccountSettingsLanguageSynced(PreferredLanguage.ar)),
+      verify: (_) => verify(
+        () => updateAccountSettings(
+          const UpdateAccountSettingsParams(
+            preferredLanguage: PreferredLanguage.ar,
+          ),
+          UserType.organizationProvider,
+        ),
+      ).called(1),
+    );
+  });
+
+  blocTest<AccountSettingsBloc, AccountSettingsState>(
+    'a name-only save does not carry a language, so it cannot change the app '
+    'language (regression: onSuccess used to re-apply the *server* '
+    'preferredLanguage after every save, so renaming yourself flipped the UI)',
+    build: () {
+      when(
+        () => sessionManager.userType,
+      ).thenReturn(UserType.organizationProvider);
+      when(
+        () => updateAccountSettings(any(), any()),
+      ).thenAnswer((_) => TaskEither.right(_refreshedSettings));
+      return build();
+    },
+    act: (bloc) => bloc.add(
+      const AccountSettingsUpdated(
+        UpdateAccountSettingsParams(name: 'Layla Al Yamani'),
+      ),
+    ),
+    verify: (_) => verify(
+      () => updateAccountSettings(
+        const UpdateAccountSettingsParams(name: 'Layla Al Yamani'),
+        UserType.organizationProvider,
+      ),
+    ).called(1),
+  );
 }

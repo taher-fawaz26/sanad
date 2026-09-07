@@ -62,11 +62,13 @@ class EnterNamePage extends HookWidget {
         }
       },
       child: Scaffold(
-        appBar: AppNavBar(
-          title: '',
-          showBackButton: true,
-          onLeadingTap: () => context.pop(),
-        ),
+        // No back button: Enter Name is the entry of the post-authentication
+        // setup flow, reached by *replacing* the pre-auth stack (see
+        // OAuthOtpPage / OAuthSplashPage). There is nothing to pop back to —
+        // and returning to the OTP screen for an already-authenticated session
+        // would make no sense — so a back affordance here would only pop into
+        // an empty stack.
+        appBar: const AppNavBar(title: ''),
         body: SafeArea(
           child: Padding(
             padding: EdgeInsets.symmetric(
@@ -79,7 +81,7 @@ class EnterNamePage extends HookWidget {
                 // button below stays pinned regardless of content height.
                 Expanded(
                   child: SingleChildScrollView(
-                    child: Column(
+                    child: AppStaggeredColumn(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         SizedBox(height: responsiveDimension(AppSpacing.xxxxl)),

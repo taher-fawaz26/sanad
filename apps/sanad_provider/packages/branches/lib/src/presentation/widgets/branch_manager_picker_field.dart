@@ -1,14 +1,13 @@
-import 'dart:async';
-
 import 'package:branches/src/domain/entities/branch_manager_entity.dart';
-import 'package:branches/src/domain/entities/paginated_branches_entity.dart';
-import 'package:branches/src/domain/usecases/branch_usecase_params.dart';
-import 'package:branches/src/domain/usecases/get_branch_managers_usecase.dart';
+import 'package:branches/src/presentation/bloc/branch_managers/branch_managers_bloc.dart';
 import 'package:branches/src/presentation/widgets/branch_person_select_field.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:localization/localization.dart';
+import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 
 class BranchManagerPickerField extends StatelessWidget {
@@ -50,13 +49,21 @@ class BranchManagerPickerField extends StatelessWidget {
   Future<void> _openPicker(BuildContext context) async {
     final selected = await SheetNavigator.push<BranchManagerEntity>(
       context,
-      _ManagerPickerSheet(
-        title: 'branches.add_branch.branch_manager'.tr(),
-        cancelLabel: 'common.cancel'.tr(),
-        searchHint: 'branches.add_branch.manager_search_hint'.tr(),
-        loadMoreLabel: 'branches.add_branch.load_more'.tr(),
+      BlocProvider<BranchManagersBloc>(
+        create: (_) =>
+            sl<BranchManagersBloc>()..add(const BranchManagersFetchEvent()),
+        child: _ManagerPickerSheet(
+          searchHint: 'branches.add_branch.manager_search_hint'.tr(),
+        ),
       ),
-      settings: const SheetRouteSettings(sheetSize: SheetSize.expanded),
+      // Content-sized (the default) with the shared chrome (drag handle +
+      // title) — same pattern as the worker select sheet. The body caps its
+      // own scroll region so small result sets render a compact sheet while
+      // large ones scroll internally.
+      settings: SheetRouteSettings(
+        title: 'branches.add_branch.branch_manager'.tr(),
+        padChild: false,
+      ),
     );
     if (selected != null) {
       onManagerSelected(selected);
@@ -64,184 +71,156 @@ class BranchManagerPickerField extends StatelessWidget {
   }
 }
 
-class _ManagerPickerSheet extends StatefulWidget {
-  const _ManagerPickerSheet({
-    required this.title,
-    required this.cancelLabel,
-    required this.searchHint,
-    required this.loadMoreLabel,
-  });
+/// Sheet body — Stateless outer, with a tiny inner Stateful just to own the
+/// [TextEditingController]'s lifecycle (UI-ephemeral controller allowed per
+/// state-management rules; all business state lives in [BranchManagersBloc]).
+class _ManagerPickerSheet extends StatelessWidget {
+  const _ManagerPickerSheet({required this.searchHint});
 
-  final String title;
-  final String cancelLabel;
   final String searchHint;
-  final String loadMoreLabel;
 
   @override
-  State<_ManagerPickerSheet> createState() => _ManagerPickerSheetState();
+  Widget build(BuildContext context) => _ManagerPickerBody(
+    searchHint: searchHint,
+  );
 }
 
-class _ManagerPickerSheetState extends State<_ManagerPickerSheet> {
-  final _searchController = TextEditingController();
-  Timer? _debounce;
+class _ManagerPickerBody extends StatefulWidget {
+  const _ManagerPickerBody({required this.searchHint});
 
-  var _managers = <BranchManagerEntity>[];
-  BranchPaginationMeta? _meta;
-  var _isLoading = false;
-  var _isLoadingMore = false;
-  String? _query;
-
-  // Incremented on every new search. Captured before each await so stale
-  // responses from a previous query are silently discarded.
-  int _generation = 0;
+  final String searchHint;
 
   @override
-  void initState() {
-    super.initState();
-    _loadManagers(page: 1, query: null, replace: true);
-    _searchController.addListener(_onSearchChanged);
-  }
+  State<_ManagerPickerBody> createState() => _ManagerPickerBodyState();
+}
+
+class _ManagerPickerBodyState extends State<_ManagerPickerBody> {
+  final _searchController = TextEditingController();
 
   @override
   void dispose() {
     _searchController.dispose();
-    _debounce?.cancel();
     super.dispose();
-  }
-
-  void _onSearchChanged() {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 400), () {
-      final text = _searchController.text.trim();
-      final normalized = text.isEmpty ? null : text;
-      if (normalized == _query) return;
-      _loadManagers(page: 1, query: normalized, replace: true);
-    });
-  }
-
-  Future<void> _loadManagers({
-    required int page,
-    required String? query,
-    required bool replace,
-  }) async {
-    if (replace) {
-      _generation++;
-      setState(() {
-        _isLoading = true;
-        _query = query;
-      });
-    } else {
-      setState(() => _isLoadingMore = true);
-    }
-
-    final gen = _generation;
-    final params = GetBranchManagersParams(query: query, page: page, limit: 20);
-    final result = await sl<GetBranchManagersUseCase>()(params).run();
-
-    if (!mounted || gen != _generation) return;
-
-    result.fold(
-      (_) => setState(() {
-        _isLoading = false;
-        _isLoadingMore = false;
-      }),
-      (paginated) => setState(() {
-        _isLoading = false;
-        _isLoadingMore = false;
-        _meta = paginated.meta;
-        _managers = replace
-            ? paginated.managers
-            : mergeManagerPages(_managers, paginated.managers);
-      }),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: AppSpacing.xl,
-              vertical: AppSpacing.md,
+    // Cap just the scrollable list region so the pinned search field never
+    // scrolls off-sheet; the outer sheet is content-sized, so a short list
+    // yields a compact sheet and a long one scrolls within this box (mirrors
+    // AppSelectSheet.maxHeightFraction).
+    final maxListHeight = MediaQuery.sizeOf(context).height * 0.55;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: EdgeInsetsDirectional.fromSTEB(
+            AppSpacing.xl,
+            AppSpacing.sm,
+            AppSpacing.xl,
+            AppSpacing.md,
+          ),
+          child: AppSearchField(
+            controller: _searchController,
+            variant: AppSearchFieldVariant.bordered,
+            hint: widget.searchHint,
+            showMicIcon: false,
+            autofocus: true,
+            onChanged: (value) => context.read<BranchManagersBloc>().add(
+              BranchManagersSearchChangedEvent(value),
             ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    widget.title,
-                    style: theme.textTheme.titleMedium,
+          ),
+        ),
+        Flexible(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxListHeight),
+            child: BlocBuilder<BranchManagersBloc, BranchManagersState>(
+              builder: (context, state) => SanadPagedList<BranchManagerEntity>(
+                state: toPagingState(state.pagination),
+                shrinkWrap: true,
+                fetchNextPage: () => context.read<BranchManagersBloc>().add(
+                  const BranchManagersLoadMoreEvent(),
+                ),
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                itemBuilder: (context, manager, index) => ListTile(
+                  leading: AppAvatar(
+                    initials: manager.initials,
+                    size: AppAvatarSize.small,
+                  ),
+                  title: Text(manager.fullName),
+                  onTap: () => Navigator.of(context).pop(manager),
+                ),
+                firstPageErrorIndicatorBuilder: (context) => _PickerMessage(
+                  message:
+                      state.firstPageError?.localizedMessage() ??
+                      'errors.unknown'.tr(),
+                  actionLabel: 'common.retry'.tr(),
+                  onAction: () => context.read<BranchManagersBloc>().add(
+                    const BranchManagersRefreshEvent(),
                   ),
                 ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(widget.cancelLabel),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-            child: AppTextField(
-              controller: _searchController,
-              label: '',
-              hint: widget.searchHint,
-            ),
-          ),
-          SizedBox(height: AppSpacing.sm),
-          Expanded(
-            child: _isLoading
-                ? const Center(child: AppLoadingIndicator())
-                : ListView.builder(
-                    itemCount:
-                        _managers.length + (_meta?.hasMore == true ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index == _managers.length) {
-                        return Center(
-                          child: _isLoadingMore
-                              ? const Padding(
-                                  padding: EdgeInsets.all(16),
-                                  child: AppLoadingIndicator(),
-                                )
-                              : TextButton(
-                                  onPressed: () => _loadManagers(
-                                    page: _meta!.currentPage + 1,
-                                    query: _query,
-                                    replace: false,
-                                  ),
-                                  child: Text(widget.loadMoreLabel),
-                                ),
-                        );
-                      }
-                      final manager = _managers[index];
-                      return ListTile(
-                        leading: AppAvatar(
-                          initials: manager.initials,
-                          size: AppAvatarSize.small,
-                        ),
-                        title: Text(manager.fullName),
-                        onTap: () => Navigator.of(context).pop(manager),
-                      );
-                    },
+                newPageErrorIndicatorBuilder: (context) => _PickerMessage(
+                  message:
+                      state.nextPageError?.localizedMessage() ??
+                      'errors.unknown'.tr(),
+                  actionLabel: 'common.retry'.tr(),
+                  onAction: () => context.read<BranchManagersBloc>().add(
+                    const BranchManagersLoadMoreEvent(),
                   ),
+                ),
+                noItemsFoundIndicatorBuilder: (context) => _PickerMessage(
+                  message: 'branches.add_branch.no_managers_found'.tr(),
+                ),
+              ),
+            ),
           ),
-          SizedBox(height: AppSpacing.lg),
-        ],
-      ),
+        ),
+        SizedBox(height: AppSpacing.lg),
+      ],
     );
   }
 }
 
-/// Appends [incoming] to [existing], skipping any manager whose ID is already
-/// present. Visible for testing.
-List<BranchManagerEntity> mergeManagerPages(
-  List<BranchManagerEntity> existing,
-  List<BranchManagerEntity> incoming,
-) {
-  final seen = existing.map((m) => m.id).toSet();
-  return [...existing, ...incoming.where((m) => seen.add(m.id))];
+/// Centered message (+ optional action) for the picker's empty / error
+/// slots — keeps the three ISP builders consistent and compact.
+class _PickerMessage extends StatelessWidget {
+  const _PickerMessage({
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: context.appTypography.regularNormal.copyWith(
+                color: context.appColors.textSecondary,
+              ),
+            ),
+            if (actionLabel != null && onAction != null) ...[
+              SizedBox(height: AppSpacing.md),
+              AppButtonPresets.outline(
+                label: actionLabel!,
+                onPressed: onAction,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }

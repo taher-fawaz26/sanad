@@ -1,10 +1,11 @@
 import 'package:branches/src/di/branches_di.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
-import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_cubit.dart';
-import 'package:branches/src/presentation/bloc/add_branch/add_branch_location_cubit.dart';
-import 'package:branches/src/presentation/bloc/add_branch/add_branch_wizard_cubit.dart';
+import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_bloc.dart';
+import 'package:branches/src/presentation/bloc/add_branch/add_branch_location_bloc.dart';
+import 'package:branches/src/presentation/bloc/add_branch/add_branch_wizard_bloc.dart';
 import 'package:branches/src/presentation/bloc/branch_details/branch_details_bloc.dart';
 import 'package:branches/src/presentation/bloc/branches/branches_bloc.dart';
+import 'package:branches/src/presentation/bloc/swipe_hint/swipe_hint_bloc.dart';
 import 'package:branches/src/presentation/models/coverage_area_args.dart';
 import 'package:maps/maps.dart';
 import 'package:branches/src/presentation/pages/add_branch_page.dart';
@@ -49,12 +50,12 @@ class BranchesModule extends FeatureModule {
           BlocProvider(
             create: (_) => sl<AddBranchBloc>()..add(const AddBranchStarted()),
           ),
-          BlocProvider(create: (_) => AddBranchDraftCubit()),
+          BlocProvider(create: (_) => AddBranchDraftBloc()),
           BlocProvider(
-            create: (_) => AddBranchWizardCubit(totalSteps: 4),
+            create: (_) => AddBranchWizardBloc(totalSteps: 4),
           ),
           BlocProvider(
-            create: (_) => AddBranchLocationCubit(sl<LocationService>()),
+            create: (_) => AddBranchLocationBloc(sl<LocationService>()),
           ),
         ],
         child: const AddBranchPage(),
@@ -104,8 +105,14 @@ class BranchesModule extends FeatureModule {
   }) => [
     GoRoute(
       path: BranchRoutes.list,
-      builder: (context, state) => BlocProvider(
-        create: (_) => sl<BranchesBloc>(),
+      builder: (context, state) => MultiBlocProvider(
+        providers: [
+          BlocProvider(create: (_) => sl<BranchesBloc>()),
+          BlocProvider(
+            create: (_) =>
+                sl<SwipeHintBloc>()..add(const SwipeHintLoadRequested()),
+          ),
+        ],
         child: ProviderBranchesPage(isOwner: isOwner()),
       ),
     ),

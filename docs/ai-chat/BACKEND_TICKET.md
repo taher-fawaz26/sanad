@@ -227,3 +227,169 @@ match those shapes so both sides test the same things.
 3. Which entity ids does the agent have access to, and do they match what the
    app can open?
 4. Do we want remote images in v2, and behind which allowlist?
+
+---
+
+## 10. Gaps observed on `/user-agent/chat/stream`
+
+Probed live against `agent-dev.trysanad.us` on 2026-09-04, when the client's
+real transport moved from the WebSocket to this endpoint. **The framing and
+envelope are correct** — `data: ` + one-line JSON, blank-line delimited, with
+exactly `{eventId, conversationId, messageId, seq, type, createdAt, payload}`,
+`seq` contiguous from 0, and `concat(text_delta.delta) == message_end.text` to
+the character. Server-side conversation memory works: turn 2 on the same
+`conversation_id` recalled turn 1.
+
+Three gaps remain, all backend-side. The client is complete and waiting.
+
+### 10.1 No `ui` events — blocks this entire ticket
+
+Across every probe, including prompts explicitly asking for buttons and options,
+the endpoint emitted only `message_start`, `text_delta` and `message_end`.
+**Never `ui`.** The agent answers with Markdown numbered lists where §2 asks for
+a `quick_reply` or `button` payload — exactly what §0.2 of
+[`AI_CONTRACT.md`](AI_CONTRACT.md) forbids.
+
+The OpenAPI spec makes this look structural rather than accidental:
+`/user-agent/chat` is typed `UserChatResponse` = `{conversation_id, reply}`,
+plain text. The `ChatResponse` schema that carries `{schemaVersion, blocks}`,
+along with `TextNode`, `ButtonNode` and `QuickReplyNode`, is bound **only** to
+the provider-facing `/agent` route.
+
+**Ask:** emit protocol `ui` payloads from the user-agent, per §2 and §3. The
+client's codec, validator, renderer and action registry are all wired and
+tested for it today — no mobile change is needed when this lands.
+
+### 10.2 The access token is accepted and ignored
+
+`Sanad-Access-Token` is declared optional in the spec and there is no
+`securitySchemes` block. An **invalid** token returns `200` and a full stream,
+not `401`, and the agent then states it has no access to the user's profile or
+bookings — it has no authenticated identity and no platform tools.
+
+The client attaches the header correctly on every turn (and re-reads it each
+turn, so a refresh is picked up). There is currently nothing behind it.
+
+**Ask:** confirm whether the user-agent is meant to authenticate. If it is,
+reject an invalid token rather than silently degrading, and give it the
+user-scoped tools it needs.
+
+### 10.3 Domain drift — is this the right assistant?
+
+The user-agent self-identifies as *"Sanad Insurance"* and answers about
+policies, claims, motor/travel/health cover. The SANAD client app is a services
+and booking marketplace. The provider-facing `/agent`, by contrast, does talk
+about services, branches and team.
+
+**Ask:** product confirmation that the insurance-domain user-agent is the
+intended assistant for the SANAD client app.
+
+### 10.4 Smaller observations
+
+| Observation | Impact |
+|---|---|
+| An empty `message` returns `200 text/event-stream` with a **completely empty body** — zero frames | Client handles it (no bubble opened, diagnostic only), but a `422` would be more honest |
+| Errors are `422` + `application/json` **before** the stream, never an in-stream `error` frame | Client classifies by status only and never surfaces the Pydantic body |
+| No keepalive/comment frames during generation | A stalled turn is indistinguishable from a dead connection until the 60s inter-chunk timeout |
+| Worst measured time-to-first-token: **9.3s** | Drove the client's receive timeout up from the shared 15s default to 60s |
+| `typing` events are never sent | Optional in the protocol; the client simply never shows the indicator |
+
+---
+
+## 11. Inbound attachments and recorded voice notes
+
+New, and independent of §10: the client now sends attachments on the turn. It
+ships whether or not the backend reads them yet, because a voice note's words
+also reach `message` (see 11.3). Nothing below changes the outbound envelope.
+
+### 11.1 Accept `attachments` on the turn
+
+`POST /user-agent/chat/stream` (and the WS frame) now receives:
+
+```json
+{
+  "conversation_id": "conv_1",
+  "message": "what does this say?",
+  "attachments": [
+    { "id": "68f1…", "url": "https://…" },
+    { "id": "9ab2…", "url": "https://…", "type": "audio",
+      "transcript": "book me a plumber for tomorrow morning" }
+  ]
+}
+```
+
+The key is **absent** when the turn carries no files, so a text-only turn is the
+same body you receive today and nothing needs to change for it.
+
+Files are uploaded to `POST /api/v1/media/upload-single` (multipart, field
+`file`) on the REST host before the turn is sent, and `id`/`url` are that
+response's own fields.
+
+**Asks**
+
+- Parse `attachments`, and **ignore keys you do not recognise** — the client
+  adds them additively.
+- **Fetch by `url`. Do not resolve storage from `id`.** The whole point of
+  sending both is that the location is already known; a lookup on your side is
+  latency for nothing. `id` is for correlation, logging, and any later operation
+  that genuinely needs the record.
+- Reject nothing on the basis of the fields we *don't* send: file name, MIME
+  type, size and duration are deliberately absent, because you have the URL.
+
+### 11.2 Do not re-transcribe a voice note
+
+An audio attachment carries `type: "audio"` and, when the device produced one,
+a `transcript`.
+
+**Asks**
+
+- **When `transcript` is present, use it.** Server-side transcription must not
+  be a mandatory step of the normal recorded-audio flow — it is duplicated work
+  on a turn the client already paid for, and it is the single largest latency
+  item this change exists to remove.
+- Keep audio-specific processing for cases that explicitly need it: tone,
+  speaker, or a transcript you have concrete reason to distrust. Not routine
+  text reasoning.
+- Treat `transcript` as **best-effort and never authoritative**. It comes from
+  the device's own recogniser; it may be absent, partial or wrong. An audio
+  attachment with no `transcript` is speech you have not been given words for —
+  not an opaque blob to read as text.
+- It is **one message**. The audio and its transcript belong to the same turn
+  and must not become two conversation entries.
+
+### 11.3 The `message` mirror, and why it is there
+
+When the user typed nothing and a transcript exists, `message` repeats the
+transcript. This is deliberate redundancy, for two reasons:
+
+1. §10.4 records that an empty `message` returns `200` with **zero frames**, so
+   a voice-only turn would otherwise be met with silence.
+2. It means a voice note is understood before this ticket lands.
+
+When the user typed a caption *and* recorded a note, `message` is the caption
+and the transcript stays on the attachment. They are different things; do not
+merge or discard either.
+
+### 11.4 Storage asks
+
+- **Short-lived, signed URLs are preferred** over permanent public ones for
+  private user files. `media/upload-single` currently returns a permanent URL.
+  The client is written to tolerate either: the URL is minted at send and
+  consumed in the same request, and nothing caches it or reuses it across
+  turns. An expiry on the order of the request is sufficient.
+- **Orphaned uploads need garbage collection on your side.** A batch that fails
+  partway leaves earlier uploads stranded, and the client cannot clean them up:
+  `DELETE /media/{id}` is provider-only. The client does not retry or
+  compensate — it abandons the batch and tells the user.
+
+### 11.5 What the client already does
+
+No mobile work is pending on any of the above.
+
+| | |
+|---|---|
+| Upload | `packages/media_upload` → `media/upload-single`, at send time, sequential, all-or-nothing |
+| Recording | unchanged — `record`, 5-minute cap, `FileSizePolicy` 5 MiB ceiling |
+| Transcript | `speech_to_text` on-device, captured *during* the take (it cannot transcribe a finished file), best-effort |
+| Failure | one `error` bubble; the user's text and audio stay in their own bubble and the audio stays playable |
+| Supported types | images, `pdf/doc/docx/xls/xlsx/txt`, and `audio/mp4` voice notes; max 5 per message |

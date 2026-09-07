@@ -42,6 +42,11 @@ class OtpHost<T> extends StatelessWidget {
           if (data == null) return;
           if (config.showSuccessScreen) {
             await Future<void>.delayed(config.successAutoCloseDelay);
+            // The success screen is dismissible: a back press, drag or barrier
+            // tap during those seconds tears this subtree down while the timer
+            // is still pending. Reporting a result then pops a route that is
+            // no longer ours.
+            if (!context.mounted) return;
           }
           onResult(OtpVerified<T>(data));
         },

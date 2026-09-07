@@ -10,7 +10,8 @@ enum Environment {
   stage,
 
   /// Live production environment.
-  production;
+  production
+  ;
 
   /// Whether this environment is the production environment.
   bool get isProduction => this == Environment.production;

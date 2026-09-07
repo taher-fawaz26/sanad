@@ -58,18 +58,23 @@ class BranchInfoEditSheet extends StatefulWidget {
 
 class _BranchInfoEditSheetState extends State<BranchInfoEditSheet> {
   late final _nameController = TextEditingController(text: widget.initialName);
+  // Read-only city field: controller created once, disposed with the sheet
+  // (previously constructed inside build() — leaked one per rebuild).
+  late final _cityController = TextEditingController(
+    text: widget.cityDisplayName ?? '',
+  );
   late BranchType _type;
 
   @override
   void initState() {
     super.initState();
     _type = widget.initialType;
-    _nameController.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _cityController.dispose();
     super.dispose();
   }
 
@@ -106,11 +111,17 @@ class _BranchInfoEditSheetState extends State<BranchInfoEditSheet> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        AppTextField(
-          controller: _nameController,
-          label: 'branches.add_branch.branch_name'.tr(),
-          hint: 'branches.add_branch.branch_name_hint'.tr(),
-          errorText: _nameError,
+        // Text field + save button rebuild only on controller changes, not
+        // the whole sheet (previously the addListener fired setState on
+        // every keystroke).
+        ListenableBuilder(
+          listenable: _nameController,
+          builder: (context, _) => AppTextField(
+            controller: _nameController,
+            label: 'branches.add_branch.branch_name'.tr(),
+            hint: 'branches.add_branch.branch_name_hint'.tr(),
+            errorText: _nameError,
+          ),
         ),
         SizedBox(height: AppSpacing.md),
         BranchTypeSelectField(
@@ -120,17 +131,25 @@ class _BranchInfoEditSheetState extends State<BranchInfoEditSheet> {
         if (widget.cityDisplayName != null &&
             widget.cityDisplayName!.isNotEmpty) ...[
           SizedBox(height: AppSpacing.md),
+          // Read-only by contract, not by omission: the backend derives the
+          // branch city from `locationPlaceId` and exposes no `cityId` to
+          // set, so the city changes only by moving the map pin. The caption
+          // says so, otherwise the disabled field reads as broken (SAN-774).
           AppTextField(
-            controller: TextEditingController(text: widget.cityDisplayName),
+            controller: _cityController,
             label: 'branches.add_branch.city'.tr(),
+            caption: 'branches.details.city_follows_location'.tr(),
             readOnly: true,
             enabled: false,
           ),
         ],
         SizedBox(height: AppSpacing.xl),
-        AppButton(
-          label: 'branches.edit_branch.save_button'.tr(),
-          onPressed: _isValid && _hasChanges ? _submit : null,
+        ListenableBuilder(
+          listenable: _nameController,
+          builder: (context, _) => AppButton(
+            label: 'branches.edit_branch.save_button'.tr(),
+            onPressed: _isValid && _hasChanges ? _submit : null,
+          ),
         ),
       ],
     );

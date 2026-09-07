@@ -30,6 +30,24 @@ final class AiChatState extends Equatable {
   /// True when there is nothing to show yet.
   bool get isEmpty => messages.isEmpty;
 
+  /// Whether Home should render its **landing** composition — the hero mark
+  /// and the starter suggestions — rather than a conversation.
+  ///
+  /// One canonical answer to "has the conversation started?", derived from
+  /// the conversation itself. The hero, the suggestions and the message list
+  /// all read this same getter, so the three can never disagree about which
+  /// composition the screen is in.
+  ///
+  /// [isTyping] is part of it because the turn has already begun the moment
+  /// the agent signals a reply: the first token can land before any message
+  /// exists, and a hero that reappeared in that gap would flicker back in
+  /// behind the incoming answer.
+  ///
+  /// Deliberately **not** a function of composer focus. Focusing the field is
+  /// not starting a conversation — the landing composition survives the
+  /// keyboard opening, and only an actual turn replaces it.
+  bool get showsLanding => isEmpty && !isTyping;
+
   /// Returns a copy with the given fields replaced.
   AiChatState copyWith({
     RequestStatus? status,

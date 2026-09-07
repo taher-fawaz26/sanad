@@ -81,106 +81,128 @@ class AccountSettingsPage extends StatelessWidget {
                     if (state.saveFailure != null) {
                       showAppErrorSnackbar(
                         context: context,
-                        title: state.saveFailure!.message,
+                        // Never the raw `.message`: a backend contract
+                        // complaint ("property cityId should not exist") is
+                        // developer-facing and must not reach the user
+                        // (SAN-774).
+                        title: state.saveFailure!.localizedSafeMessage(),
                       );
                     }
                   },
-                  onSuccess: (context, state) async {
-                    if (state.preferredLanguage != null) {
-                      await _applyPreferredLanguage(
-                        context,
-                        state.preferredLanguage!,
-                      );
-                    }
-                  },
-                  child: AppScrollPage(
-                    slivers: [
-                      AppSliverAppBar(
-                        navBar: AppNavBar(
-                          title: 'settings.account_settings'.tr(),
-                          showBackButton: true,
-                          onLeadingTap: () => context.pop(),
-                        ),
-                      ),
-                      AppSliverPadding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: AppSpacing.xl,
-                          vertical: AppSpacing.md,
-                        ),
-                        sliver: AppSkeletonizer.sliver(
-                          enabled: isInitialLoad,
-                          child: SliverMainAxisGroup(
-                            slivers: [
-                              AppSliverBox(
-                                child: AccountCredentialsSection(
-                                  name: accountState.name,
-                                  phone: accountState.phone,
-                                  email: email,
-                                  emailVerified:
-                                      session?.isEmailVerified ?? false,
-                                  onAddPhone: () =>
-                                      _addOrChangePhone(context, null),
-                                  onChangePhone: () => _addOrChangePhone(
-                                    context,
-                                    accountState.phone,
-                                  ),
-                                  onAddEmail: () =>
-                                      _addOrChangeEmail(context, null),
-                                  onChangeEmail: () =>
-                                      _addOrChangeEmail(context, email),
-                                  onEditName: () => _editName(
-                                    context,
-                                    accountState.name,
-                                  ),
-                                ),
-                              ),
-                              AppSliverGap(AppSpacing.lg),
-                              AppSliverBox(
-                                child: LanguagePreferencesSection(
-                                  selectedLanguageLabel: _languageLabel(
-                                    accountState.preferredLanguage?.toApi(),
-                                  ),
-                                  onTap: () => _openLanguageSheet(context),
-                                ),
-                              ),
-                              AppSliverGap(AppSpacing.lg),
-                              const AppSliverBox(child: _SecuritySliver()),
-                              AppSliverGap(AppSpacing.lg),
-                              AppSliverBox(
-                                child: HelpSupportSection(
-                                  onContactSupport: () =>
-                                      _showComingSoon(context),
-                                  onTermsOfService: () =>
-                                      _showComingSoon(context),
-                                  onPrivacyPolicy: () =>
-                                      _showComingSoon(context),
-                                ),
-                              ),
-                              AppSliverGap(AppSpacing.lg),
-                              AppSliverBox(
-                                child: _DeleteAccountRow(
-                                  onTap: session == null
-                                      ? null
-                                      : () => context.push(
-                                          AccountSettingsRoutes.deletion,
-                                        ),
-                                ),
-                              ),
-                              AppSliverGap(AppSpacing.lg),
-                              AppSliverBox(
-                                child: AppButton(
-                                  label: 'settings.logout'.tr(),
-                                  onPressed: () => context.read<AuthBloc>().add(
-                                    AuthLogoutEvent(),
-                                  ),
-                                ),
-                              ),
-                              AppSliverGap(AppSpacing.xl),
-                            ],
+                  // No onSuccess language hook. It used to re-apply the
+                  // server's `preferredLanguage` after *every* successful
+                  // save, so renaming yourself flipped the UI language
+                  // (SAN-774). The language is now applied locally the moment
+                  // the user picks it; the server value never drives the
+                  // runtime locale.
+                  child: _LanguageSyncListener(
+                    child: AppScrollPage(
+                      slivers: [
+                        AppSliverAppBar(
+                          navBar: AppNavBar(
+                            title: 'settings.account_settings'.tr(),
+                            showBackButton: true,
+                            onLeadingTap: () => context.pop(),
                           ),
                         ),
-                      ),
-                    ],
+                        AppSliverPadding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSpacing.xl,
+                            vertical: AppSpacing.md,
+                          ),
+                          sliver: AppSkeletonizer.sliver(
+                            enabled: isInitialLoad,
+                            child: SliverMainAxisGroup(
+                              slivers: [
+                                AppSliverBox(
+                                  child: AccountCredentialsSection(
+                                    name: accountState.name,
+                                    phone: accountState.phone,
+                                    email: email,
+                                    emailVerified:
+                                        session?.isEmailVerified ?? false,
+                                    onAddPhone: () =>
+                                        _addOrChangePhone(context, null),
+                                    onChangePhone: () => _addOrChangePhone(
+                                      context,
+                                      accountState.phone,
+                                    ),
+                                    onAddEmail: () =>
+                                        _addOrChangeEmail(context, null),
+                                    onChangeEmail: () =>
+                                        _addOrChangeEmail(context, email),
+                                    onEditName: () => _editName(
+                                      context,
+                                      accountState.name,
+                                    ),
+                                  ),
+                                ),
+                                AppSliverGap(AppSpacing.lg),
+                                AppSliverBox(
+                                  // Sourced from TranslateBloc — the single
+                                  // source of truth for the app language — so
+                                  // the value shown here can never disagree
+                                  // with the language the user is looking at.
+                                  // It used to read the server's
+                                  // `preferredLanguage`, which defaulted to
+                                  // English and rendered "English" over an
+                                  // Arabic UI (SAN-774).
+                                  child:
+                                      BlocBuilder<
+                                        TranslateBloc,
+                                        TranslateState
+                                      >(
+                                        builder: (context, translateState) {
+                                          return LanguagePreferencesSection(
+                                            selectedLanguageLabel:
+                                                translateState.language.labelKey
+                                                    .tr(),
+                                            onTap: () =>
+                                                _openLanguageSheet(context),
+                                          );
+                                        },
+                                      ),
+                                ),
+                                AppSliverGap(AppSpacing.lg),
+                                const AppSliverBox(child: _SecuritySliver()),
+                                AppSliverGap(AppSpacing.lg),
+                                AppSliverBox(
+                                  child: HelpSupportSection(
+                                    onContactSupport: () =>
+                                        _showComingSoon(context),
+                                    onTermsOfService: () =>
+                                        _showComingSoon(context),
+                                    onPrivacyPolicy: () =>
+                                        _showComingSoon(context),
+                                  ),
+                                ),
+                                AppSliverGap(AppSpacing.lg),
+                                AppSliverBox(
+                                  child: _DeleteAccountRow(
+                                    onTap: session == null
+                                        ? null
+                                        : () => context.push(
+                                            AccountSettingsRoutes.deletion,
+                                          ),
+                                  ),
+                                ),
+                                AppSliverGap(AppSpacing.lg),
+                                AppSliverBox(
+                                  child: AppButton(
+                                    label: 'settings.logout'.tr(),
+                                    onPressed: () =>
+                                        context.read<AuthBloc>().add(
+                                          AuthLogoutEvent(),
+                                        ),
+                                  ),
+                                ),
+                                AppSliverGap(AppSpacing.xl),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },
@@ -191,48 +213,29 @@ class AccountSettingsPage extends StatelessWidget {
     );
   }
 
-  String _languageLabel(String? code) {
-    if (code == 'en') return 'app.english'.tr();
-    if (code == 'ar') return 'app.arabic'.tr();
-    return 'app.english'.tr();
-  }
-
   Future<void> _openLanguageSheet(BuildContext context) async {
     final accountBloc = context.read<AccountSettingsBloc>();
-    final currentCode =
-        accountBloc.state.preferredLanguage?.toApi() ??
-        context.read<TranslateBloc>().state.languageCode;
+    final current = context.appLanguage;
 
     final result = await showLanguagePreferencesBottomSheet(
       context: context,
-      initialLanguageCode: currentCode,
+      initialLanguageCode: current.code,
     );
     if (result == null || !context.mounted) return;
-    if (result == currentCode) return;
 
+    final selected = AppLanguage.fromCode(result);
+    if (selected == current) return;
+
+    // Local-first. The app language is a device preference: it applies (and
+    // persists) immediately, so it works offline and for a worker/manager who
+    // has no permission to PATCH account settings at all.
+    context.setAppLanguage(selected);
+
+    // Then a best-effort sync so backend-generated content (emails,
+    // notifications) follows. A failure surfaces as a notice and never rolls
+    // the local language back.
     accountBloc.add(
-      AccountSettingsUpdated(
-        UpdateAccountSettingsParams(
-          preferredLanguage: PreferredLanguage.fromApi(result),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _applyPreferredLanguage(
-    BuildContext context,
-    PreferredLanguage language,
-  ) async {
-    final code = language.toApi();
-    final locale = code == 'en'
-        ? const Locale('en', 'US')
-        : const Locale('ar', 'AR');
-
-    await context.setLocale(locale);
-    if (!context.mounted) return;
-
-    context.read<TranslateBloc>().add(
-      code == 'ar' ? TrArabicEvent() : TrEnglishEvent(),
+      AccountSettingsLanguageSynced(PreferredLanguage.fromApi(selected.code)),
     );
   }
 
@@ -394,6 +397,32 @@ class _DeleteAccountRow extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Surfaces a failed best-effort `preferredLanguage` sync as a notice.
+///
+/// Separate from the page's [MutationListener]: the language has already been
+/// applied locally, so this is not a failed save — only a heads-up that
+/// backend-generated content (emails, notifications) is still on the previous
+/// language.
+class _LanguageSyncListener extends StatelessWidget {
+  const _LanguageSyncListener({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<AccountSettingsBloc, AccountSettingsState>(
+      listenWhen: (previous, current) =>
+          previous.languageSyncFailure != current.languageSyncFailure &&
+          current.languageSyncFailure != null,
+      listener: (context, state) => showAppSnackbar(
+        context: context,
+        title: 'settings.language_sync_failed'.tr(),
+      ),
+      child: child,
     );
   }
 }

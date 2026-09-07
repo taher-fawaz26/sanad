@@ -16,7 +16,10 @@ enum AppLottieAsset {
   notFound(AppAnimations.notFound404),
 
   /// "403 Forbidden" illustration.
-  forbidden(AppAnimations.forbidden403)
+  forbidden(AppAnimations.forbidden403),
+
+  /// AI chat's animated center visual — the "Sanad is here" mark on Home.
+  aiAssistant(AppAnimations.aiAssistantLoading)
   ;
 
   const AppLottieAsset(this.path);

@@ -98,7 +98,7 @@ class _OAuthPhoneView extends HookWidget {
                 // button below stays pinned regardless of content height.
                 Expanded(
                   child: SingleChildScrollView(
-                    child: Column(
+                    child: AppStaggeredColumn(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         SizedBox(height: responsiveDimension(AppSpacing.xxxxl)),

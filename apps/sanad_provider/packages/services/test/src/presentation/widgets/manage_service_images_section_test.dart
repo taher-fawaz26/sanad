@@ -46,7 +46,6 @@ import 'package:services/src/presentation/widgets/service_image_card.dart';
 // only through the single implicit pump inside `pump()`, with no further
 // interaction/pumping, which has held up reliably.
 
-
 class _MockRepository extends Mock implements ProviderServicesRepository {}
 
 class _MockMediaUploadRepository extends Mock

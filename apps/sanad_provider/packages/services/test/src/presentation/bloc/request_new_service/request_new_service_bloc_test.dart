@@ -153,22 +153,23 @@ void main() {
   group('RequestNewServiceBloc — categories picker', () {
     blocTest<RequestNewServiceBloc, RequestNewServiceState>(
       'categories fetch success emits the loaded list',
-      setUp: () => when(
-        () => categoriesRepo.getCategories(limit: 100),
-      ).thenAnswer(
-        (_) => TaskEither.of(
-          ServicesPagedResult(
-            items: [_category('cat-car')],
-            meta: const PaginationMetaEntity(
-              totalItems: 1,
-              itemCount: 1,
-              itemsPerPage: 100,
-              totalPages: 1,
-              currentPage: 1,
+      setUp: () =>
+          when(
+            () => categoriesRepo.getCategories(limit: 100),
+          ).thenAnswer(
+            (_) => TaskEither.of(
+              ServicesPagedResult(
+                items: [_category('cat-car')],
+                meta: const PaginationMetaEntity(
+                  totalItems: 1,
+                  itemCount: 1,
+                  itemsPerPage: 100,
+                  totalPages: 1,
+                  currentPage: 1,
+                ),
+              ),
             ),
           ),
-        ),
-      ),
       build: buildBloc,
       act: (bloc) => bloc.add(const RequestNewServiceCategoriesRequested()),
       expect: () => [
@@ -193,8 +194,8 @@ void main() {
 
     blocTest<RequestNewServiceBloc, RequestNewServiceState>(
       'categories fetch failure surfaces the failure',
-      setUp: () => when(() => categoriesRepo.getCategories(limit: 100))
-          .thenAnswer(
+      setUp: () =>
+          when(() => categoriesRepo.getCategories(limit: 100)).thenAnswer(
             (_) => TaskEither.left(const ServerFailure(message: 'boom')),
           ),
       build: buildBloc,

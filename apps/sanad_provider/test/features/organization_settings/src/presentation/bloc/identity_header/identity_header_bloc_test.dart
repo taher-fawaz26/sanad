@@ -165,8 +165,9 @@ void main() {
         lastMedia: media,
       ),
     ),
-    act: (bloc) =>
-        bloc.add(IdentityHeaderUploadCancelled(slot: OrganizationMediaSlot.logo)),
+    act: (bloc) => bloc.add(
+      IdentityHeaderUploadCancelled(slot: OrganizationMediaSlot.logo),
+    ),
     verify: (bloc) {
       verify(
         () => repository.cancelUpload(OrganizationMediaSlot.logo),
@@ -233,19 +234,15 @@ void main() {
   );
 
   blocTest<IdentityHeaderBloc, IdentityHeaderState>(
-    'a failed remove (SAN-699: no documented remove endpoint) surfaces as a '
-    'non-retryable failure and leaves the existing image untouched',
+    'a failed remove surfaces as a non-retryable failure and leaves the '
+    'existing image untouched — never optimistically cleared',
     build: build,
     seed: () => IdentityHeaderState(
       cover: IdentityMediaSlotState(imageUrl: 'c.png'),
     ),
     setUp: () {
       when(() => removeUseCase(any())).thenAnswer(
-        (_) => TaskEither.left(
-          const BusinessRuleFailure(
-            message: 'errors.remove_image_not_supported',
-          ),
-        ),
+        (_) => TaskEither.left(const ServerFailure(message: 'boom')),
       );
     },
     act: (bloc) =>
@@ -264,6 +261,39 @@ void main() {
     },
   );
 
+  // Profile and cover are independent: each slot has its own endpoint and its
+  // own state, so removing one must not disturb the other.
+  for (final removed in OrganizationMediaSlot.values) {
+    final other = removed == OrganizationMediaSlot.cover
+        ? OrganizationMediaSlot.logo
+        : OrganizationMediaSlot.cover;
+
+    blocTest<IdentityHeaderBloc, IdentityHeaderState>(
+      'removing the ${removed.name} leaves the ${other.name} untouched',
+      build: build,
+      seed: () => IdentityHeaderState(
+        cover: IdentityMediaSlotState(imageUrl: 'c.png'),
+        logo: IdentityMediaSlotState(imageUrl: 'l.png'),
+      ),
+      setUp: () {
+        when(
+          () => removeUseCase(any()),
+        ).thenAnswer((_) => TaskEither.right(unit));
+      },
+      act: (bloc) => bloc.add(IdentityHeaderMediaRemoved(slot: removed)),
+      verify: (bloc) {
+        expect(bloc.state.slot(removed).hasImage, isFalse);
+        expect(
+          bloc.state.slot(other).imageUrl,
+          other == OrganizationMediaSlot.cover ? 'c.png' : 'l.png',
+        );
+        verify(
+          () => removeUseCase(RemoveOrganizationMediaParams(slot: removed)),
+        ).called(1);
+      },
+    );
+  }
+
   blocTest<IdentityHeaderBloc, IdentityHeaderState>(
     'IdentityHeaderFailureAcknowledged clears status/failure back to '
     'initial without touching imageUrl — used once a non-retryable failure '
@@ -274,9 +304,7 @@ void main() {
       cover: IdentityMediaSlotState(
         status: RequestStatus.failure,
         imageUrl: 'c.png',
-        failure: const BusinessRuleFailure(
-          message: 'errors.remove_image_not_supported',
-        ),
+        failure: const ServerFailure(message: 'boom'),
       ),
     ),
     act: (bloc) => bloc.add(

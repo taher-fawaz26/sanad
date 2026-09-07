@@ -15,6 +15,10 @@ final class BranchesRefreshEvent extends BranchesEvent {
   const BranchesRefreshEvent();
 }
 
+final class BranchesLoadMoreEvent extends BranchesEvent {
+  const BranchesLoadMoreEvent();
+}
+
 final class BranchesFilterChangedEvent extends BranchesEvent {
   const BranchesFilterChangedEvent(this.filter);
 

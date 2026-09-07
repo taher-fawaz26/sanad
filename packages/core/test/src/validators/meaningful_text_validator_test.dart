@@ -60,7 +60,9 @@ void main() {
 
       test('accepts mixed Arabic/English text', () {
         expect(
-          MeaningfulTextValidator.isValid('Available 24/7 - متاح على مدار الساعة'),
+          MeaningfulTextValidator.isValid(
+            'Available 24/7 - متاح على مدار الساعة',
+          ),
           isTrue,
         );
       });
@@ -73,9 +75,17 @@ void main() {
       });
 
       test('accepts text combined with normal punctuation', () {
-        expect(MeaningfulTextValidator.isValid('Emergency service - available 24/7.'), isTrue);
+        expect(
+          MeaningfulTextValidator.isValid(
+            'Emergency service - available 24/7.',
+          ),
+          isTrue,
+        );
         expect(MeaningfulTextValidator.isValid('A & B Services'), isTrue);
-        expect(MeaningfulTextValidator.isValid("O'Connor & Sons (est. 1990)"), isTrue);
+        expect(
+          MeaningfulTextValidator.isValid("O'Connor & Sons (est. 1990)"),
+          isTrue,
+        );
       });
 
       test('accepts text with Arabic diacritics', () {

@@ -3,16 +3,6 @@ import 'package:branches/src/domain/entities/branch_availability_mode.dart';
 import 'package:branches/src/domain/entities/branch_type.dart';
 import 'package:equatable/equatable.dart';
 
-class GetBranchesParams extends Equatable {
-  const GetBranchesParams({this.page = 1, this.limit = 20});
-
-  final int page;
-  final int limit;
-
-  @override
-  List<Object?> get props => [page, limit];
-}
-
 class GetBranchParams extends Equatable {
   const GetBranchParams({required this.id});
 
@@ -181,22 +171,6 @@ class UpdateBranchStatusParams extends Equatable {
 
   @override
   List<Object?> get props => [id, isAvailable];
-}
-
-class GetBranchManagersParams extends Equatable {
-  const GetBranchManagersParams({
-    this.query,
-    this.page = 1,
-    this.limit = 20,
-  });
-
-  /// Optional search query — `null` means no filter.
-  final String? query;
-  final int page;
-  final int limit;
-
-  @override
-  List<Object?> get props => [query, page, limit];
 }
 
 class DeleteBranchParams extends Equatable {

@@ -9,6 +9,11 @@ class LocationPickerLabels {
     required this.serviceDisabled,
     required this.genericError,
     required this.openSettings,
+    required this.openLocationSettings,
+    required this.retry,
+    required this.locationUnavailable,
+    required this.locationTimeout,
+    required this.addressNotFound,
     required this.searchEmpty,
     required this.searchRetry,
     required this.outsideCountry,
@@ -31,7 +36,29 @@ class LocationPickerLabels {
   final String permissionPermanentlyDenied;
   final String serviceDisabled;
   final String genericError;
+
+  /// Action that opens the app's own settings page — recovery for a
+  /// permanently-denied app permission.
   final String openSettings;
+
+  /// Action that opens the device location (GPS) settings — recovery for
+  /// switched-off location services.
+  final String openLocationSettings;
+
+  /// Action to re-attempt the current-location request.
+  final String retry;
+
+  /// Shown when the device position could not be obtained (not permission or
+  /// service related — e.g. no fix available).
+  final String locationUnavailable;
+
+  /// Shown when obtaining the device position timed out.
+  final String locationTimeout;
+
+  /// Shown when a coordinate was obtained but no address could be resolved for
+  /// it (reverse-geocode "not found"). Distinct from [locationUnavailable] —
+  /// the location itself is fine, only the address lookup failed.
+  final String addressNotFound;
 
   /// Shown in the search sheet when a query returns no results.
   final String searchEmpty;

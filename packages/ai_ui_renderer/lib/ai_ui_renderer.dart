@@ -28,6 +28,7 @@ export 'src/diagnostics/ai_ui_diagnostics_sink.dart';
 export 'src/rendering/ai_node_renderer.dart';
 export 'src/rendering/ai_ui_default_renderers.dart';
 export 'src/rendering/ai_ui_formatters.dart';
+export 'src/rendering/ai_ui_markdown.dart';
 export 'src/rendering/ai_ui_render_scope.dart';
 export 'src/rendering/ai_ui_renderer_registry.dart';
 export 'src/rendering/ai_ui_semantics.dart';

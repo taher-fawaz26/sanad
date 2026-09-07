@@ -3,10 +3,11 @@ import 'package:branches/src/data/models/requests/create_branch_request.dart';
 import 'package:branches/src/data/models/requests/update_branch_request.dart';
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
-import 'package:branches/src/domain/entities/paginated_branches_entity.dart';
-import 'package:branches/src/domain/entities/paginated_managers_entity.dart';
+import 'package:branches/src/domain/entities/branch_manager_entity.dart';
 import 'package:branches/src/domain/repositories/branch_repository.dart';
+import 'package:branches/src/domain/usecases/branch_managers_query.dart';
 import 'package:branches/src/domain/usecases/branch_usecase_params.dart';
+import 'package:branches/src/domain/usecases/branches_query.dart';
 import 'package:core/core.dart';
 import 'package:fpdart/fpdart.dart';
 
@@ -16,11 +17,9 @@ class BranchRepositoryImpl implements BranchRepository {
   final BranchRemoteDataSource _remoteDataSource;
 
   @override
-  TaskEither<Failure, PaginatedBranchesEntity> getBranches(
-    GetBranchesParams params,
-  ) => _remoteDataSource
-      .getBranches(page: params.page, limit: params.limit)
-      .map((dto) => dto.toDomain());
+  TaskEither<Failure, Page<BranchEntity>> getBranches(
+    BranchesQuery query,
+  ) => _remoteDataSource.getBranches(query).map((dto) => dto.toPage());
 
   @override
   TaskEither<Failure, BranchEntity> getBranch(GetBranchParams params) =>
@@ -95,7 +94,7 @@ class BranchRepositoryImpl implements BranchRepository {
       _remoteDataSource.getCompanySchedule();
 
   @override
-  TaskEither<Failure, PaginatedManagersEntity> getBranchManagers(
-    GetBranchManagersParams params,
-  ) => _remoteDataSource.getBranchManagers(params);
+  TaskEither<Failure, Page<BranchManagerEntity>> getBranchManagers(
+    BranchManagersQuery query,
+  ) => _remoteDataSource.getBranchManagers(query).map((dto) => dto.toPage());
 }

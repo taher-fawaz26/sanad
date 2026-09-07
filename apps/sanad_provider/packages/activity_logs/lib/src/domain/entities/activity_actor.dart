@@ -7,7 +7,8 @@ enum ActivityActorType {
   worker,
   admin,
   system,
-  unknown;
+  unknown
+  ;
 
   static ActivityActorType fromApiValue(String? value) =>
       ActivityActorType.values.firstWhere(

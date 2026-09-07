@@ -24,10 +24,12 @@ void main() {
 
     test('retries a GET timeout and resolves on success', () async {
       adapter
-        ..stage((options) => throw DioException(
-              requestOptions: options,
-              type: DioExceptionType.receiveTimeout,
-            ))
+        ..stage(
+          (options) => throw DioException(
+            requestOptions: options,
+            type: DioExceptionType.receiveTimeout,
+          ),
+        )
         ..stage((options) => _ok(options));
 
       final res = await dio.get<dynamic>('/services');
@@ -74,10 +76,12 @@ void main() {
 
     test('still retries a PUT timeout (idempotent)', () async {
       adapter
-        ..stage((options) => throw DioException(
-              requestOptions: options,
-              type: DioExceptionType.connectionTimeout,
-            ))
+        ..stage(
+          (options) => throw DioException(
+            requestOptions: options,
+            type: DioExceptionType.connectionTimeout,
+          ),
+        )
         ..stage((options) => _ok(options));
 
       final res = await dio.put<dynamic>('/branches/1');

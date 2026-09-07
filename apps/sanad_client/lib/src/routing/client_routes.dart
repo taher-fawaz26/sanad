@@ -11,6 +11,12 @@ abstract final class ClientRoutes {
   static const home = '/home';
   static const offline = '/offline';
 
+  /// Client profile. A real, permanent destination — unlike the AI chat
+  /// prototype's routes, not gated by `kReleaseMode`. Today it is reachable
+  /// only from that prototype's Home header, so it is registered but
+  /// unadvertised in a release build rather than unreachable outright.
+  static const profile = '/profile';
+
   /// Full-screen 403 page — reachable as an explicit `denyRedirect` target
   /// for any route rule that wants a dedicated "Access Denied" screen.
   static const forbidden = '/403';

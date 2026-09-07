@@ -1,12 +1,13 @@
 # AI Chat documentation
 
 The SANAD AI assistant renders native UI inside chat bubbles from a validated
-JSON payload. **This is a prototype**: the transport is a scripted local mock,
-and the route exists only in non-release builds.
+JSON payload. The chat talks to the **live agent over a WebSocket**; the
+scripted mock is still there behind `/dev/ai-chat?mock=1` for the failure
+scenarios. The route exists only in non-release builds.
 
 | Doc | Read when you need… |
 |---|---|
-| [`AI_CONTRACT.md`](AI_CONTRACT.md) | **To build the agent.** The complete agent-facing rules: envelope, all 20 components, the six actions, limits, valid and invalid examples. No Flutter knowledge required. |
+| [`AI_CONTRACT.md`](AI_CONTRACT.md) | **To build the agent.** The complete agent-facing rules: envelope, all 20 components, the eight actions, limits, valid and invalid examples. No Flutter knowledge required. |
 | [`PROTOCOL_V1.md`](PROTOCOL_V1.md) | The normative client-side reference — every field, default, limit and failure behaviour the validator enforces. |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | How the packages, transport seam, renderer registry and action registry fit together, and why. |
 | [`BACKEND_TICKET.md`](BACKEND_TICKET.md) | The implementation-ready ticket for the AI/backend team, with acceptance criteria. |
@@ -23,6 +24,10 @@ and the route exists only in non-release builds.
   degrades one bubble — the chat never breaks.
 - `schemaVersion` is the integer `1`. Images are `assetId`-only. Six actions are
   implemented. Every semantic node needs a `fallbackText`.
+- Going the other way, a turn carries `attachments` as `{id, url}` pairs,
+  uploaded before the request — so the agent resolves no storage. A voice note
+  adds `type: "audio"` and the transcript its own device produced, so nothing
+  transcribes it twice. One message, audio and words together.
 
 ## Source of truth
 

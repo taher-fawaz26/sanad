@@ -48,6 +48,7 @@ export 'src/components/app_icon_button.dart';
 export 'src/components/app_large_nav_bar.dart';
 export 'src/components/app_nav_bar.dart';
 export 'src/components/app_notification_badge.dart';
+export 'src/components/app_overlay_notification.dart';
 export 'src/components/app_page_indicator.dart';
 export 'src/components/app_popover.dart';
 export 'src/components/app_otp_field.dart';

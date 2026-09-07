@@ -58,9 +58,9 @@ class RequestDetailsPage extends StatelessWidget {
                     if (state.status == RequestStatus.failure)
                       _DetailErrorState(
                         failure: state.failure,
-                        onRetry: () => context
-                            .read<RequestDetailsBloc>()
-                            .add(const RequestDetailsFetchRequested()),
+                        onRetry: () => context.read<RequestDetailsBloc>().add(
+                          const RequestDetailsFetchRequested(),
+                        ),
                       )
                     else
                       // Skeletonize the *real* info section, seeded with

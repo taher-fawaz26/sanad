@@ -118,6 +118,43 @@ void main() {
       },
     );
 
+    test(
+      'resend falls back when the 400 arrives as a BusinessRuleFailure — the '
+      'shape the backend actually sends (regression: matching only on '
+      'ValidationFailure left this fallback unreachable, because ErrorMapper '
+      "reserves that for a class-validator `message` array and this endpoint's "
+      'rejection is a single string)',
+      () async {
+        when(() => resendUseCase(any())).thenAnswer(
+          (_) => TaskEither.left(
+            const BusinessRuleFailure(
+              message: 'No active session for this purpose',
+              code: '400',
+            ),
+          ),
+        );
+        stubRequest();
+
+        final result = await verifier.resendCode().run();
+
+        expect(result.isRight(), isTrue, reason: 'recovered, not stranded');
+        verify(() => requestUseCase(any())).called(1);
+      },
+    );
+
+    test('a conflict on resend is surfaced as-is, not retried', () async {
+      when(() => resendUseCase(any())).thenAnswer(
+        (_) => TaskEither.left(
+          const ConflictFailure(message: 'Target no longer available'),
+        ),
+      );
+
+      final result = await verifier.resendCode().run();
+
+      expect(result.isLeft(), isTrue);
+      verifyNever(() => requestUseCase(any()));
+    });
+
     test('a non-recoverable resend failure is surfaced as-is', () async {
       when(() => resendUseCase(any())).thenAnswer(
         (_) => TaskEither.left(const RateLimitFailure(message: 'cooldown')),
@@ -142,7 +179,7 @@ void main() {
         ),
       );
 
-      final result = await verifier.cooldown()!.run();
+      final result = await verifier.cooldown().run();
 
       expect(
         result.getOrElse((_) => OtpCooldown.unknown),

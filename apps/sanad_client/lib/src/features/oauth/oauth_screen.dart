@@ -1,3 +1,4 @@
+import 'package:app_animations/app_animations.dart';
 import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -81,7 +82,10 @@ class OAuthScreen extends StatelessWidget {
                   padding: EdgeInsets.only(
                     top: responsiveDimension(AppSpacing.sm),
                   ),
-                  child: const OAuthLanguageSelector(),
+                  child: const OAuthLanguageSelector().appFadeIn(
+                    context,
+                    duration: AppMotionDuration.quick,
+                  ),
                 ),
               ),
               // Bottom-anchored content on tall screens (matches Figma), but
@@ -95,7 +99,7 @@ class OAuthScreen extends StatelessWidget {
                       constraints: BoxConstraints(
                         minHeight: constraints.maxHeight,
                       ),
-                      child: Column(
+                      child: AppStaggeredColumn(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           Text(

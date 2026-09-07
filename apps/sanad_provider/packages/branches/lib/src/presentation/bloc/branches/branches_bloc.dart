@@ -1,18 +1,30 @@
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
-import 'package:branches/src/domain/entities/paginated_branches_entity.dart';
+import 'package:branches/src/domain/entities/branch_filter.dart';
 import 'package:branches/src/domain/usecases/branch_usecase_params.dart';
+import 'package:branches/src/domain/usecases/branches_query.dart';
 import 'package:branches/src/domain/usecases/delete_branch_usecase.dart';
 import 'package:branches/src/domain/usecases/get_branches_usecase.dart';
 import 'package:branches/src/domain/usecases/update_branch_status_usecase.dart';
 import 'package:core/core.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fpdart/fpdart.dart';
 
 part 'branches_event.dart';
 part 'branches_state.dart';
 
-class BranchesBloc extends Bloc<BranchesEvent, BranchesState> {
+/// Debounce applied to search keystrokes before hitting the server.
+const _searchDebounce = Duration(milliseconds: 350);
+
+class BranchesBloc extends Bloc<BranchesEvent, BranchesState>
+    with
+        PaginationMixin<
+          BranchesEvent,
+          BranchesState,
+          BranchEntity,
+          BranchesQuery
+        > {
   BranchesBloc({
     required GetBranchesUseCase getBranchesUseCase,
     required DeleteBranchUseCase deleteBranchUseCase,
@@ -21,10 +33,23 @@ class BranchesBloc extends Bloc<BranchesEvent, BranchesState> {
        _deleteBranchUseCase = deleteBranchUseCase,
        _updateBranchStatusUseCase = updateBranchStatusUseCase,
        super(const BranchesState()) {
-    on<BranchesFetchEvent>(_onFetch);
-    on<BranchesRefreshEvent>(_onRefresh);
-    on<BranchesFilterChangedEvent>(_onFilterChanged);
-    on<BranchesSearchChangedEvent>(_onSearchChanged);
+    on<BranchesFetchEvent>((event, emit) => loadFirstPage(emit));
+    on<BranchesRefreshEvent>(
+      (event, emit) => refresh(emit),
+      transformer: droppable(),
+    );
+    on<BranchesLoadMoreEvent>(
+      (event, emit) => loadNextPage(emit),
+      transformer: droppable(),
+    );
+    on<BranchesFilterChangedEvent>(
+      _onFilterChanged,
+      transformer: restartable(),
+    );
+    on<BranchesSearchChangedEvent>(
+      _onSearchChanged,
+      transformer: restartable(),
+    );
     // Drop duplicate submits while one is in flight (double-tap guard).
     on<BranchDeletedEvent>(_onBranchDeleted, transformer: droppable());
     on<BranchStatusChangedEvent>(
@@ -38,34 +63,22 @@ class BranchesBloc extends Bloc<BranchesEvent, BranchesState> {
   final DeleteBranchUseCase _deleteBranchUseCase;
   final UpdateBranchStatusUseCase _updateBranchStatusUseCase;
 
-  Future<void> _onFetch(
-    BranchesFetchEvent event,
-    Emitter<BranchesState> emit,
-  ) async {
-    emit(state.copyWith(status: RequestStatus.loading, clearFailure: true));
-    await _loadBranches(emit);
-  }
-
-  Future<void> _onRefresh(
-    BranchesRefreshEvent event,
-    Emitter<BranchesState> emit,
-  ) async {
-    emit(state.copyWith(status: RequestStatus.loading, clearFailure: true));
-    await _loadBranches(emit);
-  }
-
-  void _onFilterChanged(
+  Future<void> _onFilterChanged(
     BranchesFilterChangedEvent event,
     Emitter<BranchesState> emit,
-  ) {
+  ) async {
+    if (event.filter == state.filter) return;
     emit(state.copyWith(filter: event.filter));
+    await onQueryChanged(emit);
   }
 
-  void _onSearchChanged(
+  Future<void> _onSearchChanged(
     BranchesSearchChangedEvent event,
     Emitter<BranchesState> emit,
-  ) {
+  ) async {
     emit(state.copyWith(searchQuery: event.query));
+    await Future<void>.delayed(_searchDebounce);
+    await onQueryChanged(emit);
   }
 
   Future<void> _onBranchDeleted(
@@ -84,7 +97,7 @@ class BranchesBloc extends Bloc<BranchesEvent, BranchesState> {
             .toList();
         emit(
           state.copyWith(
-            branches: updated,
+            pagination: state.pagination.copyWith(items: updated),
             clearActionFailure: true,
           ),
         );
@@ -111,7 +124,7 @@ class BranchesBloc extends Bloc<BranchesEvent, BranchesState> {
             .toList();
         emit(
           state.copyWith(
-            branches: updated,
+            pagination: state.pagination.copyWith(items: updated),
             clearActionFailure: true,
           ),
         );
@@ -126,22 +139,30 @@ class BranchesBloc extends Bloc<BranchesEvent, BranchesState> {
     emit(state.copyWith(clearActionFailure: true));
   }
 
-  Future<void> _loadBranches(Emitter<BranchesState> emit) async {
-    final result = await _getBranchesUseCase(
-      const GetBranchesParams(limit: 50),
-    ).run();
+  @override
+  PaginationData<BranchEntity> readPage(BranchesState state) =>
+      state.pagination;
 
-    result.fold(
-      (failure) => emit(
-        state.copyWith(status: RequestStatus.failure, failure: failure),
-      ),
-      (paginated) => emit(
-        state.copyWith(
-          status: RequestStatus.success,
-          branches: paginated.branches,
-          meta: paginated.meta,
-        ),
-      ),
+  @override
+  BranchesState writePage(
+    BranchesState state,
+    PaginationData<BranchEntity> data,
+  ) => state.copyWith(pagination: data);
+
+  @override
+  BranchesQuery buildQuery({required int page}) {
+    final trimmed = state.searchQuery.trim();
+    return BranchesQuery(
+      page: page,
+      search: trimmed.isEmpty ? null : trimmed,
+      filter: state.filter,
     );
   }
+
+  @override
+  TaskEither<Failure, Page<BranchEntity>> fetchPage(BranchesQuery query) =>
+      _getBranchesUseCase(query);
+
+  @override
+  Object dedupKey(BranchEntity item) => item.id;
 }

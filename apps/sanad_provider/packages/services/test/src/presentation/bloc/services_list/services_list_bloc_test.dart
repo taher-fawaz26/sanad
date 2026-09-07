@@ -717,8 +717,10 @@ void main() {
           status: RequestStatus.success,
           items: [
             _service('sofa', category: homeCleaning),
-            _service('leak', category: plumbing)
-                .copyWith(status: ProviderServiceStatus.inactive),
+            _service(
+              'leak',
+              category: plumbing,
+            ).copyWith(status: ProviderServiceStatus.inactive),
             _service('water-heater', category: plumbing),
           ],
         ),
@@ -930,8 +932,7 @@ void main() {
           'atomic: query cleared and items cleared to loading',
         ),
         predicate<ServicesListState>(
-          (s) =>
-              s.services.length == 2 && s.status == RequestStatus.success,
+          (s) => s.services.length == 2 && s.status == RequestStatus.success,
           'terminal populated list',
         ),
       ],

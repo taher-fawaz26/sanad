@@ -333,4 +333,84 @@ abstract final class AppSvgs {
 
   /// Phone-with-plus icon — details card "Mobile number" row (`7020:28373`).
   static const String uaePassMobileNumber = '$_base/uae_pass_mobile_number.svg';
+
+  // ── AI chat home + composer (Figma `7118:29597` / `5153:42646` /
+  // `7827:30542`) ─────────────────────────────────────────────────────────
+
+  /// Two-tone sparkle mark — composer's leading "Sanad" glyph. Baked-in
+  /// brand colors (`#1A7E6B` / `#87FC00`); rendered without a `colorFilter`,
+  /// like [sanadLogo].
+  static const String aiChatSparkle = '$_base/ai_chat_sparkle.svg';
+
+  /// The "Sanad" nav-pill glyph — Figma `header-profile` (`7124:29682`).
+  ///
+  /// Green + lime (`#1A7A66` / `#87FC00`) at ~19dp, its own third colorway
+  /// alongside [aiChatSparkle] and [aiChatHeroMark]. Rendered without a
+  /// `colorFilter`, like [sanadLogo].
+  ///
+  /// This file previously held the **hero** export by mistake — 93×91,
+  /// `white` + `#1A7A66`. Scaled into a 19dp nav slot, its white body
+  /// disappeared against the white pill and only the dark check remained, so
+  /// the selected destination showed a small dark smudge instead of the
+  /// sparkle.
+  static const String aiChatNavMark = '$_base/ai_chat_nav_mark.svg';
+
+  /// The Home hero's large sparkle mark (Figma `7118:29600`).
+  ///
+  /// The same silhouette as [aiChatSparkle] in a **different colorway** —
+  /// `white` + `#1A7A66` here, against the composer glyph's `#1A7E6B` +
+  /// `#87FC00` lime. It reads as white because it sits on the hero's green
+  /// bloom, where the composer's lime would disappear. Both are baked-in
+  /// brand colors, so neither takes a `colorFilter`; scaling the composer
+  /// export up to hero size would render the wrong colors, which is why this
+  /// is its own asset rather than a size variant.
+  static const String aiChatHeroMark = '$_base/ai_chat_hero_mark.svg';
+
+  /// Outline document — the "Requests" nav-pill glyph. Single-color stroke
+  /// (baked `#5C6C75`); recolor via `colorFilter` for the active/inactive
+  /// tint rather than keeping a second copy per state.
+  static const String aiChatNavPaper = '$_base/ai_chat_nav_paper.svg';
+
+  /// Outline folder — the "My Life" nav-pill glyph. Single-color stroke,
+  /// recolor via `colorFilter` as with [aiChatNavPaper].
+  static const String aiChatNavFolder = '$_base/ai_chat_nav_folder.svg';
+
+  /// Outline clock-in-circle — the History button glyph.
+  static const String aiChatNavHistory = '$_base/ai_chat_nav_history.svg';
+
+  // ── Live Voice (Figma `Chat – 06/07/08`, `7137:29887` / `7880:16671` /
+  // `7873:16622`) ─────────────────────────────────────────────────────────
+
+  /// The Live Voice hero mark (Figma `7880:16695`) — the **fourth** colorway
+  /// of Sanad's sparkle: `white` + lime `#87FC00`, at ~86×84.
+  ///
+  /// Each surface gets its own export because each sits on a different
+  /// ground, and the marks are not recolourable (their brand colors are baked
+  /// in, so no `colorFilter` applies):
+  ///
+  /// | asset | colors | ground |
+  /// |---|---|---|
+  /// | [aiChatSparkle] | `#1A7E6B` + `#87FC00` | white composer/bubble |
+  /// | [aiChatNavMark] | `#1A7A66` + `#87FC00` | white nav pill |
+  /// | [aiChatHeroMark] | `white` + `#1A7A66` | pale green chat bloom |
+  /// | [aiChatVoiceMark] | `white` + `#87FC00` | dark green voice gradient |
+  static const String aiChatVoiceMark = '$_base/ai_chat_voice_mark.svg';
+
+  /// The Live Voice close (X) — Figma `7880:16685`, 32dp, stroked `#F9F9FA`
+  /// for the dark background. Single-color, so it recolors via `colorFilter`.
+  static const String aiChatVoiceClose = '$_base/ai_chat_voice_close.svg';
+
+  /// Filled microphone — composer dictation button, Default/Focused states.
+  static const String aiChatComposerMic = '$_base/ai_chat_composer_mic.svg';
+
+  /// Outline microphone — composer dictation button, Disabled state. A
+  /// distinct Figma export, not a recolor of [aiChatComposerMic].
+  static const String aiChatComposerMicDisabled =
+      '$_base/ai_chat_composer_mic_disabled.svg';
+
+  /// Plus — composer attach button.
+  static const String aiChatComposerPlus = '$_base/ai_chat_composer_plus.svg';
+
+  /// Right-arrow chevron — composer Send button.
+  static const String aiChatComposerSend = '$_base/ai_chat_composer_send.svg';
 }

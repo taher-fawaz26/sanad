@@ -6,17 +6,14 @@ import 'package:branches/src/data/models/manager_list_response_dto.dart';
 import 'package:branches/src/data/models/requests/create_branch_request.dart';
 import 'package:branches/src/data/models/requests/update_branch_request.dart';
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
-import 'package:branches/src/domain/entities/paginated_managers_entity.dart';
-import 'package:branches/src/domain/usecases/branch_usecase_params.dart';
+import 'package:branches/src/domain/usecases/branch_managers_query.dart';
+import 'package:branches/src/domain/usecases/branches_query.dart';
 import 'package:core/core.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:network/network.dart';
 
 abstract interface class BranchRemoteDataSource {
-  TaskEither<Failure, BranchListResponseDto> getBranches({
-    required int page,
-    required int limit,
-  });
+  TaskEither<Failure, BranchListResponseDto> getBranches(BranchesQuery query);
 
   TaskEither<Failure, BranchDto> getBranch(String id);
 
@@ -36,8 +33,8 @@ abstract interface class BranchRemoteDataSource {
 
   TaskEither<Failure, List<BranchAvailabilityEntity>> getCompanySchedule();
 
-  TaskEither<Failure, PaginatedManagersEntity> getBranchManagers(
-    GetBranchManagersParams params,
+  TaskEither<Failure, ManagerListResponseDto> getBranchManagers(
+    BranchManagersQuery query,
   );
 }
 
@@ -47,13 +44,12 @@ class BranchRemoteDataSourceImpl implements BranchRemoteDataSource {
   final BaseApiClient _apiClient;
 
   @override
-  TaskEither<Failure, BranchListResponseDto> getBranches({
-    required int page,
-    required int limit,
-  }) => _apiClient.request<BranchListResponseDto>(
+  TaskEither<Failure, BranchListResponseDto> getBranches(
+    BranchesQuery query,
+  ) => _apiClient.request<BranchListResponseDto>(
     path: BranchApiPaths.branches,
     method: RequestMethod.get,
-    query: {'page': page, 'limit': limit},
+    query: query.toQueryMap(),
     parser: (data) =>
         BranchListResponseDto.fromJson(data as Map<String, dynamic>),
   );
@@ -114,6 +110,9 @@ class BranchRemoteDataSourceImpl implements BranchRemoteDataSource {
           final map = data as Map<String, dynamic>;
           final list = map['availability'] as List<dynamic>?;
           if (list == null) return [];
+          // Day codes are normalized to the canonical all-caps form inside
+          // `BranchAvailabilityDto.toDomain()` — the single boundary shared
+          // with the branch payload's own availability (SAN-780).
           return list
               .map(
                 (e) => BranchAvailabilityDto.fromJson(
@@ -125,24 +124,13 @@ class BranchRemoteDataSourceImpl implements BranchRemoteDataSource {
       );
 
   @override
-  TaskEither<Failure, PaginatedManagersEntity> getBranchManagers(
-    GetBranchManagersParams params,
-  ) {
-    final query = <String, dynamic>{
-      'type': 'manager',
-      'page': params.page,
-      'limit': params.limit,
-    };
-    if (params.query != null && params.query!.isNotEmpty) {
-      query['search'] = params.query;
-    }
-    return _apiClient.request<PaginatedManagersEntity>(
-      path: BranchApiPaths.branchManagers,
-      method: RequestMethod.get,
-      query: query,
-      parser: (data) => ManagerListResponseDto.fromJson(
-        data as Map<String, dynamic>,
-      ).toDomain(),
-    );
-  }
+  TaskEither<Failure, ManagerListResponseDto> getBranchManagers(
+    BranchManagersQuery query,
+  ) => _apiClient.request<ManagerListResponseDto>(
+    path: BranchApiPaths.branchManagers,
+    method: RequestMethod.get,
+    query: query.toQueryMap(),
+    parser: (data) =>
+        ManagerListResponseDto.fromJson(data as Map<String, dynamic>),
+  );
 }

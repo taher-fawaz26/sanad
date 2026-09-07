@@ -31,6 +31,8 @@ class LocationPickerState extends Equatable {
     this.searchQuery = '',
     this.hasLocationPermission = false,
     this.selectedPlaceId,
+    this.isLocating = false,
+    this.currentLocationFailure,
   });
 
   /// Country the picked location must belong to (the UAE).
@@ -60,6 +62,28 @@ class LocationPickerState extends Equatable {
   /// selection. Cleared when the user drags the map or uses forward geocode,
   /// because those flows produce coordinates without a Google Place ID.
   final String? selectedPlaceId;
+
+  /// True while the "use my current location" (crosshair) request is in flight
+  /// — from permission/service resolution through the GPS fetch. Transient and
+  /// deliberately separate from [status] so a running (or failed) GPS attempt
+  /// never clobbers an already-valid selection or its address (SAN-778).
+  final bool isLocating;
+
+  /// The most recent "use my current location" failure. Surfaced to the user
+  /// as a localized message + recovery action WITHOUT destroying a valid
+  /// [status]/[position]/[address] — a failed GPS attempt must leave any
+  /// previously selected location intact (SAN-778). Cleared on the next
+  /// attempt, on success, and on app resume.
+  final Failure? currentLocationFailure;
+
+  /// A selection is present and confirmable on its own terms — used to decide
+  /// whether a current-location failure is shown inline (no selection yet) or
+  /// as a transient snackbar (an existing selection must be preserved).
+  bool get hasResolvedSelection =>
+      status == LocationPickerStatus.ready &&
+      position != null &&
+      address != null &&
+      address!.isNotEmpty;
 
   /// True only when the pin is *known* to be in another country — a null
   /// geocode never blocks a legitimate in-country point.
@@ -104,11 +128,14 @@ class LocationPickerState extends Equatable {
     String? searchQuery,
     bool? hasLocationPermission,
     String? Function()? selectedPlaceId,
+    bool? isLocating,
+    Failure? currentLocationFailure,
     bool clearFailure = false,
     bool clearAddress = false,
     bool clearPredictions = false,
     bool clearSearchError = false,
     bool clearSelectedPlaceId = false,
+    bool clearCurrentLocationFailure = false,
   }) {
     return LocationPickerState(
       status: status ?? this.status,
@@ -134,8 +161,12 @@ class LocationPickerState extends Equatable {
       selectedPlaceId: clearSelectedPlaceId
           ? null
           : (selectedPlaceId != null
-              ? selectedPlaceId()
-              : this.selectedPlaceId),
+                ? selectedPlaceId()
+                : this.selectedPlaceId),
+      isLocating: isLocating ?? this.isLocating,
+      currentLocationFailure: clearCurrentLocationFailure
+          ? null
+          : (currentLocationFailure ?? this.currentLocationFailure),
     );
   }
 
@@ -153,5 +184,7 @@ class LocationPickerState extends Equatable {
     searchQuery,
     hasLocationPermission,
     selectedPlaceId,
+    isLocating,
+    currentLocationFailure,
   ];
 }

@@ -1,6 +1,7 @@
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:localization/localization.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 
@@ -35,9 +36,9 @@ class LanguagePreferencesBottomSheet extends StatefulWidget {
 
 class _LanguagePreferencesBottomSheetState
     extends State<LanguagePreferencesBottomSheet> {
-  static const _options = <_LanguageOption>[
-    _LanguageOption(code: 'en', labelKey: 'app.english'),
-    _LanguageOption(code: 'ar', labelKey: 'app.arabic'),
+  static const _options = <AppLanguage>[
+    AppLanguage.english,
+    AppLanguage.arabic,
   ];
 
   late String _selectedCode;
@@ -45,7 +46,9 @@ class _LanguagePreferencesBottomSheetState
   @override
   void initState() {
     super.initState();
-    _selectedCode = widget.initialLanguageCode == 'en' ? 'en' : 'ar';
+    // Resolved through AppLanguage so an unrecognized code lands on the
+    // product default (English) rather than silently selecting Arabic.
+    _selectedCode = AppLanguage.fromCode(widget.initialLanguageCode).code;
   }
 
   void _select(String code) => setState(() => _selectedCode = code);
@@ -89,13 +92,6 @@ class _LanguagePreferencesBottomSheetState
       ],
     );
   }
-}
-
-class _LanguageOption {
-  const _LanguageOption({required this.code, required this.labelKey});
-
-  final String code;
-  final String labelKey;
 }
 
 class _DragHandle extends StatelessWidget {

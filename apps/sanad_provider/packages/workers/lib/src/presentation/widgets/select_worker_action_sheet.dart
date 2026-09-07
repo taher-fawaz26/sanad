@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 import 'package:workers/src/domain/entities/worker_entity.dart';
+import 'package:workers/src/domain/entities/worker_type.dart';
 import 'package:workers/src/domain/usecases/get_workers_usecase.dart';
 
 /// Result returned when the user confirms worker selection.
@@ -34,8 +35,12 @@ Future<SelectWorkerResult?> showSelectWorkerActionSheet({
           w.role.toLowerCase().contains(q),
       initialSelectedIds: initialSelectedIds,
       loadItems: () async {
+        // Server-side type filter — the picker assigns *workers* to a
+        // branch, so managers must never appear (they have their own
+        // picker with `type=manager`). Mirrors the manager picker's query;
+        // no client-side post-filter.
         final result = await sl<GetWorkersUseCase>()(
-          const WorkersQuery(limit: 100),
+          const WorkersQuery(limit: 100, type: WorkerType.worker),
         ).run();
         return result.fold((f) => throw f, (paged) => paged.items);
       },

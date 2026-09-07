@@ -29,6 +29,7 @@ flutter:
     - assets/images/workers/
     - assets/images/onboarding/
     - assets/images/registration/
+    - assets/images/ai_chat/
     - assets/icons/
     - assets/icons/navigation/
     - assets/animations/production/

@@ -82,7 +82,9 @@ final class OrganizationSettingsMediaUpdated extends OrganizationSettingsEvent {
   });
 
   final OrganizationMediaSlot slot;
-  final String url;
+
+  /// The new image URL, or `null` when the image was removed.
+  final String? url;
 
   @override
   List<Object?> get props => [slot, url];

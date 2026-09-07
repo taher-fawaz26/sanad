@@ -92,7 +92,8 @@ abstract final class TradeLicenseSignalPolicy {
     final text = _normalize(rawOcrText);
     if (text.length < _kMinTextLength) return false;
 
-    final hasStrongTerm = _containsAny(text, _strongTermsEn) ||
+    final hasStrongTerm =
+        _containsAny(text, _strongTermsEn) ||
         _containsAny(text, _strongTermsAr);
     if (!hasStrongTerm) return false;
 

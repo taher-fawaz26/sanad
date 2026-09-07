@@ -18,6 +18,9 @@ class LocationRepositoryImpl implements LocationRepository {
   Future<bool> openAppSettings() => _service.openAppSettings();
 
   @override
+  Future<bool> openLocationSettings() => _service.openLocationSettings();
+
+  @override
   Future<LocationPermissionStatus> checkPermission() =>
       _service.checkPermission();
 }

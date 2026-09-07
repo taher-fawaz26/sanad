@@ -366,7 +366,7 @@ class OrganizationSettingsBloc
     );
   }
 
-  /// Merges a successfully-uploaded cover/logo URL into [state.organization]
+  /// Merges a successful cover/logo change into [state.organization]
   /// so it doesn't go stale (or get silently overwritten by a stale cached
   /// value) until the next full network refresh. The upload/its own
   /// loading-progress state is already owned and shown by
@@ -379,16 +379,24 @@ class OrganizationSettingsBloc
     final organization = state.organization;
     if (organization == null) return;
 
-    final media = MeMediaEntity(
-      id:
-          switch (event.slot) {
-            OrganizationMediaSlot.cover => organization.coverImage?.id,
-            OrganizationMediaSlot.logo => organization.profileImage?.id,
-          } ??
-          event.url,
-      url: event.url,
-    );
+    final url = event.url;
 
+    // A null url is a removal: clear the slot rather than merging a media
+    // record. Without this the cached organization kept the deleted image and
+    // the next refresh put it straight back on screen.
+    final media = url == null
+        ? null
+        : MeMediaEntity(
+            id:
+                switch (event.slot) {
+                  OrganizationMediaSlot.cover => organization.coverImage?.id,
+                  OrganizationMediaSlot.logo => organization.profileImage?.id,
+                } ??
+                url,
+            url: url,
+          );
+
+    // Only the targeted slot is passed, so the other image is left untouched.
     final merged = switch (event.slot) {
       OrganizationMediaSlot.cover => organization.copyWith(coverImage: media),
       OrganizationMediaSlot.logo => organization.copyWith(profileImage: media),

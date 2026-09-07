@@ -14,7 +14,8 @@ import 'package:sanad_client/src/routing/client_routes.dart';
 
 /// Builds the [OtpFlowConfig] for the OAuth Email/Phone verification step.
 ///
-/// Centralizes the copy/behavior that differs from the shared package
+/// Renders the client OTP visual spec ([OtpVisualStyle.client]) and
+/// centralizes the copy/behavior that differs from the shared package
 /// defaults (see [OtpFlowConfig.verifyLabel]/[OtpFlowConfig.pinActionToBottom]
 /// doc comments for why): "Next" instead of "Verify", the button pinned to the
 /// bottom of the screen, a channel-specific subtitle, and no success screen
@@ -42,23 +43,35 @@ OtpFlowConfig<ClientVerifyResult> buildOAuthOtpConfig({
       destination: destination,
       verifier: verifier,
       presentation: OtpPresentation.page,
+      // Pinned rather than left to the app-level `OtpStyleScope`: this screen
+      // exists only in the client app and is drawn straight from the client
+      // OTP Figma, so it should read as the client spec on its own.
+      style: OtpVisualStyle.client,
       subtitleBuilder: subtitleBuilder,
       verifyLabel: 'oauth.next'.tr(),
       pinActionToBottom: true,
       autoSendOnStart: autoSendOnStart,
       autoSubmit: false,
       showSuccessScreen: false,
+      animateContent: true,
+      animateBanner: true,
     ),
     OtpChannel.phone => OtpFlowConfig<ClientVerifyResult>.phone(
       destination: destination,
       verifier: verifier,
       presentation: OtpPresentation.page,
+      // Pinned rather than left to the app-level `OtpStyleScope`: this screen
+      // exists only in the client app and is drawn straight from the client
+      // OTP Figma, so it should read as the client spec on its own.
+      style: OtpVisualStyle.client,
       subtitleBuilder: subtitleBuilder,
       verifyLabel: 'oauth.next'.tr(),
       pinActionToBottom: true,
       autoSendOnStart: autoSendOnStart,
       autoSubmit: false,
       showSuccessScreen: false,
+      animateContent: true,
+      animateBanner: true,
     ),
   };
 }
@@ -145,8 +158,14 @@ class _OAuthOtpPageState extends State<OAuthOtpPage> {
         userResult.match(
           (failure) => _showError(failure.localizedMessage()),
           (_) {
+            // `go`, not `push`: the session is now authenticated, so the whole
+            // pre-auth OAuth/OTP stack must be replaced, not layered under the
+            // next screen. Leaving this OTP route in the back stack is what let
+            // a later `refreshListenable` re-parse rebuild it with a dropped
+            // `extra` and crash (`state.extra!`). Enter Name / Home own the
+            // stack from here.
             if (data.user?.name == null) {
-              context.push(AccountSetupRoutes.enterName);
+              context.go(AccountSetupRoutes.enterName);
             } else {
               context.go(ClientRoutes.home);
             }

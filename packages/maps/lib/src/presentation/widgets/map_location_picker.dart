@@ -7,9 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:maps/src/domain/entities/place_prediction.dart';
-import 'package:maps/src/domain/usecases/get_current_location_usecase.dart';
 import 'package:maps/src/presentation/bloc/location_picker/location_picker_bloc.dart';
 import 'package:maps/src/presentation/camera/default_map_viewport.dart';
+import 'package:maps/src/services/location_failure_codes.dart';
 import 'package:maps/src/presentation/camera/initial_camera_resolver.dart';
 import 'package:maps/src/presentation/controllers/map_camera_controller.dart';
 import 'package:maps/src/presentation/models/location_picker_labels.dart';
@@ -29,6 +29,7 @@ class MapLocationPicker extends StatefulWidget {
     this.existingLocation,
     this.initialLocation,
     this.initialAddress,
+    this.initialPlaceId,
     this.configuration = const MapConfiguration(),
     this.pinMarker,
     this.mapHeight = 320,
@@ -52,6 +53,10 @@ class MapLocationPicker extends StatefulWidget {
   /// [existingLocation].
   final LatLng? initialLocation;
   final String? initialAddress;
+
+  /// A previously saved Google Place ID (edit-reopen), seeded so an
+  /// already-complete selection is confirmable immediately (SAN-778 follow-up).
+  final String? initialPlaceId;
   final MapConfiguration configuration;
   final Widget? pinMarker;
   final double mapHeight;
@@ -74,8 +79,13 @@ class MapLocationPicker extends StatefulWidget {
   State<MapLocationPicker> createState() => MapLocationPickerState();
 }
 
-class MapLocationPickerState extends State<MapLocationPicker> {
+class MapLocationPickerState extends State<MapLocationPicker>
+    with WidgetsBindingObserver {
   final _cameraController = MapCameraController();
+
+  /// Held so the app-lifecycle observer can re-check permission on resume.
+  /// Owned/closed by the [BlocProvider]; this is only a reference.
+  LocationPickerBloc? _bloc;
 
   /// Gates the real map/Bloc content behind the sheet's first frame.
   ///
@@ -94,6 +104,7 @@ class MapLocationPickerState extends State<MapLocationPicker> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       appLogger.d('[MapLocationPicker] sheet first frame rendered');
       if (!mounted) return;
@@ -103,8 +114,23 @@ class MapLocationPickerState extends State<MapLocationPicker> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    // A location error notification lives in the root overlay, so it would
+    // outlive this sheet — dismiss it when the picker closes.
+    dismissAppOverlayNotification();
+    _bloc = null;
     _cameraController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Returning from system Settings (device location / app permission) must
+    // recover the picker without a restart or an arbitrary delay: re-check
+    // the OS state and clear any stale current-location error (SAN-778).
+    if (state == AppLifecycleState.resumed) {
+      _bloc?.add(const LocationPickerResumed());
+    }
   }
 
   /// Opens the tap-to-search modal sheet, mirroring the Branches/Workers search
@@ -169,42 +195,83 @@ class MapLocationPickerState extends State<MapLocationPicker> {
     appLogger.d('[MapLocationPicker] location/map init starting');
 
     return BlocProvider(
-      create: (_) => sl<LocationPickerBloc>()
-        ..add(
-          LocationPickerStarted(
-            initialPosition: InitialCameraResolver.resolveInitialLocation(
-              existingLocation: widget.existingLocation,
-              initialLocation: widget.initialLocation,
-            ),
-            initialAddress: widget.initialAddress,
-            localeIdentifier: localeIdentifier,
-          ),
-        ),
-      child: BlocListener<LocationPickerBloc, LocationPickerState>(
-        listenWhen: (previous, current) =>
-            previous.position != current.position ||
-            previous.address != current.address ||
-            previous.cameraSource != current.cameraSource,
-        listener: (context, state) {
-          if (state.cameraSource == LocationPickerCameraSource.programmatic &&
-              state.position != null) {
-            _cameraController.animateTo(
-              state.position!,
-              zoom: widget.configuration.initialZoom,
-            );
-          }
-          if (state.position != null &&
-              state.address != null &&
-              state.address!.isNotEmpty) {
-            widget.onLocationChanged?.call(
-              LocationPickerResult(
-                position: state.position!,
-                address: state.address!,
-                placeId: state.selectedPlaceId,
+      create: (_) {
+        final bloc = sl<LocationPickerBloc>()
+          ..add(
+            LocationPickerStarted(
+              initialPosition: InitialCameraResolver.resolveInitialLocation(
+                existingLocation: widget.existingLocation,
+                initialLocation: widget.initialLocation,
               ),
-            );
-          }
-        },
+              initialAddress: widget.initialAddress,
+              initialPlaceId: widget.initialPlaceId,
+              localeIdentifier: localeIdentifier,
+            ),
+          );
+        _bloc = bloc;
+        return bloc;
+      },
+      child: MultiBlocListener(
+        listeners: [
+          BlocListener<LocationPickerBloc, LocationPickerState>(
+            listenWhen: (previous, current) =>
+                previous.position != current.position ||
+                previous.address != current.address ||
+                previous.cameraSource != current.cameraSource,
+            listener: (context, state) {
+              if (state.cameraSource ==
+                      LocationPickerCameraSource.programmatic &&
+                  state.position != null) {
+                _cameraController.animateTo(
+                  state.position!,
+                  zoom: widget.configuration.initialZoom,
+                );
+              }
+              if (state.position != null &&
+                  state.address != null &&
+                  state.address!.isNotEmpty) {
+                widget.onLocationChanged?.call(
+                  LocationPickerResult(
+                    position: state.position!,
+                    address: state.address!,
+                    placeId: state.selectedPlaceId,
+                  ),
+                );
+              }
+            },
+          ),
+          // Every location failure is surfaced as a top-of-screen
+          // notification rendered in the ROOT overlay, so it stays visible
+          // ABOVE this modal bottom sheet — a ScaffoldMessenger snackbar would
+          // anchor to the underlying page's Scaffold and be hidden behind the
+          // sheet. The failed attempt never hides/replaces a valid selection
+          // (SAN-778): the sheet stays open and the map state is untouched.
+          BlocListener<LocationPickerBloc, LocationPickerState>(
+            listenWhen: (previous, current) =>
+                previous.currentLocationFailure !=
+                    current.currentLocationFailure &&
+                current.currentLocationFailure != null,
+            listener: (context, state) => _showLocationErrorNotification(
+              context,
+              state.currentLocationFailure!,
+              isCurrentLocation: true,
+            ),
+          ),
+          // Reverse/forward-geocode + Place-ID resolution failures (network,
+          // no place found, API errors) surface through the same top
+          // notification instead of an inline panel under the sheet.
+          BlocListener<LocationPickerBloc, LocationPickerState>(
+            listenWhen: (previous, current) =>
+                previous.failure != current.failure &&
+                current.status == LocationPickerStatus.failure &&
+                current.failure != null,
+            listener: (context, state) => _showLocationErrorNotification(
+              context,
+              state.failure!,
+              isCurrentLocation: false,
+            ),
+          ),
+        ],
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -243,6 +310,7 @@ class MapLocationPickerState extends State<MapLocationPicker> {
         isLoadingMap: state.isLoadingMap,
         isGeocoding: state.isGeocoding,
         hasLocationPermission: state.hasLocationPermission,
+        isLocating: state.isLocating,
       ),
       builder: (context, mapState) {
         final bloc = context.read<LocationPickerBloc>();
@@ -252,6 +320,7 @@ class MapLocationPickerState extends State<MapLocationPicker> {
           isLoadingMap: mapState.isLoadingMap,
           isGeocoding: mapState.isGeocoding,
           hasLocationPermission: mapState.hasLocationPermission,
+          isLocating: mapState.isLocating,
           initialCameraPosition: InitialCameraResolver.resolveCamera(
             existingLocation: widget.existingLocation,
             initialLocation: widget.initialLocation,
@@ -262,6 +331,8 @@ class MapLocationPickerState extends State<MapLocationPicker> {
           height: widget.mapHeight,
           showControls: widget.showControls,
           onCameraIdle: () => _onCameraIdle(bloc, state),
+          onMyLocationPressed: () =>
+              bloc.add(const LocationPickerCurrentLocationRequested()),
         );
       },
     );
@@ -271,22 +342,62 @@ class MapLocationPickerState extends State<MapLocationPicker> {
     return BlocBuilder<LocationPickerBloc, LocationPickerState>(
       buildWhen: (previous, current) =>
           previous.status != current.status ||
-          previous.address != current.address ||
-          previous.failure != current.failure,
+          previous.address != current.address,
       builder: (context, state) {
         final labels = widget.labels;
-
-        if (state.hasPermissionError) {
-          return _PermissionMessage(state: state, labels: labels);
-        }
-        if (state.status == LocationPickerStatus.failure) {
-          return _ErrorMessage(failure: state.failure, labels: labels);
-        }
+        // The sheet content only ever shows the (read-only) address field —
+        // the resolved address when there is a valid selection, otherwise the
+        // hint. Failures are surfaced as a top-of-screen notification above
+        // the sheet (see the failure listeners in `_buildContent`), never
+        // inline under the sheet, and never by disabling the field. Progress
+        // is conveyed by the map spinner and the disabled Confirm button.
         return LocationAddressField(
           label: labels.specifiedLocation,
-          value: state.address,
+          value: state.hasResolvedSelection ? state.address : null,
           hint: labels.addressHint,
         );
+      },
+    );
+  }
+
+  /// Surfaces a location [failure] as a top-of-screen notification rendered in
+  /// the root overlay — visible ABOVE this modal bottom sheet. The message is
+  /// localized by the stable failure [code] (never a raw platform exception),
+  /// and the single recovery action retries or opens the appropriate settings.
+  /// Repeated failures replace the active notification rather than stacking.
+  void _showLocationErrorNotification(
+    BuildContext context,
+    Failure failure, {
+    required bool isCurrentLocation,
+  }) {
+    final labels = widget.labels;
+    final bloc = context.read<LocationPickerBloc>();
+    final action = _locationErrorActionFor(failure.code);
+
+    showAppOverlayNotification(
+      context: context,
+      title: _locationErrorMessageFor(failure.code, labels),
+      action: AppSnackbarAction.text,
+      actionLabel: switch (action) {
+        _LocationErrorAction.openAppSettings => labels.openSettings,
+        _LocationErrorAction.openLocationSettings =>
+          labels.openLocationSettings,
+        _LocationErrorAction.retry => labels.retry,
+      },
+      onAction: () {
+        if (bloc.isClosed) return;
+        switch (action) {
+          case _LocationErrorAction.openAppSettings:
+            bloc.add(const LocationPickerSettingsRequested());
+          case _LocationErrorAction.openLocationSettings:
+            bloc.add(const LocationPickerDeviceSettingsRequested());
+          case _LocationErrorAction.retry:
+            bloc.add(
+              isCurrentLocation
+                  ? const LocationPickerCurrentLocationRequested()
+                  : const LocationPickerRetryGeocode(),
+            );
+        }
       },
     );
   }
@@ -425,12 +536,14 @@ class _MapState extends Equatable {
     required this.isLoadingMap,
     required this.isGeocoding,
     required this.hasLocationPermission,
+    required this.isLocating,
   });
 
   final LatLng? position;
   final bool isLoadingMap;
   final bool isGeocoding;
   final bool hasLocationPermission;
+  final bool isLocating;
 
   @override
   List<Object?> get props => [
@@ -438,6 +551,7 @@ class _MapState extends Equatable {
     isLoadingMap,
     isGeocoding,
     hasLocationPermission,
+    isLocating,
   ];
 }
 
@@ -451,6 +565,8 @@ class _MapView extends StatelessWidget {
     required this.isLoadingMap,
     required this.isGeocoding,
     required this.hasLocationPermission,
+    required this.isLocating,
+    required this.onMyLocationPressed,
     this.position,
     this.pinMarker,
   });
@@ -463,12 +579,21 @@ class _MapView extends StatelessWidget {
   /// layer before permission is actually known to be granted (see
   /// [LocationPickerState.hasLocationPermission]).
   final bool hasLocationPermission;
+
+  /// Whether a current-location request is in flight — drives the crosshair
+  /// button's spinner.
+  final bool isLocating;
   final CameraPosition initialCameraPosition;
   final MapCameraController cameraController;
   final Widget? pinMarker;
   final double height;
   final bool showControls;
   final VoidCallback onCameraIdle;
+
+  /// Dispatches the "use my current location" request. The whole sequence
+  /// (permission/service, GPS, validation, camera, geocode) is owned by the
+  /// bloc — see [LocationPickerCurrentLocationRequested].
+  final VoidCallback onMyLocationPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -510,8 +635,8 @@ class _MapView extends StatelessWidget {
                 children: [
                   MapZoomControls(cameraController: cameraController),
                   MapMyLocationButton(
-                    cameraController: cameraController,
-                    getCurrentLocationUseCase: sl<GetCurrentLocationUseCase>(),
+                    isLoading: isLocating,
+                    onPressed: onMyLocationPressed,
                   ),
                 ],
               ),
@@ -535,68 +660,33 @@ class _MapView extends StatelessWidget {
   }
 }
 
-class _PermissionMessage extends StatelessWidget {
-  const _PermissionMessage({
-    required this.state,
-    required this.labels,
-  });
+/// The recovery action a location failure offers.
+enum _LocationErrorAction { retry, openAppSettings, openLocationSettings }
 
-  final LocationPickerState state;
-  final LocationPickerLabels labels;
-
-  @override
-  Widget build(BuildContext context) {
-    final message = switch (state.status) {
-      LocationPickerStatus.permissionDenied => labels.permissionDenied,
-      LocationPickerStatus.permissionPermanentlyDenied =>
+/// Resolves a location failure [code] to a localized message — never render
+/// `failure.message`, which for geocoding/location failures may be a raw
+/// platform exception string (e.g. `PlatformException(NOT_FOUND, ...)`) and
+/// must never reach the user (SAN-778).
+String _locationErrorMessageFor(String? code, LocationPickerLabels labels) =>
+    switch (code) {
+      LocationFailureCodes.serviceDisabled => labels.serviceDisabled,
+      LocationFailureCodes.permissionDenied => labels.permissionDenied,
+      LocationFailureCodes.permissionPermanentlyDenied =>
         labels.permissionPermanentlyDenied,
-      LocationPickerStatus.serviceDisabled => labels.serviceDisabled,
+      LocationFailureCodes.outsideSupportedCountry => labels.outsideCountry,
+      LocationFailureCodes.timeout => labels.locationTimeout,
+      LocationFailureCodes.unavailable => labels.locationUnavailable,
+      LocationFailureCodes.geocodingFailed => labels.addressNotFound,
       _ => labels.genericError,
     };
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          message,
-          style: context.appTypography.regularNormal.copyWith(
-            color: context.appColors.error,
-          ),
-        ),
-        if (state.status ==
-            LocationPickerStatus.permissionPermanentlyDenied) ...[
-          SizedBox(height: AppSpacing.sm),
-          AppButton(
-            label: labels.openSettings,
-            variant: AppButtonVariant.secondary,
-            onPressed: () {
-              context.read<LocationPickerBloc>().add(
-                const LocationPickerSettingsRequested(),
-              );
-            },
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _ErrorMessage extends StatelessWidget {
-  const _ErrorMessage({
-    required this.labels,
-    this.failure,
-  });
-
-  final Failure? failure;
-  final LocationPickerLabels labels;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      failure?.message ?? labels.genericError,
-      style: context.appTypography.regularNormal.copyWith(
-        color: context.appColors.error,
-      ),
-    );
-  }
-}
+/// The single recovery action appropriate to a location failure [code]:
+/// device-location settings for a disabled service, app settings for a
+/// permanent permission denial, and a plain retry for everything else.
+_LocationErrorAction _locationErrorActionFor(String? code) => switch (code) {
+  LocationFailureCodes.serviceDisabled =>
+    _LocationErrorAction.openLocationSettings,
+  LocationFailureCodes.permissionPermanentlyDenied =>
+    _LocationErrorAction.openAppSettings,
+  _ => _LocationErrorAction.retry,
+};

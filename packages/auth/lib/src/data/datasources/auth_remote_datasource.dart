@@ -162,6 +162,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         method: RequestMethod.post,
         body: model.toMap(),
         parser: (_) {},
+        // Backend contract: Auth: None. Never ride a leftover session token.
+        authRequired: false,
       );
 
   @override
@@ -173,6 +175,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     method: RequestMethod.get,
     query: {'method': method.value, 'value': value},
     parser: (data) => ResendInfoModel.fromJson(data as Map<String, dynamic>),
+    // Backend contract: Auth: None.
+    authRequired: false,
   );
 
   @override
@@ -184,6 +188,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     body: model.toMap(),
     parser: (data) =>
         ClientVerifyResponseModel.fromJson(data as Map<String, dynamic>),
+    // Backend contract: Auth: None — issues a brand-new session.
+    authRequired: false,
   );
 
   @override

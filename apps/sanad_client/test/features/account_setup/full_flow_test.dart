@@ -58,8 +58,13 @@ GoRouter _buildRouter() => GoRouter(
       path: OAuthRoutes.otp,
       redirect: (context, state) =>
           state.extra is OAuthOtpRouteArgs ? null : OAuthRoutes.screen,
-      builder: (context, state) =>
-          buildOAuthOtpRoutePage(context, state.extra! as OAuthOtpRouteArgs),
+      // Mirror production: never force-unwrap the imperative `extra` in the
+      // builder (a background rebuild can drop it — see client_router.dart).
+      builder: (context, state) {
+        final args = state.extra;
+        if (args is! OAuthOtpRouteArgs) return const SizedBox.shrink();
+        return buildOAuthOtpRoutePage(context, args);
+      },
     ),
     ShellRoute(
       builder: (context, state, child) => BlocProvider(
@@ -236,24 +241,27 @@ void main() {
     expect(find.byType(OAuthScreen), findsNothing);
   });
 
-  testWidgets('back navigation: Enter Name -> OTP', (tester) async {
-    await _pumpRouter(tester);
+  testWidgets(
+    'Enter Name replaces the pre-auth stack — no back to OTP',
+    (tester) async {
+      await _pumpRouter(tester);
 
-    await tester.tap(find.text('oauth.continue_email'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'user@example.com');
-    await tester.pump();
-    await _tapNextToOtp(tester);
-    await _completeOtp(tester);
-    expect(find.byType(EnterNamePage), findsOneWidget);
+      await tester.tap(find.text('oauth.continue_email'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'user@example.com');
+      await tester.pump();
+      await _tapNextToOtp(tester);
+      await _completeOtp(tester);
+      expect(find.byType(EnterNamePage), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.chevron_left));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 350));
-
-    expect(find.byType(EnterNamePage), findsNothing);
-    expect(find.byType(OAuthOtpPage), findsOneWidget);
-  });
+      // The session is authenticated now, so the OTP route was *replaced*
+      // (via `go`), not layered under Enter Name — the pre-auth stack that
+      // used to linger here is what a background refresh rebuilt and crashed
+      // on. There is deliberately no back affordance, and OTP is gone.
+      expect(find.byIcon(Icons.chevron_left), findsNothing);
+      expect(find.byType(OAuthOtpPage), findsNothing);
+    },
+  );
 
   testWidgets('back navigation: Get Notified -> Enter Name', (tester) async {
     await _pumpRouter(tester);

@@ -32,8 +32,15 @@ Translation files: `packages/localization/assets/translations/`
 
 ## Language Switching
 
-`TranslateBloc` events only: `TrArabicEvent` / `TrEnglishEvent`
-Never call `context.setLocale()` directly in widgets.
+`context.setAppLanguage(AppLanguage.arabic)` — the single entry point. It
+dispatches `AppLanguageSelected` on `TranslateBloc`, the only persisted locale
+store; `AppLocaleSync` applies it to EasyLocalization.
+
+Never call `context.setLocale()` directly, and never set `saveLocale: true` —
+both are enforced by
+`packages/localization/test/src/locale/single_set_locale_call_site_test.dart`.
+
+Default language is **English** (`AppLanguage.defaultLanguage`).
 
 ## Pluralization
 

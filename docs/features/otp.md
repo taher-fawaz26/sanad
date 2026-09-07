@@ -4,8 +4,12 @@
 
 The single one-time-code verification flow in the app. Every OTP surface —
 authentication, account settings, organization settings, worker invitation,
-account deletion — runs the same engine and the same screen; callers supply
-only a verifier and what to do with the result.
+account deletion — runs the same engine, the same parts and the same input
+control; callers supply only a verifier and what to do with the result.
+
+There are two **visual specifications** on top of that one engine, because the
+client and provider products are drawn to different OTP designs. See
+[Visual styles](#visual-styles).
 
 ## Location
 
@@ -49,8 +53,43 @@ endpoints implements two methods.
 - `OtpHost<T>` — the same bloc + UI, reporting through a callback instead of
   popping. Used where the screen is embedded in a host's own chrome (the auth
   shell).
-- `OtpView<T>` — the canonical screen. Sheet and page differ **only** in the
-  container around it.
+- `OtpView<T>` — the screen. It owns the code controller, resolves the visual
+  style, and delegates to one of two layouts.
+
+### Visual styles
+
+`OtpVisualStyle` selects which product's Figma the screen is drawn from:
+
+| | `OtpVisualStyle.client` | `OtpVisualStyle.provider` |
+|---|---|---|
+| Figma | `6979:27634`, `6979:27585`, `7063:25563` | `2142:14121` (page), `3809:18083`/`3809:18133` (sheet) |
+| Hierarchy | leading icon circle, start-aligned | no icon, centered |
+| Title | 28dp bold, `otp.client.title` | 32dp semibold, `otp.title` |
+| Cells | `AppOtpFieldMetrics.standard` (45dp) | `AppOtpFieldMetrics.large` (54.5dp) |
+| Action | pinned to a bottom bar (`pinActionToBottom`) | inline, above the countdown |
+| Countdown / resend | mutually exclusive | shown together; the link greys out |
+
+The two live in `view/layouts/client_otp_layout.dart` and
+`view/layouts/provider_otp_layout.dart`. **Neither reads the other**, which is
+the point: before this split there was one hardcoded layout, so tuning the
+client OTP screen silently restyled the provider's. All state binding stays in
+`view/otp_parts.dart` — one implementation of the banner, header, field,
+action, countdown and resend row, styled by whatever the layout passes in — so
+a new style never re-derives behaviour.
+
+`OtpPresentation` (page vs bottom sheet) is orthogonal; both layouts honour it,
+inseting themselves on a page and deferring to the sheet chrome's own padding
+in a sheet.
+
+Resolution order, in `OtpView`:
+
+1. `OtpFlowConfig.style`, when a flow pins itself to one spec;
+2. the app-level `OtpStyleScope` each app installs above its router — this is
+   what lets the OTP call sites in packages **both** apps depend on (`auth`
+   sign-in, `account_settings` deletion, `contact_verification`) render the
+   right product's design without taking a style parameter;
+3. `OtpVisualStyle.provider`, the spec the shared `otp.*` copy was written
+   against (the client spec has its own `otp.client.*` keys).
 
 ## Main State Management
 
@@ -110,7 +149,13 @@ OpenAPI file is committed — read the live spec rather than inferring from Dart
   position is always *selected*, so each keystroke replaces rather than
   inserts, and the caret auto-advances one cell. See
   `_armSelection` in `app_otp_field.dart`.
-- OTP digits stay LTR in Arabic; so does the `mm:ss` countdown.
+- A Figma frame is drawn with however many cells fit its mock, while `length`
+  follows the backend's six-digit contract. When the designed row overflows the
+  available width, `AppOtpField` scales cells **and** gutters by one shared
+  factor, so the frame's cell:gap proportion survives instead of fixed gutters
+  eating into the cells.
+- OTP digits stay LTR in Arabic; so does the countdown (`m:ss` on the client
+  spec's "Resend code in 0:45" caption, bare `mm:ss` on the provider's).
 - Tapping a cell always re-opens the keyboard, including after the platform
   down-chevron dismissed it (SAN-569).
 
@@ -132,6 +177,10 @@ OpenAPI file is committed — read the live spec rather than inferring from Dart
 
 - `packages/otp/lib/src/presentation/bloc/otp/otp_bloc.dart`
 - `packages/otp/lib/src/presentation/view/otp_view.dart`
+- `packages/otp/lib/src/presentation/view/otp_parts.dart`
+- `packages/otp/lib/src/presentation/view/layouts/client_otp_layout.dart`
+- `packages/otp/lib/src/presentation/view/layouts/provider_otp_layout.dart`
+- `packages/otp/lib/src/presentation/config/otp_visual_style.dart`
 - `packages/otp/lib/src/domain/contracts/otp_verifier.dart`
 - `packages/design_system/lib/src/components/app_otp_field.dart`
 

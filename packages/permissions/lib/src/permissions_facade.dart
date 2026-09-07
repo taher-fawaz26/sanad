@@ -177,6 +177,18 @@ abstract final class Permissions {
     PermissionPolicy? policy,
   }) => _ensure(PermissionType.microphone, context: context, policy: policy);
 
+  /// Speech recognition — a *separate* grant from [ensureMicrophone] on iOS,
+  /// and the same underlying RECORD_AUDIO grant on Android (so on Android it
+  /// resolves immediately once the microphone has been allowed).
+  static Future<PermissionResult> ensureSpeechRecognition({
+    BuildContext? context,
+    PermissionPolicy? policy,
+  }) => _ensure(
+    PermissionType.speechRecognition,
+    context: context,
+    policy: policy,
+  );
+
   static Future<PermissionResult> ensureContacts({
     BuildContext? context,
     PermissionPolicy? policy,

@@ -1,3 +1,4 @@
+import 'package:app_animations/app_animations.dart';
 import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
 import 'package:equatable/equatable.dart';
@@ -159,10 +160,17 @@ class _DetailRow extends StatelessWidget {
             ),
           ),
           SizedBox(width: responsiveDimension(AppSpacing.sm)),
-          switch (data.status) {
-            UaePassDetailRowStatus.completed => const AppVerifiedBadge(),
-            UaePassDetailRowStatus.loading => const _LoadingArcIcon(),
-          },
+          // Crossfade the loading arc → verified badge as each field
+          // arrives, so the swap reads as a state change rather than an
+          // instant pop. Functional motion (not reduced-motion gated); keyed
+          // on the row status so it only transitions when the status flips.
+          AppStateTransition<UaePassDetailRowStatus>(
+            value: data.status,
+            builder: (context, status) => switch (status) {
+              UaePassDetailRowStatus.completed => const AppVerifiedBadge(),
+              UaePassDetailRowStatus.loading => const _LoadingArcIcon(),
+            },
+          ),
         ],
       ),
     );

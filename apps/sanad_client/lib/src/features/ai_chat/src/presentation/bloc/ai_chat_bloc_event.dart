@@ -22,14 +22,23 @@ final class AiChatStarted extends AiChatBlocEvent {
 
 /// A user turn, from the composer or from a `send_message` action.
 final class AiChatMessageSubmitted extends AiChatBlocEvent {
-  /// Creates a submission carrying [text].
-  const AiChatMessageSubmitted(this.text);
+  /// Creates a submission carrying [text] and any [attachments].
+  const AiChatMessageSubmitted(this.text, {this.attachments = const []});
 
-  /// Raw composer text. Trimmed by the handler; empty input is ignored.
+  /// Raw composer text. Trimmed by the handler; empty input is ignored
+  /// **unless** [attachments] carries something.
   final String text;
 
+  /// Images, documents and voice notes to send with this turn.
+  ///
+  /// Already `ready`: the composer prepares them before submitting. That
+  /// matters because this handler runs under `droppable()` — doing the
+  /// picking or encoding here would widen the await window and silently
+  /// swallow the user's next tap.
+  final List<AiChatAttachment> attachments;
+
   @override
-  List<Object?> get props => [text];
+  List<Object?> get props => [text, attachments];
 }
 
 /// One frame off the transport, re-entered through the bloc so every state

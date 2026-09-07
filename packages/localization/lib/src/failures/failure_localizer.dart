@@ -11,7 +11,7 @@ import 'package:easy_localization/easy_localization.dart';
 ///
 /// Two kinds of message can reach this resolver:
 ///   * **Client i18n keys** — the network layer emits namespaced keys
-///     ([_errorKeyPrefix], e.g. `errors.no_internet`) for transport/local
+///     (`errors.*`, e.g. `errors.no_internet`) for transport/local
 ///     failures. These are translated client-side.
 ///   * **Backend prose** — the API returns human messages (already locale-
 ///     negotiated via the Accept-Language interceptor) for 4xx/5xx bodies.
@@ -34,6 +34,32 @@ extension FailureLocalizer on Failure {
     if (_i18nKeyPattern.hasMatch(raw)) return raw.tr();
     return raw;
   }
+
+  /// Like [localizedMessage], but never leaks a developer-facing contract
+  /// complaint.
+  ///
+  /// The backend's validation layer emits two very different kinds of 400
+  /// prose. Some is genuinely for the user ("phone must be a valid UAE
+  /// number") and must survive. The rest describes the *request shape* —
+  /// "property cityId should not exist", "day must be one of the following
+  /// values: Monday,…" — and is meaningless to the user, so it is replaced
+  /// with the generic localized `errors.bad_request` (SAN-774, where
+  /// "property cityId should not exist" was shown verbatim in a snackbar).
+  ///
+  /// Use this at mutation error sinks. [localizedMessage] stays the right
+  /// choice where the message is known to be user-facing.
+  String localizedSafeMessage() =>
+      isValidation && _contractComplaintPattern.hasMatch(message.trim())
+      ? localizedGenericMessage()
+      : localizedMessage();
+
+  /// Recognizes `class-validator`-style complaints about the request schema
+  /// rather than about a value the user typed.
+  static final RegExp _contractComplaintPattern = RegExp(
+    'should not exist|must be one of the following values|'
+    'must be an? (object|array)|property [A-Za-z0-9_]+ ',
+    caseSensitive: false,
+  );
 
   /// A generic, type-based localized message that ignores any server prose.
   ///

@@ -32,11 +32,10 @@ void main() {
 
   WorkerActivityCubit buildCubit({
     Duration staleness = const Duration(seconds: 60),
-  }) =>
-      WorkerActivityCubit(
-        getActivityLogsUseCase: useCase,
-        cacheStore: ActivityLogCacheStore(staleness: staleness),
-      );
+  }) => WorkerActivityCubit(
+    getActivityLogsUseCase: useCase,
+    cacheStore: ActivityLogCacheStore(staleness: staleness),
+  );
 
   blocTest<WorkerActivityCubit, WorkerActivityState>(
     'load emits loading then success on success',

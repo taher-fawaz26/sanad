@@ -255,7 +255,7 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
                                 horizontal: AppSpacing.xl,
                               ),
                               child: Text(
-                                state.failure!.message,
+                                _localizedFailure(state.failure!),
                                 style: context.appTypography.smallNormal
                                     .copyWith(
                                       color: context.appColors.error,
@@ -511,7 +511,7 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
           ],
           SizedBox(height: AppSpacing.sm),
           SizedBox(
-            width: 150,
+            width: responsiveDimension(150),
             child: AppButton(
               label: 'common.add'.tr(),
               size: AppButtonSize.small,
@@ -526,3 +526,17 @@ class _CoverageAreaPageState extends State<CoverageAreaPage> {
     );
   }
 }
+
+/// Resolves a location [failure] to a localized message by its stable code,
+/// so the raw platform exception text is never shown to the user (SAN-778).
+String _localizedFailure(Failure failure) => switch (failure.code) {
+  LocationFailureCodes.serviceDisabled =>
+    'branches.location_picker.service_disabled'.tr(),
+  LocationFailureCodes.permissionDenied =>
+    'branches.location_picker.permission_denied'.tr(),
+  LocationFailureCodes.permissionPermanentlyDenied =>
+    'branches.location_picker.permission_denied'.tr(),
+  LocationFailureCodes.outsideSupportedCountry =>
+    'branches.location_picker.outside_uae'.tr(),
+  _ => 'branches.location_picker.generic_error'.tr(),
+};

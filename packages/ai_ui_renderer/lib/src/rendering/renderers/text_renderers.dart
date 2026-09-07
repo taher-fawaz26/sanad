@@ -1,5 +1,6 @@
 import 'package:ai_ui_protocol/ai_ui_protocol.dart';
 import 'package:ai_ui_renderer/src/rendering/ai_node_renderer.dart';
+import 'package:ai_ui_renderer/src/rendering/ai_ui_markdown.dart';
 import 'package:ai_ui_renderer/src/rendering/ai_ui_render_scope.dart';
 import 'package:ai_ui_renderer/src/rendering/ai_ui_semantics.dart';
 import 'package:ai_ui_renderer/src/rendering/ai_ui_tokens.dart';
@@ -25,15 +26,30 @@ final class AiUiTextRenderer extends AiNodeRenderer<AiUiTextNode> {
         ? node.text.ltrIsolated
         : node.text;
 
+    final style = AiUiTokens.textStyle(context, node.style, node.emphasis);
+    final align = AiUiTokens.textAlign(node.align);
+
+    // The live agent writes Markdown inside `text`. Rendering it verbatim
+    // would show literal `**` and `###` to the user. An inherently-LTR value
+    // is never parsed — it is a raw value, not prose, and `*` in an id or
+    // reference must survive untouched.
+    final markdown = node.direction == AiUiTextDirectionHint.ltrValue
+        ? null
+        : AiUiMarkdown.build(context, text, baseStyle: style, textAlign: align);
+
     return leafSemantics(
       label: node.a11yLabel,
-      child: Text(
-        text,
-        style: AiUiTokens.textStyle(context, node.style, node.emphasis),
-        textAlign: AiUiTokens.textAlign(node.align),
-        maxLines: node.maxLines,
-        overflow: node.maxLines == null ? null : TextOverflow.ellipsis,
-      ),
+      // Plain prose keeps the simple Text path so `maxLines` and ellipsis
+      // still work; Markdown becomes block content, where they do not apply.
+      child:
+          markdown ??
+          Text(
+            text,
+            style: style,
+            textAlign: align,
+            maxLines: node.maxLines,
+            overflow: node.maxLines == null ? null : TextOverflow.ellipsis,
+          ),
     );
   }
 }

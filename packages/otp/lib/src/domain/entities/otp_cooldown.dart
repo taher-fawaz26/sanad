@@ -43,6 +43,15 @@ class OtpCooldown extends Equatable {
 
   bool get hasKnownResendsLeft => resendsLeft >= 0;
 
+  /// A cooldown that is actually running.
+  ///
+  /// [canResend] alone is ambiguous: every `resend-info` endpoint in the
+  /// contract answers `false` both while a session cools down *and* when no
+  /// session exists at all. Only a live session names the seconds left on it,
+  /// so the remainder is what separates "wait, a code is already out there"
+  /// from "nothing has been sent yet".
+  bool get isLiveCooldown => !canResend && remainingSeconds > 0;
+
   OtpCooldown copyWith({
     bool? canResend,
     int? remainingSeconds,

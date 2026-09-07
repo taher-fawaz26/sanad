@@ -1,126 +1,103 @@
 import 'package:core/core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
-import 'package:shared_ui/shared_ui.dart';
+import 'package:shared_ui/src/pagination/paging_state_adapter.dart';
 
 void main() {
   group('toPagingState', () {
-    test('maps an initial (empty, not loading) state', () {
-      final state = toPagingState(const PaginationData<int>());
-      expect(state.pages, isEmpty);
-      expect(state.keys, isEmpty);
-      expect(state.hasNextPage, isFalse);
-      expect(state.isLoading, isFalse);
-      expect(state.error, isNull);
+    test(
+      'initial (never fetched) reports loading, not an empty result',
+      () {
+        // Regression: a freshly-constructed PaginationData (before the BLoC
+        // dispatches its first fetch) must not look "loaded and empty" —
+        // that rendered infinite_scroll_pagination's no-items-found
+        // indicator for a frame (the manager-picker premature "No Results"
+        // bug).
+        const data = PaginationData<int>();
+        expect(data.status, RequestStatus.initial);
+
+        final paging = toPagingState(data);
+
+        expect(paging.isLoading, isTrue);
+        expect(paging.pages, isEmpty);
+        expect(paging.error, isNull);
+      },
+    );
+
+    test('first-page loading reports loading with no pages', () {
+      const data = PaginationData<int>(status: RequestStatus.loading);
+      final paging = toPagingState(data);
+
+      expect(paging.isLoading, isTrue);
+      expect(paging.pages, isEmpty);
     });
 
-    test('maps a first-page loading state', () {
-      final state = toPagingState(
-        const PaginationData<int>(status: RequestStatus.loading),
-      );
-      expect(state.isLoading, isTrue);
-      expect(state.pages, isEmpty);
-    });
-
-    test('maps loaded items as a single accumulated page', () {
-      const meta = PageMeta(
-        totalItems: 4,
-        itemCount: 2,
-        itemsPerPage: 2,
-        totalPages: 2,
-        currentPage: 1,
-      );
-      final state = toPagingState(
-        const PaginationData<int>(
-          status: RequestStatus.success,
-          items: [1, 2],
-          meta: meta,
+    test('success with items exposes one logical page, not loading', () {
+      const data = PaginationData<int>(
+        status: RequestStatus.success,
+        items: [1, 2, 3],
+        meta: PageMeta(
+          totalItems: 3,
+          itemCount: 3,
+          itemsPerPage: 20,
+          totalPages: 1,
+          currentPage: 1,
         ),
       );
-      expect(state.pages, [
+      final paging = toPagingState(data);
+
+      expect(paging.isLoading, isFalse);
+      expect(paging.pages, [
+        [1, 2, 3],
+      ]);
+      expect(paging.hasNextPage, isFalse);
+    });
+
+    test(
+      'genuine empty (success + no items) is idle so the empty state shows',
+      () {
+        const data = PaginationData<int>(
+          status: RequestStatus.success,
+        );
+        final paging = toPagingState(data);
+
+        expect(paging.isLoading, isFalse);
+        expect(paging.pages, isEmpty);
+        expect(paging.error, isNull);
+      },
+    );
+
+    test('loading more keeps existing items and reports loading', () {
+      const data = PaginationData<int>(
+        status: RequestStatus.success,
+        items: [1, 2],
+        loadingMore: true,
+        meta: PageMeta(
+          totalItems: 4,
+          itemCount: 2,
+          itemsPerPage: 2,
+          totalPages: 2,
+          currentPage: 1,
+        ),
+      );
+      final paging = toPagingState(data);
+
+      expect(paging.isLoading, isTrue);
+      expect(paging.pages, [
         [1, 2],
       ]);
-      expect(state.keys, [1]);
-      expect(state.hasNextPage, isTrue);
+      expect(paging.hasNextPage, isTrue);
     });
 
-    test('maps hasNextPage=false on the last page', () {
-      const meta = PageMeta(
-        totalItems: 2,
-        itemCount: 2,
-        itemsPerPage: 10,
-        totalPages: 1,
-        currentPage: 1,
+    test('first-page failure surfaces the error', () {
+      const data = PaginationData<int>(
+        status: RequestStatus.failure,
+        firstPageError: UnknownFailure(message: 'boom'),
       );
-      final state = toPagingState(
-        const PaginationData<int>(
-          status: RequestStatus.success,
-          items: [1, 2],
-          meta: meta,
-        ),
-      );
-      expect(state.hasNextPage, isFalse);
-    });
+      final paging = toPagingState(data);
 
-    test('surfaces a first-page error', () {
-      const failure = ServerFailure(message: 'boom');
-      final state = toPagingState(
-        const PaginationData<int>(
-          status: RequestStatus.failure,
-          firstPageError: failure,
-        ),
-      );
-      expect(state.error, failure);
-      expect(state.pages, isEmpty);
-    });
-
-    test('surfaces a next-page error while keeping existing items', () {
-      const failure = ServerFailure(message: 'boom');
-      const meta = PageMeta(
-        totalItems: 2,
-        itemCount: 1,
-        itemsPerPage: 1,
-        totalPages: 2,
-        currentPage: 1,
-      );
-      final state = toPagingState(
-        const PaginationData<int>(
-          status: RequestStatus.success,
-          items: [1],
-          meta: meta,
-          nextPageError: failure,
-        ),
-      );
-      expect(state.error, failure);
-      expect(state.pages, [
-        [1],
-      ]);
-    });
-
-    test('isLoading reflects loadingMore during pagination', () {
-      const meta = PageMeta(
-        totalItems: 2,
-        itemCount: 1,
-        itemsPerPage: 1,
-        totalPages: 2,
-        currentPage: 1,
-      );
-      final state = toPagingState(
-        const PaginationData<int>(
-          status: RequestStatus.success,
-          items: [1],
-          meta: meta,
-          loadingMore: true,
-        ),
-      );
-      expect(state.isLoading, isTrue);
-    });
-
-    test('returns a PagingState instance', () {
-      expect(
-        toPagingState(const PaginationData<int>()),
-        isA<PagingState<int, int>>(),
-      );
+      expect(paging.error, isA<UnknownFailure>());
+      expect(paging.isLoading, isFalse);
     });
   });
 }

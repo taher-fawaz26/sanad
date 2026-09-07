@@ -26,3 +26,20 @@ final class AccountSettingsUpdated extends AccountSettingsEvent {
   @override
   List<Object?> get props => [params];
 }
+
+/// Syncs the account's `preferredLanguage` to the backend after the user has
+/// already switched the app language locally.
+///
+/// Deliberately separate from [AccountSettingsUpdated]: the app language is a
+/// device preference that applies immediately, so this sync must not show a
+/// blocking progress dialog, must not gate the language change on a 200, and
+/// must not be rolled back on failure. It only keeps backend-generated content
+/// (emails, notifications) on the same language.
+final class AccountSettingsLanguageSynced extends AccountSettingsEvent {
+  const AccountSettingsLanguageSynced(this.language);
+
+  final PreferredLanguage language;
+
+  @override
+  List<Object?> get props => [language];
+}

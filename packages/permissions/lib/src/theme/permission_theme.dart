@@ -97,7 +97,8 @@ class PermissionIcons {
       PermissionType.photos || PermissionType.gallery => photos,
       PermissionType.storage || PermissionType.manageExternalStorage => storage,
       PermissionType.documents => documents,
-      PermissionType.microphone => microphone,
+      PermissionType.microphone ||
+      PermissionType.speechRecognition => microphone,
       PermissionType.locationWhenInUse ||
       PermissionType.locationAlways => location,
       PermissionType.notifications => notifications,

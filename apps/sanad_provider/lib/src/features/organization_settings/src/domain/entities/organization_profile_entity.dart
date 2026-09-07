@@ -79,8 +79,8 @@ class OrganizationProfileEntity extends Equatable {
     String? description,
     List<CategoryEntity>? categories,
     SocialProfilesEntity? socialProfiles,
-    MeMediaEntity? coverImage,
-    MeMediaEntity? profileImage,
+    Object? coverImage = _sentinel,
+    Object? profileImage = _sentinel,
   }) => OrganizationProfileEntity(
     id: id,
     categories: categories ?? this.categories,
@@ -93,13 +93,22 @@ class OrganizationProfileEntity extends Equatable {
     businessPhone: businessPhone,
     ownerEmiratesId: ownerEmiratesId,
     tradeLicenseNumber: tradeLicenseNumber,
-    coverImage: coverImage ?? this.coverImage,
-    profileImage: profileImage ?? this.profileImage,
+    // Sentinel-guarded: removing an identity image has to be expressible as
+    // `copyWith(coverImage: null)`. With a plain `??` that reads as "leave it
+    // alone", so a deleted image came back on the next rebuild.
+    coverImage: identical(coverImage, _sentinel)
+        ? this.coverImage
+        : coverImage as MeMediaEntity?,
+    profileImage: identical(profileImage, _sentinel)
+        ? this.profileImage
+        : profileImage as MeMediaEntity?,
     socialProfiles: socialProfiles ?? this.socialProfiles,
     personalLegalData: personalLegalData ?? this.personalLegalData,
     tradeLicenseLegalData: tradeLicenseLegalData ?? this.tradeLicenseLegalData,
     rejectionReason: rejectionReason,
   );
+
+  static const Object _sentinel = Object();
 
   @override
   List<Object?> get props => [

@@ -20,6 +20,8 @@ dependencies:
     path: ../../packages/app_logger
   account_settings:
     path: ../../packages/account_settings
+  asset_picker:
+    path: ../../packages/asset_picker
   auth:
     path: ../../packages/auth
   config:
@@ -28,6 +30,20 @@ dependencies:
     path: ../../packages/core
   bloc_concurrency: ^0.3.0
   cupertino_icons: ^1.0.8
+  # ── Audio (AI chat: recorded voice notes + live-voice mock) ───────────────
+  # `record` is pinned to the 6.x line on purpose: 7.x requires Dart ^3.12 /
+  # Flutter >=3.44 and this workspace is on Dart 3.11.5 / Flutter 3.41.9.
+  # 6.2.1 still exposes `startStream()` and `onAmplitudeChanged()`, which are
+  # the two APIs the live-voice capture path needs.
+  record: ^6.2.1
+  just_audio: ^0.10.6
+  audio_session: ^0.2.4
+  # Native speech recognition for the composer's dictation button. Pinned to
+  # the 7.4.x line for the same reason as `record` above: 7.5.0-beta.1 requires
+  # Dart ^3.12 / Flutter >=3.44. 7.4.0 needs only Dart >=3.3 / Flutter >=3.10.
+  # It brings no new audio dependency and requests no audio focus of its own —
+  # the system recognizer owns its capture. See `SpeechToTextRecognizer`.
+  speech_to_text: ^7.4.0
   deep_linking:
     path: ../../packages/deep_linking
   design_system:
@@ -36,6 +52,8 @@ dependencies:
     path: ../../packages/device
   shared_ui:
     path: ../../packages/shared_ui
+  sheet_navigation:
+    path: ../../packages/sheet_navigation
   dio: ^5.10.0
   easy_localization: ^3.0.8
   equatable: ^2.1.0
@@ -50,21 +68,31 @@ dependencies:
   go_router: ^17.3.0
   hive_ce: ^2.10.1
   hydrated_bloc: ^11.0.0
+  intl: ^0.20.2
   localization:
     path: ../../packages/localization
+  # Shared multipart-upload pipeline. Used by the AI chat to turn a staged
+  # attachment into the `{id, url}` pair the agent needs, so it never has to
+  # resolve a storage location itself.
+  media_upload:
+    path: ../../packages/media_upload
   network:
     path: ../../packages/network
   otp:
     path: ../../packages/otp
+  permissions:
+    path: ../../packages/permissions
   path_provider: ^2.1.5
   storage:
     path: ../../packages/storage
+  web_socket_channel: ^3.0.3
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.3
   flutter_native_splash: ^2.4.6
   flutter_test:
     sdk: flutter
+  stream_channel: ^2.1.4
   testing:
     path: ../../packages/testing
   very_good_analysis: ^9.0.0

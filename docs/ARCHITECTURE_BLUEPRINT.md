@@ -500,7 +500,7 @@ The built-in `RefreshEvent` (`BaseRequestBloc`) is dead.
 - Validation (400) returns `message` as an **array**; business conflicts also arrive as **400** (e.g. "Cannot delete the only branch", "Worker still manages one or more branches"). 403 carries prose ("Please verify your account first").
 - OpenAPI spec (73 paths, 65 schemas) declares only 400/401/403/404 with **no error body schema**, and **no 409/422/500** documented — the client hand-rolls NestJS assumptions.
 - Client infers behavior from **HTTP status + English prose + substring matching**.
-- (Separate, open) request-shape mismatches recorded in project memory: `city` vs `cityId`, `isAvailable` vs `status`, manager mapping, `company/schedule` path.
+- (Separate) request-shape mismatches recorded in project memory: `city` vs `cityId` (**closed** — city is read-only and derived from `locationPlaceId`), `isAvailable` vs `status`, manager mapping, `company/schedule` path.
 
 ### Approved architecture
 - Backend exposes a **stable machine-readable error code** (e.g. `errorCode: "ACCOUNT_UNVERIFIED"`, `"BRANCH_LAST_CANNOT_DELETE"`) on every error, plus properly documented error bodies and correct status usage (409 for conflicts, 422 for validation, 429 for rate limit).
@@ -513,7 +513,7 @@ Collapses three fragile inference mechanisms (status, prose, substring) into one
 ### Known technical debt
 - Multi-message validation loss (first-element-only); conflicts == validation == `ServerFailure(400)`; undocumented 409/422/500; locale-fragile 403 sniffing; open request-shape mismatches.
 
-**✅ Epic 1 update:** **multi-message validation loss fixed** (all messages preserved); conflicts vs validation now distinct types; client handles 409/429 by status. **Request-shape mismatches resolved** (`CreateBranchRequest` sends `cityId`/`availabilityMode`). Still ⛔ backend-gated: the live API returns **no `errorCode`** yet — code→`Failure` mapping and 403 prose-sniffing removal wait on the backend; the client seam preserves any body `errorCode` in `metadata`.
+**✅ Epic 1 update:** **multi-message validation loss fixed** (all messages preserved); conflicts vs validation now distinct types; client handles 409/429 by status. **Request-shape mismatches resolved** (`CreateBranchRequest` sends `locationPlaceId`/`availabilityMode`; the branch city is **derived** from `locationPlaceId` and there is deliberately no `cityId` field in `CreateBranchDto`/`UpdateBranchDto` — sending one is a 400, see SAN-774). Still ⛔ backend-gated: the live API returns **no `errorCode`** yet — code→`Failure` mapping and 403 prose-sniffing removal wait on the backend; the client seam preserves any body `errorCode` in `metadata`.
 
 ### Future evolution
 - Codegen the client error map + DTOs from an OpenAPI spec that documents error bodies and codes.
@@ -540,7 +540,7 @@ Status: ✅ resolved · 🟡 partially resolved · ⛔ backend-gated · ⬜ open
 | D11 | Dead code | `BaseRequestBloc`, `FailureMapper`, `ApiErrorResponse`, dead `ErrorMessages` keys, unused `packages/domain` repos, `API_GUIDE.md` drift | P2 | 🟡 docs reconciled (blueprint + `API_GUIDE.md` error sections); dead code itself still present |
 | D12 | Network/Security | TLS pinning dead scaffolding; connectivity = interface not reachability; no `CancelToken`; `transformTimeout` unretried | P2 | ⬜ open |
 | D13 | Success | 4 success-modeling styles; inconsistent feedback; no business-event channel | P2 | ⬜ deferred (high-churn/low-value; services→bloc done under D-outlier) |
-| D14 | Contract | Request-shape mismatches (`cityId`, `status`, manager mapping, `company/schedule`) | P2 | 🟡 `cityId`/`status` resolved; manager mapping & `company/schedule` not re-verified |
+| D14 | Contract | Request-shape mismatches (`cityId`, `status`, manager mapping, `company/schedule`) | P2 | 🟡 `cityId` closed — city is derived from `locationPlaceId`, never sent (SAN-774); `status` resolved; manager mapping & `company/schedule` not re-verified |
 
 ---
 

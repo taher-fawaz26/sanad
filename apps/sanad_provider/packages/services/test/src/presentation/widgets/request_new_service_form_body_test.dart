@@ -90,7 +90,7 @@ PickedAsset _asset({String name = 'photo.jpg'}) => PickedAsset(
 /// `flutter_test`'s FakeAsync zone; constructing it here avoids the
 /// mismatch (see `add_service_form_body_test.dart`'s `_pump` for the same
 /// pattern).
-Future<void> _pump(
+Future<MediaUploadBloc> _pump(
   WidgetTester tester, {
   required ValueChanged<bool> onCompletenessChanged,
   Key? key,
@@ -167,6 +167,8 @@ Future<void> _pump(
       ),
     ),
   );
+
+  return mediaBloc;
 }
 
 void main() {
@@ -219,11 +221,14 @@ void main() {
   });
 
   testWidgets(
-    'reports complete once name, category, and description are present — '
-    'images are optional',
+    'stays incomplete with name, category and description but no image — '
+    'reports complete only once at least one image is uploaded (SAN-782)',
     (tester) async {
       final completenessEvents = <bool>[];
-      await _pump(tester, onCompletenessChanged: completenessEvents.add);
+      final mediaBloc = await _pump(
+        tester,
+        onCompletenessChanged: completenessEvents.add,
+      );
 
       await tester.enterText(find.byType(TextField).at(0), 'Ceramic Coating');
       await tester.pumpAndSettle();
@@ -238,6 +243,18 @@ void main() {
       await tester.enterText(
         find.byType(TextField).at(1),
         'A full ceramic coating protection package.',
+      );
+      await tester.pumpAndSettle();
+
+      // All text fields filled but no image → still incomplete.
+      expect(completenessEvents, isNot(contains(true)));
+
+      // Seed a successful upload directly (empty URL avoids the network-image
+      // shimmer ticker) — the images field is mandatory.
+      mediaBloc.add(
+        MediaUploadExistingItemsSeeded([
+          MediaUploadItem.remote(mediaId: 'media-1', url: ''),
+        ]),
       );
       await tester.pumpAndSettle();
 

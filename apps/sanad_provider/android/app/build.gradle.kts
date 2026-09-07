@@ -1,3 +1,4 @@
+import java.util.Base64
 import java.util.Properties
 
 plugins {
@@ -22,6 +23,60 @@ val localProperties = Properties()
 val localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
     localProperties.load(localPropertiesFile.inputStream())
+}
+
+// SAN-823: the Maps key has TWO consumers, and they used to read it from two
+// different places, so a build could satisfy one and silently starve the other:
+//
+//   1. the native Google Maps SDK — reads the MAPS_API_KEY manifest placeholder
+//      set from local.properties in defaultConfig below (renders tiles/pin).
+//   2. the Dart Maps REST calls — read the MAPS_API_KEY *dart-define* via
+//      String.fromEnvironment in lib/src/di/app_di.dart. This is what obtains
+//      the Google place_id for a picked branch location, and what powers Places
+//      autocomplete.
+//
+// Only `.vscode/launch.json` and the `build:provider:*` melos scripts pass that
+// dart-define. A bare `flutter build apk --release` passes neither, producing an
+// APK where the map renders and the pin still reverse-geocodes (via the keyless
+// native Android Geocoder) but no place_id can EVER be resolved — leaving Branch
+// Location permanently unconfirmable and Places search silently inert.
+//
+// Deriving the dart-define here makes local.properties the single source of
+// truth for both consumers, so every build command and build type behaves the
+// same. A MAPS_API_KEY dart-define passed on the command line always wins, so
+// the melos scripts and the CI workflow are unaffected.
+run {
+    val mapsApiKey = localProperties.getProperty("MAPS_API_KEY", "")
+    val existing = project.findProperty("dart-defines")?.toString().orEmpty()
+    val alreadyProvided = existing
+        .split(",")
+        .filter { it.isNotBlank() }
+        .any {
+            runCatching {
+                String(Base64.getDecoder().decode(it), Charsets.UTF_8)
+            }.getOrDefault("").startsWith("MAPS_API_KEY=")
+        }
+
+    if (alreadyProvided) {
+        // Explicit --dart-define(-from-file) on the command line: leave it be.
+    } else if (mapsApiKey.isBlank()) {
+        logger.warn(
+            "WARNING: MAPS_API_KEY is not set in android/local.properties and no " +
+                "MAPS_API_KEY dart-define was passed. The map will render blank and " +
+                "a branch location can never be confirmed (no Google place_id). " +
+                "See docs/CONFIGURATION.md."
+        )
+    } else {
+        val encoded = Base64.getEncoder()
+            .encodeToString("MAPS_API_KEY=$mapsApiKey".toByteArray(Charsets.UTF_8))
+        // -P properties land in the project's extra properties, so setting the
+        // key here overrides/extends what the Flutter tool passed. Read back by
+        // the Flutter Gradle plugin in afterEvaluate, i.e. after this script.
+        project.extra.set(
+            "dart-defines",
+            if (existing.isBlank()) encoded else "$existing,$encoded"
+        )
+    }
 }
 
 android {

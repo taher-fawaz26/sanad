@@ -77,6 +77,7 @@ export 'src/presentation/widgets/serving_area_chips.dart';
 // Services — infrastructure wired by the host app's DI
 export 'src/services/geocoding_service.dart';
 export 'src/services/geocoding_service_impl.dart';
+export 'src/services/location_failure_codes.dart';
 export 'src/services/location_service.dart';
 export 'src/services/location_service_impl.dart';
 

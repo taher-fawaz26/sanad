@@ -3,7 +3,10 @@ import 'dart:async';
 import 'package:ai_ui_protocol/ai_ui_protocol.dart';
 import 'package:core/core.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/mock_scenarios.dart';
+import 'package:sanad_client/src/features/ai_chat/src/data/mocks/multimodal_mock_scenarios.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/ai_chat_event_source.dart';
+import 'package:sanad_client/src/features/ai_chat/src/domain/ai_multimodal_event_source.dart';
+import 'package:sanad_client/src/features/ai_chat/src/domain/entities/ai_outgoing_message.dart';
 
 /// A local stand-in for the AI agent.
 ///
@@ -11,7 +14,8 @@ import 'package:sanad_client/src/features/ai_chat/src/domain/ai_chat_event_sourc
 /// stream, so the bloc, renderer and protocol are all exercised on their real
 /// paths. Swapping this for a WebSocket source is a new class implementing
 /// [AiChatEventSource] — nothing above it changes.
-class MockAiChatEventSource implements AiChatEventSource {
+class MockAiChatEventSource
+    implements AiChatEventSource, AiMultimodalEventSource {
   /// Creates a scripted source. The delays exist so the streaming path is
   /// visible to a human watching the prototype.
   MockAiChatEventSource({
@@ -47,22 +51,33 @@ class MockAiChatEventSource implements AiChatEventSource {
   Stream<AiChatEvent> get events => _controller.stream;
 
   @override
-  Future<void> send(String text) async {
+  Future<void> send(String text) =>
+      sendMultimodal(AiOutgoingMessage(text: text));
+
+  @override
+  Future<void> sendMultimodal(AiOutgoingMessage message) async {
     if (_disposed) return;
 
-    final scenario = forcedScenarioId == null
-        ? scenarioFor(text)
-        : mockScenarios.firstWhere(
-            (s) => s.id == forcedScenarioId,
-            orElse: () => mockScenarios.first,
-          );
+    final messageId = 'msg_${generateUuidV4()}';
+
+    // The dev scenario picker still wins, even for a turn with attachments —
+    // that is how the deliberately-broken payloads stay reachable.
+    final forced = forcedScenarioId;
+    final script = forced == null
+        ? MultimodalMockScenarios.reply(messageId, message)
+        : mockScenarios
+              .firstWhere(
+                (s) => s.id == forced,
+                orElse: () => mockScenarios.first,
+              )
+              .build(messageId);
 
     _emit(
       AiChatTypingEvent(eventId: 'evt_${generateUuidV4()}', active: true),
     );
 
     await _wait(thinkingDelay);
-    await _replay(scenario.build('msg_${generateUuidV4()}'));
+    await _replay(script);
   }
 
   Future<void> _replay(List<AiChatEvent> script) async {

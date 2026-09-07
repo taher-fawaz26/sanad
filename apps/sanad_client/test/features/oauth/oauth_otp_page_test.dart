@@ -72,7 +72,7 @@ void main() {
       );
 
       expect(find.byIcon(Icons.chevron_left), findsOneWidget);
-      expect(find.text('otp.title'.tr()), findsOneWidget);
+      expect(find.text('otp.client.title'.tr()), findsOneWidget);
       expect(
         find.byWidgetPredicate(
           (widget) =>
@@ -134,7 +134,7 @@ void main() {
     await tester.tap(find.widgetWithText(AppButton, 'oauth.next'.tr()));
     await tester.pump(const Duration(milliseconds: 50));
 
-    expect(find.text('otp.invalid_code'.tr()), findsOneWidget);
+    expect(find.text('otp.client.invalid_code'.tr()), findsOneWidget);
     // No dispatch banner container — only the field-level error is present.
     expect(find.byIcon(Icons.error_outline_rounded), findsNothing);
   });
@@ -157,11 +157,11 @@ void main() {
     await tester.pump();
     await tester.tap(find.widgetWithText(AppButton, 'oauth.next'.tr()));
     await tester.pump(const Duration(milliseconds: 50));
-    expect(find.text('otp.invalid_code'.tr()), findsOneWidget);
+    expect(find.text('otp.client.invalid_code'.tr()), findsOneWidget);
 
     await tester.enterText(find.byType(EditableText).first, '654321');
     await tester.pump(const Duration(milliseconds: 50));
-    expect(find.text('otp.invalid_code'.tr()), findsNothing);
+    expect(find.text('otp.client.invalid_code'.tr()), findsNothing);
   });
 
   testWidgets('tapping back pops the page', (tester) async {
@@ -219,7 +219,7 @@ void main() {
       ),
     );
 
-    expect(find.text('otp.title'.tr()), findsOneWidget);
+    expect(find.text('otp.client.title'.tr()), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

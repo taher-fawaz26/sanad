@@ -27,10 +27,17 @@ class ApiClientImpl implements BaseApiClient {
     required FutureOr<T> Function(dynamic data) parser,
     Map<String, dynamic>? query,
     dynamic body,
+    bool authRequired = true,
   }) {
     final httpTask = TaskEither<Failure, T>.tryCatch(
       () async {
-        final response = await _executeDioRequest(path, method, query, body);
+        final response = await _executeDioRequest(
+          path,
+          method,
+          query,
+          body,
+          authRequired,
+        );
         return await parser(response.data);
       },
       (error, _) => ErrorMapper.mapError(error),
@@ -44,15 +51,43 @@ class ApiClientImpl implements BaseApiClient {
     RequestMethod method,
     Map<String, dynamic>? query,
     dynamic body,
-  ) => switch (method) {
-    RequestMethod.get => _dio.get(path, queryParameters: query),
-    RequestMethod.post => _dio.post(path, queryParameters: query, data: body),
-    RequestMethod.put => _dio.put(path, queryParameters: query, data: body),
-    RequestMethod.patch => _dio.patch(path, queryParameters: query, data: body),
-    RequestMethod.delete => _dio.delete(
-      path,
-      queryParameters: query,
-      data: body,
-    ),
-  };
+    bool authRequired,
+  ) {
+    // Carry the auth intent to the AuthInterceptor via Dio's per-request
+    // `extra`. Left at the default (`true`) this changes nothing.
+    final options = Options(
+      extra: <String, dynamic>{kAuthRequiredExtraKey: authRequired},
+    );
+    return switch (method) {
+      RequestMethod.get => _dio.get(
+        path,
+        queryParameters: query,
+        options: options,
+      ),
+      RequestMethod.post => _dio.post(
+        path,
+        queryParameters: query,
+        data: body,
+        options: options,
+      ),
+      RequestMethod.put => _dio.put(
+        path,
+        queryParameters: query,
+        data: body,
+        options: options,
+      ),
+      RequestMethod.patch => _dio.patch(
+        path,
+        queryParameters: query,
+        data: body,
+        options: options,
+      ),
+      RequestMethod.delete => _dio.delete(
+        path,
+        queryParameters: query,
+        data: body,
+        options: options,
+      ),
+    };
+  }
 }

@@ -11,6 +11,7 @@ void main() {
         PermissionType.storage,
         PermissionType.documents,
         PermissionType.microphone,
+        PermissionType.speechRecognition,
         PermissionType.locationWhenInUse,
         PermissionType.locationAlways,
         PermissionType.notifications,
@@ -26,8 +27,8 @@ void main() {
       expect(PermissionType.values.toSet(), equals(expected));
     });
 
-    test('has 16 values', () {
-      expect(PermissionType.values.length, equals(16));
+    test('has 17 values', () {
+      expect(PermissionType.values.length, equals(17));
     });
   });
 }

@@ -1,8 +1,11 @@
 ﻿import 'package:app_logger/app_logger.dart';
+import 'package:core/core.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:localization/localization.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sanad_client/src/app.dart';
 import 'package:sanad_client/src/di/app_di.dart';
@@ -16,7 +19,18 @@ Future<void> bootstrap() => runGuarded(_bootstrap);
 Future<void> _bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
   installGlobalErrorHandlers();
+
+  // MUST run before EasyLocalization.ensureInitialized() — see the provider
+  // bootstrap for why the ordering matters (SAN-774).
+  final legacyLanguage = await LegacyLocalePreference.takeIfAny();
+
   await EasyLocalization.ensureInitialized();
+  // Load intl locale symbols so DateFormat('h:mm a', 'ar') renders Arabic
+  // AM/PM markers rather than falling back to en_US (SAN-573).
+  await Future.wait([
+    initializeDateFormatting('ar'),
+    initializeDateFormatting('en'),
+  ]);
 
   final appDir = await getApplicationDocumentsDirectory();
   HydratedBloc.storage = await HydratedStorage.build(
@@ -24,16 +38,30 @@ Future<void> _bootstrap() async {
   );
   Hive.init(appDir.path);
 
-  await configureDependencies();
+  await configureDependencies(
+    initialLanguage: legacyLanguage ?? AppLanguage.defaultLanguage,
+  );
+
+  if (legacyLanguage != null) {
+    LegacyLocalePreference.adopt(sl<TranslateBloc>(), legacyLanguage);
+  }
+
+  // The migrated value, when there was one, is the language the user was
+  // actually looking at — and `adopt` dispatches an event, which the bloc has
+  // not processed yet, so its `state` is still the pre-migration one on this
+  // line. Reading it here would flash the wrong language for a frame.
+  final startLanguage = legacyLanguage ?? sl<TranslateBloc>().state.language;
 
   Bloc.observer = AppBlocObserver();
 
   runApp(
     EasyLocalization(
-      supportedLocales: const [Locale('ar', 'AR'), Locale('en', 'US')],
+      supportedLocales: AppLanguage.supportedLocales,
       path: 'packages/localization/assets/translations',
-      startLocale: const Locale('ar', 'AR'),
-      fallbackLocale: const Locale('en', 'US'),
+      startLocale: startLanguage.locale,
+      fallbackLocale: AppLanguage.fallbackLocale,
+      // See the provider bootstrap: TranslateBloc is the only locale store.
+      saveLocale: false,
       child: const SanadClientApp(),
     ),
   );

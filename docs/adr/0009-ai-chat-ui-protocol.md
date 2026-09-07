@@ -105,10 +105,49 @@ references, which streams a large surface better. Our payloads are one chat
 bubble, where a nested tree is simpler to validate and read. Recorded as a v2
 consideration.
 
+## Transport addendum — 2026-09-05
+
+The consequences section above notes that `BaseApiClient.request<T>()` returns
+`TaskEither` and cannot express a `Stream`, and that this is why the transport
+went WebSocket. That reasoning still holds for `BaseApiClient`; the conclusion
+has changed.
+
+The agent team could not supply a complete WebSocket integration contract, so
+the real transport moved to a **streamed `POST`** —
+`POST /user-agent/chat/stream`, `text/event-stream` — implemented as
+`SseAiChatEventSource`. This decision is **temporary and transport-only**.
+
+What made it cheap, and what it validates:
+
+- The endpoint already emits the Protocol v1 envelope verbatim. There is **no
+  adapter and no mapping layer**: each `data:` frame goes straight to the
+  existing `AiChatEventCodec`.
+- Nothing above `AiChatEventSource` changed — not the bloc, the protocol, the
+  validator, the renderer, the action registry or the message-state design.
+  The seam did the job it was built for.
+- `WebSocketAiChatEventSource` is **retained**, reachable with
+  `?transport=ws`. `MockAiChatEventSource` is untouched.
+
+`BaseApiClient` was **not** widened. It has no `Options`, `ResponseType` or
+`CancelToken`, and a `TaskEither` yields one value; adding a stream-returning
+method would touch every implementer and leak Dio types past the boundary this
+ADR's consequences set. The agent also lives on a different host and
+authenticates with a raw `Sanad-Access-Token` rather than `Authorization:
+Bearer`, so `NetworkDI`'s interceptor stack does not apply. The transport
+therefore owns a small, interceptor-free Dio behind an injectable connector
+seam, inside the feature — `packages/network` is unchanged.
+
+One consequence the transport swap surfaced: the endpoint emits **no `ui`
+event**, so prose is the only channel, and it is Markdown-heavy. The chat bubble
+now renders assistant prose through `AiUiMarkdown` — the same helper the `text`
+node renderer already used. Markdown *prose* remains acceptable; Markdown
+standing in for structure remains forbidden (`AI_CONTRACT.md` §0.2).
+
 ## Follow-ups
 
-- Transport: replace `MockAiChatEventSource` with a WebSocket source
-  (`AppUrls.socketBaseUrl` already exists, unused).
+- Transport: revisit the WebSocket once the agent team can supply a contract;
+  the source is still there. ~~Replace `MockAiChatEventSource` with a WebSocket
+  source.~~ Done, then superseded by SSE — see the addendum above.
 - Wire a real diagnostics sink — `analytics` is currently a dependency of
   nothing and `ErrorReporter.use(...)` is never called.
 - Decide whether `open_url` gets a host allowlist, and whether v2 admits remote

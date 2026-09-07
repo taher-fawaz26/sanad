@@ -15,9 +15,13 @@ document is the agent-facing subset plus the rules about *when* to use what.
 1. **Never emit Flutter or Dart code.** Not `Row(...)`, not `Container(...)`,
    not a widget name, not a code block containing either. The app has no
    interpreter; such output is discarded.
-2. **Never use Markdown to describe UI.** No `|` tables, no `#` headings, no
-   `- ` bullet lists standing in for a `list` node, no `[text](url)`. Markdown
-   is not parsed. Use `rich_text` for inline emphasis and `list` for lists.
+2. **Never use Markdown to describe UI.** Markdown *prose* inside a `text`
+   node is fine and is rendered (bold, italic, inline code, headings, bullet
+   and numbered lists). What is forbidden is Markdown standing in for
+   structure: no `|` tables, no `[text](url)` link pretending to be a button,
+   no `![alt](url)` image. Link and image syntax is stripped to its label and
+   is never tappable. Anything interactive must be a structured node with an
+   action from §5.
 3. **Never emit executable intent.** No `onTap`, no `callback`, no function
    name, no expression, no raw route path, no deep link. Actions are declarative
    objects from a fixed catalog (§5).
@@ -112,7 +116,8 @@ Enum values are exact strings. An unrecognised enum falls back to the default.
 ```
 - `spans` **required**, 1–20. Each span: `text` (required), `emphasis`
   (optional), `action` (optional — makes the span a link).
-- This replaces bold/italic Markdown. There is no other inline formatting.
+- Use this when a span needs an **action** (an inline link). For plain
+  emphasis, Markdown inside a `text` node is simpler and equally supported.
 
 ### `icon`
 ```json
@@ -505,3 +510,55 @@ Each of these fails. The reason is what to internalise.
 9. Is the payload under 32 KB and 100 nodes?
 10. Is there any Flutter code, Markdown table, or callback anywhere? There must
     not be.
+
+## 14. The inbound turn — what the client sends you
+
+Everything above describes what you send the app. This is the other direction.
+
+```json
+{
+  "conversation_id": "conv_1",
+  "message": "what does this say?",
+  "attachments": [
+    { "id": "68f1…", "url": "https://…" },
+    { "id": "9ab2…", "url": "https://…", "type": "audio",
+      "transcript": "book me a plumber for tomorrow morning" }
+  ]
+}
+```
+
+| Field | Presence | Meaning |
+|---|---|---|
+| `conversation_id` | always | Stable for the visit |
+| `message` | always | What the user typed. May be `""` |
+| `attachments` | only when the turn carries files | Never sent as `[]` |
+| `attachments[].id` | always | Opaque upload id |
+| `attachments[].url` | always | Already-resolved location |
+| `attachments[].type` | audio only | `"audio"` |
+| `attachments[].transcript` | audio, when there is one | Client-side device STT |
+
+### Rules
+
+- **The URL is pre-resolved. Do not look storage up by `id`.** The client
+  uploaded the file and already knows where it landed; a second lookup on your
+  side is latency for nothing. `id` is there for correlation, logging and any
+  later operation that genuinely needs the record.
+- **An attachment object carries nothing else.** No file name, MIME type, size,
+  local path, duration or waveform. Those describe a file you have a URL for.
+- **`transcript` is the words, produced on the device.** When it is present,
+  use it. Do not transcribe the audio again as part of the normal flow — that
+  is duplicated work on a turn the client already paid for. Re-reading the
+  audio is for cases that explicitly need it (tone, speaker, a transcript you
+  have concrete reason to distrust), not for routine text reasoning.
+- **`transcript` is best-effort and never authoritative.** It comes from the
+  device's own recogniser, which may be absent, may have lost the microphone to
+  the recorder, or may have misheard. Absent is normal, partial is possible.
+  An audio attachment with no `transcript` is speech you have not been given
+  words for — not an opaque blob to read as text.
+- **When the user typed nothing and there is a transcript, `message` repeats
+  it.** Deliberate redundancy: it means a voice note is understood by a reader
+  that only looks at `message`. Treat them as one utterance, not two.
+- **When the user typed a caption *and* recorded a note, they are different
+  things.** `message` is what they wrote; the transcript is what they said. Do
+  not merge or discard either.
+- **Ignore fields you do not recognise.** The client adds keys additively.

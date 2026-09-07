@@ -1,15 +1,14 @@
 import 'package:branches/src/domain/entities/branch_availability_entity.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
-import 'package:branches/src/domain/entities/paginated_branches_entity.dart';
-import 'package:branches/src/domain/entities/paginated_managers_entity.dart';
+import 'package:branches/src/domain/entities/branch_manager_entity.dart';
+import 'package:branches/src/domain/usecases/branch_managers_query.dart';
 import 'package:branches/src/domain/usecases/branch_usecase_params.dart';
+import 'package:branches/src/domain/usecases/branches_query.dart';
 import 'package:core/core.dart';
 import 'package:fpdart/fpdart.dart';
 
 abstract interface class BranchRepository {
-  TaskEither<Failure, PaginatedBranchesEntity> getBranches(
-    GetBranchesParams params,
-  );
+  TaskEither<Failure, Page<BranchEntity>> getBranches(BranchesQuery query);
 
   TaskEither<Failure, BranchEntity> getBranch(GetBranchParams params);
 
@@ -25,7 +24,7 @@ abstract interface class BranchRepository {
 
   TaskEither<Failure, List<BranchAvailabilityEntity>> getCompanySchedule();
 
-  TaskEither<Failure, PaginatedManagersEntity> getBranchManagers(
-    GetBranchManagersParams params,
+  TaskEither<Failure, Page<BranchManagerEntity>> getBranchManagers(
+    BranchManagersQuery query,
   );
 }

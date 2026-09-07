@@ -43,4 +43,14 @@ abstract final class AppImages {
   /// Emirates ID front capture preview — Scan flow (`2897:13628`).
   static const String emiratesIdFrontPreview =
       '$_base/registration/emirates_id_front_preview.png';
+
+  /// Stand-in profile portrait for the AI Chat header and user message rows
+  /// — Figma `header-profile` (`7124:29693`) / `avatar` (`6695:44807`).
+  ///
+  /// A **placeholder**, shown only until a real account avatar is available;
+  /// it is the likeness used in the design file, so treat it as mockup
+  /// artwork rather than shipped product imagery and swap it for the signed-in
+  /// user's own photo as soon as the profile API provides one.
+  static const String aiChatProfileAvatarPlaceholder =
+      '$_base/ai_chat/profile_avatar_placeholder.png';
 }

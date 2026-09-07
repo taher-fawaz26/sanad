@@ -7,6 +7,7 @@ class AccountSettingsState extends Equatable {
     this.settings,
     this.failure,
     this.saveFailure,
+    this.languageSyncFailure,
   });
 
   final RequestStatus loadStatus;
@@ -14,6 +15,14 @@ class AccountSettingsState extends Equatable {
   final AccountSettingsEntity? settings;
   final Failure? failure;
   final Failure? saveFailure;
+
+  /// Failure of the best-effort `preferredLanguage` sync.
+  ///
+  /// Kept apart from [saveFailure] because the language change is applied
+  /// locally and never rolled back — a failed sync only means backend-generated
+  /// content (emails, notifications) is still on the old language, which is a
+  /// notice rather than a failed save.
+  final Failure? languageSyncFailure;
 
   String? get name => settings?.name;
   String? get email => settings?.email;
@@ -28,8 +37,10 @@ class AccountSettingsState extends Equatable {
     AccountSettingsEntity? settings,
     Failure? failure,
     Failure? saveFailure,
+    Failure? languageSyncFailure,
     bool clearFailure = false,
     bool clearSaveFailure = false,
+    bool clearLanguageSyncFailure = false,
   }) {
     return AccountSettingsState(
       loadStatus: loadStatus ?? this.loadStatus,
@@ -37,6 +48,9 @@ class AccountSettingsState extends Equatable {
       settings: settings ?? this.settings,
       failure: clearFailure ? null : (failure ?? this.failure),
       saveFailure: clearSaveFailure ? null : (saveFailure ?? this.saveFailure),
+      languageSyncFailure: clearLanguageSyncFailure
+          ? null
+          : (languageSyncFailure ?? this.languageSyncFailure),
     );
   }
 
@@ -47,5 +61,6 @@ class AccountSettingsState extends Equatable {
     settings,
     failure,
     saveFailure,
+    languageSyncFailure,
   ];
 }

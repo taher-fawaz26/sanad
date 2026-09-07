@@ -74,12 +74,18 @@ class OtpBloc<T> extends Bloc<OtpEvent, OtpState<T>> {
     if (_config.probeCooldownOnStart) {
       final probed = await _probeCooldown();
       if (isClosed) return;
-      if (probed != null && !probed.canResend) {
+      if (probed != null && probed.isLiveCooldown) {
         // A code is already out there and still valid — show the countdown and
         // let the user type it. Sending again would only earn a 429.
         _applyCooldown(emit, probed, phase: const OtpAwaitingInput());
         return;
       }
+      // Anything else — including `canResend: false` with nothing left to wait
+      // for, which is how every one of these endpoints reports "no session
+      // exists yet" — falls through to the dispatch below. Reading that shape
+      // as a live cooldown is what previously stranded the user on an OTP
+      // screen where no code had been sent, no countdown ran, and the resend
+      // link was permanently dead (SAN contact-verification dead end).
     }
 
     await _dispatch(emit, resend: false);

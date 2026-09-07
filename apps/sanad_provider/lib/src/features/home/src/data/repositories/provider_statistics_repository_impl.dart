@@ -5,8 +5,7 @@ import 'package:sanad_provider/src/features/home/src/data/datasources/provider_s
 import 'package:sanad_provider/src/features/home/src/domain/entities/provider_statistic_entity.dart';
 import 'package:sanad_provider/src/features/home/src/domain/repositories/provider_statistics_repository.dart';
 
-class ProviderStatisticsRepositoryImpl
-    implements ProviderStatisticsRepository {
+class ProviderStatisticsRepositoryImpl implements ProviderStatisticsRepository {
   const ProviderStatisticsRepositoryImpl(this._remote, this._networkGuard);
 
   final ProviderStatisticsRemoteDataSource _remote;

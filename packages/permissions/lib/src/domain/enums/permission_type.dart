@@ -10,6 +10,10 @@
 /// - [notifications]: iOS may return [PermissionStatus.provisional] on first
 ///   launch before the user is explicitly prompted.
 /// - [locationAlways]: requires [locationWhenInUse] to be granted first on iOS.
+/// - [speechRecognition]: Android → RECORD_AUDIO (the same grant as
+///   [microphone]); iOS → `SFSpeechRecognizer` authorization, which is a
+///   *separate* prompt from the microphone and needs
+///   `NSSpeechRecognitionUsageDescription` in `Info.plist`.
 enum PermissionType {
   camera,
   photos,
@@ -17,6 +21,7 @@ enum PermissionType {
   storage,
   documents,
   microphone,
+  speechRecognition,
   locationWhenInUse,
   locationAlways,
   notifications,

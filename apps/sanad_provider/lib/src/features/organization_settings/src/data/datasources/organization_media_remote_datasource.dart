@@ -6,12 +6,16 @@ import 'package:sanad_provider/src/features/organization_settings/src/data/datas
 import 'package:sanad_provider/src/features/organization_settings/src/data/models/organization_media_response.dart';
 import 'package:sanad_provider/src/features/organization_settings/src/domain/entities/organization_media_slot.dart';
 
-/// Sets the organization's cover/logo image via the documented two-step
-/// contract: `POST media/upload-single` (via [MediaUploadRemoteDataSource])
-/// returns a `mediaId`, then `PATCH {slot.endpoint} {mediaId}` applies it.
+/// Sets or clears the organization's cover/logo image.
 ///
-/// Removing an image has no documented endpoint (see
-/// `OrganizationMediaRepository.removeMedia` for the resulting failure).
+/// Setting uses the documented two-step contract: `POST media/upload-single`
+/// (via [MediaUploadRemoteDataSource]) returns a `mediaId`, then
+/// `PATCH {slot.endpoint} {mediaId}` applies it.
+///
+/// Clearing reuses the *same* PATCH endpoint with `mediaId: null` — there is
+/// no separate delete endpoint, and the client never touches storage
+/// directly. Each slot has its own endpoint, so an operation on one image
+/// cannot disturb the other.
 abstract interface class OrganizationMediaRemoteDataSource {
   TaskEither<Failure, OrganizationMediaResponse> uploadMedia({
     required OrganizationMediaSlot slot,
@@ -58,8 +62,15 @@ class OrganizationMediaRemoteDataSourceImpl
   @override
   TaskEither<Failure, Unit> removeMedia({
     required OrganizationMediaSlot slot,
-  }) => TaskEither.left(
-    const BusinessRuleFailure(message: 'errors.remove_image_not_supported'),
+  }) => _apiClient.request<Unit>(
+    path: slot.endpoint,
+    method: RequestMethod.patch,
+    // `mediaId` is *required* by `UpdateServiceProviderMediaDto` — the key
+    // must be present and explicitly null. An empty body is a 400, not a
+    // no-op. Only this slot's field is sent, so the other image is untouched.
+    body: const {'mediaId': null},
+    // The response echoes `{mediaId: null}`; there is nothing to read back.
+    parser: (_) => unit,
   );
 
   @override

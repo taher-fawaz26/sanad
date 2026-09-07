@@ -2,7 +2,7 @@ import 'package:branches/src/domain/entities/branch_availability_entity.dart';
 import 'package:branches/src/domain/entities/branch_availability_mode.dart';
 import 'package:branches/src/domain/entities/branch_schedule_mode.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
-import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_cubit.dart';
+import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_bloc.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_state.dart';
 import 'package:branches/src/presentation/utils/branch_maps_launcher.dart';
 import 'package:branches/src/presentation/utils/branch_summary_section_matcher.dart';
@@ -22,7 +22,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 ///
 /// Every section is directly editable from here — each pencil opens the same
 /// section editor used by Branch Details, but routes its result into
-/// [AddBranchDraftCubit] (the local creation draft) instead of a backend
+/// [AddBranchDraftBloc] (the local creation draft) instead of a backend
 /// PATCH. Coverage, Services and Team reuse the wizard's own step handlers
 /// (passed in) so location-permission checks and picker sheets stay a single
 /// source of truth.
@@ -81,7 +81,7 @@ class _BranchReviewBodyState extends State<BranchReviewBody> {
       listenWhen: (previous, current) =>
           previous.failure != current.failure && current.failure != null,
       listener: _onSubmitFailure,
-      child: BlocBuilder<AddBranchDraftCubit, AddBranchDraft>(
+      child: BlocBuilder<AddBranchDraftBloc, AddBranchDraft>(
         builder: (context, draft) {
           final companySchedule = context
               .watch<AddBranchBloc>()
@@ -156,7 +156,7 @@ class _BranchReviewBodyState extends State<BranchReviewBody> {
   }
 
   Future<void> _openBranchInfoEdit(BuildContext context) async {
-    final draft = context.read<AddBranchDraftCubit>().state;
+    final draft = context.read<AddBranchDraftBloc>().state;
     final result = await showBranchInfoEditSheet(
       context: context,
       initialName: draft.branchName,
@@ -164,13 +164,13 @@ class _BranchReviewBodyState extends State<BranchReviewBody> {
     );
     if (result == null || !context.mounted) return;
 
-    context.read<AddBranchDraftCubit>()
+    context.read<AddBranchDraftBloc>()
       ..updateBasicInfo(branchName: result.branchName)
       ..updateBranchType(result.branchType);
   }
 
   Future<void> _openContactEdit(BuildContext context) async {
-    final draft = context.read<AddBranchDraftCubit>().state;
+    final draft = context.read<AddBranchDraftBloc>().state;
     final result = await showContactEditSheet(
       context: context,
       initialPhone: draft.phone,
@@ -178,7 +178,7 @@ class _BranchReviewBodyState extends State<BranchReviewBody> {
     );
     if (result == null || !context.mounted) return;
 
-    context.read<AddBranchDraftCubit>()
+    context.read<AddBranchDraftBloc>()
       ..updateBasicInfo(phone: result.branchPhone)
       ..updateManager(result.manager);
   }
@@ -195,7 +195,7 @@ class _BranchReviewBodyState extends State<BranchReviewBody> {
       return;
     }
 
-    final draft = context.read<AddBranchDraftCubit>().state;
+    final draft = context.read<AddBranchDraftBloc>().state;
     final initialMode = draft.scheduleMode == BranchScheduleMode.custom
         ? BranchAvailabilityMode.custom
         : BranchAvailabilityMode.coreHours;
@@ -211,7 +211,7 @@ class _BranchReviewBodyState extends State<BranchReviewBody> {
     final mode = result.availabilityMode == BranchAvailabilityMode.custom
         ? BranchScheduleMode.custom
         : BranchScheduleMode.company;
-    final draftCubit = context.read<AddBranchDraftCubit>()
+    final draftCubit = context.read<AddBranchDraftBloc>()
       ..updateScheduleMode(mode);
     if (mode == BranchScheduleMode.custom) {
       draftCubit.updateCustomSchedule(result.availability);

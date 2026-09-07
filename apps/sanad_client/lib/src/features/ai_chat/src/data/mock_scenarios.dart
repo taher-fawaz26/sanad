@@ -645,6 +645,15 @@ const mockScenarios = <MockScenario>[
   _longConversation,
 ];
 
+/// Builds a plain streamed reply: `message_start`, word-sized deltas, then an
+/// authoritative `message_end`.
+///
+/// Exposed so the multimodal scenarios can produce the same shape without
+/// duplicating the pacing helpers — the point of the mock is that every reply
+/// travels the real event path, whatever prompted it.
+List<AiChatEvent> mockSay(String messageId, String text) =>
+    _say(messageId, text);
+
 /// Picks a scenario from what the user typed, falling back to the card demo.
 MockScenario scenarioFor(String message) {
   final lower = message.toLowerCase();

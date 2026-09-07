@@ -8,6 +8,9 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/ai_chat_event_source.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/ai_chat_message.dart';
+import 'package:sanad_client/src/features/ai_chat/src/domain/ai_multimodal_event_source.dart';
+import 'package:sanad_client/src/features/ai_chat/src/domain/entities/ai_chat_attachment.dart';
+import 'package:sanad_client/src/features/ai_chat/src/domain/entities/ai_outgoing_message.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/bloc/active_stream_controller.dart';
 
 part 'ai_chat_bloc_event.dart';
@@ -71,7 +74,10 @@ class AiChatBloc extends Bloc<AiChatBlocEvent, AiChatState> {
     Emitter<AiChatState> emit,
   ) async {
     final text = event.text.trim();
-    if (text.isEmpty) return;
+    final attachments = event.attachments;
+    // An attachment-only turn is legitimate — a photo with no caption, a voice
+    // note on its own — so empty text alone no longer means "nothing to send".
+    if (text.isEmpty && attachments.isEmpty) return;
 
     emit(
       state.copyWith(
@@ -80,13 +86,29 @@ class AiChatBloc extends Bloc<AiChatBlocEvent, AiChatState> {
           AiChatMessage.user(
             id: 'user_${generateUuidV4()}',
             text: text,
+            attachments: attachments,
             createdAt: DateTime.now(),
           ),
         ],
       ),
     );
 
-    await _source.send(text);
+    final source = _source;
+    // A variable pattern rather than `is`: Dart forms no intersection type for
+    // two unrelated interfaces, so a plain `is` would not promote here.
+    if (source case final AiMultimodalEventSource multimodal) {
+      await multimodal.sendMultimodal(
+        AiOutgoingMessage(text: text, attachments: attachments),
+      );
+      return;
+    }
+
+    // A transport with no multimodal contract still carries the text. The
+    // attachments remain visible in the user's own bubble, which is the
+    // honest degradation: nothing is invented on a wire that cannot express
+    // it. See `AiMultimodalEventSource` for why this is a capability test
+    // rather than a method on the base interface.
+    await source.send(text);
   }
 
   void _onTransportEvent(

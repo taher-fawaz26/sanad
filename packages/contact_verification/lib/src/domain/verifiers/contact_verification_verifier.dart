@@ -48,15 +48,23 @@ class ContactVerificationVerifier implements OtpVerifier<VerificationResult> {
 
   /// Resends on the live session, falling back to opening a new one.
   ///
-  /// `/resend` answers 400 when no session exists — which is recoverable, not
-  /// fatal: `/request` opens one. Without this the user is stuck behind an
-  /// error with no way forward but to close the sheet.
+  /// `/resend` answers 400 "No active session for this purpose" when none
+  /// exists — recoverable, not fatal: `/request` opens one. Without this the
+  /// user is stuck behind an error with no way forward but to close the sheet.
+  ///
+  /// Both 400 failure shapes are accepted deliberately. `ErrorMapper` only
+  /// produces a [ValidationFailure] for a class-validator-shaped `message`
+  /// *array*; this endpoint's hand-written single-string rejection maps to
+  /// [BusinessRuleFailure] instead, so matching on validation alone left the
+  /// fallback unreachable. Narrowing it back re-breaks the recovery.
+  /// A 429/409/403 still surfaces as-is — those are not "no session".
   @override
   TaskEither<Failure, OtpDelivery> resendCode() =>
       _resendVerification(ResendVerificationParams(purpose: purpose))
           .map((_) => OtpDelivery(maskedDestination: target))
           .orElse(
-            (failure) => failure is ValidationFailure
+            (failure) =>
+                failure is ValidationFailure || failure is BusinessRuleFailure
                 ? requestCode()
                 : TaskEither.left(failure),
           );

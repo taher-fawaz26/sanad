@@ -1,3 +1,4 @@
+import 'package:app_animations/app_animations.dart';
 import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -45,6 +46,27 @@ class OAuthUaePassSuccessPage extends StatelessWidget {
     final typography = context.appTypography;
     final resolvedDetails = details ?? UaePassCollectedDetails.placeholder();
 
+    final rows = <UaePassDetailRowData>[
+      UaePassDetailRowData(
+        iconAsset: AppSvgs.registrationProfile,
+        label: 'oauth.uae_pass_detail_full_name_label'.tr(),
+        value: resolvedDetails.fullName,
+        status: UaePassDetailRowStatus.completed,
+      ),
+      UaePassDetailRowData(
+        iconAsset: AppSvgs.uaePassVerifiedIdentity,
+        label: 'oauth.uae_pass_detail_verified_identity_label'.tr(),
+        value: resolvedDetails.verifiedIdentityLabel,
+        status: UaePassDetailRowStatus.completed,
+      ),
+      UaePassDetailRowData(
+        iconAsset: AppSvgs.uaePassMobileNumber,
+        label: 'oauth.uae_pass_detail_mobile_number_label'.tr(),
+        value: resolvedDetails.maskedMobileNumber,
+        status: UaePassDetailRowStatus.completed,
+      ),
+    ];
+
     return Scaffold(
       appBar: AppNavBar(
         title: '',
@@ -63,57 +85,47 @@ class OAuthUaePassSuccessPage extends StatelessWidget {
                   child: Column(
                     children: [
                       SizedBox(height: responsiveDimension(AppSpacing.xxxxl)),
+                      // Emphasized one-shot pop-in for the completion seal —
+                      // the "you're all set" moment. Kept separate from the
+                      // staggered content below so it reads as a distinct beat.
                       AppSvgPicture.asset(
                         AppSvgs.uaePassSuccessSeal,
                         width: responsiveDimension(78.3694),
                         height: responsiveDimension(79.0558),
+                      ).appFadeScale(
+                        context,
+                        duration: AppMotionDuration.emphasis,
+                        curve: AppMotionCurve.emphasizedDecelerate,
+                        beginScale: 0.85,
                       ),
                       SizedBox(height: responsiveDimension(AppSpacing.xl)),
-                      Text(
-                        'oauth.uae_pass_success_title'.tr(),
-                        textAlign: TextAlign.center,
-                        style: typography.regularNone.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: _successAccent,
-                        ),
-                      ),
-                      SizedBox(height: responsiveDimension(AppSpacing.md)),
-                      SizedBox(
-                        width: responsiveDimension(260),
-                        child: AppProgressBar(
-                          value: 1,
-                          height: responsiveDimension(8),
-                          borderRadius: BorderRadius.circular(
-                            responsiveDimension(4),
+                      AppStaggeredColumn(
+                        children: [
+                          Text(
+                            'oauth.uae_pass_success_title'.tr(),
+                            textAlign: TextAlign.center,
+                            style: typography.regularNone.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: _successAccent,
+                            ),
                           ),
-                          trackColor: _progressTrackColor,
-                          fillColor: _successAccent,
-                        ),
-                      ),
-                      SizedBox(height: responsiveDimension(AppSpacing.xl)),
-                      UaePassDetailsCard(
-                        title: 'oauth.uae_pass_success_card_title'.tr(),
-                        rows: [
-                          UaePassDetailRowData(
-                            iconAsset: AppSvgs.registrationProfile,
-                            label: 'oauth.uae_pass_detail_full_name_label'.tr(),
-                            value: resolvedDetails.fullName,
-                            status: UaePassDetailRowStatus.completed,
+                          SizedBox(height: responsiveDimension(AppSpacing.md)),
+                          SizedBox(
+                            width: responsiveDimension(260),
+                            child: AppProgressBar(
+                              value: 1,
+                              height: responsiveDimension(8),
+                              borderRadius: BorderRadius.circular(
+                                responsiveDimension(4),
+                              ),
+                              trackColor: _progressTrackColor,
+                              fillColor: _successAccent,
+                            ),
                           ),
-                          UaePassDetailRowData(
-                            iconAsset: AppSvgs.uaePassVerifiedIdentity,
-                            label:
-                                'oauth.uae_pass_detail_verified_identity_label'
-                                    .tr(),
-                            value: resolvedDetails.verifiedIdentityLabel,
-                            status: UaePassDetailRowStatus.completed,
-                          ),
-                          UaePassDetailRowData(
-                            iconAsset: AppSvgs.uaePassMobileNumber,
-                            label: 'oauth.uae_pass_detail_mobile_number_label'
-                                .tr(),
-                            value: resolvedDetails.maskedMobileNumber,
-                            status: UaePassDetailRowStatus.completed,
+                          SizedBox(height: responsiveDimension(AppSpacing.xl)),
+                          UaePassDetailsCard(
+                            title: 'oauth.uae_pass_success_card_title'.tr(),
+                            rows: rows,
                           ),
                         ],
                       ),

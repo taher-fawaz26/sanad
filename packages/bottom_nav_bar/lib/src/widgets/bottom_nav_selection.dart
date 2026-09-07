@@ -1,5 +1,6 @@
 import 'package:bottom_nav_bar/src/models/bottom_nav_action.dart';
 import 'package:bottom_nav_bar/src/models/bottom_nav_destination.dart';
+
 /// Shared selection helpers for bar and center widgets.
 abstract final class BottomNavSelection {
   BottomNavSelection._();

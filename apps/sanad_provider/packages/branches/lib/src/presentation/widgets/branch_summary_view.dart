@@ -452,12 +452,29 @@ class _WorkingHoursSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final closedLabel = 'branches.details.closed'.tr();
+    // Pass the active locale so AM/PM renders localized (ص/م in Arabic);
+    // omitting it silently reverts to English markers (SAN-573).
+    // `Localizations.localeOf` (not EasyLocalization's `context.locale`) so
+    // this stays safe in widget tests that don't bootstrap EasyLocalization.
+    final locale = Localizations.localeOf(context).toString();
     final byDay = {for (final entry in data.schedule) entry.day: entry};
 
+    // Render only days that actually have open slots, in canonical
+    // Saturday→Friday order. Off days are omitted entirely rather than shown
+    // as "Closed" rows (SAN-780). The schedule's day codes are normalized to
+    // the all-caps `BranchWeekdays` form at the data-source boundary, so this
+    // lookup hits; a day with multiple slots renders all of them (comma-
+    // joined by `formatAvailability`).
     final items = [
       for (final day in BranchWeekdays.all)
-        _scheduleItem(day, byDay[day], closedLabel, colors.error),
+        if (byDay[day] case final entry? when entry.slots.isNotEmpty)
+          GroupedKeyValueItem(
+            title: BranchScheduleFormatter.localizedDay(day),
+            value: BranchScheduleFormatter.formatAvailability(
+              entry,
+              locale: locale,
+            ),
+          ),
     ];
 
     final badge = data.isCustomSchedule
@@ -496,25 +513,16 @@ class _WorkingHoursSection extends StatelessWidget {
         ),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: AppGroupedKeyValueList(items: items),
+          child: items.isEmpty
+              ? Text(
+                  'branches.details.no_working_hours'.tr(),
+                  style: context.appTypography.smallNormal.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                )
+              : AppGroupedKeyValueList(items: items),
         ),
       ],
-    );
-  }
-
-  GroupedKeyValueItem _scheduleItem(
-    String day,
-    BranchAvailabilityEntity? availability,
-    String closedLabel,
-    Color closedColor,
-  ) {
-    final hasSlots = availability != null && availability.slots.isNotEmpty;
-    return GroupedKeyValueItem(
-      title: BranchScheduleFormatter.localizedDay(day),
-      value: hasSlots
-          ? BranchScheduleFormatter.formatAvailability(availability)
-          : closedLabel,
-      valueColor: hasSlots ? null : closedColor,
     );
   }
 }

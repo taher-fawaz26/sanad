@@ -4,7 +4,7 @@ import 'package:branches/src/domain/usecases/branch_usecase_params.dart';
 import 'package:branches/src/domain/usecases/create_branch_usecase.dart';
 import 'package:branches/src/domain/usecases/get_company_schedule_usecase.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
-import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_cubit.dart';
+import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_bloc.dart';
 import 'package:branches/src/presentation/widgets/branch_review_body.dart';
 import 'package:branches/src/presentation/widgets/branch_summary_view.dart';
 import 'package:core/core.dart';
@@ -43,7 +43,7 @@ const _validParams = CreateBranchParams(
 
 void main() {
   late _MockBranchRepository repository;
-  late AddBranchDraftCubit draftCubit;
+  late AddBranchDraftBloc draftCubit;
   late AddBranchBloc addBranchBloc;
 
   setUpAll(() {
@@ -78,7 +78,7 @@ void main() {
 
   setUp(() {
     repository = _MockBranchRepository();
-    draftCubit = AddBranchDraftCubit();
+    draftCubit = AddBranchDraftBloc();
     addBranchBloc = AddBranchBloc(
       createBranchUseCase: CreateBranchUseCase(repository),
       getCompanyScheduleUseCase: GetCompanyScheduleUseCase(repository),
@@ -107,7 +107,7 @@ void main() {
           theme: AppTheme.light(),
           home: MultiBlocProvider(
             providers: [
-              BlocProvider<AddBranchDraftCubit>.value(value: draftCubit),
+              BlocProvider<AddBranchDraftBloc>.value(value: draftCubit),
               BlocProvider<AddBranchBloc>.value(value: addBranchBloc),
             ],
             child: Scaffold(
@@ -203,7 +203,15 @@ void main() {
         await pump(tester);
         expect(summaryView(tester).data.title, 'First Name');
 
-        draftCubit.updateBasicInfo(branchName: 'Renamed Branch');
+        // Bloc event emissions resolve outside the widget-test fake clock —
+        // runAsync to wait for the new state, then pump for the rebuild
+        // (Cubit's synchronous emit did not need this).
+        await tester.runAsync(() async {
+          draftCubit.updateBasicInfo(branchName: 'Renamed Branch');
+          await draftCubit.stream.firstWhere(
+            (d) => d.branchName == 'Renamed Branch',
+          );
+        });
         await tester.pumpAndSettle();
 
         expect(summaryView(tester).data.title, 'Renamed Branch');

@@ -1,5 +1,6 @@
 import 'package:authorization/authorization.dart';
 import 'package:branches/src/data/models/person_initials.dart';
+import 'package:branches/src/domain/entities/branch_availability_entity.dart';
 import 'package:branches/src/domain/entities/branch_availability_mode.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/domain/entities/branch_manager_entity.dart';
@@ -9,6 +10,7 @@ import 'package:branches/src/presentation/models/coverage_area_args.dart';
 import 'package:branches/src/presentation/models/coverage_area_result.dart';
 import 'package:branches/src/presentation/utils/add_branch_params_mapper.dart';
 import 'package:branches/src/presentation/utils/branch_maps_launcher.dart';
+import 'package:branches/src/presentation/utils/coverage_location_gate.dart';
 import 'package:branches/src/presentation/widgets/branch_info_edit_sheet.dart';
 import 'package:branches/src/presentation/widgets/branch_summary_view.dart';
 import 'package:branches/src/presentation/widgets/contact_edit_sheet.dart';
@@ -73,8 +75,12 @@ class BranchDetailsPage extends StatelessWidget {
         final failure = state.sectionSaveFailure ?? state.statusUpdateFailure;
         showAppErrorSnackbar(
           context: context,
+          // `localizedSafeMessage`, not `localizedMessage`: a 400 that
+          // complains about the request shape ("property cityId should not
+          // exist") is developer-facing and must never reach the user
+          // (SAN-774).
           title: failure != null
-              ? failure.localizedMessage()
+              ? failure.localizedSafeMessage()
               : 'branches.details.status_update_error'.tr(),
         );
       },
@@ -108,7 +114,11 @@ class BranchDetailsPage extends StatelessWidget {
           return const SizedBox.shrink();
         }
 
-        return _BranchDetailsContent(branch: branch, isOwner: isOwner);
+        return _BranchDetailsContent(
+          branch: branch,
+          isOwner: isOwner,
+          companySchedule: state.companySchedule,
+        );
       },
     );
   }
@@ -160,14 +170,36 @@ class _BranchDetailsError extends StatelessWidget {
 }
 
 class _BranchDetailsContent extends StatelessWidget {
-  const _BranchDetailsContent({required this.branch, required this.isOwner});
+  const _BranchDetailsContent({
+    required this.branch,
+    required this.isOwner,
+    this.companySchedule,
+  });
 
   final BranchEntity branch;
   final bool isOwner;
 
+  /// Effective schedule source for company-hours branches (their own
+  /// [BranchEntity.availability] is empty). `null` until fetched by the bloc.
+  final List<BranchAvailabilityEntity>? companySchedule;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    // `branch.city` is the backend's own `city.name`, which it localizes from
+    // the request language (`x-lang`/`Accept-Language`). One field feeds both
+    // this row and `branch.displayAddress`, so the screen can never show two
+    // different spellings of the same city (SAN-774).
+    final displayCity = branch.city;
+    // Company-hours branches show the org-wide company schedule; custom
+    // branches carry their own hours. Falling back to the branch payload
+    // keeps the skeleton and pre-fetch frames well-defined (SAN-780).
+    final effectiveSchedule =
+        branch.availabilityMode == BranchAvailabilityMode.custom
+        ? (branch.availability ?? const <BranchAvailabilityEntity>[])
+        : (companySchedule ??
+              branch.availability ??
+              const <BranchAvailabilityEntity>[]);
     final managerCaption = branch.branchManagerName == null
         ? null
         : 'branches.details.manager_caption'.tr(
@@ -222,13 +254,13 @@ class _BranchDetailsContent extends StatelessWidget {
                       branchTypeLabel: branchTypeLabel(branch.branchType),
                       position: position,
                       address: branch.displayAddress,
-                      cityName: branch.city,
+                      cityName: displayCity,
                       phone: branch.branchPhone,
                       managerName: branch.branchManagerName,
                       isCustomSchedule:
                           branch.availabilityMode ==
                           BranchAvailabilityMode.custom,
-                      schedule: branch.availability ?? const [],
+                      schedule: effectiveSchedule,
                       areaNames: areaNames,
                       serviceNames: branch.serviceNames ?? const [],
                       workerInitials: [
@@ -304,22 +336,11 @@ class _BranchDetailsContent extends StatelessWidget {
   }
 
   Future<void> _openWorkingHoursEdit(BuildContext context) async {
-    // Fetched up front so the sheet renders its full content from the very
-    // first frame — swapping a loading state in after mount fights the
-    // sheet's auto-sizing (`SheetSize.content`) while it settles.
-    final scheduleResult = await sl<GetCompanyScheduleUseCase>()(
-      const NoParams(),
-    ).run();
-    if (!context.mounted) return;
-
-    final companySchedule = scheduleResult.fold((failure) => null, (s) => s);
-    if (companySchedule == null) {
-      showAppSnackbar(
-        context: context,
-        title: 'branches.details.status_update_error'.tr(),
-      );
-      return;
-    }
+    // The company schedule is pre-fetched by `BranchDetailsBloc._loadBranch`
+    // for company-hours branches (SAN-780) — read it from state instead of
+    // re-fetching in the widget. Custom-schedule branches don't need it.
+    final companySchedule =
+        context.read<BranchDetailsBloc>().state.companySchedule ?? const [];
 
     final result = await showWorkingHoursEditSheet(
       context: context,
@@ -339,20 +360,31 @@ class _BranchDetailsContent extends StatelessWidget {
   }
 
   Future<void> _openCoverageEdit(BuildContext context) async {
-    final status = await sl<LocationService>().checkPermission();
-    if (!context.mounted) return;
-    if (status == LocationPermissionStatus.permanentlyDenied ||
-        status == LocationPermissionStatus.serviceDisabled) {
-      showAppSnackbar(
-        context: context,
-        title: 'branches.add_branch.location_access_description'.tr(),
-      );
-      return;
-    }
-
     final position = (branch.lat != null && branch.lng != null)
         ? LatLng(branch.lat!, branch.lng!)
         : null;
+    // Editing coverage is configured from the branch's already-saved location
+    // (coordinates + address) and never needs a live device position. So an
+    // existing, resolved branch opens straight into the coverage editor
+    // regardless of live location-services/permission state — disabling device
+    // Location must not block editing a saved branch. Only when the branch has
+    // no usable location do we require live location access first.
+    final hasResolvedLocation =
+        position != null && branch.branchAddress.isNotEmpty;
+    if (!hasResolvedLocation) {
+      final status = await sl<LocationService>().checkPermission();
+      if (!context.mounted) return;
+      if (isCoverageLocationBlocked(
+        hasResolvedLocation: false,
+        permissionStatus: status,
+      )) {
+        showAppSnackbar(
+          context: context,
+          title: 'branches.add_branch.location_access_description'.tr(),
+        );
+        return;
+      }
+    }
 
     final result = await context.push<CoverageAreaResult>(
       BranchRoutes.coverage,

@@ -36,14 +36,49 @@ void main() {
       expect(options.headers['x-lang'], 'en');
     });
 
-    test('defaults to "ar" for an unrecognized language code', () async {
+    test('defaults to "en" for an unrecognized language code', () async {
+      // English is the product default (SAN-774); this used to fall back to
+      // Arabic, so an unresolvable code silently served Arabic content.
       final dio = buildDio(() => 'fr');
 
       await dio.get<dynamic>('/services');
 
       final options = adapter.lastOptions!;
-      expect(options.headers['Accept-Language'], 'ar');
-      expect(options.headers['x-lang'], 'ar');
+      expect(options.headers['Accept-Language'], 'en');
+      expect(options.headers['x-lang'], 'en');
+    });
+
+    test('defaults to "en" for an empty language code', () async {
+      final dio = buildDio(() => '');
+
+      await dio.get<dynamic>('/services');
+
+      expect(adapter.lastOptions!.headers['x-lang'], 'en');
+    });
+
+    test('normalizes a full locale tag down to its primary subtag', () async {
+      // The backend only accepts a bare `ar`/`en` on `x-lang` and silently
+      // defaults to English for anything else, so `ar-AR` / `ar_AR` (Dart's
+      // own `Locale.toString()` form) must not reach it verbatim.
+      for (final entry in {
+        'ar-AR': 'ar',
+        'ar_AR': 'ar',
+        'AR': 'ar',
+        'en-US': 'en',
+        'en_US': 'en',
+      }.entries) {
+        final dio = buildDio(() => entry.key);
+
+        await dio.get<dynamic>('/services');
+
+        final options = adapter.lastOptions!;
+        expect(
+          options.headers['Accept-Language'],
+          entry.value,
+          reason: entry.key,
+        );
+        expect(options.headers['x-lang'], entry.value, reason: entry.key);
+      }
     });
 
     test(

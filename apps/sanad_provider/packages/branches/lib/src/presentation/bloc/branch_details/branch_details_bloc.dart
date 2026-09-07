@@ -1,7 +1,10 @@
 import 'package:bloc_concurrency/bloc_concurrency.dart';
+import 'package:branches/src/domain/entities/branch_availability_entity.dart';
+import 'package:branches/src/domain/entities/branch_availability_mode.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
 import 'package:branches/src/domain/usecases/branch_usecase_params.dart';
 import 'package:branches/src/domain/usecases/get_branch_usecase.dart';
+import 'package:branches/src/domain/usecases/get_company_schedule_usecase.dart';
 import 'package:branches/src/domain/usecases/update_branch_status_usecase.dart';
 import 'package:branches/src/domain/usecases/update_branch_usecase.dart';
 import 'package:core/core.dart';
@@ -16,9 +19,11 @@ class BranchDetailsBloc extends Bloc<BranchDetailsEvent, BranchDetailsState> {
     required GetBranchUseCase getBranchUseCase,
     required UpdateBranchStatusUseCase updateBranchStatusUseCase,
     required UpdateBranchUseCase updateBranchUseCase,
+    required GetCompanyScheduleUseCase getCompanyScheduleUseCase,
   }) : _getBranchUseCase = getBranchUseCase,
        _updateBranchStatusUseCase = updateBranchStatusUseCase,
        _updateBranchUseCase = updateBranchUseCase,
+       _getCompanyScheduleUseCase = getCompanyScheduleUseCase,
        super(const BranchDetailsState()) {
     on<BranchDetailsFetchEvent>(_onFetch);
     on<BranchDetailsRefreshEvent>(_onRefresh);
@@ -30,6 +35,7 @@ class BranchDetailsBloc extends Bloc<BranchDetailsEvent, BranchDetailsState> {
   final GetBranchUseCase _getBranchUseCase;
   final UpdateBranchStatusUseCase _updateBranchStatusUseCase;
   final UpdateBranchUseCase _updateBranchUseCase;
+  final GetCompanyScheduleUseCase _getCompanyScheduleUseCase;
 
   Future<void> _onFetch(
     BranchDetailsFetchEvent event,
@@ -135,15 +141,52 @@ class BranchDetailsBloc extends Bloc<BranchDetailsEvent, BranchDetailsState> {
       GetBranchParams(id: branchId),
     ).run();
 
-    return result.fold(
-      (failure) {
-        emit(state.copyWith(status: RequestStatus.failure, failure: failure));
-        return false;
-      },
-      (branch) {
-        emit(state.copyWith(status: RequestStatus.success, branch: branch));
-        return true;
-      },
+    final branch = result.fold((_) => null, (branch) => branch);
+    if (branch == null) {
+      final failure = result.fold((failure) => failure, (_) => null);
+      emit(state.copyWith(status: RequestStatus.failure, failure: failure));
+      return false;
+    }
+
+    // Resolve the effective schedule BEFORE surfacing success. Company-hours
+    // branches keep their hours in the org company schedule (their own
+    // `availability` is empty), so emitting success first would render a
+    // transient "all days closed" frame until the schedule arrived. Fetching
+    // it up front keeps the skeleton up until the real hours are ready
+    // (SAN-780). Custom branches skip the fetch and resolve to `null` here.
+    final companySchedule = await _resolveCompanySchedule(branch);
+
+    emit(
+      state.copyWith(
+        status: RequestStatus.success,
+        branch: branch,
+        companySchedule: companySchedule,
+      ),
     );
+    return true;
+  }
+
+  /// Resolves the org-wide company schedule for a company-hours [branch] —
+  /// its effective schedule lives there rather than on the branch payload
+  /// ([BranchEntity.availability] is empty for them), so the details view can
+  /// render the real hours instead of showing every day as closed (SAN-780).
+  ///
+  /// Returns `null` (skipping the fetch) for custom-schedule branches, which
+  /// carry their own hours, and returns the already-cached schedule on a
+  /// refresh so it is fetched at most once. A failed fetch is non-fatal and
+  /// also returns `null`: the section falls back to whatever the branch
+  /// payload carries. Because [BranchDetailsState.copyWith] treats a `null`
+  /// `companySchedule` as "unchanged", returning `null` here never clobbers a
+  /// previously-resolved schedule.
+  Future<List<BranchAvailabilityEntity>?> _resolveCompanySchedule(
+    BranchEntity branch,
+  ) async {
+    if (branch.availabilityMode != BranchAvailabilityMode.coreHours) {
+      return null;
+    }
+    if (state.companySchedule != null) return state.companySchedule;
+
+    final result = await _getCompanyScheduleUseCase(const NoParams()).run();
+    return result.fold((_) => null, (schedule) => schedule);
   }
 }

@@ -5,6 +5,7 @@ import 'package:maps/src/config/maps_config.dart';
 import 'package:maps/src/data/cache/geocoding_cache.dart';
 import 'package:maps/src/data/repositories/geocoding_repository_impl.dart';
 import 'package:maps/src/data/repositories/google_nearby_areas_repository_impl.dart';
+import 'package:maps/src/data/repositories/google_reverse_geocode_place_repository_impl.dart';
 import 'package:maps/src/data/repositories/location_repository_impl.dart';
 import 'package:maps/src/data/repositories/locations_repository_impl.dart';
 import 'package:maps/src/data/repositories/places_repository_impl.dart';
@@ -13,14 +14,17 @@ import 'package:maps/src/domain/repositories/location_repository.dart';
 import 'package:maps/src/domain/repositories/locations_repository.dart';
 import 'package:maps/src/domain/repositories/nearby_areas_repository.dart';
 import 'package:maps/src/domain/repositories/places_repository.dart';
+import 'package:maps/src/domain/repositories/reverse_geocode_place_repository.dart';
 import 'package:maps/src/domain/usecases/check_location_permission_usecase.dart';
 import 'package:maps/src/domain/usecases/forward_geocode_usecase.dart';
 import 'package:maps/src/domain/usecases/get_cities_usecase.dart';
 import 'package:maps/src/domain/usecases/get_current_location_usecase.dart';
 import 'package:maps/src/domain/usecases/get_place_details_usecase.dart';
+import 'package:maps/src/domain/usecases/open_device_location_settings_usecase.dart';
 import 'package:maps/src/domain/usecases/open_location_settings_usecase.dart';
 import 'package:maps/src/domain/usecases/resolve_coverage_location_usecase.dart';
 import 'package:maps/src/domain/usecases/resolve_nearby_areas_usecase.dart';
+import 'package:maps/src/domain/usecases/reverse_geocode_place_usecase.dart';
 import 'package:maps/src/domain/usecases/reverse_geocode_usecase.dart';
 import 'package:maps/src/domain/usecases/search_places_usecase.dart';
 import 'package:maps/src/presentation/bloc/coverage_area/coverage_area_bloc.dart';
@@ -38,6 +42,8 @@ abstract final class MapsDI {
   MapsDI._();
 
   static void init({MapsConfig config = const MapsConfig()}) {
+    _warnIfKeyless(config);
+
     sl
       ..registerLazySingleton<MapsConfig>(() => config)
       ..registerLazySingleton<LocationsRepository>(
@@ -65,14 +71,7 @@ abstract final class MapsDI {
       ..registerLazySingleton<NearbyAreasRepository>(
         () {
           if (!config.placesEnabled) {
-            // A missing/empty Maps REST key must never fail silently — this
-            // build will discover zero serving areas for every location.
-            appLogger.e(
-              '[MapsDI] placesApiKey is not configured — serving-area '
-              'discovery is disabled and will return empty results for '
-              'every location. Pass --dart-define=MAPS_API_KEY=... (or the '
-              'equivalent --dart-define-from-file) at build time.',
-            );
+            // Cause already reported once, eagerly, by _warnIfKeyless.
             return const NoopNearbyAreasRepository();
           }
           return GoogleNearbyAreasRepositoryImpl(
@@ -101,6 +100,9 @@ abstract final class MapsDI {
         () => OpenLocationSettingsUseCase(sl<LocationRepository>()),
       )
       ..registerLazySingleton(
+        () => OpenDeviceLocationSettingsUseCase(sl<LocationRepository>()),
+      )
+      ..registerLazySingleton(
         () => CheckLocationPermissionUseCase(sl<LocationRepository>()),
       );
 
@@ -118,6 +120,26 @@ abstract final class MapsDI {
         ..registerLazySingleton(
           () => GetPlaceDetailsUseCase(sl<PlacesRepository>()),
         );
+
+      // Google-only: reverse-geocode a coordinate to a real Google place_id
+      // (the REST Geocoding API), so a map-dragged pin / current-location fix
+      // carries the Place ID the backend requires without forcing the user to
+      // pick a search result. Not available for the backend/OSM providers.
+      if (config.placesProvider == PlacesProviderType.google) {
+        sl
+          ..registerLazySingleton<ReverseGeocodePlaceRepository>(
+            () => GoogleReverseGeocodePlaceRepositoryImpl(
+              apiKey: config.placesApiKey!,
+              dio: _createPlacesDio(),
+              countryCode: config.countryCode,
+            ),
+          )
+          ..registerLazySingleton(
+            () => ReverseGeocodePlaceUseCase(
+              sl<ReverseGeocodePlaceRepository>(),
+            ),
+          );
+      }
     }
 
     sl
@@ -132,12 +154,20 @@ abstract final class MapsDI {
           reverseGeocodeUseCase: sl<ReverseGeocodeUseCase>(),
           forwardGeocodeUseCase: sl<ForwardGeocodeUseCase>(),
           openLocationSettingsUseCase: sl<OpenLocationSettingsUseCase>(),
+          getCurrentLocationUseCase: sl<GetCurrentLocationUseCase>(),
+          openDeviceLocationSettingsUseCase:
+              sl<OpenDeviceLocationSettingsUseCase>(),
           checkLocationPermissionUseCase: sl<CheckLocationPermissionUseCase>(),
           searchPlacesUseCase: config.placesEnabled
               ? sl<SearchPlacesUseCase>()
               : null,
           getPlaceDetailsUseCase: config.placesEnabled
               ? sl<GetPlaceDetailsUseCase>()
+              : null,
+          reverseGeocodePlaceUseCase:
+              config.placesEnabled &&
+                  config.placesProvider == PlacesProviderType.google
+              ? sl<ReverseGeocodePlaceUseCase>()
               : null,
         ),
       )
@@ -152,6 +182,29 @@ abstract final class MapsDI {
               : null,
         ),
       );
+  }
+
+  /// Reports a keyless Maps configuration at init, eagerly and at error level
+  /// so it survives release log filtering (`appLogger` keeps warning-and-above
+  /// in release builds).
+  ///
+  /// Only `sanad_provider` registers Maps, and every provider build needs the
+  /// key, so an empty [MapsConfig.placesApiKey] is always a build
+  /// misconfiguration — never a supported mode. Left silent it degrades into a
+  /// dead end that looks like a feature bug: the map still renders (the native
+  /// SDK reads its own manifest key) and a dragged pin still reverse-geocodes
+  /// via the keyless platform geocoder, but no Google `place_id` can be
+  /// resolved and Places autocomplete is inert — so Confirm on the branch
+  /// location picker stays disabled forever with no stated cause (SAN-823).
+  static void _warnIfKeyless(MapsConfig config) {
+    if (config.placesEnabled) return;
+    appLogger.e(
+      '[MapsDI] MAPS_API_KEY is missing — Places autocomplete, Google '
+      'place_id resolution and serving-area discovery are ALL disabled. A '
+      'branch location can never be confirmed in this build. Build with '
+      '`melos run build:provider:android`, or set MAPS_API_KEY in '
+      'android/local.properties (see docs/CONFIGURATION.md).',
+    );
   }
 
   static PlacesProvider _createPlacesProvider(MapsConfig config) {

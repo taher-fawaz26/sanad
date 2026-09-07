@@ -51,7 +51,7 @@ class OrganizationProfileSliverHeader extends StatefulWidget {
   /// Fired once a cover/logo upload succeeds, with the new image URL — lets
   /// the parent bloc sync its own copy of the profile so the change survives a
   /// reload. Mirrors the previous `OrganizationHeader` contract.
-  final void Function(OrganizationMediaSlot slot, String url)? onMediaUpdated;
+  final void Function(OrganizationMediaSlot slot, String? url)? onMediaUpdated;
 
   @override
   State<OrganizationProfileSliverHeader> createState() =>
@@ -133,7 +133,7 @@ class _ProfileHeaderDelegate extends SliverPersistentHeaderDelegate {
   final bool isLoading;
   final Color backgroundColor;
   final Color dividerColor;
-  final void Function(OrganizationMediaSlot slot, String url)? onMediaUpdated;
+  final void Function(OrganizationMediaSlot slot, String? url)? onMediaUpdated;
 
   // ── Geometry (design-spec dp; const so the extents are deterministic) ──
   static const double _hPad = AppSpacingDp.xl; // 20
@@ -265,7 +265,7 @@ class _ProfileHeaderContent extends StatelessWidget {
   final bool isLoading;
   final Color backgroundColor;
   final Color dividerColor;
-  final void Function(OrganizationMediaSlot slot, String url)? onMediaUpdated;
+  final void Function(OrganizationMediaSlot slot, String? url)? onMediaUpdated;
   final double coverTop;
   final double coverOpacity;
   final double avatarSize;
@@ -324,8 +324,8 @@ class _ProfileHeaderContent extends StatelessWidget {
         : message;
   }
 
-  /// A failure with nothing to retry (e.g. removal, which has no documented
-  /// endpoint to retry against — see `RemoveOrganizationMediaUseCase`). These
+  /// A failure with nothing to retry — a removal keeps no `lastMedia`, so
+  /// there is no picked image for a retry affordance to re-send. These
   /// must never render as the persistent on-image [MediaFailureOverlay] (there
   /// is no action the overlay's retry affordance could offer), so they're
   /// surfaced once as a snackbar instead — see the `listener` below.
@@ -362,13 +362,18 @@ class _ProfileHeaderContent extends StatelessWidget {
           (!_isNonRetryableFailure(previous.logo) &&
               _isNonRetryableFailure(current.logo)),
       listener: (context, state) {
-        final coverUrl = state.cover.imageUrl;
-        if (state.cover.status == RequestStatus.success && coverUrl != null) {
-          onMediaUpdated?.call(OrganizationMediaSlot.cover, coverUrl);
+        // A success with a null url is a *removal*, and has to be forwarded
+        // like any other change: skipping it (the previous `!= null` guard)
+        // left the deleted image in the settings bloc and its cache, so the
+        // next refresh brought it back.
+        if (state.cover.status == RequestStatus.success) {
+          onMediaUpdated?.call(
+            OrganizationMediaSlot.cover,
+            state.cover.imageUrl,
+          );
         }
-        final logoUrl = state.logo.imageUrl;
-        if (state.logo.status == RequestStatus.success && logoUrl != null) {
-          onMediaUpdated?.call(OrganizationMediaSlot.logo, logoUrl);
+        if (state.logo.status == RequestStatus.success) {
+          onMediaUpdated?.call(OrganizationMediaSlot.logo, state.logo.imageUrl);
         }
         if (_isNonRetryableFailure(state.cover)) {
           _showNonRetryableFailureSnackbar(

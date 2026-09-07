@@ -41,8 +41,8 @@ class _RequestNewServicePageState extends State<RequestNewServicePage> {
       create: (_) => sl<MediaUploadBloc>(
         param1: const MediaUploadConfig(
           maxFileSize: FileSizePolicy.maxBytes,
-          // "Images are optional (max 6)" per this screen's own doc
-          // comment above.
+          // At least one image is required, max 6 (SAN-782) — the requirement
+          // is enforced by the form's completeness check + submit guard.
           maxFiles: kMaxServiceImages,
           allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
         ),
@@ -153,6 +153,10 @@ class _RequestNewServicePageState extends State<RequestNewServicePage> {
         .map((item) => item.mediaId)
         .whereType<String>()
         .toList();
+    // At least one image is mandatory (SAN-782). The Submit button is
+    // already gated on this, but guard here too so the request can never be
+    // sent without one.
+    if (imageIds.isEmpty) return;
 
     context.read<RequestNewServiceBloc>().add(
       RequestNewServiceSubmittedEvent(
@@ -160,7 +164,7 @@ class _RequestNewServicePageState extends State<RequestNewServicePage> {
           name: formState.name,
           categoryId: categoryId,
           description: formState.description,
-          imageIds: imageIds.isEmpty ? null : imageIds,
+          imageIds: imageIds,
         ),
       ),
     );

@@ -48,6 +48,13 @@ class AccountSettingsBloc
     on<AccountSettingsLoaded>(_onLoaded);
     on<AccountSettingsRefreshed>(_onLoaded);
     on<AccountSettingsUpdated>(_onUpdated, transformer: droppable());
+    on<AccountSettingsLanguageSynced>(
+      _onLanguageSynced,
+      // Restartable, not droppable: if the user switches language twice in
+      // quick succession the *last* choice is the one that must reach the
+      // backend, so an in-flight sync is abandoned rather than winning.
+      transformer: restartable(),
+    );
   }
 
   final UpdateAccountSettingsUseCase _updateAccountSettings;
@@ -117,6 +124,29 @@ class AccountSettingsBloc
             saveStatus: RequestStatus.success,
             settings: settings,
           ),
+        );
+        await _syncSession(settings);
+      },
+    );
+  }
+
+  /// Best-effort `preferredLanguage` sync. Never touches `saveStatus`, so no
+  /// blocking progress dialog appears and an unrelated save is not disturbed.
+  Future<void> _onLanguageSynced(
+    AccountSettingsLanguageSynced event,
+    Emitter<AccountSettingsState> emit,
+  ) async {
+    final userType = _sessionManager.userType ?? UserType.client;
+    final result = await _updateAccountSettings(
+      UpdateAccountSettingsParams(preferredLanguage: event.language),
+      userType,
+    ).run();
+
+    await result.fold(
+      (failure) async => emit(state.copyWith(languageSyncFailure: failure)),
+      (settings) async {
+        emit(
+          state.copyWith(settings: settings, clearLanguageSyncFailure: true),
         );
         await _syncSession(settings);
       },

@@ -44,7 +44,8 @@ Path buildBottomNavBarPath({
       )
       ..close();
   } else {
-    final distSq = math.pow(shoulder + notchR, 2) - math.pow(fabSink - shoulder, 2);
+    final distSq =
+        math.pow(shoulder + notchR, 2) - math.pow(fabSink - shoulder, 2);
     final dx = math.sqrt(math.max(0, distSq as double));
 
     final xsLeft = notchCX - dx;

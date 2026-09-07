@@ -15,7 +15,10 @@ MockHiveLocalStorage registerFakeHiveLocalStorage({bool hintSeen = false}) {
   unregisterFakeHiveLocalStorage();
   final storage = MockHiveLocalStorage();
   when(
-    () => storage.load(key: any(named: 'key'), boxName: any(named: 'boxName')),
+    () => storage.load(
+      key: any(named: 'key'),
+      boxName: any(named: 'boxName'),
+    ),
   ).thenAnswer((_) async => hintSeen);
   when(
     () => storage.save(

@@ -143,16 +143,86 @@ void main() {
     expect(values, [0.25, 1.0]);
   });
 
-  test('removeMedia is not supported by the backend', () async {
-    final result = await dataSource
-        .removeMedia(slot: OrganizationMediaSlot.logo)
-        .run();
+  // Removal reuses the same PATCH endpoint with `mediaId: null`. It used to
+  // be a hardcoded `BusinessRuleFailure` stub that never went near the
+  // network, which is why "Delete" appeared to do nothing.
+  group('removeMedia', () {
+    void stubUnitPatch() {
+      when(
+        () => apiClient.request<Unit>(
+          path: any(named: 'path'),
+          method: any(named: 'method'),
+          body: any(named: 'body'),
+          parser: any(named: 'parser'),
+          query: any(named: 'query'),
+        ),
+      ).thenAnswer((invocation) {
+        // Exercise the parser against the documented `{mediaId: null}` echo.
+        final parser =
+            invocation.namedArguments[#parser] as Unit Function(dynamic);
+        return TaskEither.right(parser(<String, dynamic>{'mediaId': null}));
+      });
+    }
 
-    expect(result.isLeft(), isTrue);
-    result.match(
-      (failure) => expect(failure, isA<BusinessRuleFailure>()),
-      (_) => fail('expected a failure'),
-    );
-    verifyZeroInteractions(mediaUpload);
+    for (final slot in OrganizationMediaSlot.values) {
+      test(
+        '${slot.name} PATCHes its own endpoint with an explicit null mediaId',
+        () async {
+          stubUnitPatch();
+
+          final result = await dataSource.removeMedia(slot: slot).run();
+
+          expect(result.isRight(), isTrue);
+          verify(
+            () => apiClient.request<Unit>(
+              path: slot.endpoint,
+              method: RequestMethod.patch,
+              // `mediaId` is required by the DTO: the key must be present and
+              // null. An empty body is a 400.
+              body: {'mediaId': null},
+              parser: any(named: 'parser'),
+              query: any(named: 'query'),
+            ),
+          ).called(1);
+          // Removal never uploads.
+          verifyZeroInteractions(mediaUpload);
+        },
+      );
+    }
+
+    test('the two slots target different endpoints', () {
+      expect(
+        OrganizationMediaSlot.logo.endpoint,
+        'service-provider/profile-image',
+      );
+      expect(
+        OrganizationMediaSlot.cover.endpoint,
+        'service-provider/cover-image',
+      );
+      expect(
+        OrganizationMediaSlot.logo.endpoint,
+        isNot(OrganizationMediaSlot.cover.endpoint),
+      );
+    });
+
+    test('a failed removal propagates the failure', () async {
+      when(
+        () => apiClient.request<Unit>(
+          path: any(named: 'path'),
+          method: any(named: 'method'),
+          body: any(named: 'body'),
+          parser: any(named: 'parser'),
+          query: any(named: 'query'),
+        ),
+      ).thenAnswer(
+        (_) => TaskEither.left(const ServerFailure(message: 'boom')),
+      );
+
+      final result = await dataSource
+          .removeMedia(slot: OrganizationMediaSlot.logo)
+          .run();
+
+      expect(result.isLeft(), isTrue);
+    });
   });
 }

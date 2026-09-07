@@ -1,5 +1,6 @@
 import 'package:document_flow/document_flow.dart' show DocumentFlowRepository;
-import 'package:document_flow/src/domain/repositories/document_flow_repository.dart' show DocumentFlowRepository;
+import 'package:document_flow/src/domain/repositories/document_flow_repository.dart'
+    show DocumentFlowRepository;
 
 /// Opaque bag of runtime data a feature's [DocumentFlowRepository]
 /// implementation needs (e.g. a short-lived onboarding token).

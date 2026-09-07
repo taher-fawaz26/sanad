@@ -6,8 +6,7 @@ abstract final class FailureMatchers {
   FailureMatchers._();
 
   /// Matches a [Failure] with the given [message].
-  static Matcher hasMessage(String message) =>
-      _FailureMessageMatcher(message);
+  static Matcher hasMessage(String message) => _FailureMessageMatcher(message);
 
   /// Matches a failure of type [T].
   static Matcher isFailureOf<T extends Failure>() => isA<T>();

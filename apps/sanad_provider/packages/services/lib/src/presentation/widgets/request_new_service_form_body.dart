@@ -19,7 +19,7 @@ import 'package:text_optimization/text_optimization.dart';
 /// `GET /categories`, owned by [RequestNewServiceBloc] — this widget only
 /// dispatches [RequestNewServiceCategoriesRequested] and reads the
 /// resulting state, it never resolves a use case itself — not free text.
-/// Images are optional (max 6).
+/// Images are mandatory (at least 1, max 6) — SAN-782.
 class RequestNewServiceFormBody extends StatefulWidget {
   /// Creates the Request New Service form body.
   const RequestNewServiceFormBody({
@@ -195,12 +195,27 @@ class RequestNewServiceFormBodyState extends State<RequestNewServiceFormBody> {
   }
 
   void _reportCompleteness() {
+    final uploadedCount = context
+        .read<MediaUploadBloc>()
+        .state
+        .items
+        .where((item) => item.isSuccess)
+        .length;
+    // Images are mandatory on this form (`CreateServiceRequestDto.imageIds`:
+    // minItems 1, maxItems 6) — mirrors AddServiceFormBody so the two sibling
+    // forms enforce the same image requirement (SAN-782).
+    final hasImage = CollectionSizeValidator.isValid(
+      uploadedCount,
+      minItems: 1,
+      maxItems: 6,
+    );
     final isComplete =
         name.isNotEmpty &&
         _validateName(_serviceNameController.text) == null &&
         categoryId != null &&
         description.isNotEmpty &&
-        LengthValidator.isValid(description, maxLength: 500);
+        LengthValidator.isValid(description, maxLength: 500) &&
+        hasImage;
 
     if (isComplete == _wasComplete) return;
     _wasComplete = isComplete;

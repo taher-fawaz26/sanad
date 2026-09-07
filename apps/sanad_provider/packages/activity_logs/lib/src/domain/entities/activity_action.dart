@@ -60,7 +60,8 @@ enum ActivityAction {
   accountDeletionRequested,
   accountDeletionCancelled,
   accountDeletionExecuted,
-  unknown;
+  unknown
+  ;
 
   static ActivityAction fromApiValue(String? value) => ActivityAction.values
       .firstWhere((action) => action.name == value, orElse: () => unknown);

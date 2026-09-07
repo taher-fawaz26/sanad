@@ -35,12 +35,14 @@ void main() {
   setUp(registerClientAuthMocks);
   tearDown(unregisterClientAuthMocks);
 
-  testWidgets('renders back button, icon, title, subtitle and name field', (
+  testWidgets('renders icon, title, subtitle and name field', (
     tester,
   ) async {
     await _pumpEnterName(tester);
 
-    expect(find.byIcon(Icons.chevron_left), findsOneWidget);
+    // No back button: Enter Name is the entry of the post-auth setup flow,
+    // reached by replacing the pre-auth stack — there is nothing to pop to.
+    expect(find.byIcon(Icons.chevron_left), findsNothing);
     expect(find.text('enter_name.title'), findsOneWidget);
     expect(find.text('enter_name.subtitle'), findsOneWidget);
     expect(find.text('enter_name.field_label'), findsOneWidget);

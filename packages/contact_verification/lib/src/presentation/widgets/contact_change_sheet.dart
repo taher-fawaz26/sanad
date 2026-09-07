@@ -26,6 +26,11 @@ enum ContactField { email, phone }
 /// email, owner phone) that differed only in validator, `VerificationPurpose`
 /// and two copy keys. Returns the accepted value once the OTP is verified, or
 /// `null` if the user backed out.
+/// [initialValue] is the contact currently on file. It both prefills the field
+/// and is the value the input is compared against: Continue stays disabled
+/// until the user enters something genuinely different *and* valid, because
+/// `/contact-verification/request` answers 409 for a target that is already
+/// set. Pass `null` when there is nothing on file yet (the add flow).
 Future<String?> showContactChangeSheet({
   required BuildContext context,
   required ContactField field,
@@ -89,7 +94,31 @@ class _ContactChangeSheetBodyState extends State<_ContactChangeSheetBody> {
       ? EmailValidator.isValid(_controller.text)
       : UaePhoneValidator.isMobile(_controller.text);
 
+  /// Comparison form, so a change of formatting is not a change of value:
+  /// `0501234567`, `501234567` and `+971501234567` are one number, and
+  /// `User@X.com` is the address already on file.
+  String _canonical(String value) => _isEmail
+      ? value.trim().toLowerCase()
+      : UaePhoneValidator.normalize(value);
+
+  /// Whether the input differs from the contact currently on file.
+  ///
+  /// With nothing on file this is the add flow, where any valid value is a
+  /// change. Guarding on this is what stops Continue being tappable the moment
+  /// the (prefilled) sheet opens, which sent `/request` for an unchanged
+  /// target and earned a 409.
+  bool get _isChanged {
+    final current = widget.initialValue;
+    if (current == null || current.trim().isEmpty) return true;
+    return _canonical(_controller.text) != _canonical(current);
+  }
+
+  bool get _canContinue => _isValid && _isChanged && !_submitting;
+
   /// Empty is not yet an error — the convention across the settings sheets.
+  ///
+  /// Neither is an unchanged value: the disabled button is the signal there,
+  /// so the user isn't scolded for the text the sheet itself prefilled.
   String? get _errorText {
     if (_controller.text.isEmpty || _isValid) return null;
     return _isEmail
@@ -98,7 +127,7 @@ class _ContactChangeSheetBodyState extends State<_ContactChangeSheetBody> {
   }
 
   Future<void> _submit() async {
-    if (!_isValid || _submitting) return;
+    if (!_canContinue) return;
 
     // The wire value the backend verifies against; for phone this is the
     // normalized E.164 form, which is not what we echo back to the caller.
@@ -179,9 +208,7 @@ class _ContactChangeSheetBodyState extends State<_ContactChangeSheetBody> {
           AppButton(
             label: 'common.continue'.tr(),
             isLoading: _submitting,
-            onPressed: _isValid && !_submitting
-                ? () => unawaited(_submit())
-                : null,
+            onPressed: _canContinue ? () => unawaited(_submit()) : null,
           ),
         ],
       ),

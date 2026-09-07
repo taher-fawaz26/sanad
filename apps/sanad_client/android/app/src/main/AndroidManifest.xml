@@ -8,6 +8,23 @@
          so the app's full permission surface is auditable in one file. -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
+    <!-- Camera — required to attach a photo to an AI chat message -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Microphone — required to record a voice note and to run live voice -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- Gallery / Photo access — required to attach images to a chat message -->
+    <!-- READ_MEDIA_IMAGES is the API 33+ (Android 13+) replacement for READ_EXTERNAL_STORAGE -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <!-- READ_EXTERNAL_STORAGE is only needed on Android 12 and below -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+
+    <!-- Neither is required to install: a device without them simply cannot
+         reach the camera or voice affordances. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
     <application
         android:label="Sanad Client"
         android:name="${applicationName}"
@@ -76,6 +93,12 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- Speech-to-text in the chat composer. Android 11+ hides other
+             packages by default, so without this the system recognizer is
+             invisible and isRecognitionAvailable() silently returns false. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
         </intent>
     </queries>
 </manifest>

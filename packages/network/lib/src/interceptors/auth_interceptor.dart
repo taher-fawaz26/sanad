@@ -4,6 +4,8 @@ import 'dart:developer' as dev;
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
+import 'package:network/src/client/base_api_client.dart'
+    show kAuthRequiredExtraKey;
 import 'package:network/src/token/token_manager.dart';
 
 /// Production-grade auth interceptor.
@@ -37,6 +39,14 @@ class AuthInterceptor extends Interceptor {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
+    // Public endpoints (Auth: None) opt out via `authRequired: false`. Attach
+    // nothing: a leftover token from a previous session must never ride along
+    // on a pre-session OTP request/verify.
+    if (options.extra[kAuthRequiredExtraKey] == false) {
+      _log('onRequest ${options.path} — unauthenticated (authRequired:false)');
+      handler.next(options);
+      return;
+    }
     if (!options.headers.containsKey('Authorization')) {
       final token = _tokenManager.accessToken;
       if (token != null && token.isNotEmpty) {
@@ -60,6 +70,12 @@ class AuthInterceptor extends Interceptor {
   ) async {
     final options = err.requestOptions;
 
+    // An unauthenticated request never carried a token, so a 401 from it is a
+    // real backend answer (e.g. a wrong OTP), not an expired session. Do not
+    // refresh or force logout on its behalf.
+    if (options.extra[kAuthRequiredExtraKey] == false) {
+      return handler.next(err);
+    }
     if (err.response?.statusCode != 401 ||
         options.path.contains(_refreshTokenPath)) {
       return handler.next(err);

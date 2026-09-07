@@ -11,11 +11,18 @@ final class LocationPickerStarted extends LocationPickerEvent {
   const LocationPickerStarted({
     this.initialPosition,
     this.initialAddress,
+    this.initialPlaceId,
     this.localeIdentifier,
   });
 
   final LatLng? initialPosition;
   final String? initialAddress;
+
+  /// A previously saved Google Place ID (edit-reopen). Seeds
+  /// [LocationPickerState.selectedPlaceId] so a reopened, already-complete
+  /// selection is confirmable immediately without re-resolving or nudging the
+  /// pin (SAN-778 follow-up).
+  final String? initialPlaceId;
 
   final String? localeIdentifier;
 
@@ -23,6 +30,7 @@ final class LocationPickerStarted extends LocationPickerEvent {
   List<Object?> get props => [
     initialPosition,
     initialAddress,
+    initialPlaceId,
     localeIdentifier,
   ];
 }
@@ -82,4 +90,34 @@ final class LocationPickerPermissionChecked extends LocationPickerEvent {
 
   @override
   List<Object?> get props => [status];
+}
+
+/// The user tapped "use my current location" (the crosshair). Owns the whole
+/// current-location sequence — permission/service resolution, GPS fetch,
+/// supported-area validation, camera move and reverse-geocode — inside the
+/// bloc so there is a single state machine, one in-flight guard against
+/// duplicate taps, and lifecycle-aware recovery (SAN-778).
+final class LocationPickerCurrentLocationRequested extends LocationPickerEvent {
+  const LocationPickerCurrentLocationRequested();
+}
+
+/// The app returned to the foreground (e.g. back from system Settings). Clears
+/// a stale current-location failure and re-checks permission so returning
+/// after enabling location/permission recovers without a restart or an
+/// arbitrary delay (SAN-778).
+final class LocationPickerResumed extends LocationPickerEvent {
+  const LocationPickerResumed();
+}
+
+/// Opens the OS *device location* settings (the global GPS toggle) — the
+/// recovery action offered when location services are switched off.
+final class LocationPickerDeviceSettingsRequested extends LocationPickerEvent {
+  const LocationPickerDeviceSettingsRequested();
+}
+
+/// Re-runs reverse-geocoding for the currently selected [LocationPickerState.
+/// position] — the retry action after an address lookup failed. No-op when
+/// there is no position to resolve (SAN-778).
+final class LocationPickerRetryGeocode extends LocationPickerEvent {
+  const LocationPickerRetryGeocode();
 }

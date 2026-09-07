@@ -63,11 +63,19 @@ class GeocodingServiceImpl implements GeocodingService {
         );
       },
       (error, _) => LocationFailure(
-        message: error.toString(),
+        message: _failureMessage(error),
         code: LocationFailureCodes.geocodingFailed,
       ),
     );
   }
+
+  /// Never surface the raw platform exception text (e.g.
+  /// `PlatformException(NOT_FOUND, ...)`) — callers localize by the failure
+  /// code, and any code path that still reads `.message` gets a stable,
+  /// non-leaking sentence (SAN-778).
+  static String _failureMessage(Object error) => error is _GeocodingException
+      ? error.message
+      : 'Failed to resolve the address for the selected location.';
 
   @override
   TaskEither<Failure, LatLng> coordinatesFromAddress(
@@ -97,7 +105,7 @@ class GeocodingServiceImpl implements GeocodingService {
         return LatLng(location.latitude, location.longitude);
       },
       (error, _) => LocationFailure(
-        message: error.toString(),
+        message: _failureMessage(error),
         code: LocationFailureCodes.geocodingFailed,
       ),
     );
@@ -155,7 +163,7 @@ class GeocodingServiceImpl implements GeocodingService {
         return areas;
       },
       (error, _) => LocationFailure(
-        message: error.toString(),
+        message: _failureMessage(error),
         code: LocationFailureCodes.geocodingFailed,
       ),
     );

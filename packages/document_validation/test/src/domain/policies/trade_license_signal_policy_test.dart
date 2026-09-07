@@ -64,7 +64,8 @@ void main() {
     test(
       'a single generic word ("License") alone is never enough to accept',
       () {
-        const text = 'This document mentions a License somewhere in it, '
+        const text =
+            'This document mentions a License somewhere in it, '
             'but nothing else about it relates to any business or company.';
         expect(TradeLicenseSignalPolicy.evaluate(text), isFalse);
       },
@@ -92,8 +93,7 @@ void main() {
       'a strong term plus two independent business terms accepts without '
       'a license-number pattern',
       () {
-        const text =
-            'Trade License — Establishment: Sanad — Legal Form: LLC';
+        const text = 'Trade License — Establishment: Sanad — Legal Form: LLC';
         expect(TradeLicenseSignalPolicy.evaluate(text), isTrue);
       },
     );

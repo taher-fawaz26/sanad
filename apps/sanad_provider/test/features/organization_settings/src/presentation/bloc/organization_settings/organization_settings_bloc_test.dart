@@ -707,4 +707,67 @@ void main() {
       verifyNever(() => updateWorkingHours(any()));
     },
   );
+
+  // The identity header owns the upload/removal itself; this event only syncs
+  // the result into the settings state + cache. A removal has to survive that
+  // sync, or the next refresh reads the stale cached image straight back.
+  group('OrganizationSettingsMediaUpdated', () {
+    final withImages = organization.copyWith(
+      coverImage: const MeMediaEntity(id: 'c1', url: 'c.png'),
+      profileImage: const MeMediaEntity(id: 'l1', url: 'l.png'),
+    );
+
+    blocTest<OrganizationSettingsBloc, OrganizationSettingsState>(
+      'a null url clears only the cover, and write-throughs to the cache',
+      build: build,
+      seed: () => OrganizationSettingsState(organization: withImages),
+      act: (bloc) => bloc.add(
+        const OrganizationSettingsMediaUpdated(
+          slot: OrganizationMediaSlot.cover,
+          url: null,
+        ),
+      ),
+      verify: (bloc) {
+        expect(bloc.state.organization!.coverImage, isNull);
+        expect(bloc.state.organization!.profileImage?.url, 'l.png');
+        verify(
+          () => organizationSettingsRepository.cacheOrganizationSettings(
+            any(that: isA<OrganizationProfileEntity>()),
+          ),
+        ).called(1);
+      },
+    );
+
+    blocTest<OrganizationSettingsBloc, OrganizationSettingsState>(
+      'a null url clears only the logo',
+      build: build,
+      seed: () => OrganizationSettingsState(organization: withImages),
+      act: (bloc) => bloc.add(
+        const OrganizationSettingsMediaUpdated(
+          slot: OrganizationMediaSlot.logo,
+          url: null,
+        ),
+      ),
+      verify: (bloc) {
+        expect(bloc.state.organization!.profileImage, isNull);
+        expect(bloc.state.organization!.coverImage?.url, 'c.png');
+      },
+    );
+
+    blocTest<OrganizationSettingsBloc, OrganizationSettingsState>(
+      'a non-null url still merges the new image (upload path unchanged)',
+      build: build,
+      seed: () => OrganizationSettingsState(organization: withImages),
+      act: (bloc) => bloc.add(
+        const OrganizationSettingsMediaUpdated(
+          slot: OrganizationMediaSlot.cover,
+          url: 'new-cover.png',
+        ),
+      ),
+      verify: (bloc) {
+        expect(bloc.state.organization!.coverImage?.url, 'new-cover.png');
+        expect(bloc.state.organization!.profileImage?.url, 'l.png');
+      },
+    );
+  });
 }

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:app_animations/src/motion/app_motion.dart';
 import 'package:app_animations/src/motion/app_motion_curve.dart';
 import 'package:app_animations/src/motion/app_motion_duration.dart';
@@ -103,6 +105,74 @@ extension AppEffects on Widget {
       end: const Offset(1, 1),
       duration: duration,
       curve: curve,
+    );
+  }
+
+  /// A subtle one-shot horizontal shake — deliberately small "wrong, try
+  /// again" feedback for a rejected entry. Scoped to the OTP field on an
+  /// invalid/expired code; not a general validation effect (calm error text
+  /// covers the rest). The movement is a few logical pixels only ([amount]
+  /// offset) so it never shifts page layout, and it plays once per change of
+  /// [trigger] rather than repeating.
+  ///
+  /// [trigger] must change value to (re)play the shake — pass the id/hash of
+  /// the current error so a new rejection re-fires it and an unrelated
+  /// rebuild does not. No-op entirely under reduced motion (the error text
+  /// still conveys the failure).
+  ///
+  /// Built on an implicit [TweenAnimationBuilder] (a `Ticker`, disposed with
+  /// the widget) rather than `flutter_animate` on purpose: a `flutter_animate`
+  /// `Animate` schedules a `Future.delayed` timer on mount, and this effect is
+  /// used on the OTP field, whose screen is pumped in bounded steps (never
+  /// `pumpAndSettle`, because of its repeating caret) — a stray timer created
+  /// as the error appears would outlive the test. This leaves no pending
+  /// timer.
+  Widget appShake(
+    BuildContext context, {
+    required Object? trigger,
+    Duration duration = AppMotionDuration.fast,
+    double amount = 2,
+  }) {
+    if (trigger == null || AppMotion.reduceMotionOf(context)) return this;
+    return _AppShake(
+      trigger: trigger,
+      duration: duration,
+      amount: amount,
+      child: this,
+    );
+  }
+}
+
+/// A subtle, one-shot damped horizontal shake that replays whenever [trigger]
+/// changes (the `ValueKey` remounts the animation), and settles back to zero
+/// offset. Implicit/`Ticker`-based — no timer, no explicit controller.
+class _AppShake extends StatelessWidget {
+  const _AppShake({
+    required this.trigger,
+    required this.duration,
+    required this.amount,
+    required this.child,
+  });
+
+  final Object trigger;
+  final Duration duration;
+  final double amount;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      key: ValueKey(trigger),
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: duration,
+      curve: AppMotionCurve.standard,
+      builder: (context, t, child) {
+        // Damped sine: a couple of oscillations whose amplitude decays to 0 as
+        // t → 1, so the field ends exactly where it started (no layout shift).
+        final dx = math.sin(t * math.pi * 3) * amount * (1 - t);
+        return Transform.translate(offset: Offset(dx, 0), child: child);
+      },
+      child: child,
     );
   }
 }

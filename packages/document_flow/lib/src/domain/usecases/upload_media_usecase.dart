@@ -4,8 +4,7 @@ import 'package:document_flow/src/domain/repositories/document_flow_repository.d
 import 'package:document_flow/src/domain/usecases/document_flow_params.dart';
 import 'package:fpdart/fpdart.dart';
 
-class UploadMediaUseCase
-    implements UseCase<DocumentMedia, UploadMediaParams> {
+class UploadMediaUseCase implements UseCase<DocumentMedia, UploadMediaParams> {
   UploadMediaUseCase(this._repository);
 
   final DocumentFlowRepository _repository;

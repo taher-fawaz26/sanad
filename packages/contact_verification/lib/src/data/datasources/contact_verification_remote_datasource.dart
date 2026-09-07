@@ -80,6 +80,7 @@ class ContactVerificationRemoteDataSourceImpl
     body: {'purpose': purpose.toApi(), 'code': code},
     parser: (data) => VerificationResultResponse.fromJson(
       data as Map<String, dynamic>,
+      requestedPurpose: purpose,
     ),
   );
 }

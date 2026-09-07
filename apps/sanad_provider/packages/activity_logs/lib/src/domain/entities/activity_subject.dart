@@ -9,7 +9,8 @@ enum ActivitySubjectType {
   serviceRequest,
   role,
   account,
-  unknown;
+  unknown
+  ;
 
   static ActivitySubjectType fromApiValue(String? value) =>
       ActivitySubjectType.values.firstWhere(

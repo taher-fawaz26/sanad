@@ -1,5 +1,6 @@
 import 'package:document_flow/document_flow.dart' show DocumentFlowRepository;
-import 'package:document_flow/src/domain/repositories/document_flow_repository.dart' show DocumentFlowRepository;
+import 'package:document_flow/src/domain/repositories/document_flow_repository.dart'
+    show DocumentFlowRepository;
 
 /// `document_flow` has no feature-agnostic dependencies to register: its
 /// [DocumentFlowRepository] is always feature-owned, so each feature (e.g.

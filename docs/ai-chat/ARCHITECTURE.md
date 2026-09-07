@@ -14,12 +14,16 @@ Related: [`PROTOCOL_V1.md`](PROTOCOL_V1.md) (the wire contract),
 ## 1. Layers
 
 ```text
-        MockAiChatEventSource            ← prototype transport (local, scripted)
+        SseAiChatEventSource            ← live transport (POST + SSE, authenticated)
+   WebSocketAiChatEventSource            ← reference transport (`?transport=ws`)
+        MockAiChatEventSource            ← scripted transport (`?mock=1`)
                  │  implements AiChatEventSource
                  ▼
    apps/sanad_client/lib/src/features/ai_chat/          (app-local, tier 7)
      domain/        AiChatMessage · AiChatEventSource
-     data/          MockAiChatEventSource · mock_scenarios
+     data/          SseAiChatEventSource · SseFrameParser
+                    WebSocketAiChatEventSource
+                    MockAiChatEventSource · mock_scenarios
      presentation/  AiChatBloc + ActiveStreamController
                     AiChatScreen → AiChatPage → AiChatBubble/Composer
                     ai_chat_action_handlers
@@ -71,15 +75,169 @@ abstract class AiChatEventSource {
 }
 ```
 
-Three members. `MockAiChatEventSource` implements it by replaying scripted
-events with realistic pacing; a WebSocket implementation is a second class with
-the same three members. Nothing above the interface knows the difference — the
-bloc, the renderer and the protocol are all transport-agnostic.
+Three members, and three implementations that share nothing but this interface.
+Nothing above the interface knows the difference — the bloc, the renderer and
+the protocol are all transport-agnostic. Adding the socket source changed no
+bloc, renderer or protocol code; **replacing it with the SSE source changed none
+either**, which is the claim this seam existed to make good on.
+
+| Source | Reached by | Role |
+|---|---|---|
+| `SseAiChatEventSource` | a plain visit | The current real transport |
+| `WebSocketAiChatEventSource` | `?transport=ws` | Reference transport, kept intact |
+| `MockAiChatEventSource` | `?mock=1` | Scripted scenarios, including hostile payloads |
+
+### The live transport — POST + SSE
+
+`POST https://agent-<env>.trysanad.us/user-agent/chat/stream`.
+
+**Why not the socket.** Temporary. The agent team could not supply a complete
+WebSocket contract, and this endpoint already emits the Protocol v1 envelope
+verbatim. The socket source is retained, not deleted.
+
+- **One request per turn**, not one connection per visit. A new turn cancels the
+  one in flight rather than racing it.
+- Sends `{"conversation_id": …, "message": …}` — the same body the socket
+  sends — plus an `attachments` array when the turn carries files (see
+  **Attachments on the wire** below; the key is absent otherwise).
+  `conversation_id` is stable for the visit, and the server keeps its own
+  conversation memory across turns (verified live: turn 2 recalled turn 1).
+- **Authentication** is the existing `TokenManager` — the same one the REST
+  stack uses. The access token goes in the `Sanad-Access-Token` request header
+  and nowhere else: never in the body (where it would reach the model), never in
+  a log, a diagnostic or an error message. It is re-read each turn, so a
+  mid-conversation refresh is picked up. There is no second token store and no
+  separate auth flow.
+- A missing token is not fatal: the server accepts the request and the agent
+  simply loses its authenticated tools. Failing closed here would turn a
+  degraded chat into no chat.
+- **No interceptors.** The agent is a different host from the REST API and uses
+  a raw `Sanad-Access-Token`, so `AuthInterceptor` is the wrong component — and
+  its 401 retry re-issues with `Dio.fetch`, handing us a second stream while we
+  consume the first. `RetryOnTimeoutInterceptor` would duplicate text on a
+  partly-consumed stream, and `LoggingInterceptor` has no `ResponseBody` case.
+- **Timeouts** are a dedicated 15s connect / 60s receive. In streaming mode
+  Dio's receive budget is *inter-chunk*, and the measured worst
+  time-to-first-token on dev was 9.3s — the shared 15s default leaves no
+  headroom.
+
+#### Observed wire format
+
+`data: ` + one line of JSON, blank-line delimited, bare LF. No `event:`, no
+`id:`, no `retry:`, no comment/keepalive lines, no `[DONE]` sentinel; the stream
+simply closes. `SseFrameParser` handles all of that, plus CRLF and a lone CR,
+because the spec allows them even though this server does not use them.
+
+Bytes are decoded with **one streaming `Utf8Decoder` per turn**. Decoding each
+network chunk independently would corrupt any multi-byte sequence straddling a
+boundary — a real hazard for Arabic, and the reason the parser test sweeps every
+byte split position.
+
+#### The three invented events
+
+Errors do not arrive as SSE: a bad request is a normal `422` with a JSON body,
+*before* any stream. So the transport synthesises a local `error` event — and
+only ever for these:
+
+| Code | When |
+|---|---|
+| `connection_failed` / `http_<status>` | the request never opened, or returned non-2xx |
+| `timeout` | connect or inter-chunk budget exhausted |
+| `stream_interrupted` | `message_start` arrived but `message_end` never did |
+
+A non-2xx contributes **its status code only**. The body is an internal
+(Pydantic) error document and never reaches a diagnostic or the user.
+
+One case deliberately invents nothing: a `200` that closes with zero frames —
+reproducible by sending an empty `message` — opens no bubble, so it is reported
+as a diagnostic and emits no event.
 
 The envelope model and its codec live in `ai_ui_protocol`, not in the feature,
-precisely so a future socket source and a second app can share them.
+precisely so both transports and a second app can share them.
 
 ---
+
+### Attachments on the wire
+
+A turn that carries files sends them as `{id, url}` pairs, uploaded before the
+request is made. The agent is handed the **resolved location**, so it never
+performs a storage lookup to find a file the client can already point at.
+
+```json
+{
+  "conversation_id": "conv_1",
+  "message": "what does this say?",
+  "attachments": [
+    { "id": "68f1…", "url": "https://…" },
+    { "id": "9ab2…", "url": "https://…", "type": "audio",
+      "transcript": "book me a plumber for tomorrow morning" }
+  ]
+}
+```
+
+`AiChatTurnPayload` (`data/ai_chat_turn_payload.dart`) is the single place this
+is shaped, shared by both transports so they cannot drift. Its rules and the
+reason for each are in `PROTOCOL_V1.md`; the load-bearing one is that
+**`attachments` is omitted when empty**, which is why a text turn is
+byte-identical to the two-field body this endpoint has always received.
+
+#### Where the upload happens, and why not here
+
+`POST <env>-api.trysanad.us/api/v1/media/upload-single` — the REST host, through
+`packages/media_upload` and its `SecureDioClient`.
+
+It cannot ride the agent's own Dio. Two hosts, two auth schemes: the agent takes
+a raw `Sanad-Access-Token` header and deliberately runs with no interceptors
+(see above), while the upload needs Bearer auth, refresh and retry. Routing the
+upload through `SecureDioClient` is what keeps this change from introducing a
+second upload or auth system.
+
+The seam is `AiAttachmentUploader` (`domain/services/`), a sealed-result port in
+the same shape as `AiAttachmentSource`; `MediaUploadAiAttachmentUploader`
+(`data/platform/attachments/`) is the only file in the feature that names
+`media_upload`. A transport constructed without one gets the `const`
+`AiUnavailableAttachmentUploader`, which succeeds trivially for an empty batch —
+that default is what let both transports gain the capability without touching a
+single existing construction site.
+
+Uploads happen **at send time**, inside `sendMultimodal`, not eagerly at pick
+time. `AiChatBloc` adds the user's bubble *before* calling the transport, so the
+turn appears instantly and only the reply waits; and nothing is uploaded that
+the user then removes — which matters, because `DELETE /media/{id}` is
+provider-only and the client cannot withdraw an orphan.
+
+A batch is **all or nothing**. The first failure abandons the rest, no request
+is made, and one `AiChatErrorEvent` carrying `ai_chat.attachment_upload_failed`
+reaches the existing snackbar. Nothing is lost: the typed text and the audio are
+already in the user's own bubble, and a submitted recording's file is
+deliberately not deleted.
+
+#### Why upload identity is a wrapper, not a field
+
+`AiUploadedAttachment { source, mediaId, url }` wraps an `AiChatAttachment` for
+the duration of one send. The attachment itself still carries no backend field,
+because it lives in `AiChatMessage.attachments` for the life of the
+conversation while an upload id is valid for one request — and because a
+message's `props` include its attachments, a mutable backend field there would
+re-emit the whole message list every time an upload resolved.
+
+#### A voice note is one message
+
+The transcript is **not** a second message and not a top-level field. It rides
+on the audio attachment, because `message` already belongs to what the user
+typed and a turn can carry both a caption and a voice note.
+
+It is produced on the device, during the take: `speech_to_text` can only
+transcribe the live microphone, so `AiComposerBloc` starts the recogniser
+alongside the recorder and routes its results to a `VoiceNoteTranscript`
+accumulator instead of the composer's text field. This never touches
+`state.speech` — that describes the dictation capability the user can see and
+start, and every invariant built on it (the mutual-exclusion guards, `canSend`,
+which bar the composer shows) is left exactly as it was.
+
+Capture is **best-effort**. If the recogniser is unavailable, cannot share the
+microphone, or hears nothing, the transcript is empty, no banner appears, and
+the turn still ships the audio. The recording is the deliverable.
 
 ## 4. Parse once, at ingestion
 
@@ -258,7 +416,7 @@ should scope an `ErrorWidget.builder` around its chat page.
 
 Deliberately absent, and not stubbed:
 
-- real WebSocket / backend integration
+- conversation history across visits
 - conversation persistence
 - analytics wiring
 - production authentication

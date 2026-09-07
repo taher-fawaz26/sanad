@@ -21,8 +21,7 @@ sealed class DocumentValidationResult extends Equatable {
 
   const factory DocumentValidationResult.valid() = DocumentValidationValid;
 
-  const factory DocumentValidationResult.invalid() =
-      DocumentValidationInvalid;
+  const factory DocumentValidationResult.invalid() = DocumentValidationInvalid;
 
   const factory DocumentValidationResult.error() = DocumentValidationError;
 

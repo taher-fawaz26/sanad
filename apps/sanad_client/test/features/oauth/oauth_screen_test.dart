@@ -154,4 +154,28 @@ void main() {
     expect(find.text('oauth.get_started_title'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'under reduced motion every element is still present (nothing hidden '
+    'behind the staggered entrance)',
+    (tester) async {
+      await pumpOAuth(
+        tester,
+        Builder(
+          builder: (context) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(disableAnimations: true),
+            child: const OAuthScreen(),
+          ),
+        ),
+      );
+
+      expect(find.text('oauth.get_started_title'), findsOneWidget);
+      expect(find.text('oauth.get_started_subtitle'), findsOneWidget);
+      expect(find.text('oauth.continue_uae_pass'), findsOneWidget);
+      expect(find.text('oauth.continue_email'), findsOneWidget);
+      expect(find.text('oauth.continue_google'), findsOneWidget);
+      expect(find.text('oauth.continue_phone'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

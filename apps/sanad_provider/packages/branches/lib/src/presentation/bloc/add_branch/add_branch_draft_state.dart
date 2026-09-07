@@ -110,12 +110,26 @@ class AddBranchDraft extends Equatable {
   /// backend contract requires it, so it gates Step 1 here too.
   bool get isStepOneComplete =>
       branchName.trim().isNotEmpty &&
-      branchAddress != null &&
-      pickedPosition != null &&
-      locationPlaceId != null &&
+      hasValidResolvedLocation &&
       UaePhoneValidator.isMobile(phone) &&
       selectedManager != null &&
       _isScheduleComplete;
+
+  /// True when Step 1 has produced a canonical, backend-valid branch location:
+  /// a resolved Google Place ID together with coordinates and an address.
+  ///
+  /// This is the *saved branch location*, deliberately distinct from live
+  /// device-location availability (permission / GPS services). Step 2
+  /// (coverage + serving-area discovery) is configured entirely from this
+  /// stored location — search / map tap / pin — and never acquires a fresh
+  /// device position, so this, not live location-services state, is what
+  /// gates the coverage step. Disabling device Location later does not
+  /// invalidate an already-resolved branch location.
+  bool get hasValidResolvedLocation =>
+      locationPlaceId != null &&
+      pickedPosition != null &&
+      branchAddress != null &&
+      branchAddress!.isNotEmpty;
 
   /// Working hours are mandatory. In company mode the branch inherits the
   /// company schedule, so it must actually have hours; in custom mode the

@@ -9,6 +9,10 @@ abstract class LocationRepository {
 
   Future<bool> openAppSettings();
 
+  /// Opens the OS device-location settings (the global GPS toggle). Recovery
+  /// path when location services are disabled.
+  Future<bool> openLocationSettings();
+
   /// Reads the current location-permission state without prompting or
   /// fetching a position. Cheap enough to gate UI on.
   Future<LocationPermissionStatus> checkPermission();

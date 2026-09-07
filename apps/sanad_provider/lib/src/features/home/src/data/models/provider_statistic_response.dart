@@ -40,10 +40,9 @@ class ProviderStatisticsResponse {
       ProviderStatisticsResponse(
         statistics: (json['statistics'] as List)
             .map(
-              (item) =>
-                  ProviderStatisticResponse.fromJson(
-                    item as Map<String, dynamic>,
-                  ),
+              (item) => ProviderStatisticResponse.fromJson(
+                item as Map<String, dynamic>,
+              ),
             )
             .toList(),
       );

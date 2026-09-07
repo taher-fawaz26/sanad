@@ -6,7 +6,8 @@
 /// editor/viewer.
 enum MediaType {
   image,
-  video;
+  video
+  ;
 
   bool get isImage => this == MediaType.image;
 

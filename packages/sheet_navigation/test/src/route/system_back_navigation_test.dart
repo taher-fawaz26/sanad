@@ -141,8 +141,8 @@ void main() {
         await _pump(tester, router);
         await _openAccountAndSheet(tester, router);
 
-        final locationBefore =
-            router.routerDelegate.currentConfiguration.uri.toString();
+        final locationBefore = router.routerDelegate.currentConfiguration.uri
+            .toString();
 
         // System back button / edge-swipe — identical pop intent in Flutter.
         await tester.binding.handlePopRoute();

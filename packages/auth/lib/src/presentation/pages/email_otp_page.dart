@@ -68,6 +68,10 @@ class _EmailOtpPageState extends State<EmailOtpPage> {
         destination: widget.email,
         verifier: verifier,
         purpose: OtpPurpose.login,
+        // Hosted inline in `AuthScreenShell` (see `build`), not pushed as a
+        // sheet — declared so the OTP layout applies its page insets rather
+        // than deferring to sheet chrome that isn't there.
+        presentation: OtpPresentation.page,
         // Verification is intentionally NOT auto-triggered on completion
         // (SAN-539). Re-editing a digit of an already-full code would
         // otherwise re-fire the verify call, burning OTP attempts and risking
@@ -171,7 +175,7 @@ class _EmailOtpPageState extends State<EmailOtpPage> {
     return AuthScreenShell(
       onBack: _changeEmail,
       title: 'auth.otp_title'.tr(),
-      // OtpView applies its own AppSpacing.xl horizontal padding — without
+      // OtpView applies its own horizontal padding in page mode — without
       // this override the shell's own inset stacks on top of it, shrinking
       // the six-cell OTP field well below its designed size.
       horizontalPadding: 0,

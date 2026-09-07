@@ -29,7 +29,11 @@ ProviderServiceEntity _service({
   id: id,
   serviceId: 'catalog-1',
   serviceName: 'Wash Car',
-  category: const CategoryRefEntity(id: 'cat-1', name: 'Car', description: null),
+  category: const CategoryRefEntity(
+    id: 'cat-1',
+    name: 'Car',
+    description: null,
+  ),
   description: 'desc',
   status: ProviderServiceStatus.active,
   images: images,
@@ -59,22 +63,23 @@ void main() {
     blocTest<ServiceImagesBloc, ServiceImagesState>(
       'a newly-succeeded upload item is attached with its mediaId — never '
       'the image row id',
-      setUp: () => when(
-        () => repo.addImage(id: 'svc-1', mediaId: 'media-new'),
-      ).thenAnswer(
-        (_) => TaskEither.of(
-          _service(
-            images: [
-              const ProviderServiceImageEntity(
-                id: 'row-new',
-                mediaId: 'media-new',
-                url: '',
-                isPrimary: true,
+      setUp: () =>
+          when(
+            () => repo.addImage(id: 'svc-1', mediaId: 'media-new'),
+          ).thenAnswer(
+            (_) => TaskEither.of(
+              _service(
+                images: [
+                  const ProviderServiceImageEntity(
+                    id: 'row-new',
+                    mediaId: 'media-new',
+                    url: '',
+                    isPrimary: true,
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
       build: buildBloc,
       act: (bloc) => bloc.add(
         ServiceImagesUploadStateChanged([
@@ -100,7 +105,10 @@ void main() {
           () => repo.addImage(id: 'svc-1', mediaId: 'media-new'),
         ).called(1);
         verifyNever(
-          () => repo.addImage(id: any(named: 'id'), mediaId: 'row-new'),
+          () => repo.addImage(
+            id: any(named: 'id'),
+            mediaId: 'row-new',
+          ),
         );
       },
     );
@@ -140,14 +148,16 @@ void main() {
       'only re-calls addImage',
       setUp: () {
         var attempt = 0;
-        when(() => repo.addImage(id: 'svc-1', mediaId: 'media-new')).thenAnswer((
-          _,
-        ) {
-          attempt++;
-          return attempt == 1
-              ? TaskEither.left(_serverFailure)
-              : TaskEither.of(_service());
-        });
+        when(() => repo.addImage(id: 'svc-1', mediaId: 'media-new')).thenAnswer(
+          (
+            _,
+          ) {
+            attempt++;
+            return attempt == 1
+                ? TaskEither.left(_serverFailure)
+                : TaskEither.of(_service());
+          },
+        );
       },
       build: buildBloc,
       act: (bloc) async {
@@ -232,25 +242,25 @@ void main() {
     blocTest<ServiceImagesBloc, ServiceImagesState>(
       'success calls setPrimaryImage with the row id and folds the '
       'returned service',
-      setUp: () => when(
-        () => repo.setPrimaryImage(id: 'svc-1', imageId: 'row-1'),
-      ).thenAnswer(
-        (_) => TaskEither.of(
-          _service(
-            images: [
-              const ProviderServiceImageEntity(
-                id: 'row-1',
-                mediaId: 'media-1',
-                url: '',
-                isPrimary: true,
+      setUp: () =>
+          when(
+            () => repo.setPrimaryImage(id: 'svc-1', imageId: 'row-1'),
+          ).thenAnswer(
+            (_) => TaskEither.of(
+              _service(
+                images: [
+                  const ProviderServiceImageEntity(
+                    id: 'row-1',
+                    mediaId: 'media-1',
+                    url: '',
+                    isPrimary: true,
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
       build: buildBloc,
-      act: (bloc) =>
-          bloc.add(const ServiceImagesSetPrimaryRequested('row-1')),
+      act: (bloc) => bloc.add(const ServiceImagesSetPrimaryRequested('row-1')),
       expect: () => [
         isA<ServiceImagesState>().having(
           (s) => s.busyImageId,
@@ -270,7 +280,10 @@ void main() {
           () => repo.setPrimaryImage(id: 'svc-1', imageId: 'row-1'),
         ).called(1);
         verifyNever(
-          () => repo.setPrimaryImage(id: any(named: 'id'), imageId: 'media-1'),
+          () => repo.setPrimaryImage(
+            id: any(named: 'id'),
+            imageId: 'media-1',
+          ),
         );
       },
     );
@@ -281,8 +294,7 @@ void main() {
         () => repo.setPrimaryImage(id: 'svc-1', imageId: 'row-1'),
       ).thenAnswer((_) => TaskEither.left(_serverFailure)),
       build: buildBloc,
-      act: (bloc) =>
-          bloc.add(const ServiceImagesSetPrimaryRequested('row-1')),
+      act: (bloc) => bloc.add(const ServiceImagesSetPrimaryRequested('row-1')),
       verify: (bloc) {
         expect(bloc.state.busyImageId, isNull);
         expect(bloc.state.mutationFailure, _serverFailure);
@@ -297,37 +309,37 @@ void main() {
     // middle.
     blocTest<ServiceImagesBloc, ServiceImagesState>(
       'setting a non-first image primary preserves image order',
-      setUp: () => when(
-        () => repo.setPrimaryImage(id: 'svc-1', imageId: 'row-2'),
-      ).thenAnswer(
-        (_) => TaskEither.of(
-          _service(
-            images: const [
-              ProviderServiceImageEntity(
-                id: 'row-1',
-                mediaId: 'media-1',
-                url: '',
-                isPrimary: false,
+      setUp: () =>
+          when(
+            () => repo.setPrimaryImage(id: 'svc-1', imageId: 'row-2'),
+          ).thenAnswer(
+            (_) => TaskEither.of(
+              _service(
+                images: const [
+                  ProviderServiceImageEntity(
+                    id: 'row-1',
+                    mediaId: 'media-1',
+                    url: '',
+                    isPrimary: false,
+                  ),
+                  ProviderServiceImageEntity(
+                    id: 'row-2',
+                    mediaId: 'media-2',
+                    url: '',
+                    isPrimary: true,
+                  ),
+                  ProviderServiceImageEntity(
+                    id: 'row-3',
+                    mediaId: 'media-3',
+                    url: '',
+                    isPrimary: false,
+                  ),
+                ],
               ),
-              ProviderServiceImageEntity(
-                id: 'row-2',
-                mediaId: 'media-2',
-                url: '',
-                isPrimary: true,
-              ),
-              ProviderServiceImageEntity(
-                id: 'row-3',
-                mediaId: 'media-3',
-                url: '',
-                isPrimary: false,
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
       build: buildBloc,
-      act: (bloc) =>
-          bloc.add(const ServiceImagesSetPrimaryRequested('row-2')),
+      act: (bloc) => bloc.add(const ServiceImagesSetPrimaryRequested('row-2')),
       verify: (bloc) {
         expect(
           bloc.state.service.images.map((i) => i.id).toList(),
@@ -366,7 +378,10 @@ void main() {
           () => repo.deleteImage(id: 'svc-1', imageId: 'row-1'),
         ).called(1);
         verifyNever(
-          () => repo.deleteImage(id: any(named: 'id'), imageId: 'media-1'),
+          () => repo.deleteImage(
+            id: any(named: 'id'),
+            imageId: 'media-1',
+          ),
         );
         expect(bloc.state.service.images, isEmpty);
         expect(bloc.state.busyImageId, isNull);

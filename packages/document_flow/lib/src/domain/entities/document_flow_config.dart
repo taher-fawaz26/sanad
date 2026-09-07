@@ -1,6 +1,7 @@
 import 'package:document_flow/document_flow.dart' show DocumentValidation;
 import 'package:document_flow/src/domain/entities/document_type.dart';
-import 'package:document_flow/src/domain/entities/document_validation.dart' show DocumentValidation;
+import 'package:document_flow/src/domain/entities/document_validation.dart'
+    show DocumentValidation;
 
 /// Branch-free configuration for one document flow instance.
 ///
@@ -11,7 +12,11 @@ class DocumentFlowConfig {
   const DocumentFlowConfig({
     required this.requiredDocuments,
     this.allowedMimeTypes = const {},
-    this.defaultAllowedMimeTypes = const {'image/jpeg', 'image/png', 'application/pdf'},
+    this.defaultAllowedMimeTypes = const {
+      'image/jpeg',
+      'image/png',
+      'application/pdf',
+    },
     this.maxSizeBytes = const {},
     this.defaultMaxSizeBytes,
     this.enableExtraction = true,

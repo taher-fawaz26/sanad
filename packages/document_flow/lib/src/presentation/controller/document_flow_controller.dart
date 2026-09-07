@@ -39,8 +39,7 @@ class DocumentFlowController {
     _bloc.add(DocumentPicked(type: type, asset: result.assets.first));
   }
 
-  void upload(DocumentType type) =>
-      _bloc.add(DocumentUploadRequested(type));
+  void upload(DocumentType type) => _bloc.add(DocumentUploadRequested(type));
 
   void cancelUpload(DocumentType type) =>
       _bloc.add(DocumentUploadCancelled(type));

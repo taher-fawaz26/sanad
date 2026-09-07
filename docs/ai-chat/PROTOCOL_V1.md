@@ -141,6 +141,19 @@ direction and mirror automatically under Arabic.
 inherently-LTR value (phone number, email, reference id) renders correctly under
 Arabic.
 
+**Markdown in prose.** `text` may contain a bounded Markdown subset and the
+client renders it: `#`/`##`/`###` headings, `-`/`*`/`+` bullets, `1.` ordered
+lists, `**bold**`, `__bold__`, `*italic*`, `_italic_`, `` `code` ``, and blank-line
+paragraph breaks. Anything else is shown literally.
+
+Link and image syntax is **not** rendered: `[label](url)` and `![alt](url)`
+collapse to their visible label and the URL is discarded. Nothing produced from
+a `text` node is ever tappable. Markdown is a prose convenience, never a UI
+transport — buttons, cards and actions must be structured nodes.
+
+`direction: "ltrValue"` disables Markdown parsing for that node: a reference id
+is a value, not prose, and its punctuation must survive verbatim.
+
 ### `rich_text`
 | Field | Type | Req | Default / limits |
 |---|---|---|---|
@@ -294,7 +307,7 @@ Excess truncated; fewer than 2 *valid* options drops the node.
 { "type": "open_service", "serviceId": "svc_123" }
 ```
 
-Nine action types are defined by the protocol:
+Eleven action types are defined by the protocol:
 
 | `type` | Required params |
 |---|---|
@@ -306,17 +319,24 @@ Nine action types are defined by the protocol:
 | `open_route` | `routeKey` — a **symbolic key**, never a path |
 | `open_url` | `url` — gated by `AiUiUrlPolicy` (https + host allowlist) |
 | `copy_text` | `text` |
+| `request_location_share` | — — asks the app to run its own location flow |
+| `request_image_upload` | — — asks the app to run its own picker/upload flow |
 | `dismiss` | — |
+
+The two `request_*` actions grant the agent **no** device access. They state an
+intent; the app owns the permission prompt, the picker and the decision to
+refuse. Emitting one is a request, never a capability.
 
 Additional scalar params (string, number, bool) are carried through as strings.
 Non-scalar params are dropped with a diagnostic. `open_route` additionally
 accepts a nested `"params"` object of scalars.
 
 **Two independent gates.** An action must be in the protocol catalog *and* in
-the host's `supportedActions` set. The SANAD client implements six:
+the host's `supportedActions` set. The SANAD client implements eight:
 `send_message`, `open_service`, `open_appointment`, `open_branch`,
-`open_document`, `copy_text`. `open_url` and `open_route` are **not implemented**
-— a payload using either is dropped.
+`open_document`, `copy_text`, `request_location_share`, `request_image_upload`.
+`open_url` and `open_route` are **not implemented** — a payload using either is
+dropped.
 
 Not representable in any form: a callback, a method name, a Dart expression, a
 raw route path, a raw deep link.
@@ -423,3 +443,58 @@ capped at 120 characters.
 - A card with a whole-card action is one `Semantics(button: true)` node, so a
   screen reader announces one destination.
 - `progress` and `loading` are live regions.
+
+## 12. The outgoing turn (client → agent)
+
+Normative. `AiChatTurnPayload.encode` is the only thing that builds this, and
+`ai_chat_turn_payload_test.dart` pins every rule below.
+
+```
+{
+  "conversation_id": String,   // always
+  "message":         String,   // always; may be ""
+  "attachments":     [         // only when the turn carries files
+    {
+      "id":         String,    // always — the upload id
+      "url":        String,    // always — the resolved location
+      "type":       "audio",   // audio attachments only
+      "transcript": String     // audio only, and only when non-empty
+    }
+  ]
+}
+```
+
+### Rules
+
+1. **`attachments` is omitted when empty**, never sent as `[]`. This is what
+   makes a text-only turn byte-identical to the two-field body of protocol
+   v1.0, so this addition is not a protocol bump and the existing
+   request-shape tests hold unchanged. Do not "tidy" it into always emitting
+   the key.
+2. **A non-audio attachment object has exactly `id` and `url`.** Nothing else
+   is sent — no file name, MIME type, size, local path, duration or waveform.
+   The URL is already resolved, so the agent performs no storage lookup, and no
+   device path ever leaves the phone.
+3. **An audio attachment adds `type: "audio"`**, whether or not it has words —
+   so the agent can tell speech it has no transcript for from an opaque file.
+4. **`transcript` is present only when non-empty.** It is client-side device
+   STT captured during the recording, and is best-effort: empty is the normal
+   outcome when the recogniser was unavailable or heard nothing.
+5. **`message` is never empty when the turn has something to say.** With no
+   typed caption and a transcript available, `message` takes the transcript.
+   Not decoration — the live agent answers an empty `message` with `200` and
+   zero frames (see `ARCHITECTURE.md` §3), so a voice-only turn would otherwise
+   be met with silence. It also means a voice note is understood by a backend
+   that has not yet learned to read `attachments`.
+6. **`message` is passed through verbatim, untrimmed.** Trimming happens once,
+   in `AiChatBloc`; doing it again here would silently change a pinned body.
+7. **Nothing credential-shaped is ever in the body.** The session token is a
+   header (`Sanad-Access-Token`) on both transports.
+
+### Why the transcript is on the attachment
+
+`message` already belongs to what the user *typed*, and a turn can carry both a
+caption and a voice note. A top-level `transcript` would either collide with the
+caption or need a rule about which wins. On the attachment, the words stay
+attached to the audio they came from, and a turn with two recordings would still
+be unambiguous.

@@ -3,7 +3,7 @@ import 'package:branches/src/domain/repositories/branch_repository.dart';
 import 'package:branches/src/domain/usecases/create_branch_usecase.dart';
 import 'package:branches/src/domain/usecases/get_company_schedule_usecase.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
-import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_cubit.dart';
+import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_bloc.dart';
 import 'package:branches/src/presentation/widgets/add_branch_step_one.dart';
 import 'package:branches/src/presentation/widgets/branch_location_field.dart';
 import 'package:branches/src/presentation/widgets/branch_manager_picker_field.dart';
@@ -32,13 +32,13 @@ const _surfaceSize = Size(4000, 3600);
 
 void main() {
   late _MockBranchRepository repository;
-  late AddBranchDraftCubit draftCubit;
+  late AddBranchDraftBloc draftCubit;
   late AddBranchBloc addBranchBloc;
   late GlobalKey<FormState> formKey;
 
   setUp(() {
     repository = _MockBranchRepository();
-    draftCubit = AddBranchDraftCubit();
+    draftCubit = AddBranchDraftBloc();
     addBranchBloc = AddBranchBloc(
       createBranchUseCase: CreateBranchUseCase(repository),
       getCompanyScheduleUseCase: GetCompanyScheduleUseCase(repository),
@@ -66,7 +66,7 @@ void main() {
           theme: AppTheme.light(),
           home: MultiBlocProvider(
             providers: [
-              BlocProvider<AddBranchDraftCubit>.value(value: draftCubit),
+              BlocProvider<AddBranchDraftBloc>.value(value: draftCubit),
               BlocProvider<AddBranchBloc>.value(value: addBranchBloc),
             ],
             child: Scaffold(
@@ -371,15 +371,18 @@ void main() {
           findsOneWidget,
         );
 
-        draftCubit.updateManager(
-          const BranchManagerEntity(
-            id: 'mgr-1',
-            fullName: 'Test Manager',
-            initials: 'TM',
-          ),
-        );
-        // Cubit emissions land on the next microtask — one pump to drain
-        // it, one to build the new frame.
+        await tester.runAsync(() async {
+          draftCubit.updateManager(
+            const BranchManagerEntity(
+              id: 'mgr-1',
+              fullName: 'Test Manager',
+              initials: 'TM',
+            ),
+          );
+          await draftCubit.stream.firstWhere(
+            (d) => d.selectedManager?.id == 'mgr-1',
+          );
+        });
         await tester.pump();
         await tester.pump();
 
@@ -402,7 +405,12 @@ void main() {
       (tester) async {
         await pump(tester);
 
-        draftCubit.updateLocation(address: address, position: position);
+        await tester.runAsync(() async {
+          draftCubit.updateLocation(address: address, position: position);
+          await draftCubit.stream.firstWhere(
+            (d) => d.branchAddress == address,
+          );
+        });
         await tester.pump();
         await tester.pump();
 

@@ -5,15 +5,18 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ActivityLogQuery.toQueryMap', () {
-    test('page/limit only when no filters are set — and never sends `lang`', () {
-      const query = ActivityLogQuery(page: 2, limit: 10);
+    test(
+      'page/limit only when no filters are set — and never sends `lang`',
+      () {
+        const query = ActivityLogQuery(page: 2, limit: 10);
 
-      final map = query.toQueryMap();
+        final map = query.toQueryMap();
 
-      expect(map, {'page': 2, 'limit': 10});
-      expect(map.containsKey('lang'), isFalse);
-      expect(map.containsKey('search'), isFalse);
-    });
+        expect(map, {'page': 2, 'limit': 10});
+        expect(map.containsKey('lang'), isFalse);
+        expect(map.containsKey('search'), isFalse);
+      },
+    );
 
     test('serializes actorId when set', () {
       const query = ActivityLogQuery(actorId: 'w-1');

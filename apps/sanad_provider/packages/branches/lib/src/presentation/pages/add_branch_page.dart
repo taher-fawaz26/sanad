@@ -1,13 +1,14 @@
 import 'package:app_logger/app_logger.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_bloc.dart';
-import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_cubit.dart';
+import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_bloc.dart';
 import 'package:branches/src/presentation/bloc/add_branch/add_branch_draft_state.dart';
-import 'package:branches/src/presentation/bloc/add_branch/add_branch_location_cubit.dart';
-import 'package:branches/src/presentation/bloc/add_branch/add_branch_wizard_cubit.dart';
+import 'package:branches/src/presentation/bloc/add_branch/add_branch_location_bloc.dart';
+import 'package:branches/src/presentation/bloc/add_branch/add_branch_wizard_bloc.dart';
 import 'package:branches/src/presentation/models/coverage_area_args.dart';
 import 'package:branches/src/presentation/models/coverage_area_result.dart';
 import 'package:branches/src/presentation/utils/add_branch_error_snackbar.dart';
 import 'package:branches/src/presentation/utils/add_branch_params_mapper.dart';
+import 'package:branches/src/presentation/utils/coverage_location_gate.dart';
 import 'package:branches/src/presentation/widgets/add_branch_coverage_step.dart';
 import 'package:branches/src/presentation/widgets/add_branch_location_permission_body.dart';
 import 'package:branches/src/presentation/widgets/add_branch_services_step.dart';
@@ -60,7 +61,7 @@ class _AddBranchPageState extends State<AddBranchPage>
     // already needs it for the address field) rather than deferring the
     // native prompt until Step 2 — see SAN-603.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<AddBranchLocationCubit>().ensureAccess();
+      if (mounted) context.read<AddBranchLocationBloc>().ensureAccess();
     });
   }
 
@@ -76,17 +77,17 @@ class _AddBranchPageState extends State<AddBranchPage>
     // outcome of the original request (fixes SAN-602: granting permission
     // from Settings and returning must clear the blocking state).
     if (state == AppLifecycleState.resumed) {
-      context.read<AddBranchLocationCubit>().refresh();
+      context.read<AddBranchLocationBloc>().refresh();
     }
   }
 
   // ── Navigation ──
 
-  void _handleBack() => context.read<AddBranchWizardCubit>().goBack();
+  void _handleBack() => context.read<AddBranchWizardBloc>().goBack();
 
   void _onNextPressed() {
-    final wizard = context.read<AddBranchWizardCubit>();
-    final draft = context.read<AddBranchDraftCubit>().state;
+    final wizard = context.read<AddBranchWizardBloc>();
+    final draft = context.read<AddBranchDraftBloc>().state;
 
     switch (wizard.state.currentStep) {
       case 1:
@@ -111,7 +112,7 @@ class _AddBranchPageState extends State<AddBranchPage>
   // ── Submission ──
 
   void _submit() {
-    final draft = context.read<AddBranchDraftCubit>().state;
+    final draft = context.read<AddBranchDraftBloc>().state;
     final bloc = context.read<AddBranchBloc>();
     final companySchedule = bloc.state.companySchedule;
 
@@ -126,7 +127,7 @@ class _AddBranchPageState extends State<AddBranchPage>
 
   Future<void> _pickLocation() async {
     appLogger.d('[AddBranchPage] Add Location tapped');
-    final draft = context.read<AddBranchDraftCubit>().state;
+    final draft = context.read<AddBranchDraftBloc>().state;
     final result = await showLocationPickerSheet(
       context,
       labels: LocationPickerLabels(
@@ -144,6 +145,13 @@ class _AddBranchPageState extends State<AddBranchPage>
         serviceDisabled: 'branches.location_picker.service_disabled'.tr(),
         genericError: 'branches.location_picker.generic_error'.tr(),
         openSettings: 'branches.location_picker.open_settings'.tr(),
+        openLocationSettings: 'branches.location_picker.open_location_settings'
+            .tr(),
+        retry: 'common.retry'.tr(),
+        locationUnavailable: 'branches.location_picker.location_unavailable'
+            .tr(),
+        locationTimeout: 'branches.location_picker.location_timeout'.tr(),
+        addressNotFound: 'branches.location_picker.address_not_found'.tr(),
         searchEmpty: 'branches.location_picker.no_results'.tr(),
         searchRetry: 'common.retry'.tr(),
         outsideCountry: 'branches.location_picker.outside_uae'.tr(),
@@ -152,11 +160,12 @@ class _AddBranchPageState extends State<AddBranchPage>
       ),
       existingLocation: draft.pickedPosition,
       initialAddress: draft.branchAddress,
+      initialPlaceId: draft.locationPlaceId,
       requirePlaceId: true,
     );
     if (!mounted || result == null) return;
 
-    context.read<AddBranchDraftCubit>().updateLocation(
+    context.read<AddBranchDraftBloc>().updateLocation(
       address: result.address,
       position: result.position,
       placeId: result.placeId,
@@ -164,16 +173,23 @@ class _AddBranchPageState extends State<AddBranchPage>
   }
 
   Future<void> _openCoverageArea() async {
-    // Figma `location-permission-denied` (`1517:9804`). Re-checks through
-    // the single location coordinator rather than the permission plugin
-    // directly — the wizard's `coverageAccessDenied` is kept in sync with
-    // this cubit by a listener in `build`, so a denial here just means the
-    // blocking body is already (or about to be) shown.
-    final locationCubit = context.read<AddBranchLocationCubit>();
-    await locationCubit.refresh();
-    if (!mounted || !locationCubit.state.isGranted) return;
+    // The coverage editor is configured from the location already resolved in
+    // Step 1 (place id + coordinates + address) plus map search/tap/pin — it
+    // never acquires a fresh device position. So a valid resolved location is
+    // enough to open it, regardless of live location-services state. Only in
+    // the live-acquisition fallback (no resolved location yet) do we require
+    // location access first, through the single location coordinator.
+    final hasResolvedLocation = context
+        .read<AddBranchDraftBloc>()
+        .state
+        .hasValidResolvedLocation;
+    if (!hasResolvedLocation) {
+      final locationCubit = context.read<AddBranchLocationBloc>();
+      await locationCubit.refresh();
+      if (!mounted || !locationCubit.state.isGranted) return;
+    }
 
-    final draft = context.read<AddBranchDraftCubit>().state;
+    final draft = context.read<AddBranchDraftBloc>().state;
     final result = await context.push<CoverageAreaResult>(
       BranchRoutes.coverage,
       extra: CoverageAreaArgs(
@@ -186,7 +202,7 @@ class _AddBranchPageState extends State<AddBranchPage>
     );
     if (!mounted || result == null) return;
 
-    final draftCubit = context.read<AddBranchDraftCubit>()
+    final draftCubit = context.read<AddBranchDraftBloc>()
       ..updateCoverage(
         address: result.address,
         position: result.position,
@@ -196,21 +212,21 @@ class _AddBranchPageState extends State<AddBranchPage>
       );
 
     // Coverage confirmed → auto-advance to services step.
-    final wizard = context.read<AddBranchWizardCubit>();
+    final wizard = context.read<AddBranchWizardBloc>();
     if (wizard.state.currentStep == 2 && draftCubit.state.isStepTwoComplete) {
       wizard.advanceTo(3);
     }
   }
 
   Future<void> _openSelectServices() async {
-    final draft = context.read<AddBranchDraftCubit>().state;
+    final draft = context.read<AddBranchDraftBloc>().state;
     final result = await showSelectServiceActionSheet(
       context: context,
       loadItems: _loadCatalogServiceSelections,
       initialSelectedIds: draft.selectedServices.map((s) => s.id).toSet(),
     );
     if (!mounted || result == null) return;
-    context.read<AddBranchDraftCubit>().updateServices(result.selectedServices);
+    context.read<AddBranchDraftBloc>().updateServices(result.selectedServices);
   }
 
   /// Builds the `loadItems` closure `showSelectServiceActionSheet` needs
@@ -237,20 +253,20 @@ class _AddBranchPageState extends State<AddBranchPage>
   }
 
   Future<void> _openSelectWorkers() async {
-    final draft = context.read<AddBranchDraftCubit>().state;
+    final draft = context.read<AddBranchDraftBloc>().state;
     final result = await showSelectWorkerActionSheet(
       context: context,
       initialSelectedIds: draft.selectedWorkers.map((w) => w.id).toSet(),
     );
     if (!mounted || result == null) return;
-    context.read<AddBranchDraftCubit>().updateWorkers(result.selectedWorkers);
+    context.read<AddBranchDraftBloc>().updateWorkers(result.selectedWorkers);
   }
 
   Future<void> _openLocationSettings() =>
-      context.read<AddBranchLocationCubit>().openSettings();
+      context.read<AddBranchLocationBloc>().openSettings();
 
   Future<void> _requestLocationAgain() =>
-      context.read<AddBranchLocationCubit>().requestAgain();
+      context.read<AddBranchLocationBloc>().requestAgain();
 
   // ── Bloc side effects ──
 
@@ -299,7 +315,7 @@ class _AddBranchPageState extends State<AddBranchPage>
   // ── Discard guard ──
 
   Future<void> _handleClose() async {
-    final hasChanges = context.read<AddBranchDraftCubit>().hasChanges;
+    final hasChanges = context.read<AddBranchDraftBloc>().hasChanges;
     if (!hasChanges) {
       context.pop();
       return;
@@ -340,29 +356,21 @@ class _AddBranchPageState extends State<AddBranchPage>
         listenWhen: (previous, current) =>
             previous.setupStatus != current.setupStatus,
         listener: _onSetupStatusChanged,
-        child: BlocListener<AddBranchLocationCubit, AddBranchLocationState>(
-          listenWhen: (previous, current) => current.hasChecked,
-          listener: (context, state) {
-            context.read<AddBranchWizardCubit>().setCoverageAccessDenied(
-              denied: !state.isGranted,
-            );
+        child: PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) _handleClose();
           },
-          child: PopScope(
-            canPop: false,
-            onPopInvokedWithResult: (didPop, _) {
-              if (!didPop) _handleClose();
-            },
-            child: Scaffold(
-              backgroundColor: context.appColors.surface,
-              body: SafeArea(
-                child: BlocBuilder<AddBranchWizardCubit, AddBranchWizardState>(
-                  builder: (context, wizard) {
-                    if (wizard.currentStep == _reviewStep) {
-                      return _buildReviewScreen();
-                    }
-                    return _buildWizardScreen(wizard);
-                  },
-                ),
+          child: Scaffold(
+            backgroundColor: context.appColors.surface,
+            body: SafeArea(
+              child: BlocBuilder<AddBranchWizardBloc, AddBranchWizardState>(
+                builder: (context, wizard) {
+                  if (wizard.currentStep == _reviewStep) {
+                    return _buildReviewScreen();
+                  }
+                  return _buildWizardScreen(wizard);
+                },
               ),
             ),
           ),
@@ -398,12 +406,28 @@ class _AddBranchPageState extends State<AddBranchPage>
   }
 
   Widget _buildWizardScreen(AddBranchWizardState wizard) {
-    final location = context.watch<AddBranchLocationCubit>().state;
+    final location = context.watch<AddBranchLocationBloc>().state;
+    // Drive Step 2's location gate from *real* state, never a stored flag:
+    // the saved branch location resolved in Step 1 (canonical) combined with
+    // the live permission state. Because the coverage step consumes the saved
+    // location and never needs live GPS, a resolved location means it is never
+    // blocked — so disabling device Location cannot surface a false "Location
+    // services off" screen.
+    final hasResolvedLocation = context
+        .watch<AddBranchDraftBloc>()
+        .state
+        .hasValidResolvedLocation;
+    final coverageLocationBlocked = isCoverageLocationBlocked(
+      hasResolvedLocation: hasResolvedLocation,
+      permissionStatus: location.status,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildNavBar(wizard.currentStep),
-        Expanded(child: _buildCurrentStep(wizard, location)),
+        Expanded(
+          child: _buildCurrentStep(wizard, location, coverageLocationBlocked),
+        ),
         AddBranchWizardFooter(
           currentStep: wizard.currentStep,
           onNext: _onNextPressed,
@@ -411,7 +435,7 @@ class _AddBranchPageState extends State<AddBranchPage>
           onAddCoverage: _openCoverageArea,
           onAddServices: _openSelectServices,
           onAddWorkers: _openSelectWorkers,
-          coverageAccessDenied: wizard.coverageAccessDenied,
+          coverageAccessDenied: coverageLocationBlocked,
           locationPermanentlyBlocked: location.isBlocked,
           onOpenLocationSettings: _openLocationSettings,
           onRequestLocationAgain: _requestLocationAgain,
@@ -457,8 +481,9 @@ class _AddBranchPageState extends State<AddBranchPage>
   Widget _buildCurrentStep(
     AddBranchWizardState wizard,
     AddBranchLocationState location,
+    bool coverageLocationBlocked,
   ) {
-    final wizardCubit = context.read<AddBranchWizardCubit>();
+    final wizardCubit = context.read<AddBranchWizardBloc>();
 
     return switch (wizard.currentStep) {
       1 => AddBranchStepOne(
@@ -470,7 +495,7 @@ class _AddBranchPageState extends State<AddBranchPage>
         onStepTapped: wizardCubit.tapStep,
         showValidationErrors: wizard.showStepOneErrors,
       ),
-      2 when wizard.coverageAccessDenied => AddBranchWizardStepShell(
+      2 when coverageLocationBlocked => AddBranchWizardStepShell(
         currentStep: wizard.currentStep,
         totalSteps: _totalSteps,
         furthestCompletedStep: wizard.furthestStep,
@@ -485,7 +510,7 @@ class _AddBranchPageState extends State<AddBranchPage>
         furthestCompletedStep: wizard.furthestStep,
         onStepTapped: wizardCubit.tapStep,
         child:
-            BlocSelector<AddBranchDraftCubit, AddBranchDraft, _CoveragePreview>(
+            BlocSelector<AddBranchDraftBloc, AddBranchDraft, _CoveragePreview>(
               selector: (state) => (
                 position: state.pickedPosition,
                 radiusKm: state.coverageRadiusKm,
@@ -513,7 +538,7 @@ class _AddBranchPageState extends State<AddBranchPage>
         onStepTapped: wizardCubit.tapStep,
         child:
             BlocSelector<
-              AddBranchDraftCubit,
+              AddBranchDraftBloc,
               AddBranchDraft,
               List<CatalogServiceSelection>
             >(
@@ -523,7 +548,7 @@ class _AddBranchPageState extends State<AddBranchPage>
                   selectedServices: services,
                   onAddServices: _openSelectServices,
                   onRemoveService: context
-                      .read<AddBranchDraftCubit>()
+                      .read<AddBranchDraftBloc>()
                       .removeService,
                 );
               },
@@ -536,7 +561,7 @@ class _AddBranchPageState extends State<AddBranchPage>
         onStepTapped: wizardCubit.tapStep,
         child:
             BlocSelector<
-              AddBranchDraftCubit,
+              AddBranchDraftBloc,
               AddBranchDraft,
               List<WorkerEntity>
             >(
@@ -546,7 +571,7 @@ class _AddBranchPageState extends State<AddBranchPage>
                   selectedWorkers: workers,
                   onAddWorkers: _openSelectWorkers,
                   onRemoveWorker: (worker) {
-                    context.read<AddBranchDraftCubit>().removeWorker(worker);
+                    context.read<AddBranchDraftBloc>().removeWorker(worker);
                   },
                 );
               },

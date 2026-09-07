@@ -1,10 +1,10 @@
-import 'dart:async';
-
 import 'package:auth/auth.dart';
 import 'package:authorization/authorization.dart';
 import 'package:branches/src/domain/entities/branch_availability_mode.dart';
 import 'package:branches/src/domain/entities/branch_entity.dart';
+import 'package:branches/src/domain/entities/branch_filter.dart';
 import 'package:branches/src/presentation/bloc/branches/branches_bloc.dart';
+import 'package:branches/src/presentation/bloc/swipe_hint/swipe_hint_bloc.dart';
 import 'package:branches/src/presentation/widgets/branch_empty_states.dart';
 import 'package:branches/src/presentation/widgets/branch_list_item.dart';
 import 'package:branches/src/presentation/widgets/branch_search_sheet.dart';
@@ -18,7 +18,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localization/localization.dart';
 import 'package:shared_ui/shared_ui.dart';
-import 'package:storage/storage.dart';
 
 /// Realistic mock used only to skeletonize the real row via
 /// [AppSkeletonizer] — no bespoke skeleton widget.
@@ -97,53 +96,14 @@ class _BranchesTabState extends State<_BranchesTab> {
   static const double _titleSectionHeight = 60;
   static const double _headerSafetyMargin = 20;
 
-  /// `null` while the Hive read is in flight — the hint never arms until
-  /// this resolves, so it can't briefly play before we know it's been seen.
-  bool? _hintSeen;
+  /// Only the first row, and only once — hint arms only after the persisted
+  /// flag has been loaded, has never been seen, and hasn't yet fired this
+  /// session (all tracked by [SwipeHintBloc]).
+  bool _showSwipeHintFor(int index, SwipeHintState hint) =>
+      index == 0 && hint.shouldArm;
 
-  /// One-shot latch: once the hint has fired (played or been cancelled), row
-  /// 0 renders as a plain `BranchListItem` on every later build (filter
-  /// change, refresh) instead of re-wrapping it in `AppSwipeActionHint`.
-  bool _hintAttempted = false;
-
-  @override
-  void initState() {
-    super.initState();
-    unawaited(_loadHintSeen());
-  }
-
-  Future<void> _loadHintSeen() async {
-    final seen =
-        await sl<HiveLocalStorage>().load(
-              key: StorageKeys.branchesSwipeHintSeen,
-              boxName: HiveBoxes.defaultBox,
-            )
-            as bool? ??
-        false;
-    if (!mounted) return;
-    setState(() => _hintSeen = seen);
-  }
-
-  /// Only the first row, and only once — [_hintSeen] resolves to `false`
-  /// (never shown before) and [_hintAttempted] hasn't already latched from
-  /// this row having played or been cancelled.
-  bool _showSwipeHintFor(int index) =>
-      index == 0 && _hintSeen == false && !_hintAttempted;
-
-  void _markHintShown() {
-    if (!mounted) return;
-    setState(() {
-      _hintSeen = true;
-      _hintAttempted = true;
-    });
-    unawaited(
-      sl<HiveLocalStorage>().save(
-        key: StorageKeys.branchesSwipeHintSeen,
-        value: true,
-        boxName: HiveBoxes.defaultBox,
-      ),
-    );
-  }
+  void _markHintShown() =>
+      context.read<SwipeHintBloc>().add(const SwipeHintMarkedSeen());
 
   /// Pinned search row: bordered field height + vertical padding around it.
   /// Must match the [PreferredSize] child exactly to avoid RenderFlex overflow.
@@ -167,7 +127,7 @@ class _BranchesTabState extends State<_BranchesTab> {
         final failure = state.actionFailure!;
         final title = failure.message.trim().isEmpty
             ? 'branches.actions.action_failed'.tr()
-            : failure.localizedMessage();
+            : failure.localizedSafeMessage();
         showAppErrorSnackbar(context: context, title: title);
         context.read<BranchesBloc>().add(
           const BranchActionFailureClearedEvent(),
@@ -190,99 +150,60 @@ class _BranchesTabState extends State<_BranchesTab> {
             onRefresh: () async {
               context.read<BranchesBloc>().add(const BranchesRefreshEvent());
             },
-            child: AppSwipeActionsGroup(
-              child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  SliverAppBar(
-                    pinned: true,
-                    toolbarHeight: 0,
-                    automaticallyImplyLeading: false,
-                    backgroundColor: colors.surface,
-                    surfaceTintColor: Colors.transparent,
-                    scrolledUnderElevation: 0,
-                    elevation: 0,
-                    expandedHeight: _expandedHeaderHeight(),
-                    flexibleSpace: FlexibleSpaceBar(
-                      background: SingleChildScrollView(
-                        physics: const NeverScrollableScrollPhysics(),
-                        child: _CollapsingHeader(
-                          businessName: widget.businessName,
-                        ),
-                      ),
-                    ),
-                    bottom: PreferredSize(
-                      preferredSize: Size.fromHeight(_bottomBarHeight()),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: AppSpacing.xl,
-                          vertical: responsiveSpacing(10),
-                        ),
-                        child: AppSearchField(
-                          variant: AppSearchFieldVariant.bordered,
-                          hint: 'common.search_hint'.tr(),
-                          showMicIcon: false,
-                          readOnly: true,
-                          onTap: () => showBranchSearchSheet(
-                            context,
-                            isOwner: widget.isOwner,
+            child: NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                // Dispatch load-more when the user is within ~200px of the
+                // bottom. The bloc's droppable() transformer + PaginationMixin
+                // (checks !hasMore / already loadingMore) make this safe to
+                // fire on every notification.
+                if (notification.metrics.pixels >=
+                        notification.metrics.maxScrollExtent - 200 &&
+                    state.hasMore &&
+                    !state.loadingMore) {
+                  context.read<BranchesBloc>().add(
+                    const BranchesLoadMoreEvent(),
+                  );
+                }
+                return false;
+              },
+              child: AppSwipeActionsGroup(
+                child: CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    SliverAppBar(
+                      pinned: true,
+                      toolbarHeight: 0,
+                      automaticallyImplyLeading: false,
+                      backgroundColor: colors.surface,
+                      surfaceTintColor: Colors.transparent,
+                      scrolledUnderElevation: 0,
+                      elevation: 0,
+                      expandedHeight: _expandedHeaderHeight(),
+                      flexibleSpace: FlexibleSpaceBar(
+                        background: SingleChildScrollView(
+                          physics: const NeverScrollableScrollPhysics(),
+                          child: _CollapsingHeader(
+                            businessName: widget.businessName,
                           ),
                         ),
                       ),
-                    ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppSpacing.xl,
-                        vertical: AppSpacing.sm,
-                      ),
-                      child: _FilterRow(currentFilter: state.filter),
-                    ),
-                  ),
-                  if (state.hasError && state.branches.isEmpty)
-                    AppSliverFillRemaining(
-                      child: _ErrorState(
-                        failure: state.failure,
-                        onRetry: () => context.read<BranchesBloc>().add(
-                          const BranchesRefreshEvent(),
-                        ),
-                      ),
-                    )
-                  else if (branches.isEmpty)
-                    AppSliverFillRemaining(
-                      child: _EmptyState(
-                        searchQuery: state.searchQuery,
-                        onClearSearch: () => context.read<BranchesBloc>().add(
-                          const BranchesSearchChangedEvent(''),
-                        ),
-                      ),
-                    )
-                  else ...[
-                    SliverList.separated(
-                      itemCount: branches.length,
-                      separatorBuilder: (context, index) =>
-                          SizedBox(height: AppSpacing.md),
-                      itemBuilder: (context, index) => RepaintBoundary(
+                      bottom: PreferredSize(
+                        preferredSize: Size.fromHeight(_bottomBarHeight()),
                         child: Padding(
                           padding: EdgeInsets.symmetric(
                             horizontal: AppSpacing.xl,
+                            vertical: responsiveSpacing(10),
                           ),
-                          child: _showSwipeHintFor(index)
-                              ? AppSwipeActionHint(
-                                  enabled: true,
-                                  onShown: _markHintShown,
-                                  builder: (context, controller) =>
-                                      BranchListItem(
-                                        branch: branches[index],
-                                        isOwner: widget.isOwner,
-                                        hintController: controller,
-                                      ),
-                                )
-                              : BranchListItem(
-                                  branch: branches[index],
-                                  isOwner: widget.isOwner,
-                                ),
+                          child: AppSearchField(
+                            variant: AppSearchFieldVariant.bordered,
+                            hint: 'common.search_hint'.tr(),
+                            showMicIcon: false,
+                            readOnly: true,
+                            onTap: () => showBranchSearchSheet(
+                              context,
+                              isOwner: widget.isOwner,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -290,21 +211,87 @@ class _BranchesTabState extends State<_BranchesTab> {
                       child: Padding(
                         padding: EdgeInsets.symmetric(
                           horizontal: AppSpacing.xl,
-                          vertical: AppSpacing.lg,
+                          vertical: AppSpacing.sm,
                         ),
-                        child: PermissionGate(
-                          permission: BranchPermissions.create,
-                          child: AppButton(
-                            label: 'branches.add_button'.tr(),
-                            icon: const Icon(Icons.add_circle_outline),
-                            iconPosition: AppButtonIconPosition.center,
-                            onPressed: () => _openAddBranch(context),
+                        child: _FilterRow(currentFilter: state.filter),
+                      ),
+                    ),
+                    if (state.hasError && state.branches.isEmpty)
+                      AppSliverFillRemaining(
+                        child: _ErrorState(
+                          failure: state.failure,
+                          onRetry: () => context.read<BranchesBloc>().add(
+                            const BranchesRefreshEvent(),
+                          ),
+                        ),
+                      )
+                    else if (branches.isEmpty)
+                      AppSliverFillRemaining(
+                        child: _EmptyState(
+                          searchQuery: state.searchQuery,
+                          onClearSearch: () => context.read<BranchesBloc>().add(
+                            const BranchesSearchChangedEvent(''),
+                          ),
+                        ),
+                      )
+                    else ...[
+                      SliverList.separated(
+                        itemCount: branches.length,
+                        separatorBuilder: (context, index) =>
+                            SizedBox(height: AppSpacing.md),
+                        itemBuilder: (context, index) => RepaintBoundary(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: AppSpacing.xl,
+                            ),
+                            child: BlocBuilder<SwipeHintBloc, SwipeHintState>(
+                              builder: (context, hint) =>
+                                  _showSwipeHintFor(index, hint)
+                                  ? AppSwipeActionHint(
+                                      enabled: true,
+                                      onShown: _markHintShown,
+                                      builder: (context, controller) =>
+                                          BranchListItem(
+                                            branch: branches[index],
+                                            isOwner: widget.isOwner,
+                                            hintController: controller,
+                                          ),
+                                    )
+                                  : BranchListItem(
+                                      branch: branches[index],
+                                      isOwner: widget.isOwner,
+                                    ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSpacing.xl,
+                            vertical: AppSpacing.lg,
+                          ),
+                          child: PermissionGate(
+                            permission: BranchPermissions.create,
+                            child: AppButton(
+                              label: 'branches.add_button'.tr(),
+                              icon: const Icon(Icons.add_circle_outline),
+                              iconPosition: AppButtonIconPosition.center,
+                              onPressed: () => _openAddBranch(context),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (state.loadingMore)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.all(AppSpacing.md),
+                          child: const Center(child: AppLoadingIndicator()),
+                        ),
+                      ),
                   ],
-                ],
+                ),
               ),
             ),
           );

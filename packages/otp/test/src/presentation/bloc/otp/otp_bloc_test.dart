@@ -113,6 +113,64 @@ void main() {
     );
 
     blocTest<OtpBloc<String>, OtpState<String>>(
+      'SENDS when the probe reports no session — `canResend:false` with '
+      'nothing left to wait for (regression: the contact-verification sheet '
+      'read that as a live cooldown, so no code was ever sent, no countdown '
+      'ran, and the resend link was permanently dead)',
+      build: () {
+        verifier = _RecordingVerifier(
+          // Exactly what `resend-info` answers before `/request` has ever been
+          // called: not a cooldown, an empty session.
+          onCooldown: () =>
+              _cool(canResend: false, resendsLeft: 0),
+        );
+        return OtpBloc<String>(config: _config(verifier));
+      },
+      act: (bloc) => bloc.add(const OtpStarted()),
+      wait: const Duration(milliseconds: 50),
+      verify: (bloc) {
+        expect(verifier.requests, 1, reason: 'the code must actually be sent');
+        expect(verifier.resends, 0, reason: 'no session to resend against');
+        expect(bloc.state.phase, isA<OtpAwaitingInput>());
+      },
+    );
+
+    blocTest<OtpBloc<String>, OtpState<String>>(
+      'the send seeds a real countdown from the follow-up probe, and the '
+      'resend stays blocked while it runs',
+      build: () {
+        var probes = 0;
+        verifier = _RecordingVerifier(
+          onCooldown: () {
+            probes++;
+            // Empty before the send; a live session with real numbers after.
+            return probes == 1
+                ? _cool(canResend: false, resendsLeft: 0)
+                : _cool(
+                    canResend: false,
+                    remainingSeconds: 60,
+                    resendsLeft: 3,
+                  );
+          },
+        );
+        return OtpBloc<String>(config: _config(verifier));
+      },
+      act: (bloc) async {
+        bloc.add(const OtpStarted());
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        bloc.add(const OtpResendRequested());
+      },
+      wait: const Duration(milliseconds: 50),
+      verify: (bloc) {
+        expect(verifier.requests, 1);
+        expect(bloc.state.secondsRemaining, 60);
+        expect(bloc.state.cooldown.resendsLeft, 3);
+        expect(bloc.state.canResend, isFalse);
+        expect(verifier.resends, 0, reason: 'resend is a no-op mid-cooldown');
+      },
+    );
+
+    blocTest<OtpBloc<String>, OtpState<String>>(
       'a rate-limited send is a cooldown, not an error',
       build: () {
         verifier = _RecordingVerifier(

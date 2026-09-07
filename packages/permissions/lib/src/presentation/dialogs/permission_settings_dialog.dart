@@ -41,14 +41,12 @@ class PermissionSettingsDialog {
           explanation: resolved,
           theme: theme,
           primaryLabel:
-              resolved.openSettingsLabel ??
-              theme.texts.openSettingsButtonLabel,
+              resolved.openSettingsLabel ?? theme.texts.openSettingsButtonLabel,
           primaryAction: () {
             Navigator.of(sheetContext).pop();
             onOpenSettings();
           },
-          secondaryLabel:
-              resolved.cancelLabel ?? theme.texts.cancelButtonLabel,
+          secondaryLabel: resolved.cancelLabel ?? theme.texts.cancelButtonLabel,
           secondaryAction: () => Navigator.of(sheetContext).pop(),
         ),
       ),

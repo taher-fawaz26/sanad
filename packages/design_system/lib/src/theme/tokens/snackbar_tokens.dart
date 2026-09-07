@@ -205,8 +205,13 @@ abstract final class SnackbarTokens {
         height: 16 / 14,
       ),
       actionStyle: typography.regularNormal.copyWith(
-        color: isPrimary ? colors.white : main.shade300,
+        color: colors.white,
         height: 20 / 16,
+        fontWeight: FontWeight.bold,
+        decoration: TextDecoration.underline,
+        decorationColor: colors.white,
+        decorationThickness: 2,
+        decorationStyle: TextDecorationStyle.solid,
       ),
       boxMaxWidth: responsiveDimension(boxMaxWidth),
     );

@@ -27,6 +27,10 @@ abstract final class AiChatConfig {
   /// something else. A test asserts the two stay in step, which is what
   /// prevents a button that renders but does nothing.
   ///
+  /// `request_location_share` and `request_image_upload` are here because the
+  /// live agent emits them: they ask the *app* to run a flow it owns, and
+  /// grant the agent no device access of their own.
+  ///
   /// `open_url` and `open_route` are absent on purpose — there is no symbolic
   /// route map yet, and adding `open_url` here would let the agent send the
   /// user off-app.
@@ -37,6 +41,8 @@ abstract final class AiChatConfig {
     AiUiActionType.openBranch,
     AiUiActionType.openDocument,
     AiUiActionType.copyText,
+    AiUiActionType.requestLocationShare,
+    AiUiActionType.requestImageUpload,
   };
 
   /// Builds the validator this app holds every AI payload to.

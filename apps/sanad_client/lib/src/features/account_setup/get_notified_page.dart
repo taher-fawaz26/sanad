@@ -46,7 +46,7 @@ class GetNotifiedPage extends StatelessWidget {
             children: [
               Expanded(
                 child: SingleChildScrollView(
-                  child: Column(
+                  child: AppStaggeredColumn(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       SizedBox(height: responsiveDimension(AppSpacing.xxxxl)),
@@ -182,22 +182,31 @@ class _NotificationIllustration extends StatelessWidget {
             ),
             Column(
               children: [
-                _NotificationCard(
-                  title: 'get_notified.preview_document_title'.tr(),
-                  body: 'get_notified.preview_document_body'.tr(),
-                  time: 'get_notified.preview_document_time'.tr(),
+                AppListEntrance(
+                  index: 0,
+                  child: _NotificationCard(
+                    title: 'get_notified.preview_document_title'.tr(),
+                    body: 'get_notified.preview_document_body'.tr(),
+                    time: 'get_notified.preview_document_time'.tr(),
+                  ),
                 ),
                 SizedBox(height: responsiveDimension(AppSpacing.md)),
-                _NotificationCard(
-                  title: 'get_notified.preview_offer_title'.tr(),
-                  body: 'get_notified.preview_offer_body'.tr(),
-                  time: 'get_notified.preview_offer_time'.tr(),
+                AppListEntrance(
+                  index: 1,
+                  child: _NotificationCard(
+                    title: 'get_notified.preview_offer_title'.tr(),
+                    body: 'get_notified.preview_offer_body'.tr(),
+                    time: 'get_notified.preview_offer_time'.tr(),
+                  ),
                 ),
                 SizedBox(height: responsiveDimension(AppSpacing.md)),
-                _NotificationCard(
-                  title: 'get_notified.preview_id_title'.tr(),
-                  body: 'get_notified.preview_id_body'.tr(),
-                  time: 'get_notified.preview_id_time'.tr(),
+                AppListEntrance(
+                  index: 2,
+                  child: _NotificationCard(
+                    title: 'get_notified.preview_id_title'.tr(),
+                    body: 'get_notified.preview_id_body'.tr(),
+                    time: 'get_notified.preview_id_time'.tr(),
+                  ),
                 ),
               ],
             ),

@@ -1124,6 +1124,90 @@ void main() {
     });
   });
 
+  group('AppOtpFieldMetrics', () {
+    testWidgets(
+      'the default metrics are unchanged — every existing caller keeps the '
+      'standard cell spec (regression)',
+      (tester) async {
+        await _pump(tester, AppOtpField(controller: TextEditingController()));
+        final defaulted = tester.getSize(find.byKey(otpCellKey(0)));
+
+        await _pump(
+          tester,
+          AppOtpField(
+            controller: TextEditingController(),
+            // Passing the default explicitly is the assertion: `standard`
+            // must stay what an omitted `metrics` resolves to.
+            // ignore: avoid_redundant_argument_values
+            metrics: const AppOtpFieldMetrics.standard(),
+          ),
+        );
+
+        expect(tester.getSize(find.byKey(otpCellKey(0))), defaulted);
+      },
+    );
+
+    testWidgets(
+      'the large preset draws bigger cells than the standard one when the '
+      'row is not width-constrained (provider vs client OTP spec)',
+      (tester) async {
+        await _pump(
+          tester,
+          AppOtpField(
+            controller: TextEditingController(),
+            // Passing the default explicitly is the assertion: `standard`
+            // must stay what an omitted `metrics` resolves to.
+            // ignore: avoid_redundant_argument_values
+            metrics: const AppOtpFieldMetrics.standard(),
+          ),
+        );
+        final standard = tester.getSize(find.byKey(otpCellKey(0))).width;
+
+        await _pump(
+          tester,
+          AppOtpField(
+            controller: TextEditingController(),
+            metrics: const AppOtpFieldMetrics.large(),
+          ),
+        );
+        final large = tester.getSize(find.byKey(otpCellKey(0))).width;
+
+        expect(large, greaterThan(standard));
+      },
+    );
+
+    testWidgets(
+      'an overflowing row scales cells and gutters by one shared factor, so '
+      'the Figma cell:gap proportion survives on a narrow screen',
+      (tester) async {
+        const metrics = AppOtpFieldMetrics.large();
+        // Narrower than six 54.5dp cells plus five 16dp gutters need.
+        await _pump(
+          tester,
+          const SizedBox(
+            width: 300,
+            child: AppOtpField(metrics: metrics),
+          ),
+        );
+
+        final first = tester.getRect(find.byKey(otpCellKey(0)));
+        final second = tester.getRect(find.byKey(otpCellKey(1)));
+        final gap = second.left - first.right;
+
+        expect(
+          gap / first.width,
+          closeTo(metrics.cellGap / metrics.cellSize, 0.01),
+          reason: 'gutters must shrink with the cells, not eat into them',
+        );
+        expect(
+          first.width,
+          lessThan(metrics.cellSize),
+          reason: 'the row genuinely had to shrink for this to prove anything',
+        );
+      },
+    );
+  });
+
   group(
     'AppOtpField Figma cell states (7305:1726 / 7324:7328 / 7055:27323)',
     () {

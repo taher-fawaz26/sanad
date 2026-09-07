@@ -71,6 +71,18 @@ class AppLottie extends StatelessWidget {
     );
   }
 
+  /// AI chat's center visual. Decorative — it communicates identity/presence,
+  /// not progress, so it freezes under reduced motion like an illustration
+  /// rather than keeps spinning like [AppLottie.loading].
+  factory AppLottie.aiAssistant({Key? key, double size = 200}) {
+    return AppLottie(
+      key: key,
+      asset: AppLottieAsset.aiAssistant,
+      size: size,
+      isDecorative: true,
+    );
+  }
+
   /// Which animation to play.
   final AppLottieAsset asset;
 

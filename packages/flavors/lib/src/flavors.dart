@@ -42,9 +42,7 @@ abstract final class Flavors {
       apiBaseUrl: 'https://qa-api.trysanad.us/api/v1/',
       refreshTokenPath: 'auth/refresh',
     ),
-    flags: FeatureFlags(
-
-    ),
+    flags: FeatureFlags(),
   );
 
   // ── Stage ─────────────────────────────────────────────────────────────────

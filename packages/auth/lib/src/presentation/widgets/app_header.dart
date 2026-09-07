@@ -1,7 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:localization/localization.dart';
 
 /// Language selector dropdown for app header.
@@ -13,7 +12,7 @@ class LanguageDropdown extends StatelessWidget {
     final currentLocale = context.locale;
     final colors = context.appColors;
 
-    return PopupMenuButton<Locale>(
+    return PopupMenuButton<AppLanguage>(
       offset: const Offset(0, 48),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -43,7 +42,7 @@ class LanguageDropdown extends StatelessWidget {
       ),
       itemBuilder: (context) => [
         PopupMenuItem(
-          value: const Locale('en', 'US'),
+          value: AppLanguage.english,
           child: Row(
             children: [
               if (currentLocale.languageCode == 'en')
@@ -60,7 +59,7 @@ class LanguageDropdown extends StatelessWidget {
           ),
         ),
         PopupMenuItem(
-          value: const Locale('ar', 'AR'),
+          value: AppLanguage.arabic,
           child: Row(
             children: [
               if (currentLocale.languageCode == 'ar')
@@ -77,16 +76,9 @@ class LanguageDropdown extends StatelessWidget {
           ),
         ),
       ],
-      onSelected: (locale) async {
-        // Two systems must stay in sync on a language change:
-        //   1. EasyLocalization — drives `.tr()` and RTL/LTR rebuilds.
-        //   2. TranslateBloc     — source of truth for `Accept-Language`.
-        await context.setLocale(locale);
-        if (!context.mounted) return;
-        context.read<TranslateBloc>().add(
-          locale.languageCode == 'ar' ? TrArabicEvent() : TrEnglishEvent(),
-        );
-      },
+      // The app's single language entry point: TranslateBloc owns the
+      // language and AppLocaleSync applies it to EasyLocalization.
+      onSelected: context.setAppLanguage,
     );
   }
 }

@@ -53,6 +53,43 @@ abstract final class AppConfig {
     ),
   };
 
+  /// The AI agent's streaming-chat endpoint (`POST` + `text/event-stream`).
+  ///
+  /// The current real transport. Temporary: the agent team cannot yet supply a
+  /// complete WebSocket contract, and this endpoint already emits the SANAD UI
+  /// Protocol v1 envelope verbatim. [aiAgentSocketUrl] is retained as the
+  /// reference transport, reachable with `?transport=ws`.
+  ///
+  /// Only the dev host has been exercised against a live server. The other
+  /// environments follow the same naming, but the chat route itself is
+  /// registered `if (!kReleaseMode)`, so a production build never opens this
+  /// connection — confirm the host with the agent team before that changes.
+  static String get aiAgentStreamUrl => switch (_env) {
+    'prod' => 'https://agent.trysanad.us/user-agent/chat/stream',
+    'stage' => 'https://agent-stage.trysanad.us/user-agent/chat/stream',
+    'qa' => 'https://agent-qa.trysanad.us/user-agent/chat/stream',
+    _ => 'https://agent-dev.trysanad.us/user-agent/chat/stream',
+  };
+
+  /// The AI agent's chat WebSocket endpoint.
+  ///
+  /// Kept as the reference transport behind `?transport=ws`; [aiAgentStreamUrl]
+  /// is what a normal visit to the chat now uses.
+  ///
+  /// TLS-only: the server rejects `ws://` outright (the handshake fails and
+  /// the socket closes 1006), so every environment is `wss://`.
+  ///
+  /// Only the dev host has been exercised against a live server. The other
+  /// environments follow the same naming, but the chat route itself is
+  /// registered `if (!kReleaseMode)`, so a production build never opens this
+  /// connection — confirm the host with the agent team before that changes.
+  static String get aiAgentSocketUrl => switch (_env) {
+    'prod' => 'wss://agent.trysanad.us/agent/chat/ws',
+    'stage' => 'wss://agent-stage.trysanad.us/agent/chat/ws',
+    'qa' => 'wss://agent-qa.trysanad.us/agent/chat/ws',
+    _ => 'wss://agent-dev.trysanad.us/agent/chat/ws',
+  };
+
   /// Trusted incoming-link sources for this app: the App Links / Universal
   /// Links host for the active environment, plus the `sanadclient://`
   /// custom scheme (registered on every environment for QA/testing before a

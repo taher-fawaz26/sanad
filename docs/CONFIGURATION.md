@@ -47,8 +47,23 @@ class NetworkConfig {
 Google Places autocomplete (the location & coverage-area search sheets) needs a
 Google API key, supplied as the `MAPS_API_KEY` dart-define. It is read in
 `apps/sanad_provider/lib/src/di/app_di.dart` via `String.fromEnvironment`. When
-absent/empty the maps package falls back to keyless mode (no autocomplete) — see
+absent/empty the maps package falls back to keyless mode — see
 `MapsConfig.placesEnabled`.
+
+> **Keyless mode is a broken build, not a supported mode.** `MapsConfig`
+> gates *three* things on the key, not just autocomplete:
+>
+> - Places autocomplete (search returns nothing, silently — no request, no error)
+> - Google `place_id` resolution for a dragged pin / current location
+>   (`ReverseGeocodePlaceUseCase`)
+> - serving-area discovery (`NoopNearbyAreasRepository`)
+>
+> The second one blocks branch creation outright: the branch payload requires a
+> `locationPlaceId`, so **Confirm on the Branch Location screen stays disabled
+> forever**. The screen still *looks* healthy, because the map renders from the
+> native manifest key and the pin still reverse-geocodes through the keyless
+> platform geocoder — only the Place ID is missing (SAN-823). `MapsDI.init`
+> logs this at error level on startup, which survives release log filtering.
 
 Keys are provided per platform through git-ignored dart-define files:
 
@@ -73,6 +88,14 @@ Launch configs (`.vscode/launch.json`) and the `build:provider:*` melos scripts
 already pass `--dart-define-from-file=dart_defines/<platform>.json`. **CI injects
 the real values** by writing these files (or overriding the define) at build
 time. Real keys are never committed — only the `*.example.json` templates are.
+
+**Android additionally derives the dart-define from `local.properties`**
+(`android/app/build.gradle.kts`), so a bare `flutter build apk --release` — which
+passes no dart-defines at all — still produces a working APK instead of a
+silently crippled one (SAN-823). An explicit `--dart-define`/`--dart-define-from-file`
+on the command line always wins, so the melos scripts and CI are unaffected. This
+makes `local.properties` the single source for **both** Maps consumers on Android:
+the native manifest placeholder and the Dart REST key.
 
 The Firebase Distribution workflow (`.github/workflows/firebase-distribution.yml`)
 injects the **`MAPS_API_KEY_ANDROID`** secret into the `sanad_provider` Android

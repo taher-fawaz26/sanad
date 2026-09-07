@@ -18,7 +18,10 @@ void main() {
   group('AppNavigationIcons', () {
     test('paths are rooted under assets/icons/navigation', () {
       expect(AppNavigationIcons.home, startsWith('assets/icons/navigation/'));
-      expect(AppNavigationIcons.centerAction, startsWith('assets/icons/navigation/'));
+      expect(
+        AppNavigationIcons.centerAction,
+        startsWith('assets/icons/navigation/'),
+      );
     });
   });
 

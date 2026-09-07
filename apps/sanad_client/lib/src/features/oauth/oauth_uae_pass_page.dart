@@ -1,3 +1,4 @@
+import 'package:app_animations/app_animations.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart' hide TextDirection;
 import 'package:flutter/material.dart';
@@ -36,7 +37,7 @@ class OAuthUaePassPage extends StatelessWidget {
             children: [
               Expanded(
                 child: SingleChildScrollView(
-                  child: Column(
+                  child: AppStaggeredColumn(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       SizedBox(height: responsiveDimension(AppSpacing.xxxxl)),

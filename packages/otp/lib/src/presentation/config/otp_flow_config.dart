@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:otp/src/domain/contracts/otp_verifier.dart';
 import 'package:otp/src/domain/enums/otp_channel.dart';
 import 'package:otp/src/domain/enums/otp_purpose.dart';
+import 'package:otp/src/presentation/config/otp_visual_style.dart';
 
 /// How the OTP screen is hosted. The *contents* are identical either way —
 /// only the surrounding container differs, so there is exactly one OTP UI.
@@ -41,6 +42,9 @@ class OtpFlowConfig<T> {
     this.dispatchErrorResolver,
     this.verifyLabel,
     this.pinActionToBottom = false,
+    this.animateContent = false,
+    this.animateBanner = false,
+    this.style,
   });
 
   /// Verify an email address. [purpose] defaults to [OtpPurpose.verifyEmail].
@@ -63,6 +67,9 @@ class OtpFlowConfig<T> {
     this.dispatchErrorResolver,
     this.verifyLabel,
     this.pinActionToBottom = false,
+    this.animateContent = false,
+    this.animateBanner = false,
+    this.style,
   }) : channel = OtpChannel.email;
 
   /// Verify a phone number. [purpose] defaults to [OtpPurpose.verifyPhone].
@@ -85,6 +92,9 @@ class OtpFlowConfig<T> {
     this.dispatchErrorResolver,
     this.verifyLabel,
     this.pinActionToBottom = false,
+    this.animateContent = false,
+    this.animateBanner = false,
+    this.style,
   }) : channel = OtpChannel.phone;
 
   final OtpChannel channel;
@@ -158,5 +168,30 @@ class OtpFlowConfig<T> {
   /// height — a full-screen `Scaffold.body` — since it wraps the scrollable
   /// content in an `Expanded`, which asserts against an unbounded-height
   /// ancestor (e.g. a content-sized bottom sheet).
+  ///
+  /// Honoured by the client layout only: the provider spec places its action
+  /// inline, above the countdown, in both its page and sheet frames.
   final bool pinActionToBottom;
+
+  /// Opt-in: play a one-shot staggered entrance on the OTP content
+  /// (icon → header → field → resend) when the screen first mounts.
+  ///
+  /// Defaults to `false` so existing consumers (the provider app, sheet
+  /// presentations) render exactly as before. The client OAuth OTP page turns
+  /// this on. Reduced-motion is honored by the underlying entrance primitive.
+  final bool animateContent;
+
+  /// Opt-in: crossfade the dispatch-error banner in/out instead of it
+  /// popping. Functional state-change motion (not reduced-motion gated).
+  ///
+  /// Defaults to `false` so existing consumers are byte-for-byte unchanged.
+  final bool animateBanner;
+
+  /// Pins this flow to one product's OTP visual specification.
+  ///
+  /// Leave `null` — the normal case. `OtpView` then reads the app-level
+  /// `OtpStyleScope`, so a flow defined in a package both apps depend on
+  /// renders the design of whichever app it is running in. Set it only where
+  /// a screen genuinely must render the other product's spec.
+  final OtpVisualStyle? style;
 }

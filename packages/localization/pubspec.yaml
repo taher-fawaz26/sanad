@@ -17,10 +17,16 @@ dependencies:
   flutter_bloc: ^9.1.1
   hydrated_bloc: ^11.0.0
   intl: ^0.20.2
+  # Only for the one-time migration off EasyLocalization's own locale storage
+  # (see LegacyLocalePreference). Already a transitive dependency of
+  # easy_localization, so this adds no new native dependency.
+  shared_preferences: ^2.5.3
 
 dev_dependencies:
+  bloc_test: ^10.0.0
   flutter_test:
     sdk: flutter
+  mocktail: ^1.0.4
   very_good_analysis: ^9.0.0
 
 flutter:

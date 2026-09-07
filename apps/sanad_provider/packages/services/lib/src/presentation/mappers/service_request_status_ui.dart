@@ -13,8 +13,7 @@ import 'package:services/src/domain/entities/service_request_status.dart';
 /// presentation concern, not more of this duplication.
 extension ServiceRequestStatusUi on ServiceRequestStatus {
   String get badgeLabel => switch (this) {
-    ServiceRequestStatus.underReview => 'services.request_status_pending'
-        .tr(),
+    ServiceRequestStatus.underReview => 'services.request_status_pending'.tr(),
     ServiceRequestStatus.approved => 'services.request_status_approved'.tr(),
     ServiceRequestStatus.rejected => 'services.request_status_rejected'.tr(),
     ServiceRequestStatus.all => '',

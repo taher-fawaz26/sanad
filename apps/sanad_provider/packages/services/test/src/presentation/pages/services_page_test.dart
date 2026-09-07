@@ -375,7 +375,8 @@ void main() {
     );
 
     testWidgets(
-      'clearing a no-match search restores the real list', (tester) async {
+      'clearing a no-match search restores the real list',
+      (tester) async {
         when(
           () => providerServicesRepo.listProviderServices(page: 1, limit: 10),
         ).thenAnswer((_) => TaskEither.of(_servicesPage()));

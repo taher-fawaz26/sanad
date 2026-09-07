@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:core/core.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:geolocator/geolocator.dart';
@@ -36,12 +38,27 @@ class LocationServiceImpl implements LocationService {
             code: error.code,
           );
         }
+        // Never leak a raw platform exception string to the UI — callers
+        // localize by [code] only. Map the well-known Geolocator/async
+        // failures to stable codes; anything else is a generic
+        // [unavailable] (SAN-778).
         return LocationFailure(
-          message: error.toString(),
-          code: LocationFailureCodes.unavailable,
+          message: 'Failed to resolve the current location.',
+          code: _codeForError(error),
         );
       },
     );
+  }
+
+  static String _codeForError(Object error) {
+    if (error is TimeoutException) return LocationFailureCodes.timeout;
+    if (error is LocationServiceDisabledException) {
+      return LocationFailureCodes.serviceDisabled;
+    }
+    if (error is PermissionDeniedException) {
+      return LocationFailureCodes.permissionDenied;
+    }
+    return LocationFailureCodes.unavailable;
   }
 
   @override
@@ -58,18 +75,29 @@ class LocationServiceImpl implements LocationService {
 
   @override
   Future<LocationPermissionStatus> requestPermission() async {
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) return LocationPermissionStatus.serviceDisabled;
-
+    // Request the app permission FIRST so the OS prompt appears even when
+    // device location services are currently off — otherwise tapping
+    // "use my current location" while location is disabled does nothing and
+    // never surfaces the permission dialog (SAN-778). The service-enabled
+    // check comes after, so a granted-but-disabled state still reports
+    // [serviceDisabled].
     final result = await _permissionService.request(
       PermissionType.locationWhenInUse,
     );
+    final status = _toLocationPermissionStatus(result);
+    if (status != LocationPermissionStatus.granted) return status;
 
-    return _toLocationPermissionStatus(result);
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return LocationPermissionStatus.serviceDisabled;
+
+    return LocationPermissionStatus.granted;
   }
 
   @override
   Future<bool> openAppSettings() => _permissionService.openSettings();
+
+  @override
+  Future<bool> openLocationSettings() => Geolocator.openLocationSettings();
 
   LocationPermissionStatus _toLocationPermissionStatus(
     PermissionResult result,
@@ -83,14 +111,11 @@ class LocationServiceImpl implements LocationService {
   }
 
   Future<LatLng> _resolveCurrentLocation() async {
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      throw const _LocationServiceException(
-        message: 'Location services are disabled.',
-        code: LocationFailureCodes.serviceDisabled,
-      );
-    }
-
+    // Request permission FIRST (before checking whether device location
+    // services are enabled) so the native permission prompt reliably appears
+    // on the first tap, even when location services are currently off — the
+    // previous service-first ordering returned early and never prompted
+    // (SAN-778).
     final result = await _permissionService.request(
       PermissionType.locationWhenInUse,
     );
@@ -105,6 +130,14 @@ class LocationServiceImpl implements LocationService {
       throw const _LocationServiceException(
         message: 'Location permission was denied.',
         code: LocationFailureCodes.permissionDenied,
+      );
+    }
+
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      throw const _LocationServiceException(
+        message: 'Location services are disabled.',
+        code: LocationFailureCodes.serviceDisabled,
       );
     }
 

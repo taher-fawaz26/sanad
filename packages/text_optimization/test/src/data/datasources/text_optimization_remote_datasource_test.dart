@@ -137,6 +137,7 @@ class _CapturingApiClient implements BaseApiClient {
     required FutureOr<T> Function(dynamic data) parser,
     Map<String, dynamic>? query,
     dynamic body,
+    bool authRequired = true,
   }) {
     onRequest(path, method, body);
     return TaskEither(() async {
@@ -160,6 +161,7 @@ class _ParserExceptionAwareApiClient implements BaseApiClient {
     required FutureOr<T> Function(dynamic data) parser,
     Map<String, dynamic>? query,
     dynamic body,
+    bool authRequired = true,
   }) => TaskEither<Failure, T>.tryCatch(
     () async => parser(data),
     (error, _) =>

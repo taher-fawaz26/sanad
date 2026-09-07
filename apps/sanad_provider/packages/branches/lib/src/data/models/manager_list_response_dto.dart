@@ -1,6 +1,6 @@
 import 'package:branches/src/data/models/branch_manager_dto.dart';
-import 'package:branches/src/domain/entities/paginated_branches_entity.dart';
-import 'package:branches/src/domain/entities/paginated_managers_entity.dart';
+import 'package:branches/src/domain/entities/branch_manager_entity.dart';
+import 'package:core/core.dart';
 
 class ManagerListResponseDto {
   const ManagerListResponseDto({required this.managers, required this.meta});
@@ -11,7 +11,7 @@ class ManagerListResponseDto {
         .toList();
 
     final metaJson = json['meta'] as Map<String, dynamic>;
-    final meta = BranchPaginationMeta(
+    final meta = PageMeta(
       totalItems: metaJson['totalItems'] as int? ?? 0,
       itemCount: metaJson['itemCount'] as int? ?? 0,
       itemsPerPage: metaJson['itemsPerPage'] as int? ?? 10,
@@ -23,10 +23,10 @@ class ManagerListResponseDto {
   }
 
   final List<BranchManagerDto> managers;
-  final BranchPaginationMeta meta;
+  final PageMeta meta;
 
-  PaginatedManagersEntity toDomain() => PaginatedManagersEntity(
-    managers: managers.map((m) => m.toDomain()).toList(),
+  Page<BranchManagerEntity> toPage() => Page<BranchManagerEntity>(
+    items: managers.map((m) => m.toDomain()).toList(),
     meta: meta,
   );
 }

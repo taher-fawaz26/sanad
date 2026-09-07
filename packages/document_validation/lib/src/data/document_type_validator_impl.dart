@@ -28,11 +28,11 @@ class DocumentTypeValidatorImpl implements DocumentTypeValidator {
     required DocumentType type,
   }) async {
     final looksLikeExpectedType = switch (type) {
-      DocumentType.emiratesIdFront ||
-      DocumentType.emiratesIdBack => await _emiratesIdScanner
-          .looksLikeEmiratesId(asset.path),
-      DocumentType.tradeLicense => await _tradeLicenseOcr
-          .looksLikeTradeLicense(asset.path),
+      DocumentType.emiratesIdFront || DocumentType.emiratesIdBack =>
+        await _emiratesIdScanner.looksLikeEmiratesId(asset.path),
+      DocumentType.tradeLicense => await _tradeLicenseOcr.looksLikeTradeLicense(
+        asset.path,
+      ),
       DocumentType.passport ||
       DocumentType.vehicleLicense ||
       DocumentType.other => true,

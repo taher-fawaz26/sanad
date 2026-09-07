@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:network/src/client/base_api_client.dart';
 import 'package:network/src/interceptors/auth_interceptor.dart';
 import 'package:network/src/token/token_manager.dart';
 
@@ -168,6 +169,41 @@ void main() {
       expect(tokens.refreshCalls, 0);
       expect(tokens.clearCalls, 1);
       expect(unauthorizedCallbacks, 1);
+    });
+
+    group('authRequired: false (public endpoints)', () {
+      test(
+        'attaches no Authorization header even when a token exists',
+        () async {
+          adapter.stage((options) => _ok('{"ok":true}', options));
+
+          await dio.post<dynamic>(
+            '/auth/client/verify',
+            options: Options(extra: {kAuthRequiredExtraKey: false}),
+          );
+
+          expect(adapter.capturedAuthHeaders.single, isNull);
+        },
+      );
+
+      test('a 401 does not refresh or force logout', () async {
+        tokens.refreshImpl = () async => 'a-2';
+        adapter.stage((options) => _status(401, options));
+
+        await expectLater(
+          dio.post<dynamic>(
+            '/auth/client/verify',
+            options: Options(extra: {kAuthRequiredExtraKey: false}),
+          ),
+          throwsA(isA<DioException>()),
+        );
+
+        // Public request: a 401 is a real backend answer, not an expired
+        // session. No refresh, no token wipe, no logout.
+        expect(tokens.refreshCalls, 0);
+        expect(tokens.clearCalls, 0);
+        expect(unauthorizedCallbacks, 0);
+      });
     });
   });
 }

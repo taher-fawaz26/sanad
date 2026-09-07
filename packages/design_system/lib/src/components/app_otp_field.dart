@@ -26,31 +26,106 @@ const int kDefaultOtpLength = 6;
 // literal hex values (`#EEEEEE` sits between `DarkPalette.shade100` and
 // `shade200`; `#A5A5A5` between `shade300` and `shade400`).
 
-/// OTP filled-digit font size.
-const double _kOtpDigitFontSize = 11.87;
-
-/// OTP filled-digit line height ratio (17.313 / 11.87).
-const double _kOtpDigitLineHeight = 17.313 / _kOtpDigitFontSize;
-
-/// OTP empty-cell placeholder ("_") font size — larger than the digit size
-/// so the placeholder reads as a baseline dash, not a tiny mark.
-const double _kOtpPlaceholderFontSize = 25.32;
-
-/// OTP placeholder line height ratio (35.166 / 25.32).
-const double _kOtpPlaceholderLineHeight = 35.166 / _kOtpPlaceholderFontSize;
-
-/// OTP focused-cell caret height (Figma node `7305:1731`).
-const double _kOtpCaretHeight = 21.1;
-
-/// OTP focused-cell caret stroke width (Figma node `7305:1731`).
-const double _kOtpCaretWidth = 0.703;
-
 /// Empty-cell border color — Figma legacy `02 - Dark/Color - Gray - 100`.
 const Color _kOtpEmptyBorderColor = Color(0xFFEEEEEE);
 
 /// Placeholder text + caret color — Figma legacy `02 - Dark/Color - Gray -
 /// 300`.
 const Color _kOtpNeutralAccentColor = Color(0xFFA5A5A5);
+
+/// The cell geometry and glyph sizing of one [AppOtpField] rendering.
+///
+/// Exists because the two products' OTP screens are drawn to genuinely
+/// different cell specs in Figma, and the field is otherwise identical
+/// between them — the editing model, keyboard handling, error semantics and
+/// accessibility are all shared. Rather than fork the widget (or scatter a
+/// dozen loose sizing parameters across its constructor), a caller picks a
+/// named preset.
+///
+/// Every value is an **unscaled design-pixel base**: [AppOtpField] runs each
+/// through `responsiveDimension` itself, exactly as it did when these numbers
+/// were hardcoded.
+@immutable
+class AppOtpFieldMetrics {
+  const AppOtpFieldMetrics({
+    required this.cellSize,
+    required this.cellGap,
+    required this.cellRadius,
+    required this.borderWidth,
+    required this.digitFontSize,
+    required this.digitLineHeightPx,
+    required this.placeholderFontSize,
+    required this.placeholderLineHeightPx,
+    required this.caretHeight,
+    required this.caretWidth,
+  });
+
+  /// Figma `7305:1726` / `7324:7328` — the client OTP screens' cell spec, and
+  /// the historical default of this widget (every existing caller renders
+  /// byte-for-byte as before).
+  const AppOtpFieldMetrics.standard()
+    : cellSize = 45.01,
+      cellGap = 13.209,
+      cellRadius = 9.907,
+      borderWidth = 1.407,
+      digitFontSize = 11.87,
+      digitLineHeightPx = 17.313,
+      placeholderFontSize = 25.32,
+      placeholderLineHeightPx = 35.166,
+      caretHeight = 21.1,
+      caretWidth = 0.703;
+
+  /// Figma `3809:18092` / `2142:14140` — the provider OTP screens' larger
+  /// cell spec (54.5dp cells, 16dp gutters, 13.6dp radius).
+  ///
+  /// The caret is not dimensioned in those frames; it is scaled from
+  /// [AppOtpFieldMetrics.standard] by the same 54.522/45.013 cell ratio so it
+  /// keeps its proportion inside the taller cell.
+  const AppOtpFieldMetrics.large()
+    : cellSize = 54.522,
+      cellGap = 16,
+      cellRadius = 13.631,
+      borderWidth = 1.704,
+      digitFontSize = 20.45,
+      digitLineHeightPx = 29.817,
+      placeholderFontSize = 30.67,
+      placeholderLineHeightPx = 42.596,
+      caretHeight = 25.56,
+      caretWidth = 0.851;
+
+  /// Width and height of one square cell.
+  final double cellSize;
+
+  /// Gutter between two adjacent cells.
+  final double cellGap;
+
+  final double cellRadius;
+
+  /// Border stroke of a cell in its resting state. A cell targeted for
+  /// replacement draws at twice this width.
+  final double borderWidth;
+
+  /// Font size of a filled digit.
+  final double digitFontSize;
+
+  /// Filled-digit line height, in design pixels (converted to a ratio).
+  final double digitLineHeightPx;
+
+  /// Font size of the empty-cell `_` placeholder — larger than
+  /// [digitFontSize] so it reads as a baseline dash, not a tiny mark.
+  final double placeholderFontSize;
+
+  /// Placeholder line height, in design pixels (converted to a ratio).
+  final double placeholderLineHeightPx;
+
+  final double caretHeight;
+  final double caretWidth;
+
+  double get digitLineHeight => digitLineHeightPx / digitFontSize;
+
+  double get placeholderLineHeight =>
+      placeholderLineHeightPx / placeholderFontSize;
+}
 
 /// Key for the tappable region of the OTP cell at [index] (0-based).
 ///
@@ -79,6 +154,7 @@ class AppOtpField extends StatefulWidget {
     this.controller,
     this.focusNode,
     this.length = kDefaultOtpLength,
+    this.metrics = const AppOtpFieldMetrics.standard(),
     this.enabled = true,
     this.autofocus = false,
     this.forceErrorState = false,
@@ -95,6 +171,11 @@ class AppOtpField extends StatefulWidget {
 
   /// Number of pin cells. Defaults to [kDefaultOtpLength] (6).
   final int length;
+
+  /// Cell geometry and glyph sizing. Defaults to
+  /// [AppOtpFieldMetrics.standard] — the spec this widget has always drawn.
+  /// The provider OTP screens pass [AppOtpFieldMetrics.large].
+  final AppOtpFieldMetrics metrics;
   final bool enabled;
   final bool autofocus;
   final bool forceErrorState;
@@ -397,21 +478,32 @@ class _AppOtpFieldState extends State<AppOtpField> {
   }
 
   Widget _buildCells({required bool hasError}) {
-    final designedCellSize = AppDimension.otpCellSize;
-    final gap = AppDimension.otpCellGap;
+    final designedCellSize = responsiveDimension(widget.metrics.cellSize);
+    final gap = responsiveDimension(widget.metrics.cellGap);
     return LayoutBuilder(
       builder: (context, constraints) {
         // Derive one `cellSize` for all six cells from the available width.
         // Every cell is built from the same value, so first/middle/last are
         // geometrically identical. When the row fits at its designed size,
-        // that is the size we use; otherwise every cell shrinks by the same
-        // amount, keeping the row balanced.
+        // that is the size we use; otherwise the whole row — cells *and*
+        // gutters — scales down by one shared factor, so an overflowing row
+        // keeps the cell:gap proportion its Figma frame specifies instead of
+        // letting fixed gutters eat into the cells.
+        //
+        // This matters because a frame is drawn with however many cells fit
+        // its mock, while `length` follows the backend's contract: the
+        // provider frames dimension five 54.5dp cells with 16dp gutters in
+        // the same width the six-digit code actually needs.
         var cellSize = designedCellSize;
-        final gapsTotal = gap * (widget.length - 1);
-        final maxCellFromWidth =
-            (constraints.maxWidth - gapsTotal) / widget.length;
-        if (maxCellFromWidth.isFinite && maxCellFromWidth < designedCellSize) {
-          cellSize = maxCellFromWidth;
+        var cellGap = gap;
+        final designedRowWidth =
+            designedCellSize * widget.length + gap * (widget.length - 1);
+        if (constraints.maxWidth.isFinite &&
+            constraints.maxWidth < designedRowWidth &&
+            designedRowWidth > 0) {
+          final scale = constraints.maxWidth / designedRowWidth;
+          cellSize = designedCellSize * scale;
+          cellGap = gap * scale;
         }
         return Center(
           child: Row(
@@ -419,7 +511,7 @@ class _AppOtpFieldState extends State<AppOtpField> {
             mainAxisSize: MainAxisSize.min,
             children: [
               for (var i = 0; i < widget.length; i++) ...[
-                if (i > 0) SizedBox(width: gap),
+                if (i > 0) SizedBox(width: cellGap),
                 GestureDetector(
                   key: otpCellKey(i),
                   behavior: HitTestBehavior.opaque,
@@ -449,7 +541,7 @@ class _AppOtpFieldState extends State<AppOtpField> {
     final colors = context.appColors;
     final typography = context.appTypography;
     final brightness = Theme.of(context).brightness;
-    final defaultWidth = responsiveDimension(AppDimension.otpCellBorderWidth);
+    final defaultWidth = responsiveDimension(widget.metrics.borderWidth);
     // No Figma-defined "selected for replacement" state exists (a static
     // frame can't show a tap interaction) — this affordance predates the
     // redesign and is preserved at proportionally the same 2x emphasis the
@@ -506,8 +598,8 @@ class _AppOtpFieldState extends State<AppOtpField> {
     }
 
     final baseTextStyle = typography.regularNormal.copyWith(
-      fontSize: responsiveDimension(_kOtpDigitFontSize),
-      height: _kOtpDigitLineHeight,
+      fontSize: responsiveDimension(widget.metrics.digitFontSize),
+      height: widget.metrics.digitLineHeight,
       fontWeight: FontWeight.w500,
       letterSpacing: 0,
       color: FieldTokens.valueColor(
@@ -518,15 +610,15 @@ class _AppOtpFieldState extends State<AppOtpField> {
     );
     final filledTextStyle = baseTextStyle.copyWith(color: filledDigitColor);
     final placeholderTextStyle = baseTextStyle.copyWith(
-      fontSize: responsiveDimension(_kOtpPlaceholderFontSize),
-      height: _kOtpPlaceholderLineHeight,
+      fontSize: responsiveDimension(widget.metrics.placeholderFontSize),
+      height: widget.metrics.placeholderLineHeight,
       color: _kOtpNeutralAccentColor,
     );
 
     final caret = _OtpCaret(
       color: _kOtpNeutralAccentColor,
-      height: responsiveDimension(_kOtpCaretHeight),
-      width: responsiveDimension(_kOtpCaretWidth),
+      height: responsiveDimension(widget.metrics.caretHeight),
+      width: responsiveDimension(widget.metrics.caretWidth),
     );
 
     return Container(
@@ -540,7 +632,7 @@ class _AppOtpFieldState extends State<AppOtpField> {
           enabled: widget.enabled,
         ),
         borderRadius: BorderRadius.circular(
-          responsiveDimension(AppDimension.otpCellRadius),
+          responsiveDimension(widget.metrics.cellRadius),
         ),
         border: Border.all(color: borderColor, width: borderWidth),
       ),

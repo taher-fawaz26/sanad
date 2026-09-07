@@ -2,12 +2,13 @@ import 'package:app_logger/src/app_logger.dart';
 
 /// A sink for errors captured by the global handlers (zone, framework,
 /// platform, bloc).
-typedef ErrorSink = void Function(
-  Object error,
-  StackTrace stackTrace, {
-  bool fatal,
-  Map<String, dynamic>? context,
-});
+typedef ErrorSink =
+    void Function(
+      Object error,
+      StackTrace stackTrace, {
+      bool fatal,
+      Map<String, dynamic>? context,
+    });
 
 /// Single ownership point for reporting captured errors.
 ///

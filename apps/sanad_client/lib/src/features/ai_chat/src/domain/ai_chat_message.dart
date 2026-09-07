@@ -1,5 +1,6 @@
 import 'package:ai_ui_protocol/ai_ui_protocol.dart';
 import 'package:equatable/equatable.dart';
+import 'package:sanad_client/src/features/ai_chat/src/domain/entities/ai_chat_attachment.dart';
 
 /// Who authored a message.
 enum AiChatRole {
@@ -39,6 +40,7 @@ final class AiChatMessage extends Equatable {
     this.document,
     this.status = AiChatMessageStatus.complete,
     this.createdAt,
+    this.attachments = const [],
   });
 
   /// Creates a user turn.
@@ -46,6 +48,7 @@ final class AiChatMessage extends Equatable {
     required this.id,
     required this.text,
     this.createdAt,
+    this.attachments = const [],
   }) : role = AiChatRole.user,
        document = null,
        status = AiChatMessageStatus.complete;
@@ -68,6 +71,17 @@ final class AiChatMessage extends Equatable {
   /// When the client first saw the message.
   final DateTime? createdAt;
 
+  /// Images, documents and voice notes sent with this turn.
+  ///
+  /// Defaults to empty, which is what makes this an additive change: every
+  /// existing construction site keeps compiling and every text-only message
+  /// behaves exactly as before. One conversation holds every modality — an
+  /// image turn, a voice turn and a document turn sit in the same list.
+  final List<AiChatAttachment> attachments;
+
+  /// Whether this turn carries anything but text.
+  bool get hasAttachments => attachments.isNotEmpty;
+
   /// Whether text is still arriving for this message.
   bool get isStreaming => status == AiChatMessageStatus.streaming;
 
@@ -76,13 +90,15 @@ final class AiChatMessage extends Equatable {
 
   /// True when there is nothing at all to draw — used to decide whether a
   /// bubble is worth keeping after a payload was entirely rejected.
-  bool get isEmpty => text.isEmpty && !hasUi && !isStreaming;
+  bool get isEmpty =>
+      text.isEmpty && !hasUi && !isStreaming && attachments.isEmpty;
 
   /// Returns a copy with the given fields replaced.
   AiChatMessage copyWith({
     String? text,
     AiUiDocument? document,
     AiChatMessageStatus? status,
+    List<AiChatAttachment>? attachments,
   }) => AiChatMessage(
     id: id,
     role: role,
@@ -90,8 +106,20 @@ final class AiChatMessage extends Equatable {
     document: document ?? this.document,
     status: status ?? this.status,
     createdAt: createdAt,
+    attachments: attachments ?? this.attachments,
   );
 
+  // `attachments` must stay in here: the message list rebuilds on
+  // `previous.messages != current.messages`, so a field left out of `props`
+  // would render once and then silently never update.
   @override
-  List<Object?> get props => [id, role, text, document, status, createdAt];
+  List<Object?> get props => [
+    id,
+    role,
+    text,
+    document,
+    status,
+    createdAt,
+    attachments,
+  ];
 }

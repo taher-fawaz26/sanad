@@ -12,8 +12,9 @@ MapControlBar(
   children: [
     MapZoomControls(cameraController: controller),
     MapMyLocationButton(
-      cameraController: controller,
-      getCurrentLocationUseCase: useCase,
+      isLoading: state.isLocating,
+      onPressed: () =>
+          bloc.add(const LocationPickerCurrentLocationRequested()),
     ),
   ],
 )
@@ -26,11 +27,17 @@ Zoom in/out buttons with min/max guards.
 - Uses `AppIconButton` + `AppShadows.small` from design system
 
 ## MapMyLocationButton
-GPS "my location" button with loading state.
-- Calls `GetCurrentLocationUseCase` on tap
-- Animates camera to current position
-- Shows `CircularProgressIndicator` while loading
-- Prevents duplicate taps during loading
+Presentational GPS "my location" (crosshair) button.
+- Purely presentational: renders a spinner when `isLoading`, otherwise the
+  crosshair icon, and delegates the tap via `onPressed`.
+- Owns **no** location logic. The whole current-location sequence —
+  permission/service resolution, GPS fetch, supported-area validation, camera
+  move, reverse-geocode, retry and lifecycle recovery — lives in
+  `LocationPickerBloc` (`LocationPickerCurrentLocationRequested`), so there is a
+  single state machine and one in-flight guard. A failed attempt never
+  clobbers a valid selection; it surfaces via `state.currentLocationFailure`
+  (inline panel when no selection, transient snackbar when one exists). See
+  SAN-778.
 
 ## Best Practices
 - Wrap controls in `MapControlBar` for consistent positioning
