@@ -1621,6 +1621,431 @@ void main() {
     });
   });
 
+  group('locking a take', () {
+    test('a held take locks and keeps recording', () async {
+      await withBloc((bloc) async {
+        bloc.add(const AiComposerRecordingStarted());
+        await pumpEventQueue();
+
+        bloc.add(const AiComposerRecordingLocked());
+        await pumpEventQueue();
+
+        expect(bloc.state.recording, AiRecordingStatus.lockedRecording);
+        // Nothing is asked of the recorder: the microphone was already open
+        // and stays open. Only the way the take *ends* changed.
+        expect(recorder.stopCount, 0);
+        expect(recorder.cancelCount, 0);
+        expect(recorder.startCount, 1);
+      });
+    });
+
+    test('a locked take is still capturing', () async {
+      // Every guard in this bloc is built on `isCapturing`. If locking fell
+      // out of it, the duration cap, backgrounding cleanup and dictation's
+      // mutual exclusion would all quietly stop covering a locked take.
+      expect(AiRecordingStatus.lockedRecording.isCapturing, isTrue);
+      expect(AiRecordingStatus.lockedRecording.occupiesComposer, isTrue);
+      expect(AiRecordingStatus.lockedRecording.showsRecordingRow, isTrue);
+      expect(AiRecordingStatus.lockedRecording.blocksSend, isTrue);
+    });
+
+    test('locking is ignored from every status but recording', () async {
+      for (final status in [
+        AiRecordingStatus.idle,
+        AiRecordingStatus.permissionDenied,
+        AiRecordingStatus.failed,
+      ]) {
+        await withBloc((bloc) async {
+          // Reached without a take, so the lock has nothing to act on.
+          if (status == AiRecordingStatus.permissionDenied) {
+            permissions.microphone = AiPermissionOutcome.denied;
+            bloc.add(const AiComposerRecordingStarted());
+            await pumpEventQueue();
+          }
+
+          bloc.add(const AiComposerRecordingLocked());
+          await pumpEventQueue();
+
+          expect(
+            bloc.state.recording,
+            isNot(AiRecordingStatus.lockedRecording),
+          );
+        });
+        permissions.microphone = AiPermissionOutcome.granted;
+      }
+    });
+
+    test('an explicit stop ends a locked take', () async {
+      await withBloc((bloc) async {
+        bloc.add(const AiComposerRecordingStarted());
+        await pumpEventQueue();
+        bloc.add(const AiComposerRecordingLocked());
+        await pumpEventQueue();
+
+        await recorder.emitSample(0.7, const Duration(seconds: 4));
+        bloc.add(const AiComposerRecordingStopped());
+        await pumpEventQueue();
+
+        expect(bloc.state.recording, AiRecordingStatus.preview);
+        expect(bloc.state.attachments.single, isA<AiAudioAttachment>());
+        expect(recorder.stopCount, 1);
+      });
+    });
+
+    test('deleting a locked take discards the file', () async {
+      await withBloc((bloc) async {
+        bloc.add(const AiComposerRecordingStarted());
+        await pumpEventQueue();
+        bloc.add(const AiComposerRecordingLocked());
+        await pumpEventQueue();
+        await recorder.emitSample(0.7, const Duration(seconds: 4));
+
+        bloc.add(const AiComposerRecordingCancelled());
+        await pumpEventQueue();
+
+        expect(bloc.state.recording, AiRecordingStatus.idle);
+        expect(bloc.state.attachments, isEmpty);
+        expect(recorder.cancelCount, 1);
+        expect(recorder.stopCount, 0);
+      });
+    });
+
+    test('backgrounding a locked take cleans it up', () async {
+      await withBloc((bloc) async {
+        bloc.add(const AiComposerRecordingStarted());
+        await pumpEventQueue();
+        bloc.add(const AiComposerRecordingLocked());
+        await pumpEventQueue();
+        await recorder.emitSample(0.7, const Duration(seconds: 4));
+
+        bloc.add(const AiComposerBackgrounded());
+        await pumpEventQueue();
+
+        expect(bloc.state.recording, AiRecordingStatus.idle);
+        expect(recorder.cancelCount, 1);
+      });
+    });
+
+    test('a locked take still stops itself at the duration cap', () async {
+      await withBloc((bloc) async {
+        bloc.add(const AiComposerRecordingStarted());
+        await pumpEventQueue();
+        bloc.add(const AiComposerRecordingLocked());
+        await pumpEventQueue();
+
+        await recorder.emitSample(0.5, rules.maxRecordingDuration);
+        await pumpEventQueue();
+
+        expect(bloc.state.recording, AiRecordingStatus.preview);
+        expect(recorder.stopCount, 1);
+      });
+    });
+
+    test('autoLock starts a take already hands-free', () async {
+      // The accessibility path. It is a flag on the start rather than a
+      // following lock event because `sequential()` orders events only within
+      // one type, so two events would race the permission round-trip.
+      await withBloc((bloc) async {
+        bloc.add(const AiComposerRecordingStarted(autoLock: true));
+        await pumpEventQueue();
+
+        expect(bloc.state.recording, AiRecordingStatus.lockedRecording);
+      });
+    });
+  });
+
+  group('a take that is too short is a mis-tap, not a message', () {
+    test('it is discarded rather than attached', () async {
+      await withBloc((bloc) async {
+        bloc.add(const AiComposerRecordingStarted());
+        await pumpEventQueue();
+        await recorder.emitSample(0.6, const Duration(milliseconds: 200));
+
+        bloc.add(const AiComposerRecordingStopped());
+        await pumpEventQueue();
+
+        expect(bloc.state.recording, AiRecordingStatus.idle);
+        expect(bloc.state.attachments, isEmpty);
+        // Cancelled, not stopped: `stop()` on a take this brief returns either
+        // nothing or an unplayable blip, and cancel is what deletes the file.
+        expect(recorder.cancelCount, 1);
+        expect(recorder.stopCount, 0);
+      });
+    });
+
+    test('it coaches rather than blames', () async {
+      await withBloc((bloc) async {
+        bloc.add(const AiComposerRecordingStarted());
+        await pumpEventQueue();
+        await recorder.emitSample(0.6, const Duration(milliseconds: 200));
+        bloc.add(const AiComposerRecordingStopped());
+        await pumpEventQueue();
+
+        expect(bloc.state.notice?.messageKey, 'ai_chat.recording_too_short');
+        expect(bloc.state.notice?.tone, AiNoticeTone.info);
+      });
+    });
+
+    test('a take at the threshold is kept', () async {
+      await withBloc((bloc) async {
+        bloc.add(const AiComposerRecordingStarted());
+        await pumpEventQueue();
+        await recorder.emitSample(0.6, rules.minRecordingDuration);
+        bloc.add(const AiComposerRecordingStopped());
+        await pumpEventQueue();
+
+        expect(bloc.state.recording, AiRecordingStatus.preview);
+        expect(bloc.state.attachments, hasLength(1));
+      });
+    });
+
+    test('a tap on the microphone starts nothing at all', () async {
+      await withBloc((bloc) async {
+        bloc.add(const AiComposerRecordingHintRequested());
+        await pumpEventQueue();
+
+        expect(bloc.state.recording, AiRecordingStatus.idle);
+        expect(recorder.startCount, 0);
+        expect(bloc.state.notice?.messageKey, 'ai_chat.record_hold_hint');
+        expect(bloc.state.notice?.tone, AiNoticeTone.info);
+      });
+    });
+  });
+
+  group('a release that beats the take it belongs to', () {
+    // `sequential()` orders events only within one event type — `Bloc.on<E>`
+    // filters the stream by `E` before applying the transformer — so a stop
+    // does NOT queue behind a start. Every test here would pass vacuously if
+    // it did, and every one of them fails without `_startInFlight`.
+
+    test('releasing during the permission prompt starts nothing', () async {
+      await withBloc((bloc) async {
+        permissions.microphoneGate = Completer<void>();
+        bloc.add(const AiComposerRecordingStarted());
+        await pumpEventQueue();
+        expect(bloc.state.recording, AiRecordingStatus.requestingPermission);
+
+        // The finger comes up while the OS dialog still has the pointer.
+        bloc.add(const AiComposerRecordingStopped());
+        await pumpEventQueue();
+
+        permissions.microphoneGate!.complete();
+        await pumpEventQueue();
+
+        expect(bloc.state.recording, AiRecordingStatus.idle);
+        // The microphone was never opened, so there is no session to release
+        // and no partial file to delete.
+        expect(recorder.startCount, 0);
+        expect(bloc.state.attachments, isEmpty);
+      });
+    });
+
+    test(
+      'the gesture being cancelled during the prompt starts nothing',
+      () async {
+        // The shape of the first-ever permission dialog: it steals the pointer,
+        // the recognizer reports a cancellation, and the grant arrives after.
+        await withBloc((bloc) async {
+          permissions.microphoneGate = Completer<void>();
+          bloc.add(const AiComposerRecordingStarted());
+          await pumpEventQueue();
+
+          bloc.add(const AiComposerRecordingCancelled());
+          await pumpEventQueue();
+
+          permissions.microphoneGate!.complete();
+          await pumpEventQueue();
+
+          expect(bloc.state.recording, AiRecordingStatus.idle);
+          expect(recorder.startCount, 0);
+          expect(bloc.state.notice, isNull);
+        });
+      },
+    );
+
+    test('a cancel supersedes a stop latched before it', () async {
+      await withBloc((bloc) async {
+        permissions.microphoneGate = Completer<void>();
+        bloc.add(const AiComposerRecordingStarted());
+        await pumpEventQueue();
+
+        bloc
+          ..add(const AiComposerRecordingStopped())
+          ..add(const AiComposerRecordingCancelled());
+        await pumpEventQueue();
+
+        permissions.microphoneGate!.complete();
+        await pumpEventQueue();
+
+        expect(bloc.state.recording, AiRecordingStatus.idle);
+        expect(bloc.state.attachments, isEmpty);
+      });
+    });
+
+    test('backgrounding during the prompt starts nothing', () async {
+      await withBloc((bloc) async {
+        permissions.microphoneGate = Completer<void>();
+        bloc.add(const AiComposerRecordingStarted());
+        await pumpEventQueue();
+
+        bloc.add(const AiComposerBackgrounded());
+        await pumpEventQueue();
+
+        permissions.microphoneGate!.complete();
+        await pumpEventQueue();
+
+        expect(bloc.state.recording, AiRecordingStatus.idle);
+        expect(recorder.startCount, 0);
+      });
+    });
+
+    test('a lock during the prompt is honoured, not dropped', () async {
+      // A fast upward flick can beat a platform-channel permission round-trip
+      // on a cold device. Dropping it would leave the user's finger coming up
+      // onto an unlocked take after they watched the lock affordance engage.
+      await withBloc((bloc) async {
+        permissions.microphoneGate = Completer<void>();
+        bloc.add(const AiComposerRecordingStarted());
+        await pumpEventQueue();
+
+        bloc.add(const AiComposerRecordingLocked());
+        await pumpEventQueue();
+
+        permissions.microphoneGate!.complete();
+        await pumpEventQueue();
+
+        expect(bloc.state.recording, AiRecordingStatus.lockedRecording);
+      });
+    });
+
+    test('a cancel and a stop together leave one clean outcome', () async {
+      // The cancel-drag that also ends in a release. Two terminal intents,
+      // different event types, so they run concurrently — without the release
+      // guard the stop calls `stop()` on a recorder the cancel already tore
+      // down and a deliberate discard reports "nothing was recorded".
+      await withBloc((bloc) async {
+        bloc.add(const AiComposerRecordingStarted());
+        await pumpEventQueue();
+        await recorder.emitSample(0.6, const Duration(seconds: 3));
+
+        bloc
+          ..add(const AiComposerRecordingCancelled())
+          ..add(const AiComposerRecordingStopped());
+        await pumpEventQueue();
+
+        expect(bloc.state.recording, AiRecordingStatus.idle);
+        expect(bloc.state.attachments, isEmpty);
+        expect(recorder.stopCount, 0);
+        expect(bloc.state.notice, isNull);
+      });
+    });
+  });
+
+  group('what the composer draws for a take', () {
+    test(
+      'a previewed take is the preview take, and is not in the strip',
+      () async {
+        await withBloc((bloc) async {
+          await _record(bloc, recorder);
+
+          final take = bloc.state.previewTake;
+          expect(take, isNotNull);
+          expect(bloc.state.attachments, contains(take));
+          // The preview row draws it; the strip must not draw it again.
+          expect(bloc.state.stripAttachments, isEmpty);
+        });
+      },
+    );
+
+    test('other attachments still reach the strip beside a preview', () async {
+      await withBloc((bloc) async {
+        source.result = AiAttachmentsPicked([
+          documentFixture(),
+        ]);
+        bloc.add(
+          const AiComposerAttachmentRequested(AiAttachmentIntent.document),
+        );
+        await pumpEventQueue();
+
+        await _record(bloc, recorder);
+
+        expect(bloc.state.attachments, hasLength(2));
+        expect(bloc.state.stripAttachments, hasLength(1));
+        expect(bloc.state.stripAttachments.single, isA<AiDocumentAttachment>());
+      });
+    });
+
+    test('there is no preview take outside preview', () async {
+      await withBloc((bloc) async {
+        bloc.add(const AiComposerRecordingStarted());
+        await pumpEventQueue();
+
+        expect(bloc.state.previewTake, isNull);
+      });
+    });
+
+    test('removing the previewed take returns the composer to idle', () async {
+      await withBloc((bloc) async {
+        await _record(bloc, recorder);
+        final take = bloc.state.attachments.single;
+
+        bloc.add(AiComposerAttachmentRemoved(take.id));
+        await pumpEventQueue();
+
+        expect(bloc.state.recording, AiRecordingStatus.idle);
+        expect(bloc.state.attachments, isEmpty);
+        expect(recorder.discarded, contains(take.localPath));
+      });
+    });
+
+    test('a take under preview blocks a second one from starting', () async {
+      // What makes the removal above unambiguous: while a take is previewed
+      // there can never be a *live* recorder for a removal to strand.
+      await withBloc((bloc) async {
+        await _record(bloc, recorder);
+
+        bloc.add(const AiComposerRecordingStarted());
+        await pumpEventQueue();
+
+        expect(bloc.state.recording, AiRecordingStatus.preview);
+        expect(recorder.startCount, 1);
+      });
+    });
+  });
+
+  group('canSend across a take', () {
+    test('every state before a take exists blocks, preview does not', () {
+      const withText = 'hello';
+      for (final status in AiRecordingStatus.values) {
+        final state = AiComposerState(recording: status);
+        expect(
+          state.canSend(withText),
+          !status.blocksSend,
+          reason: 'canSend disagreed with blocksSend for $status',
+        );
+      }
+
+      // Spelled out, so the intent survives a change to `blocksSend`.
+      expect(
+        const AiComposerState(
+          recording: AiRecordingStatus.lockedRecording,
+        ).canSend(withText),
+        isFalse,
+      );
+      expect(
+        const AiComposerState(
+          recording: AiRecordingStatus.encoding,
+        ).canSend(withText),
+        isFalse,
+      );
+      expect(
+        const AiComposerState(
+          recording: AiRecordingStatus.preview,
+        ).canSend(withText),
+        isTrue,
+      );
+    });
+  });
 }
 
 /// Drives one full take to `preview` and leaves it staged.

@@ -93,12 +93,22 @@ class AiComposerBloc extends Bloc<AiComposerEvent, AiComposerState> {
     on<AiComposerSubmitted>(_onSubmitted);
     on<AiComposerNoticeDismissed>(_onNoticeDismissed);
     on<AiComposerSettingsRequested>(_onSettingsRequested);
-    // Recording transitions must never interleave: a stop that overtook its
-    // start would strand the recorder. `sequential` is the whole guarantee.
+    // `sequential` keeps two events *of the same type* from interleaving — a
+    // second stop cannot overtake the first. It does **not** order events
+    // across types: `Bloc.on<E>` filters the stream by `E` before applying the
+    // transformer, so each registration below is its own pipeline and a stop
+    // runs concurrently with a start. Ordering *between* recording transitions
+    // is what `_startInFlight` / `_pendingRelease` / `_releaseInFlight` are
+    // for; do not delete them believing this transformer covers it.
     on<AiComposerRecordingStarted>(
       _onRecordingStarted,
       transformer: sequential(),
     );
+    on<AiComposerRecordingLocked>(
+      _onRecordingLocked,
+      transformer: sequential(),
+    );
+    on<AiComposerRecordingHintRequested>(_onRecordingHintRequested);
     on<AiComposerRecordingStopped>(
       _onRecordingStopped,
       transformer: sequential(),
@@ -239,6 +249,39 @@ class AiComposerBloc extends Bloc<AiComposerEvent, AiComposerState> {
   /// exactly as it found them.
   bool _transcribingTake = false;
 
+  /// True from the moment [_onRecordingStarted] begins until it returns.
+  ///
+  /// Bringing a take up is several awaits long — a permission round-trip, an
+  /// availability check, the recorder itself — and every other recording
+  /// handler runs concurrently with it (see the transformer note in the
+  /// constructor). Those handlers read this instead of `state`, because during
+  /// the window `state.recording` is `requestingPermission`, which every guard
+  /// built on `isCapturing` correctly refuses to act on — and refusing is
+  /// exactly wrong here: it leaves the take to start with nobody holding it.
+  bool _startInFlight = false;
+
+  /// A release the user performed while the take was still being brought up.
+  ///
+  /// Replayed by [_onRecordingStarted]'s `finally` once the take really
+  /// exists, so it runs through the real handler rather than a second copy of
+  /// its teardown.
+  _PendingRelease? _pendingRelease;
+
+  /// A lock the user performed while the take was still being brought up, or
+  /// asked for up front via `AiComposerRecordingStarted.autoLock`.
+  bool _pendingLock = false;
+
+  /// True while a stop or a cancel is running.
+  ///
+  /// At most one terminal transition per take. Without this, a cancel-drag
+  /// followed by the finger lifting dispatches both — different event types,
+  /// so they run concurrently — and the stop calls `_recorder.stop()` on a
+  /// recorder the cancel already tore down, turning a deliberate cancellation
+  /// into a "nothing was recorded" failure. Enforced here rather than in the
+  /// gesture widget so it is an invariant of the bloc and testable without a
+  /// `testWidgets`.
+  bool _releaseInFlight = false;
+
   StreamSubscription<AiRecordingSample>? _sampleSubscription;
   StreamSubscription<AiRecordingAbort>? _abortSubscription;
   StreamSubscription<AiPlaybackProgress>? _progressSubscription;
@@ -334,7 +377,19 @@ class AiComposerBloc extends Bloc<AiComposerEvent, AiComposerState> {
     emit(
       state.copyWith(
         attachments: state.attachments.where((a) => a.id != event.id).toList(),
-        recording: removed is AiAudioAttachment ? AiRecordingStatus.idle : null,
+        // Only a *previewed* take returns the status to idle. Today no other
+        // shape is reachable — `_onRecordingStarted` refuses while
+        // `occupiesComposer`, so a staged voice note and a live recorder
+        // cannot coexist — but the unqualified check said "any audio
+        // attachment removed means recording is over", which is a claim about
+        // the recorder that this handler is in no position to make. The moment
+        // keeping one take and starting another is allowed, it would strand
+        // the second recorder.
+        recording:
+            removed is AiAudioAttachment &&
+                state.recording == AiRecordingStatus.preview
+            ? AiRecordingStatus.idle
+            : null,
       ),
     );
 
@@ -386,62 +441,196 @@ class AiComposerBloc extends Bloc<AiComposerEvent, AiComposerState> {
       return;
     }
 
-    _envelope.reset();
-    emit(state.copyWith(recording: AiRecordingStatus.requestingPermission));
-
-    final outcome = await _permissions.ensureMicrophone();
-    if (_closed) return;
-
-    if (!outcome.isGranted) {
-      emit(
-        state.copyWith(
-          recording: AiRecordingStatus.permissionDenied,
-          notice: _notice(
-            outcome.needsSettings
-                ? 'ai_chat.microphone_denied_permanently'
-                : 'ai_chat.microphone_denied',
-            canOpenSettings: outcome.needsSettings,
-          ),
-        ),
-      );
-      return;
-    }
-
-    if (!await _recorder.isAvailable) {
-      if (_closed) return;
-      emit(
-        state.copyWith(
-          recording: AiRecordingStatus.failed,
-          notice: _notice('ai_chat.microphone_unavailable'),
-        ),
-      );
-      return;
-    }
-
+    _startInFlight = true;
+    _pendingRelease = null;
+    _pendingLock = event.autoLock;
     try {
-      await _recorder.start(maxDuration: rules.maxRecordingDuration);
+      _envelope.reset();
+      // The min-take guard reads this clock, so it must belong to *this* take
+      // and not carry the previous one's last reading.
+      recordingLevel.reset();
+      emit(state.copyWith(recording: AiRecordingStatus.requestingPermission));
+
+      final outcome = await _permissions.ensureMicrophone();
       if (_closed) return;
-      emit(state.copyWith(recording: AiRecordingStatus.recording));
-      // After the recorder, never before: the audio file is the deliverable
-      // and must not wait on a recogniser that may not be there. Awaited so a
-      // stop cannot overtake the start, but every failure inside is swallowed.
-      await _startTakeTranscription();
-    } on Object {
-      if (_closed) return;
-      emit(
-        state.copyWith(
-          recording: AiRecordingStatus.failed,
-          notice: _notice('ai_chat.recording_failed'),
-        ),
-      );
+
+      if (!outcome.isGranted) {
+        emit(
+          state.copyWith(
+            recording: AiRecordingStatus.permissionDenied,
+            notice: _notice(
+              outcome.needsSettings
+                  ? 'ai_chat.microphone_denied_permanently'
+                  : 'ai_chat.microphone_denied',
+              canOpenSettings: outcome.needsSettings,
+            ),
+          ),
+        );
+        return;
+      }
+
+      // Released before the microphone was ever opened — the common shape of
+      // the first-ever permission prompt, which steals the pointer and cancels
+      // the gesture while this handler is parked above. Returning here skips an
+      // audio-session activate/start/cancel round-trip for a take nobody
+      // wanted, and says nothing: the user tapped Allow and can now press and
+      // hold, which is what every messaging app does.
+      if (_pendingRelease != null) {
+        emit(state.copyWith(recording: AiRecordingStatus.idle));
+        return;
+      }
+
+      if (!await _recorder.isAvailable) {
+        if (_closed) return;
+        emit(
+          state.copyWith(
+            recording: AiRecordingStatus.failed,
+            notice: _notice('ai_chat.microphone_unavailable'),
+          ),
+        );
+        return;
+      }
+
+      try {
+        await _recorder.start(maxDuration: rules.maxRecordingDuration);
+        if (_closed) return;
+        // The single point where a take's interaction is decided, which is why
+        // `autoLock` is a flag on this event rather than a second one.
+        emit(
+          state.copyWith(
+            recording: _pendingLock
+                ? AiRecordingStatus.lockedRecording
+                : AiRecordingStatus.recording,
+          ),
+        );
+        // After the recorder, never before: the audio file is the deliverable
+        // and must not wait on a recogniser that may not be there. Every
+        // failure inside is swallowed.
+        await _startTakeTranscription();
+      } on Object {
+        if (_closed) return;
+        emit(
+          state.copyWith(
+            recording: AiRecordingStatus.failed,
+            notice: _notice('ai_chat.recording_failed'),
+          ),
+        );
+      }
+    } finally {
+      // A `finally` and not an inline check after each await: the release can
+      // land at any of the five await boundaries above, and this covers all of
+      // them in one place.
+      _startInFlight = false;
+      final release = _pendingRelease;
+      _pendingRelease = null;
+      _pendingLock = false;
+
+      // Replay it now the take really exists, through the real handler rather
+      // than a second copy of its teardown. The elapsed clock is still near
+      // zero, so a replayed stop lands in the min-take guard and is cleaned up
+      // there.
+      if (release != null && !_closed && state.recording.isCapturing) {
+        add(
+          release == _PendingRelease.cancel
+              ? const AiComposerRecordingCancelled()
+              : const AiComposerRecordingStopped(),
+        );
+      }
     }
   }
+
+  /// The take goes hands-free.
+  ///
+  /// Nothing is asked of the recorder: the microphone is already live, the
+  /// samples are already arriving, and the file is already being written. All
+  /// that changes is which interaction ends the take — which is exactly why
+  /// this is one `emit` and not a second recording path.
+  ///
+  /// Only a held take can lock. A lock arriving against `requestingPermission`,
+  /// `encoding`, `preview` or a failure is a gesture the state machine has
+  /// already moved past; the accessibility path, which wants a take that is
+  /// locked from the outset, uses `AiComposerRecordingStarted(locked: true)`
+  /// instead of racing this.
+  Future<void> _onRecordingLocked(
+    AiComposerRecordingLocked event,
+    Emitter<AiComposerState> emit,
+  ) async {
+    // Locked before the take finished coming up: latch it, and the start
+    // handler applies it at its single decision point. Reachable in practice —
+    // the long-press deadline fires, then a fast upward flick can beat a
+    // platform-channel permission round-trip on a cold device — and dropping it
+    // would leave the user's finger coming up onto an unlocked take after they
+    // saw the lock affordance engage.
+    if (_startInFlight) {
+      _pendingLock = true;
+      return;
+    }
+    // Anything else — idle, permissionDenied, a take already failed by an
+    // interruption, encoding, preview, or already locked — is a stale
+    // affordance and says nothing.
+    if (state.recording != AiRecordingStatus.recording) return;
+    emit(state.copyWith(recording: AiRecordingStatus.lockedRecording));
+  }
+
+  /// The user tapped the microphone rather than holding it.
+  ///
+  /// Deliberately does not start anything. The hold threshold exists so a
+  /// brush against the button cannot put a voice message into the
+  /// conversation, and a tap that quietly started one would defeat it.
+  void _onRecordingHintRequested(
+    AiComposerRecordingHintRequested event,
+    Emitter<AiComposerState> emit,
+  ) => emit(
+    state.copyWith(
+      notice: _notice('ai_chat.record_hold_hint', tone: AiNoticeTone.info),
+    ),
+  );
 
   Future<void> _onRecordingStopped(
     AiComposerRecordingStopped event,
     Emitter<AiComposerState> emit,
   ) async {
+    // The take is still being brought up; the start handler owns the outcome.
+    // `??=` and not `=`: a cancel already latched must not be downgraded.
+    if (_startInFlight) {
+      _pendingRelease ??= _PendingRelease.stop;
+      return;
+    }
+    if (_releaseInFlight) return;
     if (!state.recording.isCapturing) return;
+    _releaseInFlight = true;
+    try {
+      await _stopTake(emit);
+    } finally {
+      _releaseInFlight = false;
+    }
+  }
+
+  Future<void> _stopTake(Emitter<AiComposerState> emit) async {
+    // Too short to have been meant. Take the cancel path rather than the
+    // encode one: there is no take worth keeping, and `stop()` on a take this
+    // brief returns either nothing or an unplayable blip.
+    //
+    // This is also where the release-before-start race lands. `sequential()`
+    // holds a stop dispatched during `requestingPermission` until the start
+    // handler finishes, so it arrives here against an elapsed of zero.
+    if (recordingLevel.value.elapsed < rules.minRecordingDuration) {
+      await _recorder.cancel();
+      await _discardTakeTranscription();
+      recordingLevel.reset();
+      _envelope.reset();
+      if (_closed) return;
+      emit(
+        state.copyWith(
+          recording: AiRecordingStatus.idle,
+          notice: _notice(
+            'ai_chat.recording_too_short',
+            tone: AiNoticeTone.info,
+          ),
+        ),
+      );
+      return;
+    }
 
     emit(state.copyWith(recording: AiRecordingStatus.encoding));
     final elapsed = recordingLevel.value.elapsed;
@@ -510,11 +699,27 @@ class AiComposerBloc extends Bloc<AiComposerEvent, AiComposerState> {
     AiComposerRecordingCancelled event,
     Emitter<AiComposerState> emit,
   ) async {
+    // `=` and not `??=`: a cancel supersedes a latched stop. Discarding what
+    // the user asked to discard is always the safe direction.
+    if (_startInFlight) {
+      _pendingRelease = _PendingRelease.cancel;
+      return;
+    }
+    if (_releaseInFlight) return;
     if (!state.recording.occupiesComposer) return;
+    _releaseInFlight = true;
+    try {
+      await _cancelTake(emit);
+    } finally {
+      _releaseInFlight = false;
+    }
+  }
 
+  Future<void> _cancelTake(Emitter<AiComposerState> emit) async {
     await _recorder.cancel();
     await _discardTakeTranscription();
     recordingLevel.reset();
+    _envelope.reset();
     if (_closed) return;
 
     // Cancelling from preview also throws away the finished take.
@@ -537,11 +742,32 @@ class AiComposerBloc extends Bloc<AiComposerEvent, AiComposerState> {
     AiComposerRecordingAborted event,
     Emitter<AiComposerState> emit,
   ) async {
+    // An interruption while the take is still coming up must not be dropped, or
+    // the recorder opens into an audio session the OS has already given away.
+    // Latched as a cancellation: the notice is lost, but a silently-discarded
+    // take beats one recording into a phone call.
+    if (_startInFlight) {
+      _pendingRelease = _PendingRelease.cancel;
+      return;
+    }
+    if (_releaseInFlight) return;
     if (!state.recording.occupiesComposer) return;
+    _releaseInFlight = true;
+    try {
+      await _abortTake(event, emit);
+    } finally {
+      _releaseInFlight = false;
+    }
+  }
 
+  Future<void> _abortTake(
+    AiComposerRecordingAborted event,
+    Emitter<AiComposerState> emit,
+  ) async {
     await _recorder.cancel();
     await _discardTakeTranscription();
     recordingLevel.reset();
+    _envelope.reset();
     if (_closed) return;
 
     emit(
@@ -584,6 +810,12 @@ class AiComposerBloc extends Bloc<AiComposerEvent, AiComposerState> {
         available: await _recognizer.availableLocales(),
       );
       if (_closed) return;
+
+      // The take can end while this is still bringing the recogniser up — a
+      // stop on a locked take, an interruption — and setting the flag then
+      // would route the *next* dictation's words into the take accumulator,
+      // leaving the composer's text field permanently empty.
+      if (!state.recording.isCapturing) return;
 
       // Set before `start`, so the very first result the plugin delivers is
       // already routed to the accumulator rather than the text field.
@@ -851,7 +1083,12 @@ class AiComposerBloc extends Bloc<AiComposerEvent, AiComposerState> {
       emit(state.copyWith(speech: AiSpeechStatus.idle));
     }
 
-    if (state.recording.isCapturing) {
+    // A take still coming up has no recorder to stop yet, so latch it and let
+    // the start handler tear it down. Deliberately not an early return: speech
+    // and playback below still need releasing.
+    if (_startInFlight) _pendingRelease = _PendingRelease.cancel;
+
+    if (!_startInFlight && state.recording.isCapturing) {
       // `cancel` stops the recorder, releases the audio session and deletes
       // the partial file — the same path the user's own cancel takes.
       await _recorder.cancel();
@@ -906,14 +1143,18 @@ class AiComposerBloc extends Bloc<AiComposerEvent, AiComposerState> {
 
   // ── plumbing ──────────────────────────────────────────────────────────────
 
-  AiComposerNotice _notice(String messageKey, {bool canOpenSettings = false}) =>
-      AiComposerNotice(
-        // A fresh id per occurrence, so two identical failures in a row still
-        // read as a change and the second one is not swallowed.
-        id: generateUuidV4(),
-        messageKey: messageKey,
-        canOpenSettings: canOpenSettings,
-      );
+  AiComposerNotice _notice(
+    String messageKey, {
+    bool canOpenSettings = false,
+    AiNoticeTone tone = AiNoticeTone.error,
+  }) => AiComposerNotice(
+    // A fresh id per occurrence, so two identical failures in a row still
+    // read as a change and the second one is not swallowed.
+    id: generateUuidV4(),
+    messageKey: messageKey,
+    canOpenSettings: canOpenSettings,
+    tone: tone,
+  );
 
   /// Deletes the backing file when we were the ones who created it.
   ///
@@ -949,6 +1190,10 @@ class AiComposerBloc extends Bloc<AiComposerEvent, AiComposerState> {
     }
 
     _transcribingTake = false;
+    _startInFlight = false;
+    _releaseInFlight = false;
+    _pendingRelease = null;
+    _pendingLock = false;
     takeTranscript.reset();
 
     await _recorder.dispose();
@@ -961,4 +1206,13 @@ class AiComposerBloc extends Bloc<AiComposerEvent, AiComposerState> {
 
     return super.close();
   }
+}
+
+/// What the user did while a take was still being brought up.
+enum _PendingRelease {
+  /// Keep whatever was captured.
+  stop,
+
+  /// Throw it away.
+  cancel,
 }

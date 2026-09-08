@@ -4,6 +4,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/ai_circle_icon_button.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/home/ai_home_nav_pill.dart';
+import 'package:sanad_client/src/ui/glass/client_glass_surface.dart';
+import 'package:sanad_client/src/ui/glass/client_glass_tokens.dart';
 
 /// The Home shell's persistent top row — Figma `header-profile` (`7124:29682`):
 /// profile avatar, the three-segment nav pill, and the History button.
@@ -62,17 +64,21 @@ class AiHomeHeader extends StatelessWidget {
         Flexible(
           child: AiHomeNavPill(selected: selected, onSelected: onSelected),
         ),
-        // White and 55dp with a 24dp glyph — Figma `history-button`
-        // (`7124:29686`). It was `background` (`#F9F9FA`), the page's own
-        // colour, so the control had no visible surface at all.
-        AiCircleIconButton(
-          svgAsset: AppSvgs.aiChatNavHistory,
-          semanticLabel: 'ai_chat.nav_history'.tr(),
-          size: 55,
-          iconSize: 24,
-          background: context.appColors.surface,
-          iconColor: context.appColors.textSecondary,
-          onTap: onHistoryTap,
+        // 55dp with a 24dp glyph — Figma `history-button` (`7124:29686`),
+        // now glass to match the pill beside it. It was `background`
+        // (`#F9F9FA`), the page's own colour, so the control had no visible
+        // surface at all; a flat white fixed that and hid the wash instead.
+        ClientGlassSurface(
+          level: ClientGlassLevel.nav,
+          borderRadius: BorderRadius.circular(55 / 2),
+          child: AiCircleIconButton(
+            svgAsset: AppSvgs.aiChatNavHistory,
+            semanticLabel: 'ai_chat.nav_history'.tr(),
+            size: 55,
+            iconSize: 24,
+            iconColor: context.appColors.textSecondary,
+            onTap: onHistoryTap,
+          ),
         ),
       ],
     ),
@@ -98,6 +104,11 @@ class _ProfileAvatar extends StatelessWidget {
 
   /// Figma's `border-6` white ring, which is what lifts the portrait off the
   /// page behind it.
+  ///
+  /// Deliberately not glass, unlike the two controls beside it: the ring is
+  /// three points of a circle around an opaque photograph, so a backdrop
+  /// filter would cost a full blur pass to tint a hairline nobody can see
+  /// through anyway.
   static const _ringWidth = 3.0;
 
   @override

@@ -4,6 +4,8 @@ import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:sanad_client/src/ui/glass/client_glass_surface.dart';
+import 'package:sanad_client/src/ui/glass/client_glass_tokens.dart';
 
 /// The three peer destinations of the Home shell.
 enum AiHomeDestination {
@@ -44,29 +46,26 @@ class AiHomeNavPill extends StatelessWidget {
   final ValueChanged<AiHomeDestination> onSelected;
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    // White, not `background`. Figma's outer pill is `#FFFFFF` sitting on the
-    // page's own near-white `#F9F9FA` — using `background` here painted the
-    // pill the same color as what is behind it, so the container that groups
-    // the three destinations disappeared entirely and they read as three
-    // loose toolbar icons.
-    decoration: BoxDecoration(
-      color: context.appColors.surface,
-      borderRadius: AppRadius.circularXxl,
-    ),
-    child: Padding(
-      padding: EdgeInsets.all(AppSpacing.xs),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final destination in AiHomeDestination.values)
-            _Segment(
-              destination: destination,
-              selected: destination == selected,
-              onTap: () => onSelected(destination),
-            ),
-        ],
-      ),
+  Widget build(BuildContext context) => ClientGlassSurface(
+    // Glass rather than the flat `surface` fill it used to carry. The pill
+    // floats over the page's own gradient — and, on the landing state, over a
+    // drifting glow — and a solid white panel hid exactly the thing that gives
+    // the AI surface its identity. It still reads as a container grouping three
+    // destinations, which is what the flat fill was there to achieve; it now
+    // does it without blanking what is behind it.
+    level: ClientGlassLevel.nav,
+    borderRadius: AppRadius.circularXxl,
+    padding: EdgeInsets.all(AppSpacing.xs),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final destination in AiHomeDestination.values)
+          _Segment(
+            destination: destination,
+            selected: destination == selected,
+            onTap: () => onSelected(destination),
+          ),
+      ],
     ),
   );
 }

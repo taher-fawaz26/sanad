@@ -168,7 +168,20 @@ class _AiChatPageState extends State<AiChatPage> {
 
   void _onComposerNotice(BuildContext context, AiComposerState state) {
     final notice = state.notice!;
-    showAppErrorSnackbar(context: context, title: notice.messageKey.tr());
+    // Not everything the composer says is a failure. "Hold the microphone to
+    // record" is coaching, and it fires on every accidental tap — rendering
+    // that in the error snackbar's red would tell the user they broke
+    // something each time they brushed the button.
+    switch (notice.tone) {
+      case AiNoticeTone.error:
+        showAppErrorSnackbar(context: context, title: notice.messageKey.tr());
+      case AiNoticeTone.info:
+        showAppSnackbar(
+          context: context,
+          title: notice.messageKey.tr(),
+          duration: const Duration(seconds: 2),
+        );
+    }
     context.read<AiComposerBloc>().add(const AiComposerNoticeDismissed());
   }
 
@@ -192,7 +205,15 @@ class _AiChatPageState extends State<AiChatPage> {
   /// a duplex call, and leaving a voice note playing underneath it would mean
   /// two sessions competing for the same speaker.
   void _openVoice(BuildContext context) {
-    context.read<AiComposerBloc>().add(const AiComposerPlaybackStopped());
+    context.read<AiComposerBloc>()
+      ..add(const AiComposerPlaybackStopped())
+      // A locked take keeps recording with nobody holding it, including
+      // across a push. The voice route brings up its own duplex audio
+      // session and the two would fight over the microphone, so the take is
+      // discarded here rather than left to fail there. A held take cannot
+      // reach this — the live-voice button is not on screen while one is
+      // running — but a locked one can, which is exactly what locking is for.
+      ..add(const AiComposerRecordingCancelled());
     context.push(AiChatRoutes.voice);
   }
 

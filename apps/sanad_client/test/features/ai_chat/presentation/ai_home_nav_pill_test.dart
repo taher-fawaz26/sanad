@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/home/ai_home_nav_pill.dart';
+import 'package:sanad_client/src/ui/glass/client_glass_surface.dart';
 import 'package:testing/testing.dart';
 
 /// The three-segment Home nav pill.
@@ -97,5 +98,40 @@ void main() {
         reason: '$key must have an accessible name',
       );
     }
+  });
+
+  testWidgets('the pill is glass, and blurs once', (tester) async {
+    // It floats over the page's gradient — and, on the landing state, over a
+    // drifting glow. A solid fill hid the thing that gives the AI surface its
+    // identity; one filter is what keeps the fix affordable.
+    await pumpPill(
+      tester,
+      selected: AiHomeDestination.sanad,
+      onSelected: (_) {},
+    );
+
+    expect(find.byType(ClientGlassSurface), findsOneWidget);
+    expect(find.byType(BackdropFilter), findsOneWidget);
+  });
+
+  testWidgets('the active segment stays opaque', (tester) async {
+    // Its label is the one piece of text on this control, so it does not get
+    // the page showing through it — and being the only solid fill is also what
+    // makes "which destination am I on" readable at a glance.
+    await pumpPill(
+      tester,
+      selected: AiHomeDestination.requests,
+      onSelected: (_) {},
+    );
+
+    final fills = tester
+        .widgetList<AnimatedContainer>(find.byType(AnimatedContainer))
+        .map((c) => (c.decoration! as BoxDecoration).color)
+        .whereType<Color>()
+        .where((c) => c.a > 0)
+        .toList();
+
+    expect(fills, hasLength(1), reason: 'exactly one segment is filled');
+    expect(fills.single.a, 1.0, reason: 'and that fill is fully opaque');
   });
 }

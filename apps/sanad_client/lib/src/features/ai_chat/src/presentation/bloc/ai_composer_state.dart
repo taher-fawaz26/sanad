@@ -12,6 +12,7 @@ final class AiComposerNotice extends Equatable {
     required this.id,
     required this.messageKey,
     this.canOpenSettings = false,
+    this.tone = AiNoticeTone.error,
   });
 
   /// Unique per occurrence, so a repeat still reads as a change.
@@ -24,8 +25,25 @@ final class AiComposerNotice extends Equatable {
   /// after a permanent refusal.
   final bool canOpenSettings;
 
+  /// How the message should read. Defaults to [AiNoticeTone.error], so every
+  /// notice that predates this field is unchanged.
+  final AiNoticeTone tone;
+
   @override
-  List<Object?> get props => [id, messageKey, canOpenSettings];
+  List<Object?> get props => [id, messageKey, canOpenSettings, tone];
+}
+
+/// How a notice should be presented.
+///
+/// Exists because not everything the composer says is a failure. "Hold the
+/// microphone to record" is coaching, and showing it in the error snackbar's
+/// red would tell the user they did something wrong when they did not.
+enum AiNoticeTone {
+  /// Something went wrong. Rendered by `showAppErrorSnackbar`.
+  error,
+
+  /// Guidance or confirmation. Rendered by `showAppSnackbar`'s neutral style.
+  info,
 }
 
 /// The composer as the UI sees it.
@@ -73,6 +91,31 @@ final class AiComposerState extends Equatable {
   /// Whether any attachment is still being prepared.
   bool get isPreparing => attachments.any((a) => a.status.isBusy);
 
+  /// The finished take currently under preview, or `null`.
+  ///
+  /// "The last audio attachment while the status is
+  /// [AiRecordingStatus.preview]" is already the definition
+  /// `AiComposerBloc._onRecordingCancelled` uses to throw a preview away.
+  /// Naming it once here is what stops the preview row and the attachment
+  /// strip from each inventing their own answer and disagreeing.
+  AiAudioAttachment? get previewTake => recording == AiRecordingStatus.preview
+      ? attachments.whereType<AiAudioAttachment>().lastOrNull
+      : null;
+
+  /// What the attachment strip should draw.
+  ///
+  /// The preview row owns the take under preview and draws it with playback
+  /// controls, so the strip must not draw it a second time as a mute tile.
+  /// Filtered by **id** rather than by type: the moment a user is allowed to
+  /// keep one voice note and record another, filtering every
+  /// [AiAudioAttachment] would silently hide the one they kept.
+  List<AiChatAttachment> get stripAttachments {
+    final take = previewTake;
+    return take == null
+        ? attachments
+        : attachments.where((a) => a.id != take.id).toList();
+  }
+
   /// Whether a send may be attempted with [text].
   ///
   /// An attachment-only turn is legitimate, so empty text alone does not
@@ -80,7 +123,7 @@ final class AiComposerState extends Equatable {
   /// sending a half-processed attachment would be worse than waiting.
   bool canSend(String text) =>
       !isPreparing &&
-      recording != AiRecordingStatus.recording &&
+      !recording.blocksSend &&
       // While the recogniser still holds the microphone the text is not
       // settled — sending mid-phrase would post half a sentence.
       !speech.isActive &&

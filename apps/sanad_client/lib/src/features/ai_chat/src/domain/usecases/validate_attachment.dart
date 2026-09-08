@@ -11,6 +11,7 @@ final class AiAttachmentRules {
   const AiAttachmentRules({
     this.maxAttachments = 5,
     this.maxRecordingDuration = const Duration(minutes: 5),
+    this.minRecordingDuration = const Duration(milliseconds: 800),
     this.documentExtensions = const {
       'pdf',
       'doc',
@@ -32,6 +33,20 @@ final class AiAttachmentRules {
   /// recording path stays within the file-size ceiling without the UI policing
   /// it mid-take.
   final Duration maxRecordingDuration;
+
+  /// The shortest take that becomes a voice message.
+  ///
+  /// The hold-to-record gesture ends on release, so a fumbled or hurried
+  /// release lands here. Below this the take is discarded rather than attached:
+  /// a 200 ms voice note is never what anyone meant to send, and the
+  /// alternative — letting it through — puts an unplayable blip into the
+  /// conversation that the user then has to notice and delete.
+  ///
+  /// It also catches the release-before-start race. A stop dispatched while the
+  /// permission prompt is still up is queued behind the start by `sequential()`
+  /// and runs against an elapsed of zero, which this turns into a clean
+  /// cancellation instead of a "nothing was recorded" failure.
+  final Duration minRecordingDuration;
 
   /// Document extensions the composer accepts.
   final Set<String> documentExtensions;

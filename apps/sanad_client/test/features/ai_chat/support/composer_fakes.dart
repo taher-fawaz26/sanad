@@ -45,6 +45,11 @@ class FakePermissionGateway implements AiPermissionGateway {
 
   int settingsOpened = 0;
 
+  /// Held to keep the microphone decision pending, so a test can act while a
+  /// take is still being brought up — the window the first-ever permission
+  /// dialog occupies on a real device.
+  Completer<void>? microphoneGate;
+
   @override
   Future<AiPermissionOutcome> ensureCamera() async => camera;
 
@@ -52,7 +57,10 @@ class FakePermissionGateway implements AiPermissionGateway {
   Future<AiPermissionOutcome> ensureGallery() async => gallery;
 
   @override
-  Future<AiPermissionOutcome> ensureMicrophone() async => microphone;
+  Future<AiPermissionOutcome> ensureMicrophone() async {
+    if (microphoneGate != null) await microphoneGate!.future;
+    return microphone;
+  }
 
   @override
   Future<AiPermissionOutcome> ensureSpeechRecognition() async =>

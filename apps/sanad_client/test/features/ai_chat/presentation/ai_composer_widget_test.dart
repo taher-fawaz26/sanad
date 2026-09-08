@@ -13,6 +13,7 @@ import 'package:sanad_client/src/features/ai_chat/src/presentation/bloc/audio_pl
 import 'package:sanad_client/src/features/ai_chat/src/presentation/bloc/recording_level_controller.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/bloc/speech_transcript_controller.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/composer/ai_attachment_tile.dart';
+import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/composer/ai_audio_preview_row.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/composer/ai_composer.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/composer/ai_level_meter.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/composer/ai_recording_bar.dart';
@@ -105,7 +106,7 @@ void main() {
     testWidgets('starts as a microphone, with nothing to send', (tester) async {
       await pumpComposer(tester);
 
-      expect(find.bySemanticsLabel('ai_chat.speech_start'), findsOneWidget);
+      expect(find.bySemanticsLabel('ai_chat.record_start'), findsOneWidget);
       expect(find.bySemanticsLabel('ai_chat.send'), findsNothing);
     });
 
@@ -116,7 +117,7 @@ void main() {
       await tester.pump();
 
       expect(find.bySemanticsLabel('ai_chat.send'), findsOneWidget);
-      expect(find.bySemanticsLabel('ai_chat.speech_start'), findsNothing);
+      expect(find.bySemanticsLabel('ai_chat.record_start'), findsNothing);
     });
 
     testWidgets('is send when an attachment is staged, with no text', (
@@ -281,17 +282,32 @@ void main() {
   });
 
   group('recording', () {
-    testWidgets('the microphone dictates, it does not record', (
+    testWidgets('the microphone records, it does not dictate', (
       tester,
     ) async {
-      // The three microphone capabilities each get their own affordance. This
-      // one produces text, so it is the one on the keyboard's edge.
+      // The inversion this redesign exists for. The primary microphone used to
+      // start dictation while recording hid in the attach sheet; now it means
+      // a voice message and nothing else.
       await pumpComposer(tester);
 
-      await tester.tap(find.bySemanticsLabel('ai_chat.speech_start'));
+      await tester.longPress(find.bySemanticsLabel('ai_chat.record_start'));
       await tester.pump();
 
-      verify(() => bloc.add(const AiComposerSpeechStarted())).called(1);
+      verify(() => bloc.add(const AiComposerRecordingStarted())).called(1);
+      verifyNever(() => bloc.add(const AiComposerSpeechStarted()));
+    });
+
+    testWidgets('a tap is a hint, never a recording', (tester) async {
+      // The whole point of the hold threshold: brushing the button must not be
+      // able to put a voice message into the conversation.
+      await pumpComposer(tester);
+
+      await tester.tap(find.bySemanticsLabel('ai_chat.record_start'));
+      await tester.pump();
+
+      verify(
+        () => bloc.add(const AiComposerRecordingHintRequested()),
+      ).called(1);
       verifyNever(() => bloc.add(const AiComposerRecordingStarted()));
     });
 
@@ -303,8 +319,9 @@ void main() {
 
       expect(find.byType(AiRecordingContentRow), findsOneWidget);
       expect(find.byType(TextField), findsNothing);
-      expect(find.bySemanticsLabel('ai_chat.record_stop'), findsOneWidget);
-      expect(find.bySemanticsLabel('ai_chat.record_cancel'), findsOneWidget);
+      // The take is under a finger, so its controls are drags rather than
+      // buttons — see 'a held take offers drag hints, not buttons'.
+      expect(find.byType(AiRecordingHintRow), findsOneWidget);
     });
 
     testWidgets('the bar follows the level controller, not bloc state', (
@@ -335,24 +352,45 @@ void main() {
       expect(find.textContaining('1:05'), findsOneWidget);
     });
 
-    testWidgets('stop and cancel emit their events', (tester) async {
+    testWidgets('a held take offers drag hints, not buttons', (tester) async {
+      // The finger that would press a button is the finger holding the take
+      // open, so a control it cannot reach is a control that is not there.
       await pumpComposer(
         tester,
         const AiComposerState(recording: AiRecordingStatus.recording),
       );
 
-      await tester.tap(find.bySemanticsLabel('ai_chat.record_stop'));
+      expect(find.byType(AiRecordingHintRow), findsOneWidget);
+      expect(find.byType(AiRecordingActionsRow), findsNothing);
+      expect(find.text('ai_chat.record_slide_to_cancel'), findsOneWidget);
+      expect(find.text('ai_chat.record_slide_to_lock'), findsOneWidget);
+    });
+
+    testWidgets('a locked take swaps the hints for real controls', (
+      tester,
+    ) async {
+      await pumpComposer(
+        tester,
+        const AiComposerState(
+          recording: AiRecordingStatus.lockedRecording,
+        ),
+      );
+
+      expect(find.byType(AiRecordingActionsRow), findsOneWidget);
+      expect(find.byType(AiRecordingHintRow), findsNothing);
+      // Still the same live surface: locking is "keep going", not "start over".
+      expect(find.byType(AiRecordingContentRow), findsOneWidget);
+
+      await tester.tap(find.bySemanticsLabel('ai_chat.record_finish'));
       await tester.pump();
       verify(() => bloc.add(const AiComposerRecordingStopped())).called(1);
 
-      await tester.tap(find.bySemanticsLabel('ai_chat.record_cancel'));
+      await tester.tap(find.bySemanticsLabel('ai_chat.record_delete'));
       await tester.pump();
       verify(() => bloc.add(const AiComposerRecordingCancelled())).called(1);
     });
 
-    testWidgets('a finished take returns the input row and stages a tile', (
-      tester,
-    ) async {
+    testWidgets('a finished take becomes a playable preview', (tester) async {
       await pumpComposer(
         tester,
         AiComposerState(
@@ -362,11 +400,47 @@ void main() {
       );
 
       expect(find.byType(AiRecordingContentRow), findsNothing);
-      expect(find.byType(TextField), findsOneWidget);
-      expect(
-        find.byIcon(Icons.close_rounded),
-        findsOneWidget,
+      expect(find.byType(AiAudioPreviewRow), findsOneWidget);
+      expect(find.bySemanticsLabel('ai_chat.play'), findsOneWidget);
+      expect(find.bySemanticsLabel('ai_chat.record_delete'), findsOneWidget);
+      expect(find.bySemanticsLabel('ai_chat.send'), findsOneWidget);
+    });
+
+    testWidgets('the previewed take is drawn once, not twice', (tester) async {
+      // It lives in `attachments` so `canSend` and submission can see it, and
+      // the preview row already draws it — the strip must not draw it again as
+      // a mute tile beside its own playable copy.
+      await pumpComposer(
+        tester,
+        AiComposerState(
+          recording: AiRecordingStatus.preview,
+          attachments: [audioFixture(status: AiAttachmentStatus.ready)],
+        ),
       );
+
+      expect(find.byType(AiAudioPreviewRow), findsOneWidget);
+      expect(find.byType(AiAttachmentTile), findsNothing);
+    });
+
+    testWidgets('other attachments still show beside a preview', (
+      tester,
+    ) async {
+      // Filtered by id, not by type: an image staged before the take is not
+      // the take, and hiding it would be a regression the type-filter would
+      // not have caught.
+      await pumpComposer(
+        tester,
+        AiComposerState(
+          recording: AiRecordingStatus.preview,
+          attachments: [
+            documentFixture(status: AiAttachmentStatus.ready),
+            audioFixture(status: AiAttachmentStatus.ready),
+          ],
+        ),
+      );
+
+      expect(find.byType(AiAudioPreviewRow), findsOneWidget);
+      expect(find.byType(AiAttachmentTile), findsOneWidget);
     });
 
     testWidgets('the remove control carries an accessible label', (
@@ -418,10 +492,10 @@ void main() {
 
       // If this stops being true the composer stops being replaceable, which
       // is the entire premise of shipping temporary UI.
-      await tester.tap(find.bySemanticsLabel('ai_chat.speech_start'));
+      await tester.longPress(find.bySemanticsLabel('ai_chat.record_start'));
       await tester.pump();
 
-      verify(() => bloc.add(const AiComposerSpeechStarted())).called(1);
+      verify(() => bloc.add(const AiComposerRecordingStarted())).called(1);
     });
   });
 
@@ -429,12 +503,15 @@ void main() {
     testWidgets('each has its own affordance, none overloaded', (tester) async {
       await pumpComposer(tester);
 
-      // Dictation on the trailing edge, live voice beside attach, and a voice
-      // note inside the attach sheet with the other attachments. Three
-      // results, three controls.
-      expect(find.bySemanticsLabel('ai_chat.speech_start'), findsOneWidget);
+      // A voice note on the trailing edge, live voice beside it, and dictation
+      // inside the attach sheet. Three results, three controls — and the
+      // prominent one is the one that produces a message, not the one that
+      // produces text.
+      expect(find.bySemanticsLabel('ai_chat.record_start'), findsOneWidget);
       expect(find.bySemanticsLabel('ai_chat.voice_mode'), findsOneWidget);
       expect(find.bySemanticsLabel('ai_chat.attach'), findsOneWidget);
+      // The old meaning of this control is gone from the surface entirely.
+      expect(find.bySemanticsLabel('ai_chat.speech_start'), findsNothing);
     });
 
     testWidgets('live voice is a callback, not a route the widget knows', (
@@ -463,29 +540,30 @@ void main() {
       expect(find.bySemanticsLabel('ai_chat.voice_mode'), findsNothing);
     });
 
-    testWidgets('a voice note is offered with the other attachments', (
-      tester,
-    ) async {
+    testWidgets('dictation is offered in the attach sheet', (tester) async {
       await pumpComposer(tester);
 
       await tester.tap(find.bySemanticsLabel('ai_chat.attach'));
       await _openSheet(tester);
 
-      final entry = find.text('ai_chat.attach_record_audio');
+      final entry = find.text('ai_chat.speech_to_text');
       expect(entry, findsOneWidget);
+      // Recording is no longer offered here — the microphone is that path now,
+      // and a second entry point would put one capability on screen twice.
+      expect(find.text('ai_chat.attach_record_audio'), findsNothing);
 
-      // The sheet scrolls: a fourth row can sit outside the viewport at a
-      // large text size, and tapping a clipped tile hits whatever is drawn
-      // over it instead.
+      // The sheet scrolls: a row can sit outside the viewport at a large text
+      // size, and tapping a clipped tile hits whatever is drawn over it.
       await tester.ensureVisible(entry);
       await tester.pump();
       await tester.tap(entry);
       await _openSheet(tester);
 
-      // A capture rather than a pick, so it dispatches the recording event —
-      // the split that keeps `AiAttachmentIntent` meaning "what a picker can
-      // return".
-      verify(() => bloc.add(const AiComposerRecordingStarted())).called(1);
+      // Not a pick, so it dispatches the dictation event rather than an
+      // intent — the split that keeps `AiAttachmentIntent` meaning "what a
+      // picker can return".
+      verify(() => bloc.add(const AiComposerSpeechStarted())).called(1);
+      verifyNever(() => bloc.add(const AiComposerRecordingStarted()));
     });
   });
 
@@ -609,10 +687,11 @@ void main() {
         ),
       );
 
-      // The composer stages every attachment as a tile; the waveform and the
-      // play control live on the bubble, and are covered there.
-      expect(find.byType(AiAttachmentTile), findsOneWidget);
-      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+      // A finished take is previewed with its own waveform and playback, and
+      // the transcript riding along changes none of it.
+      expect(find.byType(AiAudioPreviewRow), findsOneWidget);
+      expect(find.bySemanticsLabel('ai_chat.play'), findsOneWidget);
+      expect(find.bySemanticsLabel('ai_chat.record_delete'), findsOneWidget);
     });
 
     testWidgets('the transcript is never rendered as text', (tester) async {
@@ -645,8 +724,9 @@ void main() {
         ),
       );
 
-      expect(find.byType(AiAttachmentTile), findsOneWidget);
-      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+      expect(find.byType(AiAudioPreviewRow), findsOneWidget);
+      expect(find.bySemanticsLabel('ai_chat.play'), findsOneWidget);
+      expect(find.bySemanticsLabel('ai_chat.record_delete'), findsOneWidget);
     });
   });
 }
@@ -659,4 +739,5 @@ void main() {
 Future<void> _openSheet(WidgetTester tester) async {
   for (var i = 0; i < 8; i++) {
     await tester.pump(const Duration(milliseconds: 50));
-  }}
+  }
+}

@@ -59,7 +59,45 @@ final class AiComposerSettingsRequested extends AiComposerEvent {
 /// The user pressed record.
 final class AiComposerRecordingStarted extends AiComposerEvent {
   /// Creates the start.
-  const AiComposerRecordingStarted();
+  const AiComposerRecordingStarted({this.autoLock = false});
+
+  /// Whether the take should come up already hands-free.
+  ///
+  /// Exists for the accessibility path, where holding a control for the length
+  /// of a message is not an interaction every user can perform, so a plain tap
+  /// starts a locked take and the explicit stop/delete controls are the whole
+  /// interaction.
+  ///
+  /// A flag on *this* event rather than a following
+  /// [AiComposerRecordingLocked], because `sequential()` orders events only
+  /// within one event type — `Bloc.on<E>` filters the stream by `E` before
+  /// applying the transformer — so two events would race the permission
+  /// round-trip instead of composing. One event, one handler, one decision
+  /// point: no race is possible because there is no second event to order.
+  final bool autoLock;
+
+  @override
+  List<Object?> get props => [autoLock];
+}
+
+/// The user swiped up past the lock threshold; keep recording after they let
+/// go.
+///
+/// Nothing is asked of the recorder — the microphone is already live and stays
+/// live. This changes only which interaction ends the take.
+final class AiComposerRecordingLocked extends AiComposerEvent {
+  /// Creates the lock.
+  const AiComposerRecordingLocked();
+}
+
+/// The user tapped the microphone instead of holding it.
+///
+/// Emits a hint and nothing else. A tap must never start a take: the whole
+/// point of the hold threshold is that a brush against the button cannot put a
+/// voice message into the conversation.
+final class AiComposerRecordingHintRequested extends AiComposerEvent {
+  /// Creates the hint request.
+  const AiComposerRecordingHintRequested();
 }
 
 /// The user pressed stop; keep the take for preview.

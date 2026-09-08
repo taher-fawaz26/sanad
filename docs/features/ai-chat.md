@@ -31,13 +31,58 @@ rather than one overloaded button.
 
 | Capability | Path | Produces | Affordance |
 |---|---|---|---|
-| **Dictation** | mic → native recogniser → text | editable composer text | the microphone, trailing edge |
-| **Voice note** | mic → AAC file → attachment **+ on-device transcript** | a message attachment carrying its own words | inside the `+` attach sheet |
-| **Live voice** | continuous mic → session → assistant audio | a conversation turn | the waveform button, beside `+` |
+| **Voice note** | mic → AAC file → attachment **+ on-device transcript** | a message attachment carrying its own words | the microphone, trailing edge — **hold** it |
+| **Dictation** | mic → native recogniser → text | editable composer text | inside the `+` attach sheet |
+| **Live voice** | continuous mic → session → assistant audio | a conversation turn | the waveform button, beside the microphone |
 
 `AiComposerBloc` owns the first two and refuses to run either while the other
 holds the microphone; live voice is its own bloc on its own route, reached by
 `push` so the conversation stays alive underneath.
+
+The first two swapped places. The prominent microphone used to mean dictation
+while recording hid inside the attach sheet, which put the capability that
+produces a *message* two taps behind the one that produces *text*, and left two
+microphone meanings competing on one row. The microphone is now the voice-note
+path and nothing else; dictation moved into the sheet with the other things you
+reach for occasionally.
+
+### The record gesture
+
+Held, not tapped — `AiHoldToRecordButton` over a `LongPressGestureRecognizer`
+whose deadline, lock distance and cancel distance are constants in
+`ai_recording_gesture.dart`.
+
+```text
+tap            → a hint, never a take
+hold           → recording, and it ends when you let go
+hold + swipe ↑ → lockedRecording: hands-free, ends at an explicit Stop
+hold + swipe ⇤ → discarded, file deleted        (mirrored under RTL)
+release        → encoding → preview → send
+```
+
+`lockedRecording` is one extra value on `AiRecordingStatus`, not a second
+recording path: nothing is asked of the recorder when a take locks, because the
+microphone is already open. It joins `isCapturing`, which is what carries it
+into the duration cap, backgrounding cleanup and the mutual-exclusion check
+without a new call site.
+
+A take shorter than `AiAttachmentRules.minRecordingDuration` is discarded rather
+than attached — a fumbled release is a mis-tap, not a message.
+
+**`sequential()` orders events only within one event type.** `Bloc.on<E>`
+filters the event stream by `E` before applying the transformer, so a stop runs
+*concurrently* with a start rather than queueing behind it. A release that beats
+the take it belongs to — the shape of the first-ever permission dialog, which
+steals the pointer while the handler is parked on `ensureMicrophone()` — is
+therefore latched by `_startInFlight` / `_pendingRelease` and replayed once the
+take exists. Without that the take starts with nobody holding it and runs to the
+five-minute cap. `_releaseInFlight` is the same idea for the other pair: at most
+one terminal transition per take, so a cancel-drag that also ends in a release
+cannot call `stop()` on a recorder the cancel already tore down.
+
+Screen-reader users get a plain tap that starts an *already locked* take, so
+Stop and Delete are the whole interaction and no gesture is required to reach
+any function. The drag path stays available to everyone else.
 
 A voice note also gets a transcript, and that does **not** make it a fourth
 capability. `speech_to_text` can only transcribe the live microphone — there is
@@ -102,6 +147,30 @@ partial file*, and stops playback; the voice route ends its session.
 
 ---
 
+## Glass surfaces
+
+The client's chrome is translucent over the AI background rather than painted
+on top of it — `ClientGlassSurface` in `apps/sanad_client/lib/src/ui/glass/`,
+applied to the Home header's nav pill and History button and to the composer
+card. Three levels (`nav`, `surface`, `floating`) fix the blur, tint, border and
+shadow so two surfaces at the same depth match; a caller says what the surface
+*is*, never how blurred it should be.
+
+A `BackdropFilter` is the most expensive widget in this app's vocabulary, so
+the component makes the two invisible mistakes impossible instead of documenting
+them. Every instance publishes a scope and asserts no glass ancestor, so nesting
+fails loudly in debug rather than silently costing two full passes; the filter
+lives inside the `ClipRRect`, so it samples only the surface's own bounds and
+there is no full-screen blur layer anywhere in the client; and a
+`RepaintBoundary` outside the clip stops blurred chrome repainting with the
+conversation scrolling behind it.
+
+It sits **on top of** the existing backgrounds and replaces none of them.
+`AiChatBackground`'s wash, the landing state's `AppAmbientGradient` and the
+live-voice backdrop are untouched — showing them through the chrome is the
+entire point. The nav pill's *selected* segment stays opaque, because its label
+is the one piece of text on that control.
+
 ## Try it
 
 Run `sanad_client` in a debug build and navigate to `/dev/ai-chat`.
@@ -154,6 +223,9 @@ user types  ──► AiChatBloc ──► AiChatEventSource.send()
 | `presentation/bloc/ai_composer_bloc.dart` | Staging a turn: attachments, validation, the recording state machine |
 | `presentation/bloc/ai_voice_session_bloc.dart` | The live-voice subsystem's lifecycle |
 | `presentation/bloc/recording_level_controller.dart` | Live mic level + elapsed, off bloc state |
+| `presentation/widgets/composer/ai_hold_to_record_button.dart` | The record gesture: hold, swipe to lock, swipe to discard |
+| `presentation/widgets/composer/ai_recording_gesture.dart` | The gesture's thresholds, as constants |
+| `src/ui/glass/` | `ClientGlassSurface` / `ClientGlassTokens` — the client's translucent chrome |
 | `presentation/bloc/audio_playback_controller.dart` | Playback position, off bloc state; one player for the screen |
 | `data/sse_frame_parser.dart` | `text/event-stream` framing — incremental, total, never throws |
 | `data/websocket_ai_chat_event_source.dart` | Reference transport (`?transport=ws`): `wss`, `Sanad-Access-Token`, reconnect |
@@ -213,15 +285,23 @@ clients degrade through `fallbackText`.
 
 ```bash
 fvm flutter test packages/ai_ui_protocol packages/ai_ui_renderer
-fvm flutter test apps/sanad_client/test/features/ai_chat
+fvm flutter test apps/sanad_client/test/features/ai_chat apps/sanad_client/test/ui
 ```
 
 - `ai_ui_protocol` — 118 tests: node round-trips through the real validator,
   the limit matrix, action allowlist, URL policy, totality (no input throws).
 - `ai_ui_renderer` — 51 tests: one per node type, degradation, action dispatch,
   RTL mirroring, accessibility.
-- `ai_chat` — 34 tests: 16 bloc (event sequencing, streaming, failures) and 18
-  widget (mixed content, dispatch, fallback, malformed/oversized payloads).
+- `ai_chat` — 593 tests across transports, the two blocs, the composer widgets
+  and the module's route tree. The ones most worth knowing about:
+  `ai_composer_bloc_test.dart` (the recording state machine, including the
+  concurrency latches — every test in *a release that beats the take it belongs
+  to* fails without them), `ai_hold_to_record_test.dart` (the gesture, driven
+  pointer by pointer in both text directions), and `ai_composer_widget_test.dart`
+  (which surface renders for which state).
+- `test/ui/glass` — 10 tests pinning the cost properties of
+  `ClientGlassSurface`: one filter per surface, clipped rather than
+  full-screen, nesting trips the assert.
 
 ---
 
