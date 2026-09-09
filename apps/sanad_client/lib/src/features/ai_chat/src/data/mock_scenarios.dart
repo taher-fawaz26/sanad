@@ -1,76 +1,6 @@
 import 'package:ai_ui_protocol/ai_ui_protocol.dart';
-import 'package:core/core.dart';
-
-/// A scripted assistant turn.
-///
-/// Scenarios build *wire-shaped* events — the same envelope a WebSocket would
-/// deliver — so replacing this source with a real one changes nothing above it.
-/// Several are deliberately broken: proving the chat survives a hostile payload
-/// matters more than proving it renders a nice card.
-final class MockScenario {
-  /// Creates a scenario.
-  const MockScenario({
-    required this.id,
-    required this.label,
-    required this.build,
-    this.keywords = const [],
-  });
-
-  /// Stable identifier, used by the dev scenario picker.
-  final String id;
-
-  /// Human-readable name shown in the picker.
-  final String label;
-
-  /// Keywords that select this scenario from the user's message, so the
-  /// prototype feels conversational rather than menu-driven.
-  final List<String> keywords;
-
-  /// Produces the scripted events for one assistant turn.
-  final List<AiChatEvent> Function(String messageId) build;
-}
-
-Map<String, dynamic> _payload(List<Map<String, dynamic>> blocks) =>
-    <String, dynamic>{'schemaVersion': 1, 'blocks': blocks};
-
-AiChatEvent _start(String messageId) => AiChatMessageStartEvent(
-  eventId: 'evt_${generateUuidV4()}',
-  messageId: messageId,
-);
-
-AiChatEvent _delta(String messageId, String delta) => AiChatTextDeltaEvent(
-  eventId: 'evt_${generateUuidV4()}',
-  messageId: messageId,
-  delta: delta,
-);
-
-AiChatEvent _end(String messageId, String text) => AiChatMessageEndEvent(
-  eventId: 'evt_${generateUuidV4()}',
-  messageId: messageId,
-  text: text,
-);
-
-AiChatEvent _ui(String messageId, Map<String, dynamic> payload) =>
-    AiChatUiEvent(
-      eventId: 'evt_${generateUuidV4()}',
-      messageId: messageId,
-      payload: payload,
-    );
-
-/// Splits [text] into word-sized deltas so streaming looks like streaming.
-List<AiChatEvent> _stream(String messageId, String text) {
-  final words = text.split(' ');
-  return [
-    for (var i = 0; i < words.length; i++)
-      _delta(messageId, i == 0 ? words[i] : ' ${words[i]}'),
-  ];
-}
-
-List<AiChatEvent> _say(String messageId, String text) => [
-  _start(messageId),
-  ..._stream(messageId, text),
-  _end(messageId, text),
-];
+import 'package:sanad_client/src/features/ai_chat/src/data/scenarios/component_scenarios.dart';
+import 'package:sanad_client/src/features/ai_chat/src/data/scenarios/scenario_support.dart';
 
 Map<String, dynamic> _serviceCard({
   required String id,
@@ -78,6 +8,8 @@ Map<String, dynamic> _serviceCard({
   required String subtitle,
   required int price,
   Map<String, dynamic>? badge,
+  bool selected = false,
+  String? imageUrl,
 }) => <String, dynamic>{
   'type': 'service_card',
   'id': 'svc_$id',
@@ -85,8 +17,26 @@ Map<String, dynamic> _serviceCard({
   'title': title,
   'subtitle': subtitle,
   'price': {'amount': price, 'currency': 'AED'},
+  // A service photo is backend-owned media, so it travels as a `url`. The
+  // `assetId` beside it is the client's own illustration, used only if the
+  // download fails — which is the whole point of one image object with two
+  // optional fields.
+  if (imageUrl != null) 'image': {'url': imageUrl, 'assetId': 'service_tools'},
   if (badge != null) 'badge': badge,
+  // Figma marks the service the conversation is currently about with an accent
+  // border rather than a fill.
+  if (selected) 'selected': true,
   'action': {'type': 'open_service', 'serviceId': id},
+  // The card's own call to action, drawn inside its border — Figma's `Select`
+  // pill. Posting the choice as a user turn keeps the agent in the loop.
+  'actions': [
+    {
+      'label': 'Select',
+      'variant': 'secondary',
+      'intent': 'neutral',
+      'action': {'type': 'send_message', 'text': 'I want $title'},
+    },
+  ],
   // Always set on a semantic node: this is the entire backward-compatibility
   // story for a client that predates the component.
   'fallbackText': '$title — $price AED',
@@ -99,7 +49,7 @@ const _plainText = MockScenario(
   build: _buildPlainText,
 );
 
-List<AiChatEvent> _buildPlainText(String messageId) => _say(
+List<AiChatEvent> _buildPlainText(String messageId) => scenarioSay(
   messageId,
   'I can help you find services, check your bookings, and manage your '
   'appointments. What would you like to do?',
@@ -115,11 +65,11 @@ const _textAndCard = MockScenario(
 List<AiChatEvent> _buildTextAndCard(String messageId) {
   const text = 'Your appointment is confirmed.';
   return [
-    _start(messageId),
-    ..._stream(messageId, text),
-    _ui(
+    scenarioStart(messageId),
+    ...scenarioStream(messageId, text),
+    scenarioUi(
       messageId,
-      _payload([
+      scenarioPayload([
         {
           'type': 'card',
           'id': 'c1',
@@ -147,7 +97,7 @@ List<AiChatEvent> _buildTextAndCard(String messageId) {
         },
       ]),
     ),
-    _end(messageId, text),
+    scenarioEnd(messageId, text),
   ];
 }
 
@@ -159,35 +109,47 @@ const _serviceList = MockScenario(
 );
 
 List<AiChatEvent> _buildServiceList(String messageId) {
-  const text = 'I found 3 services near you.';
+  const text = 'Here are the available services matching your request:';
   return [
-    _start(messageId),
-    ..._stream(messageId, text),
-    _ui(
+    scenarioStart(messageId),
+    ...scenarioStream(messageId, text),
+    scenarioUi(
       messageId,
-      _payload([
+      scenarioPayload([
         _serviceCard(
           id: 'svc_1',
+          imageUrl: 'https://picsum.photos/seed/ac/640/360',
           title: 'AC Maintenance',
-          subtitle: 'Same-day service',
+          subtitle:
+              'Complete system cleaning, filter replacement, and airflow '
+              'diagnostics.',
           price: 100,
-          badge: {'label': 'Popular', 'tone': 'info'},
+          // `primary` is the brand tint Figma uses for POPULAR — the one tone
+          // the design system's status badge has no equivalent for.
+          badge: {'label': 'POPULAR', 'tone': 'primary'},
+          selected: true,
         ),
         _serviceCard(
           id: 'svc_2',
+          imageUrl: 'https://picsum.photos/seed/cleaning/640/360',
           title: 'Deep Cleaning',
-          subtitle: '3 hours, 2 cleaners',
+          subtitle:
+              'Full home sanitization including bedrooms, living rooms, and '
+              'kitchen areas.',
           price: 250,
         ),
         _serviceCard(
           id: 'svc_3',
+          imageUrl: 'https://picsum.photos/seed/plumbing/640/360',
           title: 'Plumbing Repair',
-          subtitle: 'Emergency callout',
+          subtitle:
+              'Emergency callout for leaks, blockages, or fixture '
+              'installations.',
           price: 180,
         ),
       ]),
     ),
-    _end(messageId, text),
+    scenarioEnd(messageId, text),
   ];
 }
 
@@ -199,13 +161,13 @@ const _appointment = MockScenario(
 );
 
 List<AiChatEvent> _buildAppointment(String messageId) {
-  const text = 'Here is your next appointment.';
+  const text = 'Here is your next appointment:';
   return [
-    _start(messageId),
-    ..._stream(messageId, text),
-    _ui(
+    scenarioStart(messageId),
+    ...scenarioStream(messageId, text),
+    scenarioUi(
       messageId,
-      _payload([
+      scenarioPayload([
         {
           'type': 'appointment_card',
           'id': 'apt',
@@ -218,41 +180,34 @@ List<AiChatEvent> _buildAppointment(String messageId) {
           'status': 'Confirmed',
           'statusTone': 'success',
           'action': {'type': 'open_appointment', 'appointmentId': 'apt_123'},
-          'fallbackText': 'AC Maintenance, tomorrow at 10:00 AM',
-        },
-        {
-          'type': 'row',
-          'id': 'actions',
-          'gap': 'sm',
-          'children': [
+          // Attached to the card rather than sent as sibling `row` + `button`
+          // primitives: Figma draws them inside the card's own border, sharing
+          // its padding. The primitive shape still validates and still
+          // renders — it just renders as a separate block underneath.
+          'actions': [
             {
-              'type': 'button',
-              'id': 'b1',
               'label': 'Reschedule',
               'variant': 'outline',
-              'size': 'small',
               'action': {
                 'type': 'open_appointment',
                 'appointmentId': 'apt_123',
               },
             },
             {
-              'type': 'button',
-              'id': 'b2',
               'label': 'Cancel',
               'variant': 'outline',
               'intent': 'destructive',
-              'size': 'small',
               'action': {
                 'type': 'send_message',
                 'text': 'Cancel my appointment',
               },
             },
           ],
+          'fallbackText': 'AC Maintenance, tomorrow at 10:00 AM',
         },
       ]),
     ),
-    _end(messageId, text),
+    scenarioEnd(messageId, text),
   ];
 }
 
@@ -264,13 +219,13 @@ const _branches = MockScenario(
 );
 
 List<AiChatEvent> _buildBranches(String messageId) {
-  const text = 'Here are your nearest branches.';
+  const text = 'Here are your nearest branches:';
   return [
-    _start(messageId),
-    ..._stream(messageId, text),
-    _ui(
+    scenarioStart(messageId),
+    ...scenarioStream(messageId, text),
+    scenarioUi(
       messageId,
-      _payload([
+      scenarioPayload([
         {
           'type': 'branch_card',
           'id': 'br1',
@@ -278,10 +233,14 @@ List<AiChatEvent> _buildBranches(String messageId) {
           'name': 'Downtown',
           'addressText': 'Sheikh Zayed Road',
           'distanceMeters': 450,
-          'status': 'Open',
+          'status': 'OPEN',
           'statusTone': 'success',
+          // Prose, not a structured instant: what the reader needs is the
+          // relative phrase, and which day it resolves to depends on the
+          // branch's own calendar.
+          'hoursText': 'Closes 9:00 PM',
           'action': {'type': 'open_branch', 'branchId': 'br_1'},
-          'fallbackText': 'Downtown — 450 m — Open',
+          'fallbackText': 'Downtown — 450 m — open until 9:00 PM',
         },
         {
           'type': 'branch_card',
@@ -290,14 +249,15 @@ List<AiChatEvent> _buildBranches(String messageId) {
           'name': 'Marina',
           'addressText': 'Dubai Marina Walk',
           'distanceMeters': 4800,
-          'status': 'Closed',
+          'status': 'CLOSED',
           'statusTone': 'error',
+          'hoursText': 'Opens tomorrow 8:00 AM',
           'action': {'type': 'open_branch', 'branchId': 'br_2'},
-          'fallbackText': 'Marina — 4.8 km — Closed',
+          'fallbackText': 'Marina — 4.8 km — opens tomorrow 8:00 AM',
         },
       ]),
     ),
-    _end(messageId, text),
+    scenarioEnd(messageId, text),
   ];
 }
 
@@ -311,11 +271,11 @@ const _primitives = MockScenario(
 List<AiChatEvent> _buildPrimitives(String messageId) {
   const text = 'Every primitive the protocol defines:';
   return [
-    _start(messageId),
-    ..._stream(messageId, text),
-    _ui(
+    scenarioStart(messageId),
+    ...scenarioStream(messageId, text),
+    scenarioUi(
       messageId,
-      _payload([
+      scenarioPayload([
         {
           'type': 'rich_text',
           'id': 'rt',
@@ -376,6 +336,11 @@ List<AiChatEvent> _buildPrimitives(String messageId) {
               'id': 'li1',
               'title': 'Order #1042',
               'subtitle': 'Delivered',
+              // Row artwork is backend-owned too, so it travels as a `url`
+              // like any other dynamic image.
+              'leadingImage': {
+                'url': 'https://picsum.photos/seed/order1042/96/96',
+              },
               'badge': {'label': 'Done', 'tone': 'success'},
               'trailingText': 'AED 120',
             },
@@ -384,6 +349,9 @@ List<AiChatEvent> _buildPrimitives(String messageId) {
               'id': 'li2',
               'title': 'Order #1043',
               'subtitle': 'In progress',
+              'leadingImage': {
+                'url': 'https://picsum.photos/seed/order1043/96/96',
+              },
               'badge': {'label': 'Active', 'tone': 'info'},
               'trailingText': 'AED 90',
             },
@@ -391,7 +359,7 @@ List<AiChatEvent> _buildPrimitives(String messageId) {
         },
       ]),
     ),
-    _end(messageId, text),
+    scenarioEnd(messageId, text),
   ];
 }
 
@@ -405,11 +373,11 @@ const _quickReply = MockScenario(
 List<AiChatEvent> _buildQuickReply(String messageId) {
   const text = 'Would you like to book AC Maintenance for tomorrow at 10 AM?';
   return [
-    _start(messageId),
-    ..._stream(messageId, text),
-    _ui(
+    scenarioStart(messageId),
+    ...scenarioStream(messageId, text),
+    scenarioUi(
       messageId,
-      _payload([
+      scenarioPayload([
         {
           'type': 'quick_reply',
           'id': 'qr',
@@ -430,7 +398,7 @@ List<AiChatEvent> _buildQuickReply(String messageId) {
         },
       ]),
     ),
-    _end(messageId, text),
+    scenarioEnd(messageId, text),
   ];
 }
 
@@ -446,11 +414,11 @@ const _unknownNode = MockScenario(
 List<AiChatEvent> _buildUnknownNode(String messageId) {
   const text = 'This reply uses a component your app does not know yet.';
   return [
-    _start(messageId),
-    ..._stream(messageId, text),
-    _ui(
+    scenarioStart(messageId),
+    ...scenarioStream(messageId, text),
+    scenarioUi(
       messageId,
-      _payload([
+      scenarioPayload([
         // Degrades to its fallback text.
         {
           'type': 'service_carousel_v2',
@@ -466,7 +434,7 @@ List<AiChatEvent> _buildUnknownNode(String messageId) {
         },
       ]),
     ),
-    _end(messageId, text),
+    scenarioEnd(messageId, text),
   ];
 }
 
@@ -480,11 +448,11 @@ const _unknownAction = MockScenario(
 List<AiChatEvent> _buildUnknownAction(String messageId) {
   const text = 'This reply asks for things the app will not do.';
   return [
-    _start(messageId),
-    ..._stream(messageId, text),
-    _ui(
+    scenarioStart(messageId),
+    ...scenarioStream(messageId, text),
+    scenarioUi(
       messageId,
-      _payload([
+      scenarioPayload([
         // Not in the action catalog at all — the whole button is dropped.
         {
           'type': 'button',
@@ -499,13 +467,22 @@ List<AiChatEvent> _buildUnknownAction(String messageId) {
           'label': 'Open offer',
           'action': {'type': 'open_url', 'url': 'https://evil.example/steal'},
         },
-        // schemaVersion 1 is assetId-only, so a remote image URL is refused
-        // outright — the app never issues the request.
+        // Remote images are admitted, but only through the image policy: this
+        // one is not https, so it is refused during validation and the app
+        // never issues the request.
         {
           'type': 'image',
           'id': 'bad3',
-          'url': 'https://tracker.example/pixel.gif',
+          'url': 'http://tracker.example/pixel.gif',
           'alt': 'tracking pixel',
+        },
+        // An asset id the client does not publish. There is no field in which
+        // a local path means anything, so this resolves to nothing.
+        {
+          'type': 'image',
+          'id': 'bad4',
+          'assetId': 'assets/images/secret.png',
+          'alt': 'invented local file',
         },
         {
           'type': 'button',
@@ -516,7 +493,7 @@ List<AiChatEvent> _buildUnknownAction(String messageId) {
         },
       ]),
     ),
-    _end(messageId, text),
+    scenarioEnd(messageId, text),
   ];
 }
 
@@ -530,15 +507,15 @@ const _malformed = MockScenario(
 List<AiChatEvent> _buildMalformed(String messageId) {
   const text = 'The structured part of this reply is broken.';
   return [
-    _start(messageId),
-    ..._stream(messageId, text),
+    scenarioStart(messageId),
+    ...scenarioStream(messageId, text),
     // Wrong schemaVersion type, blocks not an array, nodes that are not
     // objects — all at once.
-    _ui(messageId, <String, dynamic>{
+    scenarioUi(messageId, <String, dynamic>{
       'schemaVersion': '1',
       'blocks': 'not-an-array',
     }),
-    _end(messageId, text),
+    scenarioEnd(messageId, text),
   ];
 }
 
@@ -562,11 +539,11 @@ List<AiChatEvent> _buildOversized(String messageId) {
   }
 
   return [
-    _start(messageId),
-    ..._stream(messageId, text),
-    _ui(
+    scenarioStart(messageId),
+    ...scenarioStream(messageId, text),
+    scenarioUi(
       messageId,
-      _payload([
+      scenarioPayload([
         {
           'type': 'text',
           'id': 'first',
@@ -585,7 +562,7 @@ List<AiChatEvent> _buildOversized(String messageId) {
           {'type': 'text', 'id': 'pad_$i', 'text': 'Padding block $i'},
       ]),
     ),
-    _end(messageId, text),
+    scenarioEnd(messageId, text),
   ];
 }
 
@@ -597,8 +574,8 @@ const _longConversation = MockScenario(
 );
 
 List<AiChatEvent> _buildLongConversation(String messageId) => [
-  _start(messageId),
-  ..._stream(
+  scenarioStart(messageId),
+  ...scenarioStream(
     messageId,
     'Here is a deliberately long reply so the streaming path can be watched '
     'under load. Each word arrives as its own text_delta event. None of them '
@@ -607,9 +584,9 @@ List<AiChatEvent> _buildLongConversation(String messageId) => [
     'now is rebuilding, because it listens to the active stream controller '
     'directly rather than to the chat state.',
   ),
-  _ui(
+  scenarioUi(
     messageId,
-    _payload([
+    scenarioPayload([
       _serviceCard(
         id: 'svc_9',
         title: 'AC Maintenance',
@@ -618,7 +595,7 @@ List<AiChatEvent> _buildLongConversation(String messageId) => [
       ),
     ]),
   ),
-  _end(
+  scenarioEnd(
     messageId,
     'Here is a deliberately long reply so the streaming path can be watched '
     'under load. Each word arrives as its own text_delta event. None of them '
@@ -631,13 +608,23 @@ List<AiChatEvent> _buildLongConversation(String messageId) => [
 
 /// Every scenario, in the order the dev menu shows them.
 const mockScenarios = <MockScenario>[
+  // Prose and the primitives.
   _plainText,
   _textAndCard,
+  _primitives,
+
+  // The entity cards and suggestion set that predate the current Figma
+  // component library, reworked to its card language.
   _serviceList,
   _appointment,
   _branches,
-  _primitives,
   _quickReply,
+
+  // One per component the current library added, plus its state variants.
+  ...componentScenarios,
+
+  // Payload hostility. These stay last because they are the ones a developer
+  // reaches for deliberately, not by keyword.
   _unknownNode,
   _unknownAction,
   _malformed,
@@ -652,7 +639,7 @@ const mockScenarios = <MockScenario>[
 /// duplicating the pacing helpers — the point of the mock is that every reply
 /// travels the real event path, whatever prompted it.
 List<AiChatEvent> mockSay(String messageId, String text) =>
-    _say(messageId, text);
+    scenarioSay(messageId, text);
 
 /// Picks a scenario from what the user typed, falling back to the card demo.
 MockScenario scenarioFor(String message) {

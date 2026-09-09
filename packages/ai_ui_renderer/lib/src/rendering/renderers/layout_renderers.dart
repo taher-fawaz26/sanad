@@ -2,7 +2,7 @@ import 'package:ai_ui_protocol/ai_ui_protocol.dart';
 import 'package:ai_ui_renderer/src/rendering/ai_node_renderer.dart';
 import 'package:ai_ui_renderer/src/rendering/ai_ui_render_scope.dart';
 import 'package:ai_ui_renderer/src/rendering/ai_ui_tokens.dart';
-import 'package:app_assets/app_assets.dart';
+import 'package:ai_ui_renderer/src/rendering/primitives/ai_ui_image_view.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_ui/shared_ui.dart';
@@ -218,38 +218,18 @@ final class AiUiListItemRenderer extends AiNodeRenderer<AiUiListItemNode> {
   ) {
     final image = node.leadingImage;
     if (image != null) {
-      final child = switch (image) {
-        AiUiRemoteImage(:final url) => AppNetworkImage(
-          url,
+      return ClipRRect(
+        borderRadius: AppRadius.circularSm,
+        child: AiUiImageView(
+          source: image,
+          scope: scope,
+          nodeType: AiUiNodeType.listItem.wire,
+          nodeId: node.id,
           width: AppDimension.iconButtonLg,
           height: AppDimension.iconButtonLg,
         ),
-        AiUiAssetImage(:final assetId) => _assetLeading(scope, assetId),
-      };
-      return ClipRRect(borderRadius: AppRadius.circularSm, child: child);
-    }
-    return icon;
-  }
-
-  Widget _assetLeading(AiUiRenderScope scope, String assetId) {
-    final asset = scope.assets.resolve(assetId);
-    if (asset == null) {
-      return AppImagePlaceholder(
-        width: AppDimension.iconButtonLg,
-        height: AppDimension.iconButtonLg,
       );
     }
-    return asset.isSvg
-        ? AppSvgPicture.asset(
-            asset.path,
-            width: AppDimension.iconButtonLg,
-            height: AppDimension.iconButtonLg,
-          )
-        : Image.asset(
-            asset.path,
-            package: AppAssets.package,
-            width: AppDimension.iconButtonLg,
-            height: AppDimension.iconButtonLg,
-          );
+    return icon;
   }
 }

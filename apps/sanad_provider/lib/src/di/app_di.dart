@@ -19,11 +19,14 @@ import 'package:localization/localization.dart';
 import 'package:maps/maps.dart';
 import 'package:media_upload/media_upload.dart';
 import 'package:network/network.dart';
+import 'package:notifications/notifications.dart';
 import 'package:sanad_provider/src/features/organization_settings/organization_settings.dart';
 import 'package:permissions/permissions.dart';
 import 'package:provider_rbac/provider_rbac.dart';
 import 'package:sanad_provider/src/features/registration/registration.dart';
 import 'package:sanad_provider/src/config/app_config.dart';
+import 'package:sanad_provider/src/features/requests/requests.dart';
+import 'package:sanad_provider/src/notifications/provider_notification_navigator.dart';
 import 'package:sanad_provider/src/routing/provider_navigator.dart';
 import 'package:services/services.dart';
 import 'package:storage/storage.dart';
@@ -65,7 +68,10 @@ Future<void> configureDependencies({
     ..registerLazySingleton(() => TranslateBloc(fallback: initialLanguage))
     ..registerLazySingleton(ThemeBloc.new)
     // ── Auth status ──────────────────────────────────────────────────────────
-    ..registerLazySingleton(AuthStatusNotifier.new);
+    ..registerLazySingleton(AuthStatusNotifier.new)
+    // Holds the live GoRouter so a notification tap has somewhere to go. The
+    // root widget attaches it once the router exists.
+    ..registerLazySingleton(ProviderNotificationNavigator.new);
 
   // ── Network stack (Dio, interceptors, token manager, connectivity) ───────
   await NetworkDI.init(
@@ -129,6 +135,14 @@ Future<void> configureDependencies({
       // reference `moduleRegistry` here — this closure only runs long after
       // the assignment below completes.
       onSessionBoundary: () => moduleRegistry.disposeAll(),
+      // Push registration is an upsert, not a setup step: it runs after every
+      // login and on every launch that restores a session.
+      onSessionStarted: () =>
+          sl<PushRegistrationCoordinator>().syncRegistration().ignore(),
+      // Runs while the access token is still live. Without it the signed-out
+      // handset keeps receiving the next user's notifications — tokens belong
+      // to devices, not users.
+      onBeforeSessionEnd: () => sl<PushRegistrationCoordinator>().unregister(),
     ),
     ContactVerificationModule(),
     AccountSettingsModule(),
@@ -138,6 +152,13 @@ Future<void> configureDependencies({
     ServicesModule(),
     WorkersModule(),
     ProviderRbacModule(),
+    ProviderRequestsModule(),
+    // The single owner of push registration and notification routing for this
+    // app. Registered after AuthModule so the session exists by the time its
+    // initialize() runs.
+    NotificationsModule(
+      resolveNavigator: () => sl<ProviderNotificationNavigator>(),
+    ),
     InvitationModule(),
     RegistrationModule(),
     AssetPickerModule(

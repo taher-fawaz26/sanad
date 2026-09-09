@@ -15,13 +15,13 @@ class CreateBranchRequest extends Equatable {
     required this.lng,
     required this.radiusKm,
     required this.workerIds,
+    required this.serviceIds,
+    required this.servingAreaPlaceIds,
     this.branchManagerId,
     this.googleMapsLink,
     this.socialMediaLink,
     this.availabilityMode = BranchAvailabilityMode.coreHours,
     this.availability,
-    this.serviceIds,
-    this.servingAreaPlaceIds,
   });
 
   final String branchName;
@@ -38,8 +38,27 @@ class CreateBranchRequest extends Equatable {
   final String? socialMediaLink;
   final BranchAvailabilityMode availabilityMode;
   final List<BranchAvailabilityEntity>? availability;
-  final List<String>? serviceIds;
-  final List<String>? servingAreaPlaceIds;
+  /// Provider-service ids from `GET /provider-services`.
+  ///
+  /// **Required.** `POST /branches` rejects a missing or empty array — a
+  /// branch that offers nothing cannot be matched to any request, so the
+  /// backend stopped accepting one.
+  ///
+  /// Not asserted non-empty here: this class is `const`, and `List.length` is
+  /// not const-evaluable. Emptiness is prevented up front by the wizard's
+  /// step gates (`AddBranchDraftState.isStepThreeComplete`) and caught by the
+  /// server otherwise.
+  final List<String> serviceIds;
+
+  /// Google `place_id` values matched against `location_areas`.
+  ///
+  /// **Required.** Same reasoning as [serviceIds]: serving areas are what
+  /// make a branch reachable by the matcher at all. Gated by
+  /// `AddBranchDraftState.isStepTwoComplete`.
+  ///
+  /// This used to be dropped from the body when empty, which under the new
+  /// contract produces a `400` rather than the old silent no-op.
+  final List<String> servingAreaPlaceIds;
 
   Map<String, dynamic> toMap() {
     final body = <String, dynamic>{
@@ -62,10 +81,10 @@ class CreateBranchRequest extends Equatable {
           .map(BranchAvailabilityDto.entityToMap)
           .toList();
     }
-    if (serviceIds != null) body['serviceIds'] = serviceIds;
-    if (servingAreaPlaceIds != null && servingAreaPlaceIds!.isNotEmpty) {
-      body['servingAreaPlaceIds'] = servingAreaPlaceIds;
-    }
+    // Always sent: both are required by the contract, and the constructor
+    // has already asserted neither is empty.
+    body['serviceIds'] = serviceIds;
+    body['servingAreaPlaceIds'] = servingAreaPlaceIds;
     return body;
   }
 

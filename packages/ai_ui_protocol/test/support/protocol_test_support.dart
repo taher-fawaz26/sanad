@@ -4,20 +4,34 @@ import 'package:ai_ui_protocol/ai_ui_protocol.dart';
 /// cases are the default and the "allowed" case has to be opted into.
 const testUrlPolicy = AiUiUrlPolicy(allowedHosts: {'cdn.trysanad.us'});
 
-/// schemaVersion 1 is assetId-only, so an image test names an asset the host
-/// publishes. A URL is rejected regardless of host — see the `images` group.
+/// An id the host publishes, for the `assetId` half of an image.
 const publishedAssetId = 'service_placeholder';
-const rejectedImageUrl = 'https://cdn.trysanad.us/services/ac.jpg';
+
+/// A dynamic, backend-owned image — the `url` half. Accepted by the default
+/// image policy (https, any host) and by [testImageUrlPolicy].
+const dynamicImageUrl = 'https://cdn.trysanad.us/services/ac.jpg';
+
+/// Refused by every image policy: the scheme is not https.
+const insecureImageUrl = 'http://cdn.trysanad.us/services/ac.jpg';
+
+/// An image policy narrowed to one origin, for the tests that assert a host
+/// allowlist can be applied. The *default* is any https host, because dynamic
+/// media lives on whatever CDN the backend uses.
+const testImageUrlPolicy = AiUiUrlPolicy(
+  allowedHosts: {'cdn.trysanad.us'},
+);
 
 AiUiValidator validatorWith({
   AiUiLimits limits = AiUiLimits.defaults,
   AiUiUrlPolicy urlPolicy = testUrlPolicy,
+  AiUiUrlPolicy imageUrlPolicy = AiUiUrlPolicy.httpsAnyHost,
   Set<AiUiActionType>? supportedActions,
   Set<String>? knownAssetIds,
   bool keepUnsupportedNodes = false,
 }) => AiUiValidator(
   limits: limits,
   urlPolicy: urlPolicy,
+  imageUrlPolicy: imageUrlPolicy,
   supportedActions: supportedActions,
   knownAssetIds: knownAssetIds,
   options: AiUiValidatorOptions(

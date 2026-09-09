@@ -51,6 +51,16 @@ abstract interface class AiPermissionGateway {
   /// been allowed — which is why dictation asks for both, in that order.
   Future<AiPermissionOutcome> ensureSpeechRecognition();
 
+  /// Requests while-in-use location access.
+  ///
+  /// While-in-use, never background: the AI surface asks so it can find
+  /// nearby branches during a conversation, and a background grant would be
+  /// larger than anything the conversation justifies.
+  Future<AiPermissionOutcome> ensureLocation();
+
+  /// Requests notification permission.
+  Future<AiPermissionOutcome> ensureNotifications();
+
   /// Opens the system settings screen for this app.
   ///
   /// Only meaningful after [AiPermissionOutcome.permanentlyDenied].

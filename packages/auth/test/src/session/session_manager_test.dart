@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:auth/src/auth/auth_status.dart';
 import 'package:auth/src/auth/auth_status_notifier.dart';
 import 'package:auth/src/data/models/permission_model.dart';
@@ -722,6 +724,162 @@ void main() {
 
       await expectLater(withoutHook.save(_tSession), completes);
       await expectLater(withoutHook.clear(), completes);
+    });
+  });
+
+  group('onSessionStarted / onBeforeSessionEnd (push registration seam)', () {
+    test('onSessionStarted fires on save() — a fresh sign-in', () async {
+      var starts = 0;
+      final manager = SessionManager(
+        repository: repository,
+        cache: cache,
+        tokenManager: tokenManager,
+        authStatusNotifier: notifier,
+        onSessionStarted: () => starts++,
+      );
+      when(() => tokenManager.accessToken).thenReturn('access-1');
+      when(() => tokenManager.refreshToken).thenReturn('refresh-1');
+
+      await manager.save(_tSession);
+
+      expect(starts, 1);
+    });
+
+    test(
+      'onSessionStarted fires on a restore() that finds a session',
+      () async {
+        var starts = 0;
+        final manager = SessionManager(
+          repository: repository,
+          cache: cache,
+          tokenManager: tokenManager,
+          authStatusNotifier: notifier,
+          onSessionStarted: () => starts++,
+        );
+        when(() => tokenManager.accessToken).thenReturn('access-1');
+        when(() => tokenManager.refreshToken).thenReturn('refresh-1');
+        await manager.save(_tSession);
+        cache.clear();
+        starts = 0;
+
+        await manager.restore();
+
+        // This is the "register on every launch while still signed in" trigger:
+        // without it a relaunch never re-upserts the push token, and the server
+        // eventually prunes it as stale.
+        expect(starts, 1);
+      },
+    );
+
+    test('onSessionStarted ignores a restore() that finds nothing', () async {
+      var starts = 0;
+      final manager = SessionManager(
+        repository: repository,
+        cache: cache,
+        tokenManager: tokenManager,
+        authStatusNotifier: notifier,
+        onSessionStarted: () => starts++,
+      );
+
+      await manager.restore();
+
+      expect(starts, 0);
+    });
+
+    test('onSessionStarted does NOT fire on clear()', () async {
+      var starts = 0;
+      final manager = SessionManager(
+        repository: repository,
+        cache: cache,
+        tokenManager: tokenManager,
+        authStatusNotifier: notifier,
+        onSessionStarted: () => starts++,
+      );
+      when(() => tokenManager.accessToken).thenReturn('access-1');
+      when(() => tokenManager.refreshToken).thenReturn('refresh-1');
+      await manager.save(_tSession);
+      starts = 0;
+
+      await manager.clear();
+
+      expect(starts, 0);
+    });
+
+    test('onBeforeSessionEnd runs BEFORE the tokens are wiped', () async {
+      // The whole point of the hook: DELETE /notifications/devices/:token has
+      // to be authenticated, so it must observe a live token.
+      final order = <String>[];
+      when(() => tokenManager.accessToken).thenReturn('access-1');
+      when(() => tokenManager.refreshToken).thenReturn('refresh-1');
+      when(() => tokenManager.clearTokens()).thenAnswer((_) async {
+        order.add('tokens-cleared');
+      });
+      final manager = SessionManager(
+        repository: repository,
+        cache: cache,
+        tokenManager: tokenManager,
+        authStatusNotifier: notifier,
+        onBeforeSessionEnd: () async => order.add('hook'),
+      );
+      await manager.save(_tSession);
+
+      await manager.clear();
+
+      expect(order, ['hook', 'tokens-cleared']);
+    });
+
+    test('a throwing onBeforeSessionEnd still completes the logout', () async {
+      when(() => tokenManager.accessToken).thenReturn('access-1');
+      when(() => tokenManager.refreshToken).thenReturn('refresh-1');
+      final manager = SessionManager(
+        repository: repository,
+        cache: cache,
+        tokenManager: tokenManager,
+        authStatusNotifier: notifier,
+        onBeforeSessionEnd: () async => throw StateError('offline'),
+      );
+      await manager.save(_tSession);
+
+      await expectLater(manager.clear(), completes);
+
+      verify(() => tokenManager.clearTokens()).called(1);
+      expect(notifier.status, AuthStatus.unauthenticated);
+      expect(storage.raw, isNull);
+    });
+
+    test('a hanging onBeforeSessionEnd cannot block logout forever', () async {
+      // Reached fire-and-forget from the 401 handler, where the token is
+      // already dead — the request may never resolve.
+      when(() => tokenManager.accessToken).thenReturn('access-1');
+      when(() => tokenManager.refreshToken).thenReturn('refresh-1');
+      final manager = SessionManager(
+        repository: repository,
+        cache: cache,
+        tokenManager: tokenManager,
+        authStatusNotifier: notifier,
+        onBeforeSessionEnd: () => Completer<void>().future,
+      );
+      await manager.save(_tSession);
+
+      await expectLater(
+        manager.clear().timeout(const Duration(seconds: 10)),
+        completes,
+      );
+      expect(notifier.status, AuthStatus.unauthenticated);
+    });
+
+    test('both hooks are optional', () async {
+      final manager = SessionManager(
+        repository: repository,
+        cache: cache,
+        tokenManager: tokenManager,
+        authStatusNotifier: notifier,
+      );
+      when(() => tokenManager.accessToken).thenReturn('access-1');
+      when(() => tokenManager.refreshToken).thenReturn('refresh-1');
+
+      await expectLater(manager.save(_tSession), completes);
+      await expectLater(manager.clear(), completes);
     });
   });
 }

@@ -1,4 +1,5 @@
 import 'package:account_settings/account_settings.dart';
+import 'package:notifications/notifications.dart';
 import 'package:sanad_provider/src/features/organization_settings/organization_settings.dart';
 
 /// sanad_provider route paths for app-shell pages.
@@ -36,5 +37,6 @@ abstract final class AppRoutes {
     services,
     ...OrganizationSettingsRoutes.protectedRoutes,
     ...AccountSettingsRoutes.protectedRoutes,
+    ...NotificationsRoutes.protectedRoutes,
   };
 }

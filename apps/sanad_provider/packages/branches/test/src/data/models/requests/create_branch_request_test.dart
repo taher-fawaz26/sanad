@@ -18,6 +18,8 @@ void main() {
     lng: 55.2708,
     radiusKm: 5,
     workerIds: ['w1'],
+    serviceIds: ['svc-1'],
+    servingAreaPlaceIds: ['ChIJvRmU9K1DXz4RYKyuhY6v0wM'],
   );
 
   group('CreateBranchRequest.toMap', () {
@@ -47,14 +49,29 @@ void main() {
       expect(map['radiusKm'], 5);
     });
 
-    test('omits servingAreaPlaceIds key entirely when null', () {
-      final map = baseRequest.toMap();
-      expect(map.containsKey('servingAreaPlaceIds'), isFalse);
-    });
+    test(
+      'always sends servingAreaPlaceIds and serviceIds — both are required '
+      'with at least one entry, and omitting either now answers 400',
+      () {
+        // This replaces two tests that pinned the opposite behaviour: the
+        // request used to drop `servingAreaPlaceIds` when empty, which under
+        // the current contract produces a rejected POST rather than a
+        // harmless no-op.
+        final map = baseRequest.toMap();
 
-    test('omits servingAreaPlaceIds key entirely when empty', () {
+        expect(map['servingAreaPlaceIds'], ['ChIJvRmU9K1DXz4RYKyuhY6v0wM']);
+        expect(map['serviceIds'], ['svc-1']);
+      },
+    );
+
+    test('transmits an empty required array rather than dropping the key', () {
+      // If the wizard ever lets an empty selection through, the server must
+      // get the chance to say so. Silently omitting the key — the old
+      // behaviour — turned a fixable validation error into a confusing one.
       final map = baseRequest.copyWith(servingAreaPlaceIds: const []).toMap();
-      expect(map.containsKey('servingAreaPlaceIds'), isFalse);
+
+      expect(map.containsKey('servingAreaPlaceIds'), isTrue);
+      expect(map['servingAreaPlaceIds'], isEmpty);
     });
 
     test('includes branchManagerId when a manager is assigned', () {
@@ -88,6 +105,8 @@ void main() {
               slots: [BranchTimeSlotEntity(from: '09:00', to: '13:00')],
             ),
           ],
+          serviceIds: ['svc-1'],
+          servingAreaPlaceIds: ['ChIJvRmU9K1DXz4RYKyuhY6v0wM'],
         );
 
         final map = request.toMap();
@@ -117,6 +136,8 @@ void main() {
           lng: 55.2708,
           radiusKm: 5,
           workerIds: ['w1'],
+          serviceIds: ['svc-1'],
+          servingAreaPlaceIds: ['ChIJvRmU9K1DXz4RYKyuhY6v0wM'],
         );
 
         final map = noManagerRequest.toMap();
@@ -127,7 +148,10 @@ void main() {
 }
 
 extension on CreateBranchRequest {
-  CreateBranchRequest copyWith({List<String>? servingAreaPlaceIds}) =>
+  CreateBranchRequest copyWith({
+    List<String>? servingAreaPlaceIds,
+    List<String>? serviceIds,
+  }) =>
       CreateBranchRequest(
         branchName: branchName,
         branchType: branchType,
@@ -143,7 +167,7 @@ extension on CreateBranchRequest {
         socialMediaLink: socialMediaLink,
         availabilityMode: availabilityMode,
         availability: availability,
-        serviceIds: serviceIds,
+        serviceIds: serviceIds ?? this.serviceIds,
         servingAreaPlaceIds: servingAreaPlaceIds ?? this.servingAreaPlaceIds,
       );
 }

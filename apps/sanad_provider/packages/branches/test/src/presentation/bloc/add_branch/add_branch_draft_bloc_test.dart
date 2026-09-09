@@ -780,16 +780,40 @@ void main() {
         },
       );
 
-      test('isStepTwoComplete requires radius and address', () {
-        expect(const AddBranchDraft().isStepTwoComplete, isFalse);
-        expect(
-          const AddBranchDraft(
-            branchAddress: 'Addr',
-            coverageRadiusKm: 5.0,
-          ).isStepTwoComplete,
-          isTrue,
-        );
-      });
+      test(
+        'isStepTwoComplete requires radius, address and a serving area',
+        () {
+          expect(const AddBranchDraft().isStepTwoComplete, isFalse);
+
+          // Address and radius alone are no longer enough: `POST /branches`
+          // rejects an empty `servingAreaPlaceIds`, and a branch with no
+          // serving area could never be matched to a request anyway. Blocking
+          // the step beats letting the wizard reach submit and take a 400.
+          expect(
+            const AddBranchDraft(
+              branchAddress: 'Addr',
+              coverageRadiusKm: 5.0,
+            ).isStepTwoComplete,
+            isFalse,
+          );
+
+          expect(
+            const AddBranchDraft(
+              branchAddress: 'Addr',
+              coverageRadiusKm: 5.0,
+              servingAreas: [
+                ServingArea(
+                  placeId: 'ChIJvRmU9K1DXz4RYKyuhY6v0wM',
+                  name: 'Al Barsha 1',
+                  address: '',
+                  latLng: LatLng(25.1, 55.2),
+                ),
+              ],
+            ).isStepTwoComplete,
+            isTrue,
+          );
+        },
+      );
 
       test('isStepThreeComplete requires services', () {
         expect(const AddBranchDraft().isStepThreeComplete, isFalse);

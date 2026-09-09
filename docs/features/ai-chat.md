@@ -171,15 +171,69 @@ live-voice backdrop are untouched — showing them through the chrome is the
 entire point. The nav pill's *selected* segment stays opaque, because its label
 is the one piece of text on that control.
 
+## Conversation History
+
+Figma `8120:2918` (with conversations) and `8124:3867` (without). Reached by
+push from the Home header's History button, on top of `AiHomeShell` rather than
+inside one of its branches, so it covers the whole shell — including the
+persistent header, which is why the page draws navigation of its own and
+repaints `AiChatBackground` the way `AiChatPage` does.
+
+**One screen, two renderings.** Which appears is decided by the data and
+nothing else — an empty collection *is* the empty state. There is no second
+route and no flag on the widget, which is what makes the real repository a
+drop-in later: "the user has no history" is simply what it will return.
+
+**No bloc, on purpose.** The screen loads a list once and filters it in memory:
+no async lifecycle to model, no mutation to guard, no failure to surface. The
+seam is a one-method `ConversationHistorySource`; `MockConversationHistorySource`
+implements it with local fixtures, and search is the pure
+`filterConversationHistory(entries, query)`. Swapping in a repository backed by
+the history endpoint touches neither.
+
+**Search** is the shared `AppSearchField` carrying Figma's own spec (52dp on a
+16dp radius, 20dp glyph, 14dp type) through a scoped `Theme` that overrides the
+`AppSearchBarTheme` extension for that subtree — the same mechanism the
+component already reads its spec from, so nothing changes for the screens using
+the shared 40/8 bar. The one property the extension cannot reach is the bordered
+variant's glyph size, which is why `AppSearchField.iconSize` exists.
+
+The query lives in a `ValueNotifier`, not in `State`: a keystroke has to rebuild
+the results and nothing else. Cards are `ListView.separated` rows keyed by
+conversation id, so filtering re-parents the survivors rather than rebuilding
+every row into a different entry's slot.
+
+**Not glass.** Figma draws opaque white cards on a hairline border here, and a
+list of glass rows would mean one `BackdropFilter` per visible card. The
+`ClientGlassSurface` treatment stays on the chrome it was built for.
+
+The CTA is a client-local button rather than `AppButton`: geometry, typography
+and label colour are identical, but Figma specifies `main/700` (`#1A7E6B`),
+where the primary variant resolves `main/600`. That is the AI surface's own
+green — the one `AiComposerTokens.accent` already documents — so the screen
+follows the surface it belongs to instead of repointing a shared token.
+
+---
+
 ## Try it
 
 Run `sanad_client` in a debug build and navigate to `/dev/ai-chat`.
 
+Conversation History is at `/dev/ai-chat/history`; append `?state=empty` for the
+empty state, following the `?mock=` / `?transport=` affordances on the chat
+route. Both states are reachable in a debug build without a rebuild and without
+any mock behaviour that could survive into release — the route itself does not
+exist there.
+
 The composer accepts free text; a scenario is picked by keyword (`services`,
 `appointment`, `branches`, `book`, `unsupported`, `malformed`, `oversized`, …).
 A chip row above the composer forces a specific scenario, including the
-deliberately broken ones. Twelve scenarios ship in
-`src/data/mock_scenarios.dart`; five of them are failure cases.
+deliberately broken ones and a chip that opens the component showcase.
+Twenty-six scenarios ship (twelve named here, fourteen from the component set) — `src/data/mock_scenarios.dart` assembles them and
+`src/data/scenarios/component_scenarios.dart` holds one per semantic
+component, with the state variants the design defines (an order delivered and
+active, a branch open and closed, a receipt paid and declined, a slot grid with
+one slot taken). Five are failure cases.
 
 ---
 
@@ -202,7 +256,42 @@ user types  ──► AiChatBloc ──► AiChatEventSource.send()
                 └─ document ─► AiUiSurface → renderers → App* widgets
                                       │
                                  tap ─► AiActionRegistry ─► app handler
+                                      │
+                                      └─► AiUiInteractionSink ─► the loop below
 ```
+
+### Answering a card — the return leg
+
+```text
+user taps Confirm
+        │
+        ▼
+AiUiRenderScope.submitInteraction
+        ├─ ledger.beginSubmission(nodeId)   ← refuses a second tap, here only
+        └─ builds AiUiInteraction { nodeId, kind, value, text, messageId }
+                        │
+                        ▼
+        AiChatBlocInteractionSink ─► AiChatInteractionSubmitted
+                        │
+   AiChatBloc ├─ appends AiChatMessage.user(text, interaction)
+              └─ source.sendInteraction(interaction, text:)
+                        │
+                        ▼
+        AiChatTurnPayload.encode  → { conversation_id, message, interaction }
+                        │
+                        ▼
+                agent continues ─► message_start → … → ui → message_end
+```
+
+Two halves travel: the **sentence** the agent's template produced (in
+`message`, unchanged, so a backend that ignores results still works) and the
+**structured result** naming the node, the choice and the message that asked.
+See [`../ai-chat/PROTOCOL_V1.md`](../ai-chat/PROTOCOL_V1.md) §13.
+
+Live voice runs the identical path with two substitutions: the sink is
+`AiVoiceInteractionSink`, and the transport is the session's own channel rather
+than a turn body. The nodes, the values, the lifecycle, the validation and the
+renderers are one implementation.
 
 ---
 
@@ -210,7 +299,7 @@ user types  ──► AiChatBloc ──► AiChatEventSource.send()
 
 | Path (under `features/ai_chat/src/`) | Role |
 |---|---|
-| `ai_chat_config.dart` | URL policy, the eight supported actions, published asset ids, validator factory |
+| `ai_chat_config.dart` | URL policy, the eleven supported actions, published asset ids, validator factory |
 | `domain/ai_chat_message.dart` | One bubble: role, text, validated document, lifecycle |
 | `domain/ai_chat_event_source.dart` | The transport seam — three members |
 | `data/sse_ai_chat_event_source.dart` | The live transport: streamed `POST`, `Sanad-Access-Token`, one request per turn |
@@ -230,14 +319,32 @@ user types  ──► AiChatBloc ──► AiChatEventSource.send()
 | `data/sse_frame_parser.dart` | `text/event-stream` framing — incremental, total, never throws |
 | `data/websocket_ai_chat_event_source.dart` | Reference transport (`?transport=ws`): `wss`, `Sanad-Access-Token`, reconnect |
 | `data/mock_ai_chat_event_source.dart` | Scripted replay with realistic pacing |
-| `data/mock_scenarios.dart` | The twelve scenarios |
+| `data/mock_scenarios.dart` | The scenario list, assembled |
+| `data/scenarios/component_scenarios.dart` | One scenario per semantic component, with its state variants |
+| `data/scenarios/scenario_support.dart` | The `MockScenario` shape and the event helpers |
+| `data/showcase_fixtures.dart` | The same payloads, grouped for the showcase |
+| `presentation/pages/ai_ui_showcase_page.dart` | Dev-only catalogue: every semantic type through the real validator and surface |
 | `presentation/bloc/ai_chat_bloc.dart` | Conversation state; parses `ui` once at ingestion |
 | `presentation/bloc/active_stream_controller.dart` | Streaming text, bypassing bloc state |
-| `presentation/actions/ai_chat_action_handlers.dart` | The eight handlers, the capability seam, registry builder |
+| `presentation/actions/ai_chat_action_handlers.dart` | The eleven handlers, the capability seam, registry builder |
 | `presentation/pages/ai_chat_screen.dart` | Owns the source for one visit |
 | `presentation/pages/ai_chat_page.dart` | Nav bar, message list, scenario picker, composer |
 | `presentation/widgets/ai_chat_bubble.dart` | Bubble; hosts `AiUiSurface` for structured UI |
-| `module/ai_chat_module.dart` | Dev-gated route contribution |
+| `module/ai_chat_module.dart` | Dev-gated route contribution, including History's `?state=` fixture switch |
+
+Conversation History lives beside the feature, under
+`features/history/` (it is a peer destination, not a chat branch):
+
+| Path (under `features/history/`) | Role |
+|---|---|
+| `history_page.dart` | The screen; picks its rendering from the loaded list |
+| `src/domain/conversation_history_source.dart` | The data seam — one method |
+| `src/domain/filter_conversation_history.dart` | Search, as a pure function |
+| `src/data/mock_conversation_history_source.dart` | Local fixtures + the `?state=` enum |
+| `src/presentation/conversation_history_tokens.dart` | Only the Figma numbers with no design-system token |
+| `src/presentation/widgets/conversation_history_search_field.dart` | `AppSearchField` under a scoped spec |
+| `src/presentation/widgets/conversation_history_card.dart` | One conversation row |
+| `src/presentation/widgets/conversation_history_placeholder.dart` | The illustration + copy, for both empty renderings |
 
 ---
 
@@ -252,6 +359,13 @@ it.
 a `ValueListenableBuilder`, rebuilds. If you add state that changes per token,
 you undo this.
 
+**One image contract, one image widget.** Every image-bearing node carries the
+same `{url?, assetId?}` object, and `AiUiImageView` is the only place the
+`url > assetId > fallback` precedence is implemented. A URL goes through
+`AppNetworkImage` — the app's existing cached-network-image widget — so the AI
+surface has no image stack of its own. `AiChatConfig.imageUrlPolicy` is where
+the accepted origins are decided.
+
 **The validator's allowlists come from the app's registries.**
 `AiChatConfig.supportedActions` is the single source of truth: handlers are
 registered for exactly that set, and the validator drops anything else *before*
@@ -262,12 +376,22 @@ never fire; a test asserts the two stay in step.
 
 ## Adding a component
 
-1. Add the node type and its parser to `packages/ai_ui_protocol`.
-2. Write an `AiNodeRenderer` in `packages/ai_ui_renderer` and register it in
+1. Add the node type and its parser to `packages/ai_ui_protocol` — the type to
+   `AiUiNodeType` (plus `isSemantic` and, if it takes a card action row,
+   `acceptsCardActions`), the node class under `domain/nodes/`, the parser
+   under `validation/parsers/`. The validator's dispatch switch is exhaustive,
+   so the compiler names what is missing.
+2. Write an `AiNodeRenderer` in `packages/ai_ui_renderer` under
+   `rendering/renderers/semantic/` and register it in
    `defaultRendererRegistry`. A test fails if you forget.
-3. Document it in [`PROTOCOL_V1.md`](../ai-chat/PROTOCOL_V1.md) and
-   [`AI_CONTRACT.md`](../ai-chat/AI_CONTRACT.md).
-4. Add a scenario to `mock_scenarios.dart`.
+3. Add a scenario to `data/scenarios/component_scenarios.dart` and a fixture to
+   `data/showcase_fixtures.dart` — the showcase test fails until every semantic
+   type has one.
+4. Check it on a device through `/dev/ai-chat/showcase`, in both directions and
+   at 2× text scale. Tests do not tell you whether it matches the design.
+5. Document it in [`PROTOCOL_V1.md`](../ai-chat/PROTOCOL_V1.md) and
+   [`AI_CONTRACT.md`](../ai-chat/AI_CONTRACT.md), then in the Confluence page
+   the AI team builds against.
 
 Adding a node type is **additive** — it does not bump `schemaVersion`. Older
 clients degrade through `fallbackText`.
@@ -288,17 +412,25 @@ fvm flutter test packages/ai_ui_protocol packages/ai_ui_renderer
 fvm flutter test apps/sanad_client/test/features/ai_chat apps/sanad_client/test/ui
 ```
 
-- `ai_ui_protocol` — 118 tests: node round-trips through the real validator,
-  the limit matrix, action allowlist, URL policy, totality (no input throws).
-- `ai_ui_renderer` — 51 tests: one per node type, degradation, action dispatch,
-  RTL mirroring, accessibility.
-- `ai_chat` — 593 tests across transports, the two blocs, the composer widgets
-  and the module's route tree. The ones most worth knowing about:
+- `ai_ui_protocol` — 189 tests: node round-trips through the real validator
+  (one per type in the catalog, enforced), the limit matrix, action allowlist,
+  URL policy, totality (no input throws).
+- `ai_ui_renderer` — 125 tests: one per node type, the interactive cards'
+  input and template substitution, degradation, action dispatch, RTL
+  mirroring, accessibility.
+- `ai_chat` — 667 tests across transports, the two blocs, the composer widgets
+  and the module's route tree, plus the showcase net that validates and renders
+  every fixture in both directions. The ones most worth knowing about:
   `ai_composer_bloc_test.dart` (the recording state machine, including the
   concurrency latches — every test in *a release that beats the take it belongs
   to* fails without them), `ai_hold_to_record_test.dart` (the gesture, driven
   pointer by pointer in both text directions), and `ai_composer_widget_test.dart`
   (which surface renders for which state).
+- `history` — 35 tests over a real router: both Figma states, search
+  (matching, non-matching, cleared), scrolling, the preview's two-line cap, the
+  interaction boundary, RTL and large text scale, plus the empty state's
+  illustration asset asserted **by name** — a substitute icon would still
+  satisfy "something renders".
 - `test/ui/glass` — 10 tests pinning the cost properties of
   `ClientGlassSurface`: one filter per surface, clipped rather than
   full-screen, nesting trips the assert.
@@ -307,9 +439,32 @@ fvm flutter test apps/sanad_client/test/features/ai_chat apps/sanad_client/test/
 
 ## Known limitations
 
-- `request_location_share` reaches a stub capability: the app acknowledges the
-  request but has no location flow yet. (`request_image_upload` now has a real
-  upload behind it.)
+- **The client reads no device position.** `request_location_share` now
+  returns a structured `permission_result` with `outcome: "unavailable"`
+  instead of ending in a snackbar, so the agent is *told* and can ask the user
+  to name the place — but there is still no GPS behind it. `LocationService`
+  exists in `packages/maps`, which the client does not depend on; adopting it
+  would bring `google_maps_flutter`, a Maps API key and a DI bootstrap for a
+  capability the conversation otherwise does not need. A `location_picker`
+  answer is fully structured (`id`, `name`, `addressText`, `source`); only
+  coordinates are missing.
+- **The backend does not read `interaction` yet.** The client sends it on every
+  transport. Until the agent parses it, a tapped card behaves exactly as it did
+  before — `message` still carries the agent's own sentence. See
+  [`../ai-chat/BACKEND_TICKET.md`](../ai-chat/BACKEND_TICKET.md) §12.
+- **Live voice has no realtime backend.** A semantic card can arrive
+  mid-session, be answered, and let the session resume — but *which* card
+  arrives is decided by a local script (`MockVoiceScenarios`), and the
+  assistant's audio is still the user's own capture played back. Validation,
+  rendering, the ledger, the interaction and the state machine on that path are
+  the real ones.
+- A `media_request` reports only its **cancellation** as a result. The files
+  themselves still arrive as the next turn's `attachments`, uncorrelated with
+  the node that asked — the picker returns asynchronously and the user may send
+  the photo several turns later, so claiming a count at request time would be a
+  fabrication.
+- A capability action on a bare `button` produces no result: it carries no
+  `nodeId`, so there is no question for the outcome to answer.
 - The backend does not read `attachments` yet — see
   [`../ai-chat/BACKEND_TICKET.md`](../ai-chat/BACKEND_TICKET.md) §11. Until it
   does, a voice note is still understood, because its transcript also fills
@@ -327,7 +482,12 @@ fvm flutter test apps/sanad_client/test/features/ai_chat apps/sanad_client/test/
 - There is no "stop generating" control. Cancelling an in-flight turn is now
   cheap — the transport already does it when a turn is replaced — but exposing
   it would need a fourth member on `AiChatEventSource`.
-- No conversation persistence — state is lost on navigation.
+- No conversation persistence — state is lost on navigation. Conversation
+  History is consequently UI-and-fixtures only: there is no history endpoint,
+  and nothing in the app can open a *stored* conversation (the transport has no
+  conversation id to resume), so a tap on a history card reaches
+  `HistoryPage.onConversationSelected` and stops there rather than inventing a
+  route.
 - `open_url` and `open_route` are unimplemented by design.
 - Images are `assetId`-only; there are no remote images in v1.
 - Diagnostics reach `appLogger` only, which filters below `warning` in release.

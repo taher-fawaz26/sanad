@@ -41,6 +41,24 @@ final class AiChatMessageSubmitted extends AiChatBlocEvent {
   List<Object?> get props => [text, attachments];
 }
 
+/// A structured answer to a semantic node, from Chat or from a capability
+/// handler that resolved one.
+///
+/// A separate event from [AiChatMessageSubmitted] even though both end in a
+/// user bubble: this one carries the correlation and the typed value, and the
+/// transport call it makes is a different one. Collapsing them would mean
+/// every send site had to reason about which half was populated.
+final class AiChatInteractionSubmitted extends AiChatBlocEvent {
+  /// Creates a submission carrying [interaction].
+  const AiChatInteractionSubmitted(this.interaction);
+
+  /// The answer, already built and already accepted by the ledger.
+  final AiUiInteraction interaction;
+
+  @override
+  List<Object?> get props => [interaction];
+}
+
 /// One frame off the transport, re-entered through the bloc so every state
 /// change goes through a single ordered queue.
 final class AiChatTransportEventReceived extends AiChatBlocEvent {

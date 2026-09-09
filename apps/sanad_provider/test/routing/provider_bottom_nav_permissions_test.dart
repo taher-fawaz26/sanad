@@ -1,5 +1,6 @@
 import 'package:authorization/authorization.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sanad_provider/src/features/requests/requests.dart';
 import 'package:sanad_provider/src/routing/shell/provider_bottom_nav.dart';
 import 'package:sanad_provider/src/routing/shell/provider_bottom_nav_permissions.dart';
 import 'package:services/services.dart';
@@ -9,8 +10,8 @@ import '../support/fake_authorization_reader.dart';
 void main() {
   group('visibleBottomNavTabs (RBAC Phase 7D)', () {
     test(
-      'a worker without provider-service:view sees every tab except '
-      'Services',
+      'a worker with neither service nor client-request view sees only the '
+      'ungated tabs',
       () {
         final reader = FakeAuthorizationReader(
           permissions: PermissionSet.from(const [
@@ -19,9 +20,11 @@ void main() {
           ]),
         );
 
+        // Home, Messages and Settings carry no gate: the first two are still
+        // placeholder pages with no backend fetch, and Settings opens a menu
+        // sheet rather than navigating.
         expect(visibleBottomNavTabs(reader), [
           ProviderBottomNavDestination.home,
-          ProviderBottomNavDestination.requests,
           ProviderBottomNavDestination.messages,
           ProviderBottomNavDestination.settings,
         ]);
@@ -29,12 +32,35 @@ void main() {
     );
 
     test(
-      'a worker WITH provider-service:view sees every permanent tab, in '
+      'client-request:view alone reveals Requests but not Services',
+      () {
+        // The workspace is entirely `GET /provider/requests`; without the view
+        // permission every screen behind that tab answers 403.
+        final reader = FakeAuthorizationReader(
+          permissions: PermissionSet.from(const [
+            ClientRequestPermissions.view,
+          ]),
+        );
+
+        expect(
+          visibleBottomNavTabs(reader),
+          contains(ProviderBottomNavDestination.requests),
+        );
+        expect(
+          visibleBottomNavTabs(reader),
+          isNot(contains(ProviderBottomNavDestination.services)),
+        );
+      },
+    );
+
+    test(
+      'a worker with both view permissions sees every permanent tab, in '
       'permanentTabs order',
       () {
         final reader = FakeAuthorizationReader(
           permissions: PermissionSet.from(const [
             ServicePermissions.providerServiceView,
+            ClientRequestPermissions.view,
           ]),
         );
 
@@ -56,26 +82,33 @@ void main() {
       );
     });
 
-    test('unresolved permissions hide Services — fail closed, not open', () {
-      final reader = FakeAuthorizationReader(
-        permissions: PermissionSet.from(const [
-          ServicePermissions.providerServiceView,
-        ]),
-        isResolved: false,
-      );
+    test(
+      'unresolved permissions hide both gated tabs — fail closed, not open',
+      () {
+        final reader = FakeAuthorizationReader(
+          permissions: PermissionSet.from(const [
+            ServicePermissions.providerServiceView,
+            ClientRequestPermissions.view,
+          ]),
+          isResolved: false,
+        );
 
-      expect(
-        visibleBottomNavTabs(reader),
-        isNot(contains(ProviderBottomNavDestination.services)),
-      );
-    });
+        expect(
+          visibleBottomNavTabs(reader),
+          isNot(contains(ProviderBottomNavDestination.services)),
+        );
+        expect(
+          visibleBottomNavTabs(reader),
+          isNot(contains(ProviderBottomNavDestination.requests)),
+        );
+      },
+    );
 
-    test('an empty, resolved permission set hides only Services', () {
+    test('an empty, resolved permission set hides both gated tabs', () {
       final reader = FakeAuthorizationReader();
 
       expect(visibleBottomNavTabs(reader), [
         ProviderBottomNavDestination.home,
-        ProviderBottomNavDestination.requests,
         ProviderBottomNavDestination.messages,
         ProviderBottomNavDestination.settings,
       ]);
@@ -88,6 +121,7 @@ void main() {
         final reader = FakeAuthorizationReader(
           permissions: PermissionSet.from(const [
             ServicePermissions.providerServiceView,
+            ClientRequestPermissions.view,
           ]),
         );
 

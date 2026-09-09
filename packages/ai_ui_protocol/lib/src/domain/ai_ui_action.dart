@@ -37,7 +37,34 @@ enum AiUiActionType {
   ///
   /// Same contract as [requestLocationShare] — no filesystem or camera access
   /// is granted to the agent. Emitted by the live agent as a `button` action.
+  ///
+  /// Takes an optional `source` param (`camera` / `gallery` / `video` /
+  /// `document`) so a `media_request` node's three options can each reach the
+  /// right picker. Absent means the app picks its default.
   requestImageUpload('request_image_upload', requiredParams: {}),
+
+  /// Asks the app to ensure a device permission, naming the *capability*
+  /// (`camera`, `location`, …) and never a platform permission string.
+  ///
+  /// The app owns the rationale copy, the request itself and the
+  /// settings-redirect path — this action only says which capability the
+  /// conversation needs next.
+  requestPermission('request_permission', requiredParams: {'permission'}),
+
+  /// Opens the platform dialer **pre-filled** with `phone`.
+  ///
+  /// Deliberately not a general `open_url`: the target is a phone number, the
+  /// OS shows the number before anything is dialled, and the user has to press
+  /// call. That is what makes an agent-supplied number acceptable here where an
+  /// agent-supplied URL is not.
+  callPhone('call_phone', requiredParams: {'phone'}),
+
+  /// Opens the platform maps app at `query` — an address, or `"lat,lng"`.
+  ///
+  /// A bounded query rather than a URL, which is why this exists while
+  /// [openUrl] stays deny-all: the app builds the maps URI itself, so the
+  /// agent cannot choose the host, the scheme or any other parameter.
+  openMap('open_map', requiredParams: {'query'}),
 
   dismiss('dismiss', requiredParams: {})
   ;

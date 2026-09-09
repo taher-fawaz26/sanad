@@ -36,6 +36,14 @@ final class PermissionsAiPermissionGateway implements AiPermissionGateway {
       _ensure(PermissionType.speechRecognition);
 
   @override
+  Future<AiPermissionOutcome> ensureLocation() =>
+      _ensure(PermissionType.locationWhenInUse);
+
+  @override
+  Future<AiPermissionOutcome> ensureNotifications() =>
+      _ensure(PermissionType.notifications);
+
+  @override
   Future<void> openSettings() => Permissions.openSettings();
 
   Future<AiPermissionOutcome> _ensure(PermissionType type) async {

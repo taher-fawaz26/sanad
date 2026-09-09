@@ -1,5 +1,13 @@
 name: notifications
-description: Push notifications — Firebase Messaging integration, notification handling, deep linking.
+description: >
+  Mobile push and the in-app notification inbox. Owns the one Firebase
+  Messaging boundary in the app, the device-token registration lifecycle
+  (an upsert, not a one-time setup), the notification list, and the shared
+  subject-based tap routing with deduplication.
+
+  Deliberately does NOT open the backend's SSE notification stream — that is a
+  web delivery channel. On mobile, FCM delivers while backgrounded and the
+  normal endpoints are re-read when a screen becomes active.
 version: 0.1.0
 publish_to: none
 resolution: workspace
@@ -8,15 +16,37 @@ environment:
   sdk: ">=3.11.0 <4.0.0"
 
 dependencies:
+  app_logger:
+    path: ../app_logger
+  bloc_concurrency: ^0.3.0
   core:
     path: ../core
+  design_system:
+    path: ../design_system
+  easy_localization: ^3.0.8
+  equatable: ^2.1.0
   firebase_core: ^3.15.2
   firebase_messaging: ^15.2.10
   flutter:
     sdk: flutter
+  flutter_bloc: ^9.1.1
   flutter_local_notifications: ^18.0.1
+  fpdart: ^1.2.0
+  go_router: ^17.3.0
+  intl: ^0.20.2
+  localization:
+    path: ../localization
+  network:
+    path: ../network
+  shared_ui:
+    path: ../shared_ui
+  storage:
+    path: ../storage
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  mocktail: ^1.0.4
+  testing:
+    path: ../testing
   very_good_analysis: ^9.0.0

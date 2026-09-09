@@ -57,6 +57,9 @@ need to scan source broadly.
 | [`features/registration.md`](features/registration.md) | Provider onboarding + document OCR flow |
 | [`features/otp.md`](features/otp.md) | Shared OTP verification widget/flow |
 | [`features/ai-chat.md`](features/ai-chat.md) | AI assistant chat with structured UI (**prototype**, dev-only route) |
+| [`features/client-requests.md`](features/client-requests.md) | Client request lifecycle: draft, submit, negotiate, confirm |
+| [`features/provider-requests.md`](features/provider-requests.md) | Provider request workspace: server-derived tabs, offers, job actions |
+| [`features/notifications.md`](features/notifications.md) | Notification inbox, FCM device registration, tap routing (**SSE stream is web-only and not implemented**) |
 
 ## API
 

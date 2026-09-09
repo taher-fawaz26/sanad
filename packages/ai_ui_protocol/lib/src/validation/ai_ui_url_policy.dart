@@ -11,16 +11,35 @@ import 'package:equatable/equatable.dart';
 /// The default policy allows nothing. A host opts in explicitly with the set
 /// of origins it trusts.
 final class AiUiUrlPolicy extends Equatable {
-  const AiUiUrlPolicy({this.allowedHosts = const {}});
+  const AiUiUrlPolicy({
+    this.allowedHosts = const {},
+    this.allowAnyHost = false,
+  });
 
   /// Blocks every URL. The correct default for a prototype and for any surface
   /// that has not thought about its allowlist yet.
   static const AiUiUrlPolicy denyAll = AiUiUrlPolicy();
 
+  /// Accepts any **https** host, still rejecting an unparseable URL, a
+  /// non-https scheme and embedded userinfo.
+  ///
+  /// This is the image default: dynamic business media lives on whatever CDN
+  /// the backend uses, and requiring an allowlist before any image can render
+  /// would mean shipping a contract that draws nothing. A host that wants the
+  /// stricter posture passes its own [allowedHosts] instead — that is a
+  /// one-line change at the call site, not a protocol change.
+  ///
+  /// It is deliberately **not** the default for the `open_url` action, where
+  /// the destination is a whole web page rather than a picture.
+  static const AiUiUrlPolicy httpsAnyHost = AiUiUrlPolicy(allowAnyHost: true);
+
   /// Lowercase hosts. An entry may be an exact host (`cdn.trysanad.us`) or a
   /// dot-prefixed suffix (`.trysanad.us`) matching that domain and its
   /// subdomains.
   final Set<String> allowedHosts;
+
+  /// When set, any host passes the check. [allowedHosts] is then ignored.
+  final bool allowAnyHost;
 
   bool isAllowed(String raw) => reject(raw) == null;
 
@@ -41,7 +60,7 @@ final class AiUiUrlPolicy extends Equatable {
 
     final host = uri.host.toLowerCase();
     if (host.isEmpty) return 'empty host';
-    if (!_hostAllowed(host)) return 'host not allowlisted';
+    if (!allowAnyHost && !_hostAllowed(host)) return 'host not allowlisted';
     return null;
   }
 
@@ -60,5 +79,5 @@ final class AiUiUrlPolicy extends Equatable {
   }
 
   @override
-  List<Object?> get props => [allowedHosts];
+  List<Object?> get props => [allowedHosts, allowAnyHost];
 }

@@ -1,4 +1,5 @@
 import 'package:authorization/authorization.dart';
+import 'package:sanad_provider/src/features/requests/requests.dart';
 import 'package:sanad_provider/src/routing/shell/provider_bottom_nav.dart';
 import 'package:services/services.dart';
 
@@ -13,12 +14,11 @@ import 'package:services/services.dart';
 /// branch is ever one that got filtered out here (e.g. a permission was
 /// revoked while the user was already on that tab).
 ///
-/// Today only Services carries a real gate — `provider:provider-service:view`
-/// — since it is the only permanent tab actually backed by a
-/// permission-controlled endpoint (`GET /provider-services`). Home,
-/// Messages, and Requests are placeholder pages with no backend fetch yet,
-/// and Settings opens a menu sheet rather than navigating; none of them
-/// have anything to gate.
+/// Services and Requests each carry a real gate, because each is backed by a
+/// permission-controlled endpoint — `GET /provider-services` and
+/// `GET /provider/requests`. Home and Messages are still placeholder pages
+/// with no backend fetch, and Settings opens a menu sheet rather than
+/// navigating; none of them have anything to gate.
 List<ProviderBottomNavDestination> visibleBottomNavTabs(
   AuthorizationReader reader,
 ) {
@@ -32,6 +32,11 @@ bool _isVisible(ProviderBottomNavDestination tab, AuthorizationReader reader) {
   return switch (tab) {
     ProviderBottomNavDestination.services => reader.can(
       ServicePermissions.providerServiceView,
+    ),
+    // The workspace is entirely `GET /provider/requests`; without the view
+    // permission every screen behind this tab answers 403.
+    ProviderBottomNavDestination.requests => reader.can(
+      ClientRequestPermissions.view,
     ),
     _ => true,
   };

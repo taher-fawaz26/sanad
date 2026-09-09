@@ -13,7 +13,7 @@ import 'package:sanad_provider/src/features/registration/registration.dart';
 import 'package:sanad_provider/src/di/app_di.dart';
 import 'package:sanad_provider/src/features/home/home.dart';
 import 'package:sanad_provider/src/features/messages/messages_page.dart';
-import 'package:sanad_provider/src/features/requests/requests_page.dart';
+import 'package:sanad_provider/src/features/requests/requests.dart';
 import 'package:sanad_provider/src/routing/app_routes.dart';
 import 'package:sanad_provider/src/routing/provider_capabilities.dart';
 import 'package:sanad_provider/src/routing/provider_navigator.dart';
@@ -162,12 +162,11 @@ GoRouter buildProviderRouter() {
                 ],
               ),
               StatefulShellBranch(
-                routes: [
-                  GoRoute(
-                    path: AppRoutes.requests,
-                    builder: (context, state) => const RequestsPage(),
-                  ),
-                ],
+                // Same reasoning as the Services branch below: the workspace
+                // route tree lives in `ProviderRequestsModule.shellRoute()`
+                // and is *not* also contributed as a top-level route, so a
+                // push to a request detail stays inside the shell.
+                routes: [ProviderRequestsModule.shellRoute()],
               ),
               StatefulShellBranch(
                 // `ServicesModule` no longer contributes `/services` as a

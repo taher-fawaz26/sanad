@@ -305,6 +305,64 @@ Package: `packages/features/account_settings` (`GetAccountSettingsUseCase`, `Upd
 
 ---
 
+## Client requests (`/requests`)
+
+The client-owned service-request lifecycle. Full contract, nullability rules and
+the structured 409 handling: [`features/client-requests.md`](features/client-requests.md).
+
+| Method | Path | Notes |
+|--------|------|-------|
+| `GET` | `requests` | Own requests only; optional `status`; `limit` capped at 100 |
+| `POST` | `requests` | Creates a `DRAFT`. Every field optional — completeness is enforced at submit |
+| `GET` / `PATCH` | `requests/:id` | `PATCH` answers `409` once an offer awaits a reply |
+| `POST` | `requests/:id/submit` | Structured `409`: `NO_PROVIDERS_FOR_SERVICE`, `NO_COVERAGE`, `OUTSIDE_HOURS` |
+| `POST` | `requests/:id/{cancel,confirm,dispute}` | Cancel and dispute need a 3–1000 char `reason` |
+| `POST` | `requests/:id/offers/:offerId/{accept,reject,counter}` | `offerId` must belong to `:id`; a mismatch is `404` |
+
+## Provider request workspace (`/provider/requests`)
+
+The provider-side view of the same requests, in a **different, privacy-gated
+payload**. Details: [`features/provider-requests.md`](features/provider-requests.md).
+
+| Method | Path | Notes |
+|--------|------|-------|
+| `GET` | `provider/requests` | `tab`, `search`, `branchId`; **`tab` is server-derived and canonical** |
+| `GET` | `provider/requests/{counts,stats}` | Badge counts per tab; four headline numbers |
+| `GET` | `provider/requests/:id` | `contact.unlocked` is the only signal for contact visibility |
+| `POST` | `provider/requests/:id/offers` | Matched branch + future `proposedAt`; `409` when re-bids are exhausted |
+| `POST` | `provider/requests/:id/{complete,cancel}` | Cancel needs a `reason` |
+| `POST` | `provider/offers/:offerId/{withdraw,accept,decline,counter}` | Withdraw **consumes a re-bid** |
+
+## Notifications and push (`/notifications`)
+
+See [`features/notifications.md`](features/notifications.md).
+
+| Method | Path | Notes |
+|--------|------|-------|
+| `GET` | `notifications` | Rows carry nullable `subjectType`, `subjectId`, `metadata` |
+| `PATCH` | `notifications/:id/read`, `notifications/read-all` | |
+| `POST` | `notifications/devices` | `204`. An **upsert** — sent on login, every launch, and every token rotation |
+| `DELETE` | `notifications/devices/:token` | `204`, idempotent. Sent **before** the session is cleared |
+
+> **`notifications/stream` and `notifications/stream-ticket` are web-only.** The
+> SSE stream is not implemented in either mobile app. FCM covers background
+> delivery, and screens re-read their resource when they become active.
+
+---
+
+## Pagination
+
+Every paginated endpoint answers `{ data: [...], meta: { totalItems, itemCount,
+itemsPerPage, totalPages, currentPage } }`, parsed by `parsePage` into
+`Page<T>`.
+
+**`limit` is capped at 100.** Sending 101 or more answers `400`. `PageQuery`
+clamps it centrally in `toQueryMap()` (`kMaxPageLimit`), so no individual screen
+has to remember, and an over-large caller degrades to the maximum instead of
+failing the request.
+
+---
+
 ## Validation
 
 Import scanner (`melos validate:arch`) detects `DioException` imports outside `packages/network`.

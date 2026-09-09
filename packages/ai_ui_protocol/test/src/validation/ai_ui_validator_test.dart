@@ -618,34 +618,174 @@ void main() {
       );
 
       final image = result.document!.blocks.single as AiUiImageNode;
-      expect(image.source, const AiUiAssetImage(publishedAssetId));
+      expect(image.source, const AiUiImageSource.asset(publishedAssetId));
     });
 
-    test('rejects a remote url regardless of host', () {
-      // schemaVersion 1 is assetId-only. This is not a host check — even the
-      // app's own CDN is refused, because an agent-supplied image URL is a
-      // network and tracking surface v1 does not need.
-      for (final url in [
-        rejectedImageUrl,
-        'https://evil.example/tracker.gif',
-      ]) {
-        final result = validatorWith().validate(
-          payload([
-            <String, dynamic>{
-              'type': 'image',
-              'id': 'i',
-              'url': url,
-              'alt': 'AC unit',
-            },
-          ]),
-        );
+    test('accepts a url', () {
+      final result = validatorWith().validate(
+        payload([
+          <String, dynamic>{
+            'type': 'image',
+            'id': 'i',
+            'url': dynamicImageUrl,
+            'alt': 'AC unit',
+          },
+        ]),
+      );
 
-        expect(result.document!.blocks, isEmpty, reason: url);
-        expect(
-          result.hasCode(AiUiDiagnosticCode.reservedProperty),
-          isTrue,
-          reason: url,
-        );
+      final image = result.document!.blocks.single as AiUiImageNode;
+      expect(image.source, const AiUiImageSource.url(dynamicImageUrl));
+      expect(result.diagnostics, isEmpty);
+    });
+
+    test('prefers the url when both are present', () {
+      // The whole point of one object with two optional fields: a backend can
+      // attach a local fallback without changing what the client shows.
+      final result = validatorWith().validate(
+        payload([
+          <String, dynamic>{
+            'type': 'image',
+            'id': 'i',
+            'url': dynamicImageUrl,
+            'assetId': publishedAssetId,
+            'alt': 'AC unit',
+          },
+        ]),
+      );
+
+      final image = result.document!.blocks.single as AiUiImageNode;
+      expect(image.source.hasUrl, isTrue);
+      expect(image.source.url, dynamicImageUrl);
+      // Both halves survive: the asset is the render-time fallback if the
+      // download fails, so it is not discarded during validation.
+      expect(image.source.assetId, publishedAssetId);
+      expect(result.diagnostics, isEmpty);
+    });
+
+    test('falls through an empty url to the assetId', () {
+      final result = validatorWith().validate(
+        payload([
+          <String, dynamic>{
+            'type': 'image',
+            'id': 'i',
+            'url': '',
+            'assetId': publishedAssetId,
+            'alt': 'AC unit',
+          },
+        ]),
+      );
+
+      final image = result.document!.blocks.single as AiUiImageNode;
+      expect(image.source.hasUrl, isFalse);
+      expect(image.source.assetId, publishedAssetId);
+      // An empty string is "I had nothing to put here", not a broken value.
+      expect(result.diagnostics, isEmpty);
+    });
+
+    test('falls through a refused url to the assetId', () {
+      final result = validatorWith().validate(
+        payload([
+          <String, dynamic>{
+            'type': 'image',
+            'id': 'i',
+            'url': insecureImageUrl,
+            'assetId': publishedAssetId,
+            'alt': 'AC unit',
+          },
+        ]),
+      );
+
+      final image = result.document!.blocks.single as AiUiImageNode;
+      expect(image.source.hasUrl, isFalse);
+      expect(image.source.assetId, publishedAssetId);
+      expect(result.hasCode(AiUiDiagnosticCode.invalidProperty), isTrue);
+    });
+
+    test('refuses a url that is not https', () {
+      final result = validatorWith().validate(
+        payload([
+          <String, dynamic>{
+            'type': 'image',
+            'id': 'i',
+            'url': insecureImageUrl,
+            'alt': 'AC unit',
+          },
+        ]),
+      );
+
+      // Nothing usable left, so the node that exists only to show a picture
+      // is dropped.
+      expect(result.document!.blocks, isEmpty);
+      expect(result.hasCode(AiUiDiagnosticCode.invalidProperty), isTrue);
+    });
+
+    test('refuses userinfo in a url', () {
+      // `https://user:pass@evil.example/x.png` — the classic way to make a
+      // hostile host look trusted to a human reader.
+      final result = validatorWith().validate(
+        payload([
+          <String, dynamic>{
+            'type': 'image',
+            'id': 'i',
+            'url': 'https://user:pass@evil.example/x.png',
+            'alt': 'AC unit',
+          },
+        ]),
+      );
+
+      expect(result.document!.blocks, isEmpty);
+    });
+
+    test('honours a host allowlist when the host configures one', () {
+      final result = validatorWith(imageUrlPolicy: testImageUrlPolicy).validate(
+        payload([
+          <String, dynamic>{
+            'type': 'image',
+            'id': 'i',
+            'url': 'https://evil.example/tracker.gif',
+            'alt': 'tracker',
+          },
+          <String, dynamic>{
+            'type': 'image',
+            'id': 'j',
+            'url': dynamicImageUrl,
+            'alt': 'AC unit',
+          },
+        ]),
+      );
+
+      // The default policy is any https host; a host that wants the stricter
+      // posture passes its own allowlist, and then only its origins render.
+      expect(result.document!.blocks, hasLength(1));
+      expect(
+        (result.document!.blocks.single as AiUiImageNode).source.url,
+        dynamicImageUrl,
+      );
+    });
+
+    test('never accepts a local asset path as a url or an assetId', () {
+      for (final image in <Map<String, dynamic>>[
+        {'url': 'assets/images/secret.png'},
+        {'url': 'file:///data/data/com.sanad.client/secret.png'},
+        {'url': 'package:app_assets/assets/images/logo.png'},
+        {'assetId': 'assets/images/secret.png'},
+        {'assetId': 'packages/app_assets/assets/images/logo.png'},
+        {'assetId': '@drawable/ic_launcher'},
+        {'assetId': '../../etc/passwd'},
+      ]) {
+        final result = validatorWith(knownAssetIds: {publishedAssetId})
+            .validate(
+              payload([
+                <String, dynamic>{
+                  'type': 'image',
+                  'id': 'i',
+                  ...image,
+                  'alt': 'AC unit',
+                },
+              ]),
+            );
+
+        expect(result.document!.blocks, isEmpty, reason: image.toString());
       }
     });
 
@@ -664,6 +804,26 @@ void main() {
 
       expect(result.document!.blocks, isEmpty);
       expect(result.hasCode(AiUiDiagnosticCode.unknownAssetId), isTrue);
+    });
+
+    test('drops an image with neither url nor assetId', () {
+      final result = validatorWith().validate(
+        payload([
+          <String, dynamic>{
+            'type': 'image',
+            'id': 'i',
+            'url': null,
+            'assetId': null,
+            'alt': 'AC unit',
+          },
+        ]),
+      );
+
+      expect(result.document!.blocks, isEmpty);
+      expect(
+        result.hasCode(AiUiDiagnosticCode.missingRequiredProperty),
+        isTrue,
+      );
     });
 
     test('drops an image with no alt text', () {
@@ -685,22 +845,84 @@ void main() {
       );
     });
 
-    test('uses the assetId and flags the url when both are present', () {
+    test('a non-string url or assetId is reported, not coerced', () {
       final result = validatorWith().validate(
         payload([
           <String, dynamic>{
             'type': 'image',
             'id': 'i',
-            'assetId': publishedAssetId,
-            'url': rejectedImageUrl,
+            'url': 42,
+            'assetId': ['not', 'a', 'string'],
             'alt': 'AC unit',
           },
         ]),
       );
 
-      final image = result.document!.blocks.single as AiUiImageNode;
-      expect(image.source, const AiUiAssetImage(publishedAssetId));
-      expect(result.hasCode(AiUiDiagnosticCode.reservedProperty), isTrue);
+      expect(result.document!.blocks, isEmpty);
+      expect(result.hasCode(AiUiDiagnosticCode.invalidProperty), isTrue);
+    });
+
+    test('every image-bearing node reads the same image object', () {
+      // One contract, six nodes. If a node grows its own image parsing this
+      // fails, which is the point.
+      final result = validatorWith(knownAssetIds: {publishedAssetId}).validate(
+        payload([
+          <String, dynamic>{
+            'type': 'image',
+            'id': 'im',
+            'url': dynamicImageUrl,
+            'assetId': publishedAssetId,
+            'alt': 'AC unit',
+          },
+          <String, dynamic>{
+            'type': 'list',
+            'id': 'l',
+            'children': [
+              <String, dynamic>{
+                'type': 'list_item',
+                'id': 'li',
+                'title': 'Row',
+                'leadingImage': {
+                  'url': dynamicImageUrl,
+                  'assetId': publishedAssetId,
+                },
+              },
+            ],
+          },
+          <String, dynamic>{
+            'type': 'service_card',
+            'id': 'sc',
+            'serviceId': 'svc_1',
+            'title': 'AC Maintenance',
+            'image': {'url': dynamicImageUrl, 'assetId': publishedAssetId},
+          },
+          <String, dynamic>{
+            'type': 'provider_card',
+            'id': 'pc',
+            'providerId': 'prv_1',
+            'name': 'Ahmed K.',
+            'image': {'url': dynamicImageUrl, 'assetId': publishedAssetId},
+          },
+        ]),
+      );
+
+      final sources = <AiUiImageSource?>[
+        (result.document!.blocks[0] as AiUiImageNode).source,
+        (result.document!.blocks[1] as AiUiListNode)
+            .children
+            .single
+            .leadingImage,
+        (result.document!.blocks[2] as AiUiServiceCardNode).image,
+        (result.document!.blocks[3] as AiUiProviderCardNode).image,
+      ];
+
+      expect(sources, hasLength(4));
+      for (final source in sources) {
+        expect(source, isNotNull);
+        expect(source!.url, dynamicImageUrl);
+        expect(source.assetId, publishedAssetId);
+      }
+      expect(result.diagnostics, isEmpty);
     });
   });
 

@@ -20,6 +20,14 @@ void main() {
     type: AiUiActionType.sendMessage,
     params: {'text': 'Yes'},
   );
+  const callAhmed = AiUiAction(
+    type: AiUiActionType.callPhone,
+    params: {'phone': '+971501234567'},
+  );
+  const openMarina = AiUiAction(
+    type: AiUiActionType.openMap,
+    params: {'query': 'Dubai Marina, Tower 5'},
+  );
 
   final cases = <String, AiUiNode>{
     'text': const AiUiTextNode(
@@ -51,9 +59,12 @@ void main() {
       size: AiUiIconSize.lg,
       tone: AiUiTone.success,
     ),
-    'image (asset)': const AiUiImageNode(
+    'image (url and asset)': const AiUiImageNode(
       id: 'n4',
-      source: AiUiAssetImage('service_placeholder'),
+      source: AiUiImageSource(
+        url: 'https://cdn.trysanad.us/services/ac.jpg',
+        assetId: 'service_placeholder',
+      ),
       alt: 'Service illustration',
       aspect: AiUiImageAspect.square,
       fit: AiUiImageFit.contain,
@@ -107,7 +118,9 @@ void main() {
           title: 'Downtown branch',
           subtitle: 'Sheikh Zayed Road',
           leadingIcon: 'fa-solid fa-store',
-          leadingImage: AiUiAssetImage('service_placeholder'),
+          leadingImage: AiUiImageSource.url(
+            'https://cdn.trysanad.us/rows/order.jpg',
+          ),
           badge: AiUiBadge(label: 'Open', tone: AiUiTone.success),
           trailingText: '1.2 km',
           action: openService,
@@ -132,7 +145,10 @@ void main() {
       subtitle: 'Same-day service',
       price: AiUiMoney(amount: 100, currency: 'AED'),
       ratingValue: 4.5,
-      image: AiUiAssetImage('service_placeholder'),
+      image: AiUiImageSource(
+        url: 'https://cdn.trysanad.us/services/ac.jpg',
+        assetId: 'service_placeholder',
+      ),
       badge: AiUiBadge(label: 'Popular', tone: AiUiTone.info),
       action: openService,
       fallbackText: 'AC Maintenance — 100 AED',
@@ -177,6 +193,222 @@ void main() {
           ),
         ),
       ],
+    ),
+    'order_card': const AiUiOrderCardNode(
+      id: 'n22',
+      orderId: 'ord_1042',
+      title: 'Order #1042',
+      statusText: 'In progress',
+      status: 'Active',
+      statusTone: AiUiTone.success,
+      amount: AiUiMoney(amount: 90, currency: 'AED'),
+      action: openService,
+      actions: [
+        AiUiCardAction(
+          label: 'Track',
+          action: openService,
+          variant: AiUiButtonVariant.outline,
+        ),
+      ],
+      fallbackText: 'Order #1042 — in progress — AED 90',
+    ),
+    'provider_card': const AiUiProviderCardNode(
+      id: 'n23',
+      providerId: 'prv_1',
+      name: 'Ahmed K.',
+      roleText: 'AC and plumbing specialist',
+      ratingValue: 4.8,
+      image: AiUiImageSource.url(
+        'https://cdn.trysanad.us/providers/ahmed.jpg',
+      ),
+      stats: [
+        AiUiStat(label: 'Completed jobs', value: '340+'),
+        AiUiStat(label: 'With CleanCo since', value: '2021'),
+      ],
+      action: openService,
+      actions: [
+        AiUiCardAction(
+          label: 'Call',
+          action: callAhmed,
+          variant: AiUiButtonVariant.outline,
+        ),
+        AiUiCardAction(label: 'Message', action: sendYes),
+      ],
+      fallbackText: 'Ahmed K. — 4.8 — AC and plumbing specialist',
+    ),
+    'booking_summary': const AiUiBookingSummaryNode(
+      id: 'n24',
+      title: 'Booking summary',
+      items: [
+        AiUiDetailItem(label: 'Service', value: 'Deep Cleaning'),
+        AiUiDetailItem(label: 'Provider', value: 'CleanCo Marina'),
+        AiUiDetailItem(
+          label: 'Estimated cost',
+          value: '150 AED',
+          valueTone: AiUiTone.primary,
+        ),
+      ],
+      actions: [
+        AiUiCardAction(
+          label: 'Go back',
+          action: sendYes,
+          variant: AiUiButtonVariant.secondary,
+          intent: AiUiButtonIntent.neutral,
+        ),
+        AiUiCardAction(label: 'Confirm', action: sendYes),
+      ],
+      fallbackText: 'Deep Cleaning with CleanCo Marina — 150 AED',
+    ),
+    'request_summary': const AiUiRequestSummaryNode(
+      id: 'n25',
+      items: [
+        AiUiDetailItem(label: 'Service', value: 'Home Cleaning'),
+        AiUiDetailItem(label: 'Date and time', value: 'Tomorrow, 10:00 AM'),
+      ],
+      summaryTitle: 'Summary',
+      summaryText:
+          'A full home clean, eco-friendly products, pet in the house.',
+      location: AiUiLocationRef(
+        addressText: 'Dubai Marina, Tower 5',
+        label: 'Home',
+        action: openMarina,
+      ),
+      actions: [
+        AiUiCardAction(
+          label: 'Cancel',
+          action: sendYes,
+          variant: AiUiButtonVariant.secondary,
+          intent: AiUiButtonIntent.neutral,
+        ),
+        AiUiCardAction(label: 'Confirm', action: sendYes),
+      ],
+      fallbackText: 'Home Cleaning tomorrow at 10:00 AM',
+    ),
+    'payment_receipt': const AiUiPaymentReceiptNode(
+      id: 'n26',
+      title: 'Payment successful',
+      subtitle: 'Thank you for your order',
+      items: [
+        AiUiDetailItem(
+          label: 'Transaction ID',
+          value: 'TXN-8829410',
+          isLtrValue: true,
+        ),
+        AiUiDetailItem(label: 'Payment method', value: 'Apple Pay'),
+      ],
+      total: AiUiReceiptTotal(
+        label: 'Amount paid',
+        amount: AiUiMoney(amount: 150, currency: 'AED'),
+      ),
+      actions: [
+        AiUiCardAction(
+          label: 'View receipt',
+          action: openService,
+          variant: AiUiButtonVariant.outline,
+        ),
+      ],
+      fallbackText: 'Payment successful — 150 AED',
+    ),
+    'time_slots': const AiUiTimeSlotsNode(
+      id: 'n27',
+      dateLabel: 'Tomorrow, September 3rd',
+      slots: [
+        AiUiTimeSlot(id: 's_0900', label: '9:00 AM'),
+        AiUiTimeSlot(id: 's_1030', label: '10:30 AM'),
+        AiUiTimeSlot(id: 's_1200', label: '12:00 PM', enabled: false),
+      ],
+      selectedSlotId: 's_0900',
+      confirmLabel: 'Confirm time',
+      confirmTemplate: 'Book me the {slot} slot',
+      fallbackText: 'Slots tomorrow: 9:00 AM, 10:30 AM',
+    ),
+    'review_request': const AiUiReviewRequestNode(
+      id: 'n28',
+      serviceName: 'Deep Cleaning',
+      providerText: 'Provided by CleanCo Marina',
+      commentPlaceholder: 'Leave a comment (optional)',
+      maxCommentLength: 300,
+      submitLabel: 'Submit review',
+      submitTemplate: 'My review of Deep Cleaning: {comment}',
+      fallbackText: 'How was your Deep Cleaning service?',
+    ),
+    'location_picker': const AiUiLocationPickerNode(
+      id: 'n29',
+      title: 'Set your location',
+      searchPlaceholder: 'Search for a neighbourhood or city',
+      useCurrentLabel: 'Use current location',
+      savedLabel: 'Saved locations',
+      savedLocations: [
+        AiUiSavedLocation(
+          id: 'home',
+          name: 'Home',
+          addressText: 'Dubai Marina, Tower 5, Apt 1204',
+          icon: 'fa-solid fa-house',
+        ),
+        AiUiSavedLocation(
+          id: 'office',
+          name: 'Office',
+          addressText: 'DIFC, The Gate District, Level 4',
+        ),
+      ],
+      confirmLabel: 'Confirm',
+      confirmTemplate: 'Use {location} as my address',
+      fallbackText: 'Where should the service happen?',
+    ),
+    'reminder_card': const AiUiReminderCardNode(
+      id: 'n30',
+      title: 'Reminder',
+      subtitle: 'AC Maintenance',
+      body: 'Your appointment is in 30 minutes.',
+      actions: [
+        AiUiCardAction(
+          label: 'Reschedule',
+          action: openService,
+          variant: AiUiButtonVariant.outline,
+        ),
+        AiUiCardAction(label: "I'm ready", action: sendYes),
+      ],
+      fallbackText: 'Reminder: AC Maintenance in 30 minutes',
+    ),
+    'media_request': const AiUiMediaRequestNode(
+      id: 'n31',
+      title: 'Add photos or video',
+      body: 'Sanad only asks for access when you pick one of these.',
+      options: [
+        AiUiMediaOption(label: 'Take a photo', source: AiUiMediaSource.camera),
+        AiUiMediaOption(
+          label: 'Choose photos',
+          source: AiUiMediaSource.gallery,
+        ),
+        AiUiMediaOption(
+          label: 'Add a short video',
+          source: AiUiMediaSource.video,
+        ),
+      ],
+      cancelLabel: 'Cancel',
+      fallbackText: 'Add a photo or video of the problem',
+    ),
+    'permission_request': const AiUiPermissionRequestNode(
+      id: 'n32',
+      permission: AiUiPermissionKind.location,
+      title: 'Allow location access',
+      body: 'Sanad needs your location to find nearby services.',
+      image: AiUiImageSource.asset('service_placeholder'),
+      allowLabel: 'Allow while using the app',
+      denyLabel: "Don't allow",
+      fallbackText: 'Sanad needs your location to continue',
+    ),
+    'location_confirm': const AiUiLocationConfirmNode(
+      id: 'n33',
+      title: 'Confirm your location',
+      image: AiUiImageSource.asset('service_placeholder'),
+      addressText: 'Dubai Marina',
+      confirmLabel: 'Confirm location',
+      changeLabel: 'Change location',
+      actions: [
+        AiUiCardAction(label: 'Open in maps', action: openMarina),
+      ],
+      fallbackText: 'Is Dubai Marina the right address?',
     ),
   };
 

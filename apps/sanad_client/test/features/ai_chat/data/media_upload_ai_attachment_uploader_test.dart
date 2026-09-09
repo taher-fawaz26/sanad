@@ -182,10 +182,16 @@ void main() {
         ),
       );
       verifyNever(
-        () => repository.upload(uploadKey: 'b', asset: any(named: 'asset')),
+        () => repository.upload(
+          uploadKey: 'b',
+          asset: any(named: 'asset'),
+        ),
       );
       verifyNever(
-        () => repository.upload(uploadKey: 'c', asset: any(named: 'asset')),
+        () => repository.upload(
+          uploadKey: 'c',
+          asset: any(named: 'asset'),
+        ),
       );
     });
 

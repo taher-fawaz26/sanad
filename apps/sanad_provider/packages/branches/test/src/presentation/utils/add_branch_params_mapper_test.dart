@@ -189,7 +189,7 @@ void main() {
       expect(params.servingAreaPlaceIds, ['ChIJ_catalogue']);
     });
 
-    test('sends null serving areas when only synthetic ids remain', () {
+    test('sends an empty serving-area list when only synthetic ids remain', () {
       final draft = completeDraft.copyWith(
         servingAreas: const [
           ServingArea(
@@ -206,10 +206,12 @@ void main() {
         companySchedule: companySchedule,
       );
 
-      expect(params.servingAreaPlaceIds, isNull);
+      // Synthetic `latlng:` ids are stripped because the backend cannot
+      // resolve them, leaving nothing to send.
+      expect(params.servingAreaPlaceIds, isEmpty);
     });
 
-    test('omits optional area and service lists when empty', () {
+    test('sends empty area and service lists rather than omitting them', () {
       final draft = completeDraft.copyWith(
         servingAreas: [],
         selectedServices: [],
@@ -220,8 +222,12 @@ void main() {
         companySchedule: companySchedule,
       );
 
-      expect(params.servingAreaPlaceIds, isNull);
-      expect(params.serviceIds, isNull);
+      // Sent, not omitted: the backend requires both keys with at least one
+      // entry, so an empty selection must reach it as an empty array and be
+      // rejected clearly — the wizard's step gates are what stop it getting
+      // this far in the first place.
+      expect(params.servingAreaPlaceIds, isEmpty);
+      expect(params.serviceIds, isEmpty);
       expect(params.workerIds, ['w1']);
     });
 
@@ -276,8 +282,7 @@ void main() {
         companySchedule: companySchedule,
       );
 
-      expect(params.servingAreaPlaceIds, isNotNull);
-      for (final id in params.servingAreaPlaceIds!) {
+      for (final id in params.servingAreaPlaceIds) {
         expect(id.startsWith('latlng:'), isFalse);
       }
       expect(params.servingAreaPlaceIds, [

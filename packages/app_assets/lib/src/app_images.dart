@@ -53,4 +53,14 @@ abstract final class AppImages {
   /// user's own photo as soon as the profile API provides one.
   static const String aiChatProfileAvatarPlaceholder =
       '$_base/ai_chat/profile_avatar_placeholder.png';
+
+  /// Map illustration behind the AI chat's location prompts — Figma
+  /// `illustration-container` (`7960:31577` / `7960:31628`).
+  ///
+  /// A **static preview**, not a live map. It is what the `permission_request`
+  /// and `location_confirm` components draw when the renderer has no map
+  /// engine available, which is the case in the design catalog and in every
+  /// widget test. An app that can draw a real map registers its own renderer
+  /// over those node types instead.
+  static const String aiChatMapPreview = '$_base/ai_chat/ai_map_preview.png';
 }

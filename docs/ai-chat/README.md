@@ -7,7 +7,7 @@ scenarios. The route exists only in non-release builds.
 
 | Doc | Read when you need… |
 |---|---|
-| [`AI_CONTRACT.md`](AI_CONTRACT.md) | **To build the agent.** The complete agent-facing rules: envelope, all 20 components, the eight actions, limits, valid and invalid examples. No Flutter knowledge required. |
+| [`AI_CONTRACT.md`](AI_CONTRACT.md) | **To build the agent.** The complete agent-facing rules: envelope, all 32 components (15 primitives + 17 semantic), the eleven actions, limits, valid and invalid examples. No Flutter knowledge required. |
 | [`PROTOCOL_V1.md`](PROTOCOL_V1.md) | The normative client-side reference — every field, default, limit and failure behaviour the validator enforces. |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | How the packages, transport seam, renderer registry and action registry fit together, and why. |
 | [`BACKEND_TICKET.md`](BACKEND_TICKET.md) | The implementation-ready ticket for the AI/backend team, with acceptance criteria. |

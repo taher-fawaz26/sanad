@@ -29,10 +29,28 @@ class CoverageAreaResult extends Equatable {
 
   List<ServingArea> get servingAreas => [...autoAreas, ...extraAreas];
 
+  /// Every area's `placeId`, auto areas first, exactly as picked.
+  ///
+  /// Raw on purpose — including the synthetic `latlng:` ids the picker mints
+  /// for a dropped pin that resolved to no real place. Use
+  /// [transmittableServingAreaPlaceIds] for anything that goes on the wire.
   List<String> get servingAreaPlaceIds => [
     ...autoAreas.map((a) => a.placeId),
     ...extraAreas.map((a) => a.placeId),
   ];
+
+  /// The subset of [servingAreaPlaceIds] the backend can actually resolve.
+  ///
+  /// Deduplicated, and stripped of empty and synthetic `latlng:` ids: the
+  /// server matches these against `location_areas` and rejects the whole
+  /// request for one it cannot resolve. `AddBranchParamsMapper` applies the
+  /// same filter on the create path; this getter exists so the Branch Details
+  /// edit path, which builds its PATCH straight from a picker result, cannot
+  /// skip it.
+  List<String> get transmittableServingAreaPlaceIds => servingAreaPlaceIds
+      .where((id) => id.isNotEmpty && !id.startsWith('latlng:'))
+      .toSet()
+      .toList(growable: false);
 
   @override
   List<Object?> get props => [

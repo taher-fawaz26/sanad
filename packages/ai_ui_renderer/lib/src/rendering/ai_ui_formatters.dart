@@ -16,11 +16,17 @@ abstract final class AiUiFormatters {
     // Whole amounts read better without trailing zeros in a chat bubble;
     // fractional amounts keep two digits so 99.5 does not become 100.
     final hasFraction = money.amount % 1 != 0;
-    return NumberFormat.currency(
+    final digits = NumberFormat.decimalPatternDigits(
       locale: locale,
-      name: money.currency,
       decimalDigits: hasFraction ? 2 : 0,
     ).format(money.amount);
+    // Composed rather than `NumberFormat.currency`, which runs the code into
+    // the digits ("AED120") for this locale. Figma writes "AED 120", and the
+    // separator is what makes a three-letter code read as a currency instead
+    // of part of the number. Code-first in both languages: the code and the
+    // digits are one LTR run, so an Arabic line still renders it correctly at
+    // the visual start of the value.
+    return '${money.currency} $digits';
   }
 
   /// Explicit `h:mm a` rather than `DateFormat.jm()`, because the skeleton

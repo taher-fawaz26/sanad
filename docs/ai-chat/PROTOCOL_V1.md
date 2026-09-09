@@ -175,20 +175,66 @@ action renders as plain text. If no span survives, the node is dropped.
 | Field | Type | Req | Default / limits |
 |---|---|---|---|
 | `alt` | string | **yes** | ≤ 64 chars. Absent → node dropped. |
-| `assetId` | string | **yes** | Must be an id the host publishes; otherwise node dropped. |
-| `url` | — | **rejected** | See below. |
+| `url` | string | no | See §4.1. At least one of `url` / `assetId` must be usable, or the node is dropped. |
+| `assetId` | string | no | See §4.1. |
 | `aspect` | enum | no | `wide`. One of `square`, `wide`, `thumb`. |
 | `fit` | enum | no | `cover`. One of `cover`, `contain`. |
 
-> **v1 is `assetId`-only.** A `url` on an image node is rejected outright with a
-> `reserved_property` diagnostic — this is *not* a host check, and the app's own
-> CDN is refused too. An agent-supplied image URL is a network and tracking
-> surface v1 does not need: semantic cards carry an entity id, so the app
-> fetches real artwork itself. When both `assetId` and `url` are present, the
-> `assetId` is used and the `url` is flagged.
->
-> `AiUiRemoteImage` and `AiUiUrlPolicy` exist in the codebase as future-ready
-> infrastructure. No v1 payload can produce an `AiUiRemoteImage`.
+### 4.1 The image object — one shape everywhere
+
+```text
+image
+ ├── url      optional String, preferred
+ └── assetId  optional String, controlled local fallback
+
+Priority:  url > assetId > the node's own no-image state
+```
+
+**Every** image in the protocol is this object: the `image` primitive (whose
+`url`/`assetId` sit directly on the node), `list_item.leadingImage`,
+`service_card.image`, `provider_card.image`, `permission_request.image`,
+`location_confirm.image`. There is no second image model anywhere, and no node
+has its own image rules.
+
+| Input | Client behaviour |
+|---|---|
+| `{"url": "https://cdn…/x.jpg"}` | Renders from the network |
+| `{"assetId": "service_tools"}` | Renders the bundled asset |
+| both present | **Renders the URL.** The asset is the render-time fallback if the download fails; it never overrides a usable URL. |
+| `{"url": "", "assetId": "…"}` | Renders the asset — an empty string is "no url", not a broken one |
+| `url` refused by the image policy | Diagnostic, then falls through to `assetId`; if there is none, the field is empty |
+| `{"assetId": "random_unknown_id"}` | `unknown_asset_id` diagnostic, resolves to nothing |
+| `{"url": null, "assetId": null}` | The node's no-image state |
+
+**`url`** is for dynamic, backend-owned media — a service photo, a provider
+portrait, business artwork. It is checked against the host's **image URL
+policy** during validation: https only, no embedded userinfo, parseable, and
+(when the host configures one) a host allowlist. A refused URL never reaches a
+widget and never causes a request. The client loads it through its existing
+cached-network-image stack, with the app's own loading shimmer and failure
+placeholder.
+
+**`assetId`** is **not** an arbitrary string. It names one entry in a small
+catalog the *client* publishes; the host hands that catalog to the validator,
+and an id outside it is dropped. The ids the SANAD client publishes today
+(`AiAssetResolver.defaults()`, whose keys feed `AiUiValidator.knownAssetIds`):
+
+| `assetId` | What it is |
+|---|---|
+| `image_placeholder` | Generic image placeholder (SVG) |
+| `empty_state` | Empty-state illustration |
+| `service_tools` | Service / tools illustration |
+| `no_branch_locations` | No-branches illustration |
+| `ai_map_preview` | Map illustration for the location prompts |
+
+Publishing a new id is a client release, so the list is agreed with the Flutter
+team rather than assumed. The agent knows only the canonical
+id — never a Flutter asset path, a package path, an Android or iOS resource
+name, a filename, or any other local reference. There is no field in which such
+a value means anything.
+
+The client is the source of truth for what an id maps to. Changing the file
+behind `service_tools` is a client release; the id does not change.
 
 ### `divider`
 `spacing`: enum, default `md`, one of `xs`, `sm`, `md`, `lg`, `xl`.
@@ -246,7 +292,7 @@ Rendered as a bounded column — **never a nested scrollable**.
 | `title` | string | **yes** | ≤ 64 |
 | `subtitle` | string | no | ≤ 2000 |
 | `leadingIcon` | string | no | ≤ 120 |
-| `leadingImage` | object | no | `{"assetId": "..."}` — same assetId-only rule |
+| `leadingImage` | object | no | The image object of §4.1 — `{url?, assetId?}` |
 | `badge` | object | no | `{"label": ≤40, "tone": enum default neutral}` |
 | `trailingText` | string | no | ≤ 64 |
 | `action` | action | no | |
@@ -260,15 +306,43 @@ an activity indicator instead of a bar. `label` optional (≤ 64).
 
 ---
 
-## 5. Semantic nodes (5)
+## 5. Semantic nodes (17)
 
-These are the **only** semantic components in v1. All are client-domain. There
-are no provider-domain semantic components.
+A semantic node names a **business meaning**, and the client owns everything
+about how it looks. Seventeen of them cover the current design language; the
+Figma component frame they are drawn from is `7998:34166` in file
+`al9Mb5tuJN5t4z0GBgrfDG`. All are client-domain — there are no provider-domain
+semantic components.
 
 Structured values are sent structured and formatted by the client in the
 device's locale — the agent never formats a currency, an instant, or a distance.
 
-### `service_card`
+Adding a semantic type is additive and does **not** bump `schemaVersion`
+(§9). Older clients degrade a type they do not know through `fallbackText`,
+which is why every semantic node should carry one.
+
+### 5.0 What every semantic node shares
+
+| Field | Type | Req | Notes |
+|---|---|---|---|
+| `id` | string | **yes** | Unique within the payload. |
+| `fallbackText` | string | no | ≤ 2000. What an older client renders instead. |
+| `a11yLabel` | string | no | ≤ 64. Overrides the node's derived screen-reader label. |
+| `actions` | array | no | 0–3 card actions, drawn as a row inside the card's own border. |
+
+An `actions` entry is `{"label": ≤40 (R), "action": action (R), "variant"?, "intent"?}`
+using the same `button variant` / `button intent` vocabularies as the `button`
+primitive. An entry whose action is unresolvable — not in the catalog, or not
+in the host's `supportedActions` — is **dropped like a `button`**; the card
+survives. A dead control is worse than a missing one.
+
+`actions` is accepted by every semantic node **except** `quick_reply`,
+`time_slots`, `review_request` and `location_picker`, which own their own
+controls. Sending it there emits `invalid_property` and the array is ignored.
+
+### 5.1 Entity cards
+
+#### `service_card`
 | Field | Type | Req | Limits |
 |---|---|---|---|
 | `serviceId` | string | **yes** | |
@@ -276,28 +350,167 @@ device's locale — the agent never formats a currency, an instant, or a distanc
 | `subtitle` | string | no | ≤ 2000 |
 | `price` | object | no | `{"amount": number, "currency": 3-letter ISO-4217}`. Malformed → price dropped, card kept. |
 | `ratingValue` | number | no | 0–5, clamped |
-| `image` | object | no | `{"assetId": "..."}` |
+| `image` | object | no | The image object of §4.1. Dynamic service artwork belongs in `url`. Rendered as a thumbnail above the title when present. |
 | `badge` | object | no | `{"label", "tone"}` |
-| `action` | action | no | |
+| `selected` | bool | no | Default `false`. Marks the service the conversation is currently about. |
+| `action` | action | no | Whole-card tap. |
 
-### `appointment_card`
+#### `appointment_card`
 `appointmentId` **required**, `title` **required** (≤ 64), `startsAt`
 **required** — ISO-8601, normalised to UTC; unparseable drops the node.
 Optional: `whereText` (≤ 2000), `status` (≤ 40), `statusTone` (default
 `neutral`), `action`.
 
-### `branch_card`
+#### `branch_card`
 `branchId` **required**, `name` **required** (≤ 64). Optional: `addressText`
 (≤ 2000), `distanceMeters` (number, 0–40 000 000), `status` (≤ 40),
-`statusTone` (default `neutral`), `action`.
+`statusTone` (default `neutral`), `hoursText` (≤ 64 — "Closes 9:00 PM", already
+localized prose because only the backend knows the calendar), `action`.
 
-### `document_card`
+#### `order_card`
+`orderId` **required**, `title` **required** (≤ 64 — the reference as the user
+recognises it, "Order #1042"). Optional: `statusText` (≤ 64), `status` (≤ 40)
++ `statusTone` (default `neutral`), `amount` (Money), `action`.
+
+Several stacked `order_card` blocks are what the design calls an order-tracking
+dashboard. There is no list type for it: a list of one still has to look right.
+
+#### `provider_card`
+`providerId` **required**, `name` **required** (≤ 64). Optional: `roleText`
+(≤ 64), `ratingValue` (0–5, clamped), `image` (§4.1 — a portrait is dynamic
+media, so send a `url`; the card falls back to a person glyph), `stats` (0–4
+entries of `{"label": ≤40, "value": ≤40}` — chip-length, because they sit in a
+two-column strip), `action`.
+
+#### `document_card`
 `documentId` **required**, `title` **required** (≤ 64), `status` **required**
 (≤ 40). Optional: `statusTone` (default `neutral`), `action`.
 
-### `quick_reply`
+**Supported — not in the current Figma set.** It is an already-published
+contract, so it keeps working and keeps its renderer. Nothing new should be
+designed around it; use `order_card` or a summary for new work.
+
+### 5.2 Summaries
+
+#### `booking_summary`
+`items` **required**: 1–8 detail items. Optional: `title` (≤ 64).
+
+A detail item is `{"label": ≤64 (R), "value": ≤64 (R), "valueTone"?, "isLtrValue"?}`.
+`isLtrValue` marks a value that must not be reordered by an RTL line — a
+reference id, a card number, a phone number.
+
+#### `request_summary`
+`items` **required** (1–8 detail items). Optional: `summaryTitle` (≤ 64),
+`summaryText` (≤ 2000 — the agent's recap in prose), `location`
+(`{"label"?: ≤64, "addressText": ≤64 (R), "action"?}`).
+
+#### `payment_receipt`
+`title` **required** (≤ 64), `items` **required** (1–8 detail items).
+Optional: `subtitle` (≤ 64), `statusTone` (default `success` — `error` for a
+failed payment), `total` (`{"label": ≤64 (R), "amount": Money (R)}`).
+
+### 5.3 Interactive nodes
+
+These four own their input state **client-side**. The user's choice travels
+back in two halves:
+
+1. the **sentence**, built from a template the agent supplied and posted in the
+   turn's `message` — indistinguishable from typing, and the only thing a
+   backend that has not implemented results needs to read;
+2. the **structured result**, an `interaction` object naming the node, the
+   choice and the message that asked. See §13.
+
+Both are sent together, on the same request. The agent still receives text it
+authored and never a value it can execute; what the second half adds is that it
+no longer has to re-parse its own prose to find out *which* slot was picked.
+
+A template may carry exactly one placeholder — `{comment}`, `{slot}` or
+`{location}` as listed below — and the client substitutes the user's own value
+and nothing else. A template with no placeholder is sent verbatim.
+
+#### `quick_reply`
 `options` **required**: 2–6 entries of `{"label": ≤40, "action": action}`.
 Excess truncated; fewer than 2 *valid* options drops the node.
+
+An option whose action is `send_message` also produces a
+`quick_reply_selected` result carrying the option's label. An option with any
+other action is navigation, not an answer, and produces no result. Picking one
+option retires the rest — a set of suggested replies is one choice.
+
+#### `time_slots`
+`slots` **required**: 2–12 entries of `{"id" (R), "label": ≤40 (R),
+"enabled"?: bool default true}`. `confirmLabel` **required** (≤ 40).
+`confirmTemplate` **required** (≤ 2000, placeholder `{slot}` — filled with the
+chosen slot's **label**). Optional: `dateLabel` (≤ 64), `selectedSlotId`
+(must name one of the slots; an unknown id is ignored).
+
+#### `review_request`
+`serviceName` **required** (≤ 64), `submitLabel` **required** (≤ 40),
+`submitTemplate` **required** (≤ 2000, placeholder `{comment}`). Optional:
+`providerText` (≤ 64), `commentPlaceholder` (≤ 64), `maxCommentLength`
+(1–500, clamped; the agent may lower the cap, never raise it).
+
+#### `location_picker`
+`title` **required** (≤ 64), `confirmLabel` **required** (≤ 40),
+`confirmTemplate` **required** (≤ 2000, placeholder `{location}` — filled with
+the chosen place's **name**, or with what the user typed). Optional:
+`searchPlaceholder` (≤ 64), `useCurrentLabel` (≤ 40 — renders a row that
+requests `request_location_share`), `savedLabel` (≤ 40), `savedLocations` (0–6
+entries of `{"id" (R), "name": ≤64 (R), "addressText": ≤64 (R), "icon"?}`).
+
+**One of `useCurrentLabel` or a non-empty `savedLocations` is required.** A
+picker that offers neither is a dead end, and the node is dropped: the
+conversation is a better place to ask than a card with nothing to choose.
+
+### 5.4 Prompt cards
+
+#### `permission_request`
+`permission` **required** — one of `camera`, `photos`, `microphone`,
+`location`, `notifications`; an unrecognised value **drops the node** (a
+prompt for an unknown capability has no correct button). `title` **required**
+(≤ 64), `allowLabel` **required** (≤ 40). Optional: `body` (≤ 2000), `image`
+(§4.1 — usually the client's own `ai_map_preview` illustration), `denyLabel`
+(≤ 40).
+
+Allow dispatches `request_permission` with the same `permission`; the app runs
+the platform prompt and returns a `permission_result` (§13) carrying the
+outcome. Deny still collapses the card client-side — the `dismiss` action is
+not needed for it — but **also** returns a `permission_result` with
+`status: "cancelled"` and `outcome: "denied"`.
+
+That change matters: before results existed, a declined permission ended in a
+snackbar the agent never heard about, so it could only carry on as if the
+answer had been yes.
+
+#### `media_request`
+`title` **required** (≤ 64), `options` **required**: 1–4 entries of
+`{"label": ≤64 (R), "source"?: camera|gallery|video|document, default gallery}`.
+Optional:
+`body` (≤ 2000), `cancelLabel` (≤ 40 — collapses the card, client-side).
+
+Each option dispatches `request_image_upload` carrying its `source`. The app
+still owns the permission prompt, the picker and the right to refuse.
+
+The files themselves arrive as the next turn's `attachments`, unchanged — they
+are not duplicated into a result. `cancelLabel` returns a `media_result` with
+`status: "cancelled"` and `count: 0`, so a user who backs out is not silently
+indistinguishable from one who is still choosing.
+
+#### `location_confirm`
+`title` **required** (≤ 64), `addressText` **required** (≤ 2000),
+`confirmLabel` **required** (≤ 40). Optional: `image` (§4.1 — a real static
+map for the place belongs in `url`; the client's `ai_map_preview` asset is the
+sensible `assetId`, and a tinted block is the no-image state), `changeLabel`
+(≤ 40 — requests `request_location_share` again).
+
+Confirm posts `addressText` back as a user turn **and** returns a
+`location_confirmed` result carrying it as a structured place, so accepting a
+proposed address is distinguishable from someone typing the same words.
+`changeLabel` dispatches `request_location_share` again.
+
+#### `reminder_card`
+`title` **required** (≤ 64), `body` **required** (≤ 2000). Optional:
+`subtitle` (≤ 64), `tone` (default `warning`).
 
 ---
 
@@ -307,36 +520,67 @@ Excess truncated; fewer than 2 *valid* options drops the node.
 { "type": "open_service", "serviceId": "svc_123" }
 ```
 
-Eleven action types are defined by the protocol:
+Fourteen action types are defined by the protocol:
 
-| `type` | Required params |
-|---|---|
-| `send_message` | `text` |
-| `open_service` | `serviceId` |
-| `open_appointment` | `appointmentId` |
-| `open_branch` | `branchId` |
-| `open_document` | `documentId` |
-| `open_route` | `routeKey` — a **symbolic key**, never a path |
-| `open_url` | `url` — gated by `AiUiUrlPolicy` (https + host allowlist) |
-| `copy_text` | `text` |
-| `request_location_share` | — — asks the app to run its own location flow |
-| `request_image_upload` | — — asks the app to run its own picker/upload flow |
-| `dismiss` | — |
+| `type` | Required params | Implemented by the SANAD client |
+|---|---|---|
+| `send_message` | `text` | yes |
+| `open_service` | `serviceId` | yes |
+| `open_appointment` | `appointmentId` | yes |
+| `open_branch` | `branchId` | yes |
+| `open_document` | `documentId` | yes |
+| `copy_text` | `text` | yes |
+| `request_location_share` | — | yes |
+| `request_image_upload` | — (optional `source`) | yes |
+| `request_permission` | `permission` | yes |
+| `call_phone` | `phone` | yes |
+| `open_map` | `query` — an address or `"lat,lng"`, never a URL | yes |
+| `open_route` | `routeKey` — a **symbolic key**, never a path | **no** |
+| `open_url` | `url` — gated by `AiUiUrlPolicy` (https + host allowlist) | **no** |
+| `dismiss` | — | **no** |
 
-The two `request_*` actions grant the agent **no** device access. They state an
+The `request_*` actions grant the agent **no** device access. They state an
 intent; the app owns the permission prompt, the picker and the decision to
-refuse. Emitting one is a request, never a capability.
+refuse. Emitting one is a request, never a capability. `call_phone` opens the
+dialer **pre-filled** — the user always sees the number and still has to press
+call — and `open_map` takes a bounded query rather than a URL, which is what
+lets `open_url` stay deny-all.
+
+#### Three categories, by what a tap means
+
+The catalog is one enum, but the actions fall into three groups and it is worth
+being able to tell at a glance which a given action is:
+
+| Category | Actions | What happens |
+|---|---|---|
+| **Continuation** | `send_message` | Posts a user turn. The conversation advances. |
+| **Client / system** | `open_service`, `open_appointment`, `open_branch`, `open_document`, `copy_text`, `call_phone`, `open_map`, `open_route`, `open_url`, `dismiss` | Something happens on the device. The agent hears nothing back. |
+| **Capability** | `request_permission`, `request_image_upload`, `request_location_share` | The app runs a flow it owns, then returns a **result** (§13) — but only when the request came from a node. |
+
+The third row is the one that changed. A capability request that originates
+from a semantic node carries two client-added params so its asynchronous
+outcome can be matched to the question:
+
+| Param | Meaning |
+|---|---|
+| `nodeId` | The node whose control was tapped. |
+| `messageId` | The assistant message that carried the node. |
+
+**The client adds these, not the agent.** A bare `button` with a
+`request_permission` action asked no question, so it carries neither and
+produces no result — the outcome is a device interaction with nothing to be the
+answer *to*.
 
 Additional scalar params (string, number, bool) are carried through as strings.
 Non-scalar params are dropped with a diagnostic. `open_route` additionally
 accepts a nested `"params"` object of scalars.
 
 **Two independent gates.** An action must be in the protocol catalog *and* in
-the host's `supportedActions` set. The SANAD client implements eight:
-`send_message`, `open_service`, `open_appointment`, `open_branch`,
-`open_document`, `copy_text`, `request_location_share`, `request_image_upload`.
-`open_url` and `open_route` are **not implemented** — a payload using either is
-dropped.
+the host's `supportedActions` set. The SANAD client implements the eleven
+marked above. `open_url` and `open_route` are not implemented — the client has
+no URL allowlist configured and no symbolic route map — and `dismiss` is not
+implemented because every card that can be dismissed does it itself, without
+asking the app. A payload using any of the three has the owning node dropped.
 
 Not representable in any form: a callback, a method name, a Dart expression, a
 raw route path, a raw deep link.
@@ -356,11 +600,18 @@ raw route path, a raw deep link.
 | `list` children | 20 | Truncated |
 | `rich_text` spans | 20 | Truncated |
 | `quick_reply` options | 2–6 | Truncated / node dropped |
+| `actions` per semantic node | 3 | Truncated |
+| Detail items per summary/receipt | 1–8 | Truncated / node dropped |
+| `time_slots.slots` | 2–12 | Truncated / node dropped |
+| `location_picker.savedLocations` | 6 | Truncated |
+| `media_request.options` | 1–4 | Truncated / node dropped |
+| `provider_card.stats` | 4 | Truncated |
+| `review_request` comment length | 500 | Clamped (the agent may ask for less) |
 | `text.text`, `list_item.subtitle` | 2000 | Truncated |
 | Labels, titles, `alt` | 64 | Truncated |
 | Chip/badge/status labels | 40 | Truncated |
 | Actions per message | 12 | Further actions unresolvable |
-| Images per message | 4 | Further images dropped |
+| Images per message | 8 | Further images dropped |
 | `maxLines` | 1–20 | Clamped |
 
 Size and node-count overruns reject the whole payload; child/depth overruns
@@ -387,7 +638,8 @@ Both stages are **total**: there is no input for which either throws.
 | Unknown node `type` **with** `fallbackText` | Rendered as a `text` node | `unknown_node_type` |
 | Unknown node `type` without it | Dropped (release) / labelled marker (dev builds) | `unknown_node_type` |
 | Unknown property | Ignored | `invalid_property` |
-| Reserved property (`textKey`, `textArgs`, `image.url`) | Ignored / node dropped | `reserved_property` |
+| Reserved property (`textKey`, `textArgs`) | Ignored / node dropped | `reserved_property` |
+| `image.url` refused by the image policy | Falls through to `assetId`, else empty | `invalid_property` |
 | Missing required property | Node dropped, siblings kept | `missing_required_property` |
 | Wrong property type | Node dropped or field ignored | `invalid_property` |
 | Unknown enum value | Documented default applied | `invalid_property` |
@@ -424,8 +676,10 @@ capped at 120 characters.
   never calls `.tr()` on payload text.
 - Client-owned chrome uses the `ai_chat.*` namespace in both `en-US.json` and
   `ar-AR.json`.
-- **RTL is the default** (both apps start `ar-AR`). `start`/`end` are visual and
-  flip automatically; the protocol has no `left`/`right`.
+- **Either direction is possible.** English is the product default
+  (`AppLanguage.defaultLanguage`) and Arabic is a first-class RTL locale, so a
+  payload must read correctly in both. `start`/`end` are visual and flip
+  automatically; the protocol has no `left`/`right`.
 - Structured values (`price`, `startsAt`, `distanceMeters`, `ratingValue`) are
   formatted client-side in the device locale, using the repo's 12-hour
   `DateFormat('h:mm a')` convention.
@@ -460,7 +714,8 @@ Normative. `AiChatTurnPayload.encode` is the only thing that builds this, and
       "type":       "audio",   // audio attachments only
       "transcript": String     // audio only, and only when non-empty
     }
-  ]
+  ],
+  "interaction":     { … }     // only when the turn IS an answer — see §13
 }
 ```
 
@@ -490,6 +745,11 @@ Normative. `AiChatTurnPayload.encode` is the only thing that builds this, and
    in `AiChatBloc`; doing it again here would silently change a pinned body.
 7. **Nothing credential-shaped is ever in the body.** The session token is a
    header (`Sanad-Access-Token`) on both transports.
+8. **`interaction` is omitted unless the turn is an answer**, by the same rule
+   and for the same reason as `attachments`. When it *is* present, `message`
+   still carries the sentence the agent's template produced — so a backend that
+   ignores `interaction` receives exactly the body a tapped card has always
+   sent. See §13.
 
 ### Why the transcript is on the attachment
 
@@ -498,3 +758,192 @@ caption and a voice note. A top-level `transcript` would either collide with the
 caption or need a rule about which wins. On the attachment, the words stay
 attached to the audio they came from, and a turn with two recordings would still
 be unambiguous.
+
+---
+
+## 13. The interaction result (client → agent)
+
+Normative for the **client**. `AiUiInteraction` + `AiUiInteractionCodec` in
+`packages/ai_ui_protocol` are the only things that build this, and
+`ai_ui_interaction_round_trip_test.dart` / `ai_ui_interaction_codec_test.dart`
+pin every rule below.
+
+> **Implementation status.** The client emits this today, on every transport.
+> **The backend does not read it yet.** Because `message` still carries the
+> agent's own sentence, an agent that ignores `interaction` behaves exactly as
+> it did before this section existed — which is what makes adopting it a
+> backend change that can happen whenever, with no client release to
+> coordinate. See `BACKEND_TICKET.md`.
+
+### 13.1 Why it exists
+
+The interactive cards have always answered — as prose, via `send_message` with
+a template placeholder filled in. What that cannot carry is *which* node was
+answered, *which* message asked, or whether the answer already arrived. An
+agent holding only `"Book me the 9:00 AM slot"` has to re-parse its own
+sentence to recover a slot id it published thirty seconds earlier.
+
+Three interaction classes could not answer at all: a permission outcome, a
+declined permission, and a cancelled prompt all ended in client-side UI the
+agent never heard about.
+
+### 13.2 Shape
+
+```
+{
+  "interactionId": String,   // always — client-minted idempotency key
+  "nodeId":        String,   // always — AiUiNode.id
+  "nodeType":      String,   // when known — a node type wire value
+  "messageId":     String,   // when known — the message that asked
+  "kind":          String,   // always — see 13.3
+  "status":        String,   // always — submitted | cancelled | failed
+  "value":         { ... },  // always — shape implied by `kind`, see 13.4
+  "text":          String,   // when there is one — the sentence in `message`
+  "createdAt":     String    // when set — UTC ISO-8601
+}
+```
+
+A worked example, in the turn body it travels in:
+
+```json
+{
+  "conversation_id": "conv_1",
+  "message": "Book me the 9:00 AM slot",
+  "interaction": {
+    "interactionId": "int_1757..._9f2c",
+    "nodeId": "slots_1",
+    "nodeType": "time_slots",
+    "messageId": "msg_7",
+    "kind": "slot_selected",
+    "status": "submitted",
+    "value": { "id": "s_0900", "label": "9:00 AM" },
+    "text": "Book me the 9:00 AM slot",
+    "createdAt": "2026-09-08T09:14:03.000Z"
+  }
+}
+```
+
+### 13.3 Kinds
+
+| `kind` | Produced by | `value` |
+|---|---|---|
+| `quick_reply_selected` | `quick_reply` (a `send_message` option) | Selection |
+| `slot_selected` | `time_slots` confirm | Selection |
+| `review_submitted` | `review_request` submit | Text |
+| `location_selected` | `location_picker` confirm | Location |
+| `location_confirmed` | `location_confirm` confirm | Location |
+| `permission_result` | `permission_request`, `request_permission`, `request_location_share` | Permission |
+| `media_result` | `media_request` cancel | Media |
+
+### 13.4 Value shapes
+
+The value carries **no discriminator of its own** — `kind` implies it. That is
+what keeps a result from being two things at once.
+
+| Shape | Fields |
+|---|---|
+| **Selection** | `label` (R), `id` (when the agent published one) |
+| **Text** | `text` (R; **may be empty** — an empty review is an answer) |
+| **Location** | `name` (R), `source` (R: `saved` or `typed`), `id`, `addressText` |
+| **Permission** | `permission` (R — the capability wire value), `outcome` (R: `granted`, `denied`, `permanently_denied`, `unavailable`, `cancelled`) |
+| **Media** | `count` (R), `source` |
+| **Empty** | `{}` — a cancellation whose meaning is fully carried by `kind` and `status` |
+
+`outcome` is deliberately **not** a platform permission status. Nothing in it
+names an Android or iOS concept, so the agent reasons about "may I proceed"
+rather than about a plugin's vocabulary.
+
+**Location carries no coordinates.** The client resolves a place from the
+agent's own `savedLocations` or from what the user typed, and reads no device
+position — `request_location_share` therefore returns
+`outcome: "unavailable"`. That is a real answer: the agent can ask the user to
+name the place instead of waiting for a fix that is not coming. A
+coordinate-bearing variant is additive when a device-location capability
+exists.
+
+### 13.5 Correlation
+
+Three identifiers, only one of them new:
+
+- **`nodeId`** — `AiUiNode.id`, which the agent supplied or the validator
+  derived from the node's path in the document (§3).
+- **`messageId`** — the `AiChatEvent` that delivered the node. Absent during
+  live voice, which has no assistant messages, only a session.
+- **`conversation_id`** — on the turn body that wraps the result (§12), not
+  repeated here.
+
+**`interactionId`** is the only genuinely new one, and it exists for
+idempotency: a key has to be minted by the client *before* the request leaves,
+so a retry is recognisable as the same answer. It is opaque; nothing parses it.
+
+### 13.6 Lifecycle and duplicate submission
+
+Each node moves through:
+
+```text
+active ──► pending ──► submitted
+  │           │
+  ▼           ▼
+cancelled   failed ──► active
+```
+
+A submission is refused unless the node is `active` or `failed`. That is the
+single place a double tap is stopped — not per widget — and it is why a second
+Confirm sends nothing while the first is still in flight.
+
+A **failed** send returns the node to answerable. A dropped request must never
+leave the user looking at a control they cannot use and cannot explain.
+
+`expired` and `superseded` are deliberately **not** modelled: nothing in the
+protocol carries a TTL, and an older card staying answerable in a scrollback is
+the honest behaviour. The agent is the only party that knows whether a late
+answer is still useful, which is what `messageId` is for.
+
+### 13.7 `text`, and who writes it
+
+**The agent's template wins where there is one; the client supplies the words
+where there is not.**
+
+An interactive card has a template — `"Book me the {slot} slot"` — so `text` is
+that template with the user's value substituted, and the agent can never be
+made to post words it did not author. A permission outcome has no template,
+because no agent wrote "you declined"; that is client copy, in the user's
+language, and `text` is filled from the app's own translations.
+
+Either way the sentence and the structured result travel together, and the
+conversation reads like something a person said.
+
+### 13.8 Error handling
+
+| Situation | Behaviour |
+|---|---|
+| Second tap, or a tap while a send is in flight | Refused by the lifecycle. Nothing is sent. |
+| Send fails | Node becomes `failed`, controls return, the transport's existing error surfaces. |
+| Nothing selected yet | Confirm stays disabled — no template is posted with an empty substitution. |
+| User declines | A result **is** sent, with `status: "cancelled"`. Silence would be indistinguishable from a broken client. |
+| Unknown `kind` or `status` on decode | The result is ignored. An unreadable `status` is never assumed to be `submitted`. |
+| Value of the wrong shape | Degrades to `{}`, keeping the result — that the user answered is worth more than the payload it came with. |
+| Voice session ends with a card up | The card is taken down and the node returns to `active`; no result is sent, because there is no session to send it to. |
+| Free text over the limit | Clamped to `maxInteractionTextLength` (2000) by the encoder. |
+
+### 13.9 Live voice
+
+The same object, over a different wire. A voice session's semantic channel
+delivers an ordinary `{schemaVersion, blocks}` payload and accepts an ordinary
+interaction result back; the node definitions, the value shapes, the lifecycle,
+the validation and the renderer are one implementation shared with chat.
+
+Two differences, both of them transport-shaped:
+
+1. **No `messageId`.** There are no assistant messages in a session, so
+   `nodeId` alone identifies the question.
+2. **The session waits.** While a card is up the session is in
+   `awaitingInteraction` and the microphone is released, so silence detection
+   and barge-in cannot race a user reading a question.
+
+> **Implementation status.** The client-side contract above is implemented and
+> tested. **There is no realtime voice backend**: the semantic beats are
+> supplied by a local script (`MockVoiceScenarios`), and the assistant's audio
+> is the user's own capture played back. What is *not* mocked is the path a
+> card takes — validation, rendering, the ledger, the interaction and the
+> session's state machine are the real ones.

@@ -1,3 +1,5 @@
+import 'package:ai_ui_protocol/ai_ui_protocol.dart';
+import 'package:sanad_client/src/features/ai_chat/src/domain/entities/ai_voice_event.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/enums/ai_voice_session_status.dart';
 
 /// A realtime spoken conversation with the assistant.
@@ -31,6 +33,19 @@ abstract interface class AiVoiceSession {
   /// a listenable so only the waveform rebuilds.
   Stream<double> get inputLevel;
 
+  /// Semantic events — the assistant's UI requests and their resolutions.
+  ///
+  /// A third stream rather than a merge with [status] or [inputLevel]: these
+  /// arrive once or twice a conversation while the level ticks dozens of times
+  /// a second, and a consumer of one has no business filtering the other. See
+  /// [AiVoiceEvent].
+  ///
+  /// This is the channel that makes live voice *bidirectional* in the same
+  /// terms as chat: the payload it carries is an ordinary protocol document,
+  /// and the answer that comes back through [submitInteraction] is an ordinary
+  /// `AiUiInteraction`. Only the wire differs.
+  Stream<AiVoiceEvent> get events;
+
   /// A localization key describing the failure, when [status] is
   /// [AiVoiceSessionStatus.error].
   String? get failureKey;
@@ -63,6 +78,18 @@ abstract interface class AiVoiceSession {
   ///
   /// Called both by the user's stop button and by barge-in detection.
   Future<void> interrupt();
+
+  /// Answers the card the assistant is waiting on.
+  ///
+  /// The same [AiUiInteraction] the chat transport would post as a turn — the
+  /// interaction model, the lifecycle and the renderers are shared, and only
+  /// the way the bytes leave the device is different.
+  ///
+  /// Implementations must be idempotent and ignore the call outside
+  /// [AiVoiceSessionStatus.awaitingInteraction]: the ledger already refuses a
+  /// second answer, and a late one arriving after the session moved on is not
+  /// an error.
+  Future<void> submitInteraction(AiUiInteraction interaction);
 
   /// Ends the session and releases everything.
   Future<void> end();

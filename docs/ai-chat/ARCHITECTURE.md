@@ -33,14 +33,17 @@ Related: [`PROTOCOL_V1.md`](PROTOCOL_V1.md) (the wire contract),
                  ▼
    packages/ai_ui_renderer                              (tier 3, Flutter)
      AiUiHost/AiUiSurface → AiUiRendererRegistry → AiNodeRenderer → App* widgets
+     rendering/renderers/       text · layout · interactive · media
+     rendering/renderers/semantic/  entity_cards · summaries · interactive · prompts
+     rendering/primitives/      AiSemanticCard · card content · prompt parts
      AiActionRegistry → AiActionHandler → app code
-     AiAssetResolver · AiIconResolver · AiUiTokens · AiUiFormatters
+     AiAssetResolver · AiIconResolver · AiUiTokens · AiCardTokens · AiUiFormatters
      AiUiDiagnosticsSink
                  │
                  ▼
    packages/ai_ui_protocol                              (tier 0, PURE DART)
-     AiUiCodec · AiUiValidator · AiUiLimits · AiUiUrlPolicy
-     AiUiDocument · AiUiNode (sealed) · AiUiAction · AiUiDiagnostic
+     AiUiCodec · AiUiValidator (+ validation/parsers/) · AiUiLimits · AiUiUrlPolicy
+     AiUiDocument · AiUiNode (sealed, + domain/nodes/) · AiUiAction · AiUiDiagnostic
      AiChatEvent (sealed) · AiChatEventCodec
 ```
 
@@ -422,3 +425,133 @@ Deliberately absent, and not stubbed:
 - production authentication
 - production route exposure — `AiChatModule` registers `/dev/ai-chat` only when
   `!kReleaseMode`, so the path does not exist in a release build
+
+---
+
+## 14. The interaction layer — one contract, two transports
+
+### 14.1 What it replaced
+
+The interactive cards were already half of a loop. `time_slots`,
+`review_request`, `location_picker` and `quick_reply` owned their input state
+and answered by dispatching `send_message` with a template placeholder filled
+in — the agent's own sentence, posted as an ordinary user turn.
+
+What that could not carry was identity. The agent received
+`"Book me the 9:00 AM slot"` and had to recover `s_0900` — an id it had
+published seconds earlier — by parsing its own prose. And three interaction
+classes could not answer at all:
+
+| Before | Where it ended |
+|---|---|
+| `permission_request` → allow/deny | A snackbar. The agent was never told. |
+| `request_location_share` | A "capability unavailable" snackbar. |
+| `media_request` | The composer's picker; files arrived later, uncorrelated. |
+
+Live voice had no semantic channel of any kind: `AiVoiceSession` exposed a
+status stream, a level stream, and a failure key.
+
+### 14.2 The shape of the change
+
+```text
+                    ai_ui_protocol  (tier 0, no Flutter)
+                    ├── AiUiNode / AiUiAction        AI → client
+                    └── AiUiInteraction + values     client → AI
+                                  │
+                    ai_ui_renderer (tier 3)
+                    ├── AiUiSurface / renderers      draws the question
+                    ├── AiUiInteractionLedger        node lifecycle
+                    └── AiUiInteractionSink          where answers go
+                                  │
+                    ┌─────────────┴─────────────┐
+              AiChatBloc                  AiVoiceSessionBloc
+        AiChatBlocInteractionSink       AiVoiceInteractionSink
+                    │                             │
+      SSE / WebSocket / mock            AiVoiceSession (mock)
+      `interaction` on the turn body    session's own channel
+```
+
+Everything above the fork is one implementation. The fork is two sinks, each
+about ten lines, and two transports. A `time_slots` card does not know which
+session it is in, and neither transport knows anything about time slots.
+
+### 14.3 Why the ledger is not widget state, and not bloc state
+
+It was widget state: `_ReviewRequestState._submitted` guarded one of the three
+interactive cards, and the other two had no guard at all. That was already
+unreliable — answering appends a turn, the conversation list rebuilds, and the
+flag did not survive it.
+
+Bloc state is the other obvious home, and it is wrong for the opposite reason:
+selecting a time slot would emit a new `AiChatState` and rebuild the whole
+conversation. The same reasoning that keeps streaming tokens out of state
+(`ActiveStreamController`) applies here.
+
+So `AiUiInteractionLedger` hands out **one `ValueListenable` per node id**.
+Answering a card rebuilds exactly the controls that changed. It is owned by the
+bloc, so its lifetime is the conversation: a card scrolled out of the list and
+back still knows it was answered, and a failed send can re-enable the card it
+came from.
+
+### 14.4 Two seams, two directions
+
+`AiActionRegistry` carries the agent's requests *in*. `AiUiInteractionSink`
+carries the user's results *out*. Keeping them separate is what makes the
+direction of any call obvious at the site, and it is why a result can never be
+dispatched as an action.
+
+The capability actions sit between them: `request_permission` and friends go
+*in* through the registry, and their outcome comes back *out* through the sink.
+The render scope attaches `nodeId` and `messageId` to those dispatches so the
+handler can correlate an asynchronous platform outcome with the question that
+asked. A bare `button` carrying the same action asks no question and produces
+no result — which is exactly its old behaviour.
+
+### 14.5 Backward compatibility, and how it is enforced
+
+`AiUiEnvironment.interactions` defaults to `NoopAiUiInteractionSink`, and
+`AiUiRenderScope.submitInteraction` recognises that type and falls back to
+dispatching the interaction's prose as a `send_message`. That is precisely what
+the cards did before results existed.
+
+This is not a comment; it is the compatibility guarantee, and it is guaranteed
+only while something tests it. `semantic/interactive_test.dart` and
+`semantic/prompts_test.dart` still run against the no-op sink and still assert
+the `send_message` dispatch, unchanged. `interactive_submission_test.dart` runs
+the same widgets against a real sink and asserts the structured result. Both
+halves are pinned.
+
+On the wire the same discipline applies: `interaction` is omitted when the turn
+is not an answer, so a text-only turn is byte-identical to before, and
+`message` still carries the sentence when it *is* an answer, so a backend that
+has not adopted the field is unaffected.
+
+### 14.6 Live voice: one new state, one new stream
+
+`AiVoiceSession` gained `Stream<AiVoiceEvent> events` and
+`submitInteraction(...)`. The status and level streams are untouched — the
+level ticks dozens of times a second and stays on its own path to the waveform,
+while semantic events arrive once or twice a conversation. Merging them would
+put an audio meter and a card on one stream and force every listener to filter.
+
+`AiVoiceSessionStatus.awaitingInteraction` is the only new state, and it exists
+because the original eight could not express "a card is on screen and the
+assistant is waiting for a tap": `listening` tells the user to speak,
+`processing` says the assistant is thinking, `speaking` says it is talking.
+
+Its `capturesAudio` is `false`, which is the substantive part. Leaving capture
+running would put silence detection and barge-in in a race with a user reading
+a question — a cough would end a turn that had not started.
+
+The card is drawn as an **inline panel** in the voice screen, not a
+`SheetNavigator` sheet. A sheet is a route, and a route on top of the voice
+route is a second lifecycle that ending the session and backgrounding the app
+would each have to remember to dismiss. Drawn inside the screen, the panel
+disappears exactly when the state that produced it does.
+
+> **Prototype boundary.** There is still no realtime voice transport. The
+> semantic beats come from `MockVoiceScenarios` and the assistant's audio is
+> the user's own capture played back. What is *not* mocked is the path a card
+> takes: validation, rendering, the ledger, the interaction and the session's
+> state machine are the real ones, and a real transport replaces
+> `MockAiVoiceSession` without the bloc or the screen changing.

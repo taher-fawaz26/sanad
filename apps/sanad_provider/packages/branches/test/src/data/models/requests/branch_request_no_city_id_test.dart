@@ -27,6 +27,8 @@ void main() {
     lng: 55.2708,
     radiusKm: 5,
     workerIds: ['w1'],
+    serviceIds: ['svc-1'],
+    servingAreaPlaceIds: ['ChIJvRmU9K1DXz4RYKyuhY6v0wM'],
   );
 
   const update = UpdateBranchRequest(

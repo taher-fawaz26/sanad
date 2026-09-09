@@ -4,7 +4,9 @@ import 'package:ai_ui_protocol/ai_ui_protocol.dart';
 import 'package:core/core.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/mock_scenarios.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/mocks/multimodal_mock_scenarios.dart';
+import 'package:sanad_client/src/features/ai_chat/src/data/scenarios/interaction_scenarios.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/ai_chat_event_source.dart';
+import 'package:sanad_client/src/features/ai_chat/src/domain/ai_interactive_event_source.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/ai_multimodal_event_source.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/entities/ai_outgoing_message.dart';
 
@@ -15,7 +17,10 @@ import 'package:sanad_client/src/features/ai_chat/src/domain/entities/ai_outgoin
 /// paths. Swapping this for a WebSocket source is a new class implementing
 /// [AiChatEventSource] — nothing above it changes.
 class MockAiChatEventSource
-    implements AiChatEventSource, AiMultimodalEventSource {
+    implements
+        AiChatEventSource,
+        AiMultimodalEventSource,
+        AiInteractiveEventSource {
   /// Creates a scripted source. The delays exist so the streaming path is
   /// visible to a human watching the prototype.
   MockAiChatEventSource({
@@ -53,6 +58,28 @@ class MockAiChatEventSource
   @override
   Future<void> send(String text) =>
       sendMultimodal(AiOutgoingMessage(text: text));
+
+  /// The mock agent *reads* the answer and continues from it.
+  ///
+  /// This is the half a scripted reply cannot prove on its own: the
+  /// continuation below is chosen from the interaction's kind and value, so a
+  /// green test here means the result really did carry the user's choice
+  /// rather than merely leaving the device.
+  @override
+  Future<void> sendInteraction(
+    AiUiInteraction interaction, {
+    required String text,
+  }) async {
+    if (_disposed) return;
+
+    final messageId = 'msg_${generateUuidV4()}';
+    _emit(
+      AiChatTypingEvent(eventId: 'evt_${generateUuidV4()}', active: true),
+    );
+
+    await _wait(thinkingDelay);
+    await _replay(interactionContinuation(messageId, interaction));
+  }
 
   @override
   Future<void> sendMultimodal(AiOutgoingMessage message) async {

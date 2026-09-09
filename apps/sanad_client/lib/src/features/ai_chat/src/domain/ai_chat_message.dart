@@ -41,6 +41,7 @@ final class AiChatMessage extends Equatable {
     this.status = AiChatMessageStatus.complete,
     this.createdAt,
     this.attachments = const [],
+    this.interaction,
   });
 
   /// Creates a user turn.
@@ -49,6 +50,7 @@ final class AiChatMessage extends Equatable {
     required this.text,
     this.createdAt,
     this.attachments = const [],
+    this.interaction,
   }) : role = AiChatRole.user,
        document = null,
        status = AiChatMessageStatus.complete;
@@ -79,8 +81,20 @@ final class AiChatMessage extends Equatable {
   /// image turn, a voice turn and a document turn sit in the same list.
   final List<AiChatAttachment> attachments;
 
+  /// The structured answer this turn *is*, when it came from tapping a
+  /// semantic card rather than from typing.
+  ///
+  /// Kept on the message rather than discarded after sending: it is the record
+  /// of which node was answered and with what, which is what lets the bubble
+  /// be rendered differently later and what makes a replayed conversation
+  /// reconstructible. `null` for every typed turn and every assistant turn.
+  final AiUiInteraction? interaction;
+
   /// Whether this turn carries anything but text.
   bool get hasAttachments => attachments.isNotEmpty;
+
+  /// Whether this turn answered a semantic card.
+  bool get isInteraction => interaction != null;
 
   /// Whether text is still arriving for this message.
   bool get isStreaming => status == AiChatMessageStatus.streaming;
@@ -107,6 +121,7 @@ final class AiChatMessage extends Equatable {
     status: status ?? this.status,
     createdAt: createdAt,
     attachments: attachments ?? this.attachments,
+    interaction: interaction,
   );
 
   // `attachments` must stay in here: the message list rebuilds on
@@ -121,5 +136,6 @@ final class AiChatMessage extends Equatable {
     status,
     createdAt,
     attachments,
+    interaction,
   ];
 }

@@ -39,6 +39,7 @@ class AppSearchField extends StatefulWidget {
     this.variant = AppSearchFieldVariant.flat,
     this.readOnly = false,
     this.onTap,
+    this.iconSize,
   });
 
   final TextEditingController? controller;
@@ -58,6 +59,16 @@ class AppSearchField extends StatefulWidget {
   /// instead (used as a tap-to-open trigger for the search bottom sheet).
   final bool readOnly;
   final VoidCallback? onTap;
+
+  /// Overrides the glyph size the [variant] would otherwise resolve.
+  ///
+  /// Every other visual property of this field comes from
+  /// [AppSearchBarTheme], which a caller can scope with a `Theme` — but the
+  /// bordered variant's glyph is deliberately fixed at [AppDimension.iconLg]
+  /// rather than read from the spec, so a screen whose Figma frame specifies
+  /// a different size has no other way to reach it. Leave it `null` to keep
+  /// the variant's own size.
+  final double? iconSize;
 
   @override
   State<AppSearchField> createState() => _AppSearchFieldState();
@@ -140,7 +151,8 @@ class _AppSearchFieldState extends State<AppSearchField> {
     final border = isBordered
         ? Border.all(color: FieldTokens.borderDefault(colors, brightness))
         : null;
-    final iconSize = isBordered ? AppDimension.iconLg : spec.iconSize;
+    final iconSize =
+        widget.iconSize ?? (isBordered ? AppDimension.iconLg : spec.iconSize);
 
     Widget? trailing;
     if (_showClear) {

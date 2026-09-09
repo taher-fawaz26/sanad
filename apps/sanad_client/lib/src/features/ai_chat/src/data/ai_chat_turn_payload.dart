@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:ai_ui_protocol/ai_ui_protocol.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/entities/ai_chat_attachment.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/entities/ai_uploaded_attachment.dart';
 
@@ -44,6 +45,11 @@ import 'package:sanad_client/src/features/ai_chat/src/domain/entities/ai_uploade
 /// 5. **Nothing local ever leaves the device.** No path, file name, MIME type,
 ///    size, duration or waveform appears here. Those describe a file the agent
 ///    already has a URL for.
+/// 6. **`interaction` is omitted unless the turn *is* one**, for the same
+///    reason as `attachments`. When it is present, `message` still carries the
+///    sentence the agent's own template produced — so a backend that has not
+///    learned to read `interaction` receives exactly the body a tapped card has
+///    always sent, and the structured half is pure addition.
 ///
 /// Returns an encoded `String` rather than a `Map` for the same reason
 /// `AiChatSseRequest.body` is one: a test can then assert the exact bytes,
@@ -63,6 +69,7 @@ abstract final class AiChatTurnPayload {
     required String conversationId,
     required String message,
     List<AiUploadedAttachment> attachments = const [],
+    AiUiInteraction? interaction,
   }) {
     final body = <String, dynamic>{
       'conversation_id': conversationId,
@@ -71,6 +78,10 @@ abstract final class AiChatTurnPayload {
 
     if (attachments.isNotEmpty) {
       body['attachments'] = [for (final a in attachments) _attachment(a)];
+    }
+
+    if (interaction != null) {
+      body['interaction'] = AiUiInteractionCodec.encodeMap(interaction);
     }
 
     return jsonEncode(body);

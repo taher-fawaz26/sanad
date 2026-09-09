@@ -37,7 +37,18 @@ class AuthDI {
   /// callback so `auth` never depends on `core`'s `ModuleRegistry`; the app
   /// composition root wires it to `moduleRegistry.disposeAll()` — see
   /// `AuthModule`'s matching constructor parameter.
-  static void init({void Function()? onSessionBoundary}) {
+  /// [onSessionStarted] — invoked when a session becomes usable: after a
+  /// login and after a launch that restored one. Unlike [onSessionBoundary] it
+  /// does not fire on logout.
+  ///
+  /// [onBeforeSessionEnd] — awaited (briefly, and never allowed to throw)
+  /// immediately before the session is wiped, while the access token is still
+  /// live. The one place a last authenticated call can be made.
+  static void init({
+    void Function()? onSessionBoundary,
+    void Function()? onSessionStarted,
+    Future<void> Function()? onBeforeSessionEnd,
+  }) {
     sl
       // ── Session layer ─────────────────────────────────────────────────────
       // Owns the full AuthSessionEntity (tokens + user + profile +
@@ -61,6 +72,8 @@ class AuthDI {
           tokenManager: sl<TokenManager>(),
           authStatusNotifier: sl<AuthStatusNotifier>(),
           onSessionBoundary: onSessionBoundary,
+          onSessionStarted: onSessionStarted,
+          onBeforeSessionEnd: onBeforeSessionEnd,
         ),
       )
       // ── Authorization ─────────────────────────────────────────────────────

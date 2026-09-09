@@ -85,6 +85,10 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        // `flutter_local_notifications` (which draws the foreground push
+        // banner the OS suppresses) uses java.time, so its build fails outright
+        // without desugaring on the minSdk this app targets.
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -127,6 +131,15 @@ android {
     }
 }
 
+// `document_camera_frame` still pulls the legacy `firebase-iid` artifact
+// transitively. Its classes (notably FirebaseInstanceIdReceiver) were folded
+// into `firebase-messaging` 22+, so having both on the classpath fails the
+// build with a duplicate-class error the moment firebase_messaging is added.
+// Excluding the legacy module is the documented resolution — nothing needs it.
+configurations.all {
+    exclude(group = "com.google.firebase", module = "firebase-iid")
+}
+
 dependencies {
     // Required by the AppCompat launch/normal themes (see res/values/styles.xml).
     // `local_auth` hosts BiometricPrompt in a FragmentActivity, and on API 24-27
@@ -135,6 +148,10 @@ dependencies {
     // in transitively; it is declared here explicitly so the theme's requirement
     // is not silently dependent on a transitive dependency.
     implementation("androidx.appcompat:appcompat:1.7.0")
+
+    // Backports java.time and friends for `isCoreLibraryDesugaringEnabled`
+    // above. Required by flutter_local_notifications.
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
 
 flutter {

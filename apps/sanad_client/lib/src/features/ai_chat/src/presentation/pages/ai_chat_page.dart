@@ -14,6 +14,7 @@ import 'package:sanad_client/src/features/ai_chat/src/data/default_ai_chat_sugge
 import 'package:sanad_client/src/features/ai_chat/src/data/mock_ai_chat_event_source.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/mock_scenarios.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/actions/ai_chat_action_handlers.dart';
+import 'package:sanad_client/src/features/ai_chat/src/presentation/actions/ai_chat_interaction_sink.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/bloc/ai_chat_bloc.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/bloc/ai_composer_bloc.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/ai_chat_bubble.dart';
@@ -58,12 +59,26 @@ class _AiChatPageState extends State<AiChatPage> {
       // The agent's `request_image_upload` now reaches the composer's real
       // picker instead of a "coming soon" snackbar.
       capabilities: const ComposerAiChatCapabilities(),
+      // A capability outcome — a granted camera, a refused location — becomes
+      // an answer the agent hears, instead of ending in a snackbar it never
+      // learns about.
+      interactions: AiChatBlocInteractionSink(bloc),
     ),
     diagnostics: const LoggingAiUiDiagnosticsSink(),
+    interactions: AiChatBlocInteractionSink(bloc),
+    // The bloc's, not a fresh one: a card's answered state has to survive
+    // scrolling out of the list and back, and a failed send has to be able to
+    // re-enable the card it came from.
+    ledger: bloc.ledger,
     strings: AiUiStrings(
       metresSuffix: 'ai_chat.unit_metres'.tr(),
       kilometresSuffix: 'ai_chat.unit_kilometres'.tr(),
       unsupportedContent: 'ai_chat.unsupported_content'.tr(),
+      // Names a *client* capability — which maps app the tap reaches — so the
+      // agent does not author it.
+      openInMaps: 'ai_chat.open_in_maps'.tr(),
+      ratingOutOfFive: 'ai_chat.rating_out_of_five'.tr(),
+      distanceLabel: 'ai_chat.distance_label'.tr(),
     ),
   );
 
@@ -627,7 +642,11 @@ class _ScenarioPicker extends StatelessWidget {
     child: ListView.separated(
       scrollDirection: Axis.horizontal,
       padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      itemCount: mockScenarios.length + 1,
+      // Two leading chips before the scenarios: keyword-driven replay, and a
+      // way into the component showcase. The showcase is where a design change
+      // gets reviewed; reaching it from here means it needs no entry point of
+      // its own.
+      itemCount: mockScenarios.length + 2,
       separatorBuilder: (_, _) => SizedBox(width: AppSpacing.sm),
       itemBuilder: (context, index) {
         if (index == 0) {
@@ -638,7 +657,15 @@ class _ScenarioPicker extends StatelessWidget {
             onTap: () => onSelected(null),
           );
         }
-        final scenario = mockScenarios[index - 1];
+        if (index == 1) {
+          return AppChip(
+            label: 'ai_chat.showcase_open'.tr(),
+            style: AppChipStyle.outline,
+            icon: const Icon(Icons.grid_view_rounded),
+            onTap: () => context.push(AiChatRoutes.showcase),
+          );
+        }
+        final scenario = mockScenarios[index - 2];
         return AppChip(
           label: scenario.label,
           selected: selectedId == scenario.id,

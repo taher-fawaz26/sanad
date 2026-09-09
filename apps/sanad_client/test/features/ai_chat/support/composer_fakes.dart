@@ -43,6 +43,15 @@ class FakePermissionGateway implements AiPermissionGateway {
   AiPermissionOutcome microphone;
   AiPermissionOutcome speechRecognition = AiPermissionOutcome.granted;
 
+  /// The two capabilities the AI cards added. Default to granted like the
+  /// rest, so a test only sets the one it is about.
+  AiPermissionOutcome location = AiPermissionOutcome.granted;
+  AiPermissionOutcome notifications = AiPermissionOutcome.granted;
+
+  /// Every capability this fake was asked for, in order — what an AI card's
+  /// Allow control is asserted against.
+  final List<String> requested = [];
+
   int settingsOpened = 0;
 
   /// Held to keep the microphone decision pending, so a test can act while a
@@ -51,20 +60,41 @@ class FakePermissionGateway implements AiPermissionGateway {
   Completer<void>? microphoneGate;
 
   @override
-  Future<AiPermissionOutcome> ensureCamera() async => camera;
+  Future<AiPermissionOutcome> ensureCamera() async {
+    requested.add('camera');
+    return camera;
+  }
 
   @override
-  Future<AiPermissionOutcome> ensureGallery() async => gallery;
+  Future<AiPermissionOutcome> ensureGallery() async {
+    requested.add('gallery');
+    return gallery;
+  }
 
   @override
   Future<AiPermissionOutcome> ensureMicrophone() async {
+    requested.add('microphone');
     if (microphoneGate != null) await microphoneGate!.future;
     return microphone;
   }
 
   @override
-  Future<AiPermissionOutcome> ensureSpeechRecognition() async =>
-      speechRecognition;
+  Future<AiPermissionOutcome> ensureSpeechRecognition() async {
+    requested.add('speechRecognition');
+    return speechRecognition;
+  }
+
+  @override
+  Future<AiPermissionOutcome> ensureLocation() async {
+    requested.add('location');
+    return location;
+  }
+
+  @override
+  Future<AiPermissionOutcome> ensureNotifications() async {
+    requested.add('notifications');
+    return notifications;
+  }
 
   @override
   Future<void> openSettings() async => settingsOpened++;

@@ -4,11 +4,14 @@ library;
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:ai_ui_protocol/ai_ui_protocol.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/platform/audio/audio_session_manager.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/platform/audio/wav_header.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/platform/voice/mock_ai_voice_session.dart';
+import 'package:sanad_client/src/features/ai_chat/src/data/platform/voice/mock_voice_scenarios.dart';
+import 'package:sanad_client/src/features/ai_chat/src/domain/entities/ai_voice_event.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/enums/ai_voice_session_status.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/services/ai_audio_player.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/usecases/audio_level_scale.dart';
@@ -55,11 +58,12 @@ void main() {
     }
   });
 
-  MockAiVoiceSession build() => MockAiVoiceSession(
+  MockAiVoiceSession build({AiVoiceUiScript? uiScript}) => MockAiVoiceSession(
     capture: capture,
     player: player,
     session: session,
     tuning: tuning,
+    uiScript: uiScript,
   );
 
   /// Waits long enough for the silence hold to elapse in wall-clock terms.
@@ -483,7 +487,187 @@ void main() {
       expect(capture.stopCount, stops);
     });
   });
+
+  group('a card can interrupt the conversation', () {
+    /// The whole point of live voice being bidirectional: a document arrives
+    /// mid-session, the assistant stops, the user answers by tapping, and the
+    /// session resumes. Driven through the real state machine and the real
+    /// utterance pipeline — only the decision to send a card is scripted.
+    Future<void> speakOneTurn(MockAiVoiceSession voice) async {
+      await voice.start();
+      await pumpEventQueue();
+      await capture.emit(0.5);
+      await capture.emit(0.5);
+      await capture.emit(0);
+      await passSilenceHold();
+      await capture.emit(0);
+    }
+
+    test('the assistant asks instead of speaking', () async {
+      final voice = build(uiScript: MockVoiceScenarios.standard);
+      addTearDown(voice.dispose);
+
+      final events = <AiVoiceEvent>[];
+      final sub = voice.events.listen(events.add);
+      addTearDown(sub.cancel);
+
+      await speakOneTurn(voice);
+      await until(() => events.isNotEmpty);
+
+      expect(events.single, isA<AiVoiceUiRequested>());
+      expect(
+        (events.single as AiVoiceUiRequested).payload,
+        MockVoiceScenarios.timeSlots,
+      );
+    });
+
+    test('the reply is held back until the card is answered', () async {
+      final voice = build(uiScript: MockVoiceScenarios.standard);
+      addTearDown(voice.dispose);
+
+      final seen = <AiVoiceSessionStatus>[];
+      final sub = voice.status.listen(seen.add);
+      addTearDown(sub.cancel);
+
+      await speakOneTurn(voice);
+      await until(
+        () => seen.contains(AiVoiceSessionStatus.awaitingInteraction),
+      );
+
+      // Talking over the question would be worse than saying nothing.
+      expect(player.played.length, 0);
+      expect(seen.last, AiVoiceSessionStatus.awaitingInteraction);
+    });
+
+    test('answering resumes the session', () async {
+      final voice = build(uiScript: MockVoiceScenarios.standard);
+      addTearDown(voice.dispose);
+
+      final seen = <AiVoiceSessionStatus>[];
+      final sub = voice.status.listen(seen.add);
+      addTearDown(sub.cancel);
+
+      await speakOneTurn(voice);
+      await until(
+        () => seen.contains(AiVoiceSessionStatus.awaitingInteraction),
+      );
+
+      await voice.submitInteraction(_answer);
+      await until(() => player.played.isNotEmpty);
+
+      expect(seen, contains(AiVoiceSessionStatus.speaking));
+      expect(player.played.length, 1);
+    });
+
+    test('the answered card is taken down', () async {
+      final voice = build(uiScript: MockVoiceScenarios.standard);
+      addTearDown(voice.dispose);
+
+      final events = <AiVoiceEvent>[];
+      final sub = voice.events.listen(events.add);
+      addTearDown(sub.cancel);
+
+      await speakOneTurn(voice);
+      await until(() => events.isNotEmpty);
+      await voice.submitInteraction(_answer);
+      await until(() => events.length > 1);
+
+      expect(
+        events.last,
+        isA<AiVoiceUiResolved>().having(
+          (e) => e.nodeId,
+          'nodeId',
+          'voice_slots',
+        ),
+      );
+    });
+
+    test('a second answer changes nothing', () async {
+      final voice = build(uiScript: MockVoiceScenarios.standard);
+      addTearDown(voice.dispose);
+
+      await speakOneTurn(voice);
+      await until(() => player.played.isEmpty && capture.startCount > 0);
+      await voice.submitInteraction(_answer);
+      await until(() => player.played.isNotEmpty);
+
+      await voice.submitInteraction(_answer);
+      await pumpEventQueue();
+
+      expect(player.played.length, 1);
+    });
+
+    test('ending mid-question takes the card down', () async {
+      final voice = build(uiScript: MockVoiceScenarios.standard);
+      addTearDown(voice.dispose);
+
+      final events = <AiVoiceEvent>[];
+      final sub = voice.events.listen(events.add);
+      addTearDown(sub.cancel);
+
+      await speakOneTurn(voice);
+      await until(() => events.isNotEmpty);
+
+      await voice.end();
+      await pumpEventQueue();
+
+      // A card left waiting for an answer nothing will receive is worse than
+      // one taken down.
+      expect(events.last, isA<AiVoiceUiResolved>());
+      expect(events.whereType<AiVoiceUiResolved>().last.nodeId, isNull);
+    });
+
+    test('microphone frames are ignored while a card is up', () async {
+      final voice = build(uiScript: MockVoiceScenarios.standard);
+      addTearDown(voice.dispose);
+
+      final seen = <AiVoiceSessionStatus>[];
+      final sub = voice.status.listen(seen.add);
+      addTearDown(sub.cancel);
+
+      await speakOneTurn(voice);
+      await until(
+        () => seen.contains(AiVoiceSessionStatus.awaitingInteraction),
+      );
+
+      // Loud enough to barge in, and quiet enough to end a turn: neither may
+      // fire, or a cough would answer the question.
+      await capture.emit(0.9);
+      await capture.emit(0);
+      await passSilenceHold();
+      await capture.emit(0);
+      await pumpEventQueue();
+
+      expect(seen.last, AiVoiceSessionStatus.awaitingInteraction);
+      expect(player.played.length, 0);
+    });
+
+    test('without a script the session still just echoes', () async {
+      final voice = build();
+      addTearDown(voice.dispose);
+
+      final events = <AiVoiceEvent>[];
+      final sub = voice.events.listen(events.add);
+      addTearDown(sub.cancel);
+
+      await speakOneTurn(voice);
+      await until(() => player.played.isNotEmpty);
+
+      expect(events, isEmpty);
+      expect(player.played.length, 1);
+    });
+  });
 }
+
+/// One answer, reused across the group above.
+const _answer = AiUiInteraction(
+  interactionId: 'int_1',
+  nodeId: 'voice_slots',
+  nodeType: AiUiNodeType.timeSlots,
+  kind: AiUiInteractionKind.slotSelected,
+  value: AiUiSelectionValue(id: 's_0900', label: '9:00 AM'),
+  text: 'Book me the 9:00 AM slot',
+);
 
 /// `path_provider` is a platform channel; the session writes real files, so the
 /// channel is answered with a real temporary directory instead of being faked

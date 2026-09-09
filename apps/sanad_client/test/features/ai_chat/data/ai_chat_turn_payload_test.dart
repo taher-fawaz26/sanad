@@ -99,7 +99,10 @@ void main() {
           attachments: [
             uploadedFixture(source: imageFixture(), mediaId: 'a'),
             uploadedFixture(source: documentFixture(), mediaId: 'b'),
-            uploadedFixture(source: imageFixture(id: 'att_2'), mediaId: 'c'),
+            uploadedFixture(
+              source: imageFixture(id: 'att_2'),
+              mediaId: 'c',
+            ),
           ],
         ),
       );

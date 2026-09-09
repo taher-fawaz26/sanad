@@ -84,6 +84,10 @@ dependencies:
     path: ../../packages/maps
   network:
     path: ../../packages/network
+  notifications:
+    path: ../../packages/notifications
+  requests_core:
+    path: ../../packages/requests_core
   path_provider: ^2.1.5
   permissions:
     path: ../../packages/permissions

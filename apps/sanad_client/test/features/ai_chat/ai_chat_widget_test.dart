@@ -74,6 +74,14 @@ void main() {
           AiUiActionType.openAppointment,
           AiUiActionType.openBranch,
           AiUiActionType.openDocument,
+          // The capability actions the refreshed cards introduced. Recorded
+          // rather than executed: what this file asserts is that the tap
+          // arrives with the right payload, and what the app then does with it
+          // is `ai_chat_capabilities_test.dart`.
+          AiUiActionType.requestPermission,
+          AiUiActionType.requestImageUpload,
+          AiUiActionType.callPhone,
+          AiUiActionType.openMap,
         ])
           _RecordingHandler(type, dispatched),
       ]),
@@ -208,6 +216,196 @@ void main() {
     });
   });
 
+  group('the refreshed component set', () {
+    testWidgets('several semantic cards render together in one reply', (
+      tester,
+    ) async {
+      // The shape the agent actually sends for a status update: prose, then
+      // the order, then who is coming, then what to do next. If these only
+      // worked one card per reply the protocol would be useless.
+      await pumpBubbles(tester, [
+        assistant(
+          text: 'Here is where your booking stands.',
+          blocks: [
+            {
+              'type': 'order_card',
+              'id': 'o',
+              'orderId': 'ord_4471',
+              'title': 'Order #4471 · Deep Cleaning',
+              'statusText': 'On the way',
+              'status': 'Active',
+              'statusTone': 'info',
+              'amount': {'amount': 240, 'currency': 'AED'},
+            },
+            {
+              'type': 'provider_card',
+              'id': 'p',
+              'providerId': 'prv_9',
+              'name': 'Ahmed Hassan',
+              'roleText': 'Cleaning specialist',
+              'ratingValue': 4.8,
+              'actions': [
+                {
+                  'label': 'Call',
+                  'action': {'type': 'call_phone', 'phone': '+971500000000'},
+                },
+              ],
+            },
+            {
+              'type': 'reminder_card',
+              'id': 'r',
+              'title': 'Someone must be home',
+              'body': 'The team needs access to the water supply.',
+            },
+          ],
+        ),
+      ]);
+
+      expect(find.byType(AiChatBubble), findsOneWidget);
+      expect(find.text('Here is where your booking stands.'), findsOneWidget);
+      expect(find.text('Order #4471 · Deep Cleaning'), findsOneWidget);
+      expect(find.text('On the way'), findsOneWidget);
+      expect(find.text('Ahmed Hassan'), findsOneWidget);
+      expect(find.text('Someone must be home'), findsOneWidget);
+      // One surface, three cards - not three surfaces stacked.
+      expect(find.byType(AiUiSurface), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a card action reaches an app handler with its payload', (
+      tester,
+    ) async {
+      await pumpBubbles(tester, [
+        assistant(
+          blocks: [
+            {
+              'type': 'provider_card',
+              'id': 'p',
+              'providerId': 'prv_9',
+              'name': 'Ahmed Hassan',
+              'actions': [
+                {
+                  'label': 'Call',
+                  'action': {'type': 'call_phone', 'phone': '+971500000000'},
+                },
+              ],
+            },
+          ],
+        ),
+      ]);
+
+      await tester.ensureVisible(find.text('Call'));
+      await tester.pump();
+      await tester.tap(find.text('Call'));
+      await tester.pump();
+
+      expect(dispatched, hasLength(1));
+      expect(dispatched.single.type, AiUiActionType.callPhone);
+      expect(dispatched.single.params['phone'], '+971500000000');
+    });
+
+    testWidgets('an unimplemented card action drops its own button only', (
+      tester,
+    ) async {
+      // `actions[]` degrades exactly like a sibling `button` does: the dead
+      // control disappears, the card and its other action stay.
+      await pumpBubbles(tester, [
+        assistant(
+          blocks: [
+            {
+              'type': 'order_card',
+              'id': 'o',
+              'orderId': 'ord_4471',
+              'title': 'Deep Cleaning',
+              'actions': [
+                {
+                  'label': 'Track on the web',
+                  'action': {
+                    'type': 'open_url',
+                    'url': 'https://trysanad.us/orders/4471',
+                  },
+                },
+                {
+                  'label': 'Ask about it',
+                  'action': {'type': 'send_message', 'text': 'Where is it?'},
+                },
+              ],
+            },
+          ],
+        ),
+      ]);
+
+      expect(find.text('Deep Cleaning'), findsOneWidget);
+      expect(find.text('Track on the web'), findsNothing);
+      expect(find.text('Ask about it'), findsOneWidget);
+    });
+
+    testWidgets('a permission prompt asks the app, not the platform', (
+      tester,
+    ) async {
+      await pumpBubbles(tester, [
+        assistant(
+          blocks: [
+            {
+              'type': 'permission_request',
+              'id': 'pr',
+              'permission': 'camera',
+              'title': 'Allow camera access',
+              'body': 'So you can photograph the problem.',
+              'allowLabel': 'Allow',
+              'denyLabel': 'Not now',
+            },
+          ],
+        ),
+      ]);
+
+      await tester.ensureVisible(find.text('Allow'));
+      await tester.pump();
+      await tester.tap(find.text('Allow'));
+      await tester.pump();
+
+      expect(dispatched, hasLength(1));
+      expect(dispatched.single.type, AiUiActionType.requestPermission);
+      expect(dispatched.single.params['permission'], 'camera');
+    });
+
+    testWidgets('an interactive card sends the user value, never code', (
+      tester,
+    ) async {
+      // The trust model that lets a card own an input: the agent supplies a
+      // template, the widget substitutes the user's choice, and what travels
+      // back is a sentence indistinguishable from typing.
+      await pumpBubbles(tester, [
+        assistant(
+          blocks: [
+            {
+              'type': 'time_slots',
+              'id': 'ts',
+              'dateLabel': 'Tomorrow',
+              'confirmLabel': 'Confirm',
+              'confirmTemplate': 'Book me for {slot}',
+              'slots': [
+                {'id': 'am', 'label': '10:00 AM'},
+                {'id': 'pm', 'label': '2:00 PM'},
+              ],
+            },
+          ],
+        ),
+      ]);
+
+      await tester.ensureVisible(find.text('2:00 PM'));
+      await tester.pump();
+      await tester.tap(find.text('2:00 PM'));
+      await tester.pump();
+      await tester.ensureVisible(find.text('Confirm'));
+      await tester.pump();
+      await tester.tap(find.text('Confirm'));
+      await tester.pump();
+
+      expect(sentMessages, ['Book me for 2:00 PM']);
+    });
+  });
+
   group('streaming', () {
     testWidgets('a streaming bubble follows the controller', (tester) async {
       final controller = ActiveStreamController()..start('msg_2');
@@ -289,7 +487,12 @@ void main() {
         ),
       ]);
 
-      expect(find.byType(AppChip), findsNWidgets(2));
+      // Figma stacks suggested replies as full-width pills rather than
+      // flowing them as chips — a suggested reply is a sentence, not a tag.
+      expect(find.byType(AppChip), findsNothing);
+      expect(find.text('Yes, book it'), findsOneWidget);
+      expect(find.text('Not now'), findsOneWidget);
+
       await tester.tap(find.text('Yes, book it'));
       await tester.pump();
 
@@ -364,7 +567,7 @@ void main() {
         ),
       ]);
 
-      expect(find.text('450 m'), findsOneWidget);
+      expect(find.text('Distance: 450 m'), findsOneWidget);
       await tester.tap(find.text('Downtown'));
       await tester.pump();
 
@@ -528,15 +731,51 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('a remote image url is refused before any request', (
+    testWidgets('a dynamic image renders through the app image cache', (
+      tester,
+    ) async {
+      // The app's real config admits any https image host, and the URL
+      // reaches `AppNetworkImage` — the same cached-network-image widget the
+      // rest of the app uses, not a second image stack for the AI surface.
+      final result = parse([
+        {
+          'type': 'service_card',
+          'id': 's',
+          'serviceId': 'svc_1',
+          'title': 'AC Maintenance',
+          'image': {
+            'url': 'https://cdn.trysanad.us/services/ac.jpg',
+            'assetId': 'service_tools',
+          },
+        },
+      ]);
+
+      await pumpBubbles(tester, [
+        AiChatMessage(
+          id: 'msg_1',
+          role: AiChatRole.assistant,
+          document: result.document,
+        ),
+      ]);
+
+      expect(result.diagnostics, isEmpty);
+      expect(find.byType(AppNetworkImage), findsOneWidget);
+      expect(
+        tester.widget<AppNetworkImage>(find.byType(AppNetworkImage)).url,
+        'https://cdn.trysanad.us/services/ac.jpg',
+      );
+    });
+
+    testWidgets('an image url the policy refuses issues no request', (
       tester,
     ) async {
       final result = parse([
         {
-          // Even the app's own CDN: schemaVersion 1 is assetId-only.
+          // Not https. Refused during validation, so no widget and no
+          // request — the prose is untouched.
           'type': 'image',
           'id': 'i',
-          'url': 'https://cdn.trysanad.us/services/ac.jpg',
+          'url': 'http://cdn.trysanad.us/services/ac.jpg',
           'alt': 'AC unit',
         },
         {'type': 'text', 'id': 't', 'text': 'Prose survives.'},
@@ -554,7 +793,7 @@ void main() {
       expect(find.text('Prose survives.'), findsOneWidget);
       expect(
         result.diagnostics.map((d) => d.code),
-        contains(AiUiDiagnosticCode.reservedProperty),
+        contains(AiUiDiagnosticCode.invalidProperty),
       );
       expect(tester.takeException(), isNull);
     });
@@ -675,7 +914,6 @@ void main() {
       expect(user.dx, greaterThan(reply.dx));
     });
   });
-
 
   group('a voice note is still playable', () {
     late MockAiComposerBloc composer;

@@ -11,6 +11,7 @@ import 'package:localization/localization.dart';
 import 'package:network/network.dart';
 import 'package:otp/otp.dart';
 import 'package:sanad_client/src/lock/app_lock_binding.dart';
+import 'package:sanad_client/src/notifications/client_notification_navigator.dart';
 import 'package:sanad_client/src/routing/client_router.dart';
 
 /// The root widget of the sanad_client application.
@@ -34,6 +35,9 @@ class _SanadClientAppState extends State<SanadClientApp>
   void initState() {
     super.initState();
     _router = buildClientRouter();
+    // A notification can be tapped at any point in the app's life, including
+    // the cold start that is still running here.
+    sl<ClientNotificationNavigator>().attach(_router);
     _connectivity = sl<ConnectivityController>();
     _deepLinkDispatcher = DeepLinkDispatcher(
       service: sl<DeepLinkingService>(),
@@ -54,6 +58,7 @@ class _SanadClientAppState extends State<SanadClientApp>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _deepLinkDispatcher.stop().ignore();
+    sl<ClientNotificationNavigator>().detach();
     _router.dispose();
     super.dispose();
   }

@@ -7,6 +7,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/enums/ai_voice_session_status.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/bloc/ai_voice_session_bloc.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/voice/ai_voice_hero.dart';
+import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/voice/ai_voice_interaction_panel.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/voice/ai_voice_waveform.dart';
 
 /// The Live Voice surface — Figma `Chat – 06/07/08`
@@ -95,26 +96,41 @@ class _VoiceBody extends StatelessWidget {
             // fixed offset from the top.
             Expanded(
               child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    AiVoiceHero(status: state.status),
-                    SizedBox(height: AppSpacing.xxxl),
-                    _StatusLabel(status: state.status),
-                    // Figma shows the trace only while listening — it is the
-                    // user's own voice, so there is nothing to draw when the
-                    // microphone is not the subject.
-                    SizedBox(height: AppSpacing.md),
-                    SizedBox(
-                      height: AiVoiceWaveform.reservedHeight,
-                      child: state.status == AiVoiceSessionStatus.listening
-                          ? const AiVoiceWaveform()
-                          : null,
-                    ),
-                  ],
+                // Scales down rather than overflowing when a semantic card
+                // takes the lower half of the screen. The hero, the status
+                // line and the waveform slot have a fixed intrinsic height
+                // between them, and on a short device a tall card leaves less
+                // than that — which used to be a 62-pixel overflow stripe
+                // across the screen.
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AiVoiceHero(status: state.status),
+                      SizedBox(height: AppSpacing.xxxl),
+                      _StatusLabel(status: state.status),
+                      // Figma shows the trace only while listening — it is the
+                      // user's own voice, so there is nothing to draw when the
+                      // microphone is not the subject.
+                      SizedBox(height: AppSpacing.md),
+                      SizedBox(
+                        height: AiVoiceWaveform.reservedHeight,
+                        child: state.status == AiVoiceSessionStatus.listening
+                            ? const AiVoiceWaveform()
+                            : null,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
+            // The assistant's question, when it is one a card answers. Drawn
+            // above the control so the control stays where the user last
+            // looked, and selected on the document alone so an audio tick
+            // cannot rebuild it — see `AiVoiceInteractionPanel`.
+            const AiVoiceInteractionPanel(),
+            SizedBox(height: AppSpacing.xl),
             if (state.canOpenSettings) ...[
               // A permanent affordance rather than a snackbar action: a
               // settings redirect that vanishes after four seconds is one the
@@ -189,6 +205,8 @@ class _StatusLabel extends StatelessWidget {
       AiVoiceSessionStatus.listening => 'ai_chat.voice_listening',
       AiVoiceSessionStatus.processing => 'ai_chat.voice_processing',
       AiVoiceSessionStatus.speaking => 'ai_chat.voice_speaking',
+      AiVoiceSessionStatus.awaitingInteraction =>
+        'ai_chat.voice_awaiting_interaction',
       AiVoiceSessionStatus.ending => 'ai_chat.voice_ending',
       AiVoiceSessionStatus.ended => 'ai_chat.voice_ended',
       AiVoiceSessionStatus.error => 'ai_chat.voice_error',
@@ -237,6 +255,10 @@ enum _VoiceAction {
     AiVoiceSessionStatus.speaking => _VoiceAction.interrupt,
     AiVoiceSessionStatus.connecting ||
     AiVoiceSessionStatus.processing ||
+    // The card is the affordance while one is up. A live button here would
+    // offer a second way to advance the turn, and the two would disagree
+    // about what the user meant.
+    AiVoiceSessionStatus.awaitingInteraction ||
     AiVoiceSessionStatus.ending => _VoiceAction.busy,
   };
 

@@ -1,9 +1,12 @@
 import 'dart:async';
 
+import 'package:ai_ui_protocol/ai_ui_protocol.dart';
+import 'package:ai_ui_renderer/ai_ui_renderer.dart';
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:sanad_client/src/features/ai_chat/src/domain/entities/ai_voice_event.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/enums/ai_voice_session_status.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/services/ai_permission_gateway.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/services/ai_voice_session.dart';
@@ -62,9 +65,15 @@ class AiVoiceSessionBloc
     required AiVoiceSession session,
     required AiPermissionGateway permissions,
     VoiceLevelController? level,
+    AiUiValidator? validator,
+    AiUiDiagnosticsSink diagnostics = const NoopAiUiDiagnosticsSink(),
+    AiUiInteractionLedger? ledger,
   }) : _session = session,
        _permissions = permissions,
+       _validator = validator ?? const AiUiValidator(),
+       _diagnostics = diagnostics,
        level = level ?? VoiceLevelController(),
+       ledger = ledger ?? AiUiInteractionLedger(),
        super(const AiVoiceSessionState()) {
     // Lifecycle transitions must never interleave: an `end` overtaking a
     // `start` would leave the microphone held with nothing listening.
@@ -81,6 +90,13 @@ class AiVoiceSessionBloc
       transformer: sequential(),
     );
     on<AiVoiceSessionStatusChanged>(_onStatusChanged);
+    on<AiVoiceSessionEventReceived>(_onSessionEvent);
+    // Sequential with the rest of the lifecycle: an answer racing an `end`
+    // would try to resume a session that is already tearing down.
+    on<AiVoiceSessionInteractionSubmitted>(
+      _onInteraction,
+      transformer: sequential(),
+    );
     on<AiVoiceSessionSettingsRequested>(_onSettingsRequested);
 
     _statusSubscription = _session.status.listen(
@@ -89,16 +105,31 @@ class AiVoiceSessionBloc
     _levelSubscription = _session.inputLevel.listen(
       (value) => this.level.add(value),
     );
+    _eventSubscription = _session.events.listen(
+      (event) => add(AiVoiceSessionEventReceived(event)),
+    );
   }
 
   /// Live microphone level. Read directly by the waveform; never state.
   final VoiceLevelController level;
 
+  /// The answer lifecycle of the card on screen.
+  ///
+  /// The same type the conversation uses, for the same reasons — see
+  /// `AiChatBloc.ledger`. A voice session shows one card at a time, but the
+  /// ledger still earns its place: it is what refuses a second tap while the
+  /// first answer is in flight.
+  final AiUiInteractionLedger ledger;
+
   final AiVoiceSession _session;
   final AiPermissionGateway _permissions;
 
+  final AiUiValidator _validator;
+  final AiUiDiagnosticsSink _diagnostics;
+
   StreamSubscription<AiVoiceSessionStatus>? _statusSubscription;
   StreamSubscription<double>? _levelSubscription;
+  StreamSubscription<AiVoiceEvent>? _eventSubscription;
 
   bool _closed = false;
 
@@ -186,6 +217,49 @@ class AiVoiceSessionBloc
     level.reset();
   }
 
+  /// Ingests one semantic event.
+  ///
+  /// Validation happens here — once, on arrival — exactly as `AiChatBloc`
+  /// validates a `ui` frame. No widget ever sees raw JSON, so no `build()`
+  /// pays for decoding or can be surprised by a malformed payload.
+  void _onSessionEvent(
+    AiVoiceSessionEventReceived event,
+    Emitter<AiVoiceSessionState> emit,
+  ) {
+    switch (event.event) {
+      case AiVoiceUiRequested(:final payload):
+        final result = _validator.validate(payload);
+        _diagnostics.reportAll(result.diagnostics);
+        // A payload that validated to nothing leaves the session speaking
+        // rather than staring at an empty panel. The assistant's audio still
+        // arrives; only the card is missing.
+        if (!result.hasRenderableUi) return;
+        emit(state.copyWith(document: result.document));
+
+      case AiVoiceUiResolved(:final nodeId):
+        // The card comes down. A node still pending when the session dropped
+        // it is returned to answerable rather than left disabled — nothing is
+        // going to resolve a claim whose session has gone.
+        if (nodeId != null) ledger.reset(nodeId);
+        emit(state.copyWith(clearDocument: true));
+    }
+  }
+
+  /// Hands one answer to the session and lets it resume.
+  ///
+  /// The ledger already accepted the submission — the sink claims it before
+  /// this event is added — so this does not re-check for duplicates. What it
+  /// does guard is the session itself: an answer arriving after teardown is
+  /// dropped by the session, and the card is on its way off screen anyway.
+  Future<void> _onInteraction(
+    AiVoiceSessionInteractionSubmitted event,
+    Emitter<AiVoiceSessionState> emit,
+  ) async {
+    await _session.submitInteraction(event.interaction);
+    if (_closed) return;
+    ledger.resolve(event.interaction.nodeId, event.interaction.status);
+  }
+
   void _onStatusChanged(
     AiVoiceSessionStatusChanged event,
     Emitter<AiVoiceSessionState> emit,
@@ -202,7 +276,15 @@ class AiVoiceSessionBloc
       return;
     }
 
-    emit(state.copyWith(status: event.status));
+    emit(
+      state.copyWith(
+        status: event.status,
+        // A terminal session has no card. The session emits a resolution too,
+        // but ordering between two streams is not something to rely on, and a
+        // card left on an ended screen is worse than one taken down twice.
+        clearDocument: event.status.isTerminal,
+      ),
+    );
     if (event.status.isTerminal) level.reset();
   }
 
@@ -218,13 +300,16 @@ class AiVoiceSessionBloc
 
     await _statusSubscription?.cancel();
     await _levelSubscription?.cancel();
+    await _eventSubscription?.cancel();
     _statusSubscription = null;
     _levelSubscription = null;
+    _eventSubscription = null;
 
     // Leaving the screen must release the microphone, whatever state the
     // session was in.
     await _session.dispose();
     level.dispose();
+    ledger.dispose();
 
     return super.close();
   }

@@ -2,13 +2,14 @@ import 'package:auth/auth.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:notifications/notifications.dart';
 
 /// Home header — dynamic greeting + notification bell. Figma `6755:25941`.
 ///
 /// The greeting name comes from the authenticated session
-/// ([SessionContextX.session]), never hardcoded. The bell reuses
-/// [AppNotificationIcon]; its `onTap` is a no-op today because no
-/// notifications screen/route is wired into the provider app yet.
+/// ([SessionContextX.session]), never hardcoded. The bell opens the
+/// notification inbox from `package:notifications`.
 class HomeHeader extends StatelessWidget {
   const HomeHeader({super.key});
 
@@ -34,7 +35,9 @@ class HomeHeader extends StatelessWidget {
           ),
         ),
         SizedBox(width: AppSpacing.md),
-        AppNotificationIcon(onTap: () {}),
+        AppNotificationIcon(
+          onTap: () => context.push(NotificationsRoutes.notifications),
+        ),
       ],
     );
   }

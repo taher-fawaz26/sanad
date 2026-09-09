@@ -15,6 +15,7 @@ import 'package:otp/otp.dart';
 import 'package:sanad_provider/src/lifecycle/permission_resync.dart';
 import 'package:sanad_provider/src/lock/app_lock_binding.dart';
 import 'package:sanad_provider/src/routing/app_routes.dart';
+import 'package:sanad_provider/src/notifications/provider_notification_navigator.dart';
 import 'package:sanad_provider/src/routing/provider_router.dart';
 
 /// The root widget of the sanad_provider application.
@@ -39,6 +40,9 @@ class _SanadProviderAppState extends State<SanadProviderApp>
   void initState() {
     super.initState();
     _router = buildProviderRouter();
+    // A notification can be tapped at any point in the app's life, including
+    // the cold start that is still running here.
+    sl<ProviderNotificationNavigator>().attach(_router);
     _connectivity = sl<ConnectivityController>();
     _deepLinkDispatcher = DeepLinkDispatcher(
       service: sl<DeepLinkingService>(),
@@ -72,6 +76,7 @@ class _SanadProviderAppState extends State<SanadProviderApp>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _deepLinkDispatcher.stop().ignore();
+    sl<ProviderNotificationNavigator>().detach();
     _router.dispose();
     super.dispose();
   }

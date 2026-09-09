@@ -5,6 +5,7 @@ import 'package:ai_ui_renderer/ai_ui_renderer.dart';
 import 'package:network/network.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/ai_chat_turn_payload.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/ai_chat_event_source.dart';
+import 'package:sanad_client/src/features/ai_chat/src/domain/ai_interactive_event_source.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/ai_multimodal_event_source.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/entities/ai_outgoing_message.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/services/ai_attachment_uploader.dart';
@@ -47,7 +48,10 @@ const String kSanadAccessTokenHeader = 'Sanad-Access-Token';
 /// `error` event so the chat shows something and stays usable, and the next
 /// [send] reconnects. Nothing here can tear the conversation down.
 class WebSocketAiChatEventSource
-    implements AiChatEventSource, AiMultimodalEventSource {
+    implements
+        AiChatEventSource,
+        AiMultimodalEventSource,
+        AiInteractiveEventSource {
   /// Creates a source that talks to the agent at [url].
   WebSocketAiChatEventSource({
     required this.url,
@@ -102,6 +106,18 @@ class WebSocketAiChatEventSource
     AiChatTurnPayload.encode(
       conversationId: conversationId,
       message: text,
+    ),
+  );
+
+  @override
+  Future<void> sendInteraction(
+    AiUiInteraction interaction, {
+    required String text,
+  }) => _frame(
+    AiChatTurnPayload.encode(
+      conversationId: conversationId,
+      message: text,
+      interaction: interaction,
     ),
   );
 

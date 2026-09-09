@@ -77,8 +77,15 @@ class UpdateBranchRequest extends Equatable {
           .map(BranchAvailabilityDto.entityToMap)
           .toList();
     }
-    if (serviceIds != null) body['serviceIds'] = serviceIds;
-    if (servingAreaPlaceIds != null) {
+    // Omitting either field leaves it untouched server-side; sending an
+    // explicitly **empty** array is now rejected with a `400`. So an empty
+    // list means "no change", never "detach everything" — the backend offers
+    // no way to express the latter, and a branch with no services or no
+    // serving areas cannot be matched to anything.
+    if (serviceIds != null && serviceIds!.isNotEmpty) {
+      body['serviceIds'] = serviceIds;
+    }
+    if (servingAreaPlaceIds != null && servingAreaPlaceIds!.isNotEmpty) {
       body['servingAreaPlaceIds'] = servingAreaPlaceIds;
     }
     if (workerIds != null) body['workerIds'] = workerIds;

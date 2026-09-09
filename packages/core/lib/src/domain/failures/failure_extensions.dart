@@ -74,3 +74,31 @@ extension FailureKindX on Failure {
     return false;
   }
 }
+
+/// Reads a *business* error code out of a failure.
+///
+/// [Failure.code] deliberately carries the HTTP status (`'409'`, `'403'`, …)
+/// and callers depend on that — notably [FailureKindX.isRetryable], which
+/// parses it as an int. The backend's own machine-readable code (e.g.
+/// `OUTSIDE_HOURS`, `ACCOUNT_UNVERIFIED`) instead survives inside
+/// [Failure.metadata], because `ErrorMapper` preserves the whole 4xx/5xx
+/// response body there.
+///
+/// This is the one supported way to read it, so features stop reaching into
+/// `metadata` with their own key guesses. Key aliases are tried in the order
+/// the backend has used them across versions.
+extension FailureBackendCodeX on Failure {
+  /// The backend's business error code, upper-cased, or `null` when the
+  /// response carried none.
+  String? get backendCode {
+    final meta = metadata;
+    if (meta == null) return null;
+    for (final key in const ['code', 'errorCode', 'error_code']) {
+      final raw = meta[key];
+      if (raw is String && raw.trim().isNotEmpty) {
+        return raw.trim().toUpperCase();
+      }
+    }
+    return null;
+  }
+}

@@ -228,7 +228,13 @@ class _Content extends StatelessWidget {
           activeStream: activeStream,
           color: foreground,
         ),
-        if (message.hasUi) AiUiSurface(document: message.document!),
+        if (message.hasUi)
+          // The message id rides along so an answer from any card inside this
+          // document can name the question it is answering.
+          AiUiSurface(
+            document: message.document!,
+            messageId: message.id,
+          ),
       ],
     );
   }

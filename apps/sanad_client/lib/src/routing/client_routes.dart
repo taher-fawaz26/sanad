@@ -1,4 +1,6 @@
 import 'package:account_settings/account_settings.dart';
+import 'package:notifications/notifications.dart';
+import 'package:sanad_client/src/features/client_requests/client_requests.dart';
 
 /// Static route constants for the client app.
 ///
@@ -25,5 +27,7 @@ abstract final class ClientRoutes {
   static const protected = <String>{
     home,
     ...AccountSettingsRoutes.protectedRoutes,
+    ...ClientRequestRoutes.protectedRoutes,
+    ...NotificationsRoutes.protectedRoutes,
   };
 }

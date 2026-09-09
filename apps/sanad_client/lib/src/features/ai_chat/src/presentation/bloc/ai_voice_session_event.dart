@@ -64,6 +64,36 @@ final class AiVoiceSessionSettingsRequested extends AiVoiceSessionEvent {
   const AiVoiceSessionSettingsRequested();
 }
 
+/// The user answered the card the assistant is waiting on.
+///
+/// Carries the same `AiUiInteraction` a chat card produces — the interaction
+/// model, the ledger and the renderers are shared, and only the transport that
+/// carries it differs.
+final class AiVoiceSessionInteractionSubmitted extends AiVoiceSessionEvent {
+  /// Creates a submission carrying [interaction].
+  const AiVoiceSessionInteractionSubmitted(this.interaction);
+
+  /// The answer, already accepted by the ledger.
+  final AiUiInteraction interaction;
+
+  @override
+  List<Object?> get props => [interaction];
+}
+
+/// One semantic event off the session's own stream, re-entered through the
+/// bloc so every state change goes through a single ordered queue — the same
+/// discipline `AiChatBloc` applies to transport frames.
+final class AiVoiceSessionEventReceived extends AiVoiceSessionEvent {
+  /// Creates a wrapper around a session [event].
+  const AiVoiceSessionEventReceived(this.event);
+
+  /// The undecoded semantic event.
+  final AiVoiceEvent event;
+
+  @override
+  List<Object?> get props => [event];
+}
+
 /// The session moved. Raised from its own stream, not by the UI, so every
 /// transition travels one ordered queue.
 final class AiVoiceSessionStatusChanged extends AiVoiceSessionEvent {

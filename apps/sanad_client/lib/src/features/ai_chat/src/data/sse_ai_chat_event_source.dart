@@ -10,6 +10,7 @@ import 'package:sanad_client/src/features/ai_chat/src/data/sse_frame_parser.dart
 import 'package:sanad_client/src/features/ai_chat/src/data/websocket_ai_chat_event_source.dart'
     show kSanadAccessTokenHeader;
 import 'package:sanad_client/src/features/ai_chat/src/domain/ai_chat_event_source.dart';
+import 'package:sanad_client/src/features/ai_chat/src/domain/ai_interactive_event_source.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/ai_multimodal_event_source.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/entities/ai_outgoing_message.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/services/ai_attachment_uploader.dart';
@@ -159,7 +160,10 @@ const Duration kAiChatSseReceiveTimeout = Duration(seconds: 60);
 /// contributes only its status code — the response body is a Pydantic
 /// document and never reaches a diagnostic or the user.
 class SseAiChatEventSource
-    implements AiChatEventSource, AiMultimodalEventSource {
+    implements
+        AiChatEventSource,
+        AiMultimodalEventSource,
+        AiInteractiveEventSource {
   /// Creates a source that talks to the agent at [url].
   SseAiChatEventSource({
     required this.url,
@@ -219,6 +223,18 @@ class SseAiChatEventSource
     AiChatTurnPayload.encode(
       conversationId: conversationId,
       message: text,
+    ),
+  );
+
+  @override
+  Future<void> sendInteraction(
+    AiUiInteraction interaction, {
+    required String text,
+  }) => _post(
+    AiChatTurnPayload.encode(
+      conversationId: conversationId,
+      message: text,
+      interaction: interaction,
     ),
   );
 

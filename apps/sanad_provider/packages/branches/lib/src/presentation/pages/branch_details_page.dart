@@ -405,7 +405,10 @@ class _BranchDetailsContent extends StatelessWidget {
       radiusKm: result.radiusKm,
       locationPlaceId: result.placeId ?? branch.locationPlaceId,
       servingAreas: result.servingAreas,
-      servingAreaPlaceIds: result.servingAreaPlaceIds,
+      // Filtered, not raw: this PATCH is built straight from the picker
+      // result, so it never passes through `AddBranchParamsMapper`, which is
+      // where the create path strips synthetic `latlng:` ids.
+      servingAreaPlaceIds: result.transmittableServingAreaPlaceIds,
       servingAreaNames: [for (final area in result.servingAreas) area.name],
     );
     context.read<BranchDetailsBloc>().add(

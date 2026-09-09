@@ -375,8 +375,27 @@ abstract final class AppSvgs {
   /// recolor via `colorFilter` as with [aiChatNavPaper].
   static const String aiChatNavFolder = '$_base/ai_chat_nav_folder.svg';
 
-  /// Outline clock-in-circle — the History button glyph.
+  /// Outline clock-in-circle — the History button glyph. Also the
+  /// Conversation History screen's own trailing nav glyph (`8120:3285`),
+  /// which is the same Iconly `Time Circle` export.
   static const String aiChatNavHistory = '$_base/ai_chat_nav_history.svg';
+
+  /// Two-tone chat bubble with three dots — the centre of Conversation
+  /// History's empty state (Figma `8124:3835`, Iconly `Chat`).
+  ///
+  /// Stroked in `#26A68C` (`MainPalette.shade600`), which is baked in rather
+  /// than recolored: the glyph sits on its own pale-green bloom and the
+  /// design specifies that one green for it.
+  ///
+  /// The `viewBox` is offset by half the 2.6765 stroke width relative to
+  /// Figma's raw export so the round caps at the bubble's extremes are not
+  /// clipped — Figma's HTML wrapper achieves the same with a negative inset,
+  /// which has no equivalent inside an SVG viewport. Path data is verbatim,
+  /// so drawing the file at 41.0394 reproduces Figma's own scale (a 38.3629
+  /// glyph plus its stroke bleed) — see
+  /// `ConversationHistoryTokens.emptyGlyphSize`.
+  static const String aiChatHistoryEmptyChat =
+      '$_base/ai_chat_history_empty_chat.svg';
 
   // ── Live Voice (Figma `Chat – 06/07/08`, `7137:29887` / `7880:16671` /
   // `7873:16622`) ─────────────────────────────────────────────────────────

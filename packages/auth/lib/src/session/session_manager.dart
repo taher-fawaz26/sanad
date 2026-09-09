@@ -37,11 +37,15 @@ class SessionManager {
     required TokenManager tokenManager,
     required AuthStatusNotifier authStatusNotifier,
     void Function()? onSessionBoundary,
+    void Function()? onSessionStarted,
+    Future<void> Function()? onBeforeSessionEnd,
   }) : _repository = repository,
        _cache = cache,
        _tokenManager = tokenManager,
        _authStatusNotifier = authStatusNotifier,
-       _onSessionBoundary = onSessionBoundary;
+       _onSessionBoundary = onSessionBoundary,
+       _onSessionStarted = onSessionStarted,
+       _onBeforeSessionEnd = onBeforeSessionEnd;
 
   final SessionRepository _repository;
   final SessionCache _cache;
@@ -52,6 +56,30 @@ class SessionManager {
   /// fired by [update]/[hydrateIdentity], which mutate an *existing* session
   /// rather than replace the signed-in identity.
   final void Function()? _onSessionBoundary;
+
+  /// Fired when a session becomes usable — after [save] and after a [restore]
+  /// that found one. Unlike [_onSessionBoundary] this does **not** fire on
+  /// logout, so a caller can distinguish "signed in now" from "signed out".
+  ///
+  /// Push-token registration is the motivating case: it is an upsert that must
+  /// run on every login *and* on every launch with a live session.
+  final void Function()? _onSessionStarted;
+
+  /// Awaited at the very start of [clear], while the access token is still
+  /// live, so a caller can make one last authenticated request.
+  ///
+  /// Unregistering the device's push token needs exactly this: after the wipe
+  /// the call would 401, and leaving the token registered means the signed-out
+  /// handset keeps receiving the next user's notifications.
+  ///
+  /// The contract for implementers is strict, because [clear] is also reached
+  /// fire-and-forget from the 401-refresh-failure handler: **never throw, and
+  /// never take long.** [clear] time-boxes it and continues regardless — a
+  /// logout can never be blocked by this.
+  final Future<void> Function()? _onBeforeSessionEnd;
+
+  /// How long [clear] waits for [_onBeforeSessionEnd] before proceeding.
+  static const Duration _sessionEndHookTimeout = Duration(seconds: 3);
 
   // ── Reactive handle ──────────────────────────────────────────────────────
 
@@ -102,6 +130,7 @@ class SessionManager {
       isProfileCompleted: session.isProfileCreated,
     );
     _onSessionBoundary?.call();
+    _onSessionStarted?.call();
   }
 
   /// Apply a partial mutation to the current session (change-email,
@@ -122,6 +151,10 @@ class SessionManager {
         AuthStatus.authenticated,
         isProfileCompleted: restored.isProfileCreated,
       );
+      // A relaunch with a live session is a session start too — not a
+      // boundary, since nothing changed identity, but the point at which
+      // per-session work (push registration) has to run again.
+      _onSessionStarted?.call();
     }
     return restored;
   }
@@ -129,9 +162,26 @@ class SessionManager {
   /// Wipe every session tier and flip the notifier to unauthenticated.
   /// Used by logout, delete-account, and the 401-refresh-failure handler.
   Future<void> clear() async {
+    await _runSessionEndHook();
     await _repository.clear();
     _authStatusNotifier.update(AuthStatus.unauthenticated);
     _onSessionBoundary?.call();
+  }
+
+  /// Runs [_onBeforeSessionEnd] while the tokens are still valid.
+  ///
+  /// Swallows every error and gives up after [_sessionEndHookTimeout]. The
+  /// user asked to log out; a slow or failing cleanup call must not leave them
+  /// signed in, and on the 401 path the token is already dead so the hook is
+  /// expected to fail.
+  Future<void> _runSessionEndHook() async {
+    final hook = _onBeforeSessionEnd;
+    if (hook == null) return;
+    try {
+      await hook().timeout(_sessionEndHookTimeout);
+    } on Object catch (_) {
+      // Deliberately swallowed — see above.
+    }
   }
 
   // ── Login-verify / GET-me composition ────────────────────────────────────

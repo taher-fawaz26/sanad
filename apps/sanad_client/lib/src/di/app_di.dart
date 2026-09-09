@@ -10,11 +10,15 @@ import 'package:design_system/design_system.dart';
 import 'package:device/device.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:localization/localization.dart';
+import 'package:maps/maps.dart';
 import 'package:media_upload/media_upload.dart';
 import 'package:network/network.dart';
+import 'package:notifications/notifications.dart';
 import 'package:permissions/permissions.dart';
 import 'package:sanad_client/src/config/app_config.dart';
 import 'package:sanad_client/src/features/ai_chat/src/module/ai_chat_module.dart';
+import 'package:sanad_client/src/features/client_requests/client_requests.dart';
+import 'package:sanad_client/src/notifications/client_notification_navigator.dart';
 import 'package:storage/storage.dart';
 
 late final ModuleRegistry moduleRegistry;
@@ -52,7 +56,10 @@ Future<void> configureDependencies({
     ..registerLazySingleton(() => TranslateBloc(fallback: initialLanguage))
     ..registerLazySingleton(ThemeBloc.new)
     // ── Auth status ──────────────────────────────────────────────────────────
-    ..registerLazySingleton(AuthStatusNotifier.new);
+    ..registerLazySingleton(AuthStatusNotifier.new)
+    // Holds the live GoRouter so a notification tap has somewhere to go. The
+    // root widget attaches it once the router exists.
+    ..registerLazySingleton(ClientNotificationNavigator.new);
 
   // ── Network stack (Dio, interceptors, token manager, connectivity) ───────
   await NetworkDI.init(
@@ -100,9 +107,34 @@ Future<void> configureDependencies({
       // `moduleRegistry` here — this closure only runs long after the
       // assignment below completes.
       onSessionBoundary: () => moduleRegistry.disposeAll(),
+      // Push registration is an upsert, not a setup step: it runs after every
+      // login and on every launch that restores a session.
+      onSessionStarted: () =>
+          sl<PushRegistrationCoordinator>().syncRegistration().ignore(),
+      // Runs while the access token is still live. Without it the signed-out
+      // handset keeps receiving the next user's notifications — tokens belong
+      // to devices, not users.
+      onBeforeSessionEnd: () => sl<PushRegistrationCoordinator>().unregister(),
     ),
     ContactVerificationModule(),
     AccountSettingsModule(),
+    // Map + places, for the request composer's location step. The API key is
+    // supplied at build time, the same way the provider app does it.
+    MapsModule(
+      config: MapsConfig(
+        placesApiKey: const String.fromEnvironment('MAPS_API_KEY'),
+      ),
+    ),
+    // The request lifecycle. Registered unconditionally — unlike the AI-chat
+    // prototype below, these routes must exist in a release build so a push
+    // notification can open a request.
+    ClientRequestsModule(),
+    // The single owner of push registration and notification routing for this
+    // app. Registered after AuthModule so the session exists by the time its
+    // initialize() runs.
+    NotificationsModule(
+      resolveNavigator: () => sl<ClientNotificationNavigator>(),
+    ),
     // Prototype only: contributes dev-gated routes and registers only
     // per-visit capability factories, so it cannot affect production flows.
     AiChatModule(),

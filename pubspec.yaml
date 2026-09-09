@@ -42,6 +42,7 @@ workspace:
   - packages/network
   - packages/notifications
   - packages/permissions
+  - packages/requests_core
   - packages/otp
   - apps/sanad_provider/packages/provider_rbac
   - packages/sheet_navigation

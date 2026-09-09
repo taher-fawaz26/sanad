@@ -77,16 +77,18 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('a remote image URL never reaches the widget tree', (
+    testWidgets('an image URL the policy refuses never reaches the tree', (
       tester,
     ) async {
-      // schemaVersion 1 is assetId-only, so this is refused at validation for
-      // *any* host — the app never issues a request the agent asked for.
+      // Remote images are admitted now, but only through the host's image
+      // policy. A non-https URL is refused during validation, so the app never
+      // issues a request the agent asked for. The precedence and the
+      // per-node behaviour live in `image_source_test.dart`.
       final harness = await pumpNodes(tester, [
         {
           'type': 'image',
           'id': 'i',
-          'url': 'https://evil.example/tracker.gif',
+          'url': 'http://tracker.example/pixel.gif',
           'alt': 'tracker',
         },
         {'type': 'text', 'id': 't', 'text': 'reply continues'},
@@ -95,7 +97,7 @@ void main() {
       expect(find.text('reply continues'), findsOneWidget);
       expect(find.byType(AppNetworkImage), findsNothing);
       expect(
-        harness.diagnostics.hasCode(AiUiDiagnosticCode.reservedProperty),
+        harness.diagnostics.hasCode(AiUiDiagnosticCode.invalidProperty),
         isTrue,
       );
       expect(tester.takeException(), isNull);

@@ -2,9 +2,12 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:ai_ui_protocol/ai_ui_protocol.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/platform/audio/audio_session_manager.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/platform/audio/wav_header.dart';
+import 'package:sanad_client/src/features/ai_chat/src/data/platform/voice/mock_voice_scenarios.dart';
+import 'package:sanad_client/src/features/ai_chat/src/domain/entities/ai_voice_event.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/enums/ai_voice_session_status.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/services/ai_audio_player.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/services/ai_voice_capture.dart';
@@ -82,6 +85,7 @@ class MockAiVoiceSession implements AiVoiceSession {
     required AiAudioPlayer player,
     required AudioSessionManager session,
     this.tuning = const AiVoiceTuning(),
+    this.uiScript,
   }) : _capture = capture,
        _player = player,
        _session = session {
@@ -92,6 +96,13 @@ class MockAiVoiceSession implements AiVoiceSession {
   /// The thresholds and delays in use.
   final AiVoiceTuning tuning;
 
+  /// When the assistant asks a card instead of talking.
+  ///
+  /// `null` — the default — is the echo-only session this mock has always
+  /// been, which is what keeps every existing test exercising the same state
+  /// machine it was written against.
+  final AiVoiceUiScript? uiScript;
+
   final AiVoiceCapture _capture;
   final AiAudioPlayer _player;
   final AudioSessionManager _session;
@@ -99,6 +110,8 @@ class MockAiVoiceSession implements AiVoiceSession {
   final StreamController<AiVoiceSessionStatus> _status =
       StreamController<AiVoiceSessionStatus>.broadcast();
   final StreamController<double> _level = StreamController<double>.broadcast();
+  final StreamController<AiVoiceEvent> _events =
+      StreamController<AiVoiceEvent>.broadcast();
 
   StreamSubscription<Uint8List>? _frameSubscription;
   StreamSubscription<AiPlaybackProgress>? _playerSubscription;
@@ -127,11 +140,25 @@ class MockAiVoiceSession implements AiVoiceSession {
   bool _wasPlaying = false;
   int _takeCounter = 0;
 
+  /// The recording held back while a card is on screen.
+  ///
+  /// The assistant's "reply" is the user's own audio, and it must survive the
+  /// pause: playing it before the card is answered would talk over the
+  /// question, and dropping it would leave the session silent afterwards.
+  String? _heldTakePath;
+
+  /// How many turns the user has taken, which is what the script is indexed
+  /// by.
+  int _turnCounter = 0;
+
   @override
   Stream<AiVoiceSessionStatus> get status => _status.stream;
 
   @override
   Stream<double> get inputLevel => _level.stream;
+
+  @override
+  Stream<AiVoiceEvent> get events => _events.stream;
 
   @override
   String? get failureKey => _failureKey;
@@ -211,6 +238,13 @@ class MockAiVoiceSession implements AiVoiceSession {
   Future<void> end() async {
     if (_disposed || _current.isTerminal) return;
 
+    // A card on screen when the session ends is taken down rather than left
+    // waiting for an answer nothing will ever receive.
+    if (_current == AiVoiceSessionStatus.awaitingInteraction) {
+      _events.add(const AiVoiceUiResolved());
+    }
+    _heldTakePath = null;
+
     _emitStatus(AiVoiceSessionStatus.ending);
     await _teardownAudio();
     _emitStatus(AiVoiceSessionStatus.ended);
@@ -239,6 +273,7 @@ class MockAiVoiceSession implements AiVoiceSession {
 
     if (!_status.isClosed) await _status.close();
     if (!_level.isClosed) await _level.close();
+    if (!_events.isClosed) await _events.close();
   }
 
   // ── the listening/speaking cycle ──────────────────────────────────────────
@@ -275,6 +310,11 @@ class MockAiVoiceSession implements AiVoiceSession {
         _recordFrame(frame, rms);
       case AiVoiceSessionStatus.speaking:
         _maybeBargeIn(rms);
+      // Frames still arrive while a card is up — the capture stream is not
+      // torn down for a pause measured in seconds — but nothing acts on them.
+      // That is the whole reason `awaitingInteraction` exists: silence
+      // detection and barge-in must not race a user reading a question.
+      case AiVoiceSessionStatus.awaitingInteraction:
       case AiVoiceSessionStatus.idle:
       case AiVoiceSessionStatus.connecting:
       case AiVoiceSessionStatus.processing:
@@ -331,15 +371,61 @@ class MockAiVoiceSession implements AiVoiceSession {
       return;
     }
 
+    _turnCounter++;
+    final payload = uiScript?.call(_turnCounter);
+    if (payload != null) {
+      // The reply waits its turn: the card is the question, and answering it
+      // is what resumes the conversation. See [submitInteraction].
+      _heldTakePath = path;
+      _events.add(AiVoiceUiRequested(payload));
+      _emitStatus(AiVoiceSessionStatus.awaitingInteraction);
+      return;
+    }
+
+    _speak(path);
+  }
+
+  /// Plays [path] as the assistant's reply.
+  void _speak(String path) {
     _emitStatus(AiVoiceSessionStatus.speaking);
     _speakingSince = DateTime.now();
     _wasPlaying = false;
 
-    try {
-      await _player.play(id: 'voice_$_takeCounter', path: path);
-    } on Object {
-      _fail('ai_chat.voice_error');
+    _player
+        .play(id: 'voice_$_takeCounter', path: path)
+        .onError<Object>((_, _) => _fail('ai_chat.voice_error'));
+  }
+
+  /// Resumes the conversation once the user answers the card.
+  ///
+  /// Idempotent and state-guarded: a late answer — the ledger let one through
+  /// just as the session ended, or a duplicate arrived from a rebuild — is
+  /// ignored rather than treated as an error.
+  @override
+  Future<void> submitInteraction(AiUiInteraction interaction) async {
+    if (_disposed ||
+        _current != AiVoiceSessionStatus.awaitingInteraction) {
+      return;
     }
+
+    _events.add(AiVoiceUiResolved(interaction.nodeId));
+    _emitStatus(AiVoiceSessionStatus.processing);
+
+    // A real agent would answer *about* the interaction. The mock cannot say
+    // anything it was not given, so it resumes the reply it was holding —
+    // which still proves the sequencing: the card gated the audio, and the
+    // answer released it.
+    await _wait(tuning.processingDelay);
+    if (_disposed || _current != AiVoiceSessionStatus.processing) return;
+
+    final path = _heldTakePath;
+    _heldTakePath = null;
+    if (path == null) {
+      await _beginListening();
+      return;
+    }
+
+    _speak(path);
   }
 
   void _onPlaybackProgress(AiPlaybackProgress progress) {

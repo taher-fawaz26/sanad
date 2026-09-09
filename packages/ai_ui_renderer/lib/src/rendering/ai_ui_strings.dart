@@ -15,6 +15,9 @@ final class AiUiStrings extends Equatable {
     this.metresSuffix = 'm',
     this.kilometresSuffix = 'km',
     this.unsupportedContent = 'Unsupported content',
+    this.openInMaps = 'Open in maps',
+    this.ratingOutOfFive = 'out of 5',
+    this.distanceLabel = 'Distance',
   });
 
   static const AiUiStrings fallback = AiUiStrings();
@@ -27,10 +30,27 @@ final class AiUiStrings extends Equatable {
   /// Shown in place of a node this client cannot draw, in dev builds only.
   final String unsupportedContent;
 
+  /// The link line on a `request_summary`'s address row. Names a *client*
+  /// capability — which maps app the tap reaches — so the agent does not
+  /// author it.
+  final String openInMaps;
+
+  /// Read after a rating value by a screen reader, so "4.8" is announced as a
+  /// score rather than a bare number.
+  final String ratingOutOfFive;
+
+  /// Prefixes a `branch_card`'s distance ("Distance: 450 m"). The number and
+  /// its unit come from the client's own formatter, so the word does too —
+  /// the agent never sends it.
+  final String distanceLabel;
+
   @override
   List<Object?> get props => [
     metresSuffix,
     kilometresSuffix,
     unsupportedContent,
+    openInMaps,
+    ratingOutOfFive,
+    distanceLabel,
   ];
 }

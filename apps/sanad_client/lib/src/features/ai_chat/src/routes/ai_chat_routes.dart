@@ -22,6 +22,11 @@ abstract final class AiChatRoutes {
   /// Home header. See `HistoryPage`.
   static const history = '/dev/ai-chat/history';
 
+  /// Every semantic component in the catalog, rendered through the real
+  /// validator and the real surface. Development tooling — see
+  /// `AiUiShowcasePage`.
+  static const showcase = '/dev/ai-chat/showcase';
+
   /// Not added to `ClientRoutes.protected`: the prototype has no session
   /// dependency, and gating it behind auth would only make it harder to demo.
   static const Set<String> protectedRoutes = {};

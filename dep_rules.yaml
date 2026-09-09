@@ -58,7 +58,8 @@ layer_order:
   # That is what makes "an AI payload is inert until a renderer acts on it" a
   # structural property rather than a policy — see packages/ai_ui_protocol.
   - tier: 0
-    packages: [core, app_assets, app_animations, config, utilities, ai_ui_protocol]
+    packages:
+      [core, app_assets, app_animations, config, utilities, ai_ui_protocol, requests_core]
   - tier: 1
     packages: [design_system, app_logger, localization, shared_ui, bottom_nav_bar, authorization]
   - tier: 2

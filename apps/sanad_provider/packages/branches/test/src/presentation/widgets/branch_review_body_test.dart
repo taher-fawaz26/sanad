@@ -39,6 +39,8 @@ const _validParams = CreateBranchParams(
   lng: 0,
   radiusKm: 1,
   workerIds: [],
+  serviceIds: ['svc-1'],
+  servingAreaPlaceIds: ['ChIJvRmU9K1DXz4RYKyuhY6v0wM'],
 );
 
 void main() {

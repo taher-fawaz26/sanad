@@ -71,48 +71,70 @@ final class AiUiRichSpan extends Equatable {
   List<Object?> get props => [text, emphasis, action];
 }
 
-/// Where an image comes from.
+/// Where an image comes from — **one shape for every image in the protocol**.
 ///
-/// **schemaVersion 1 only ever produces [AiUiAssetImage].** The validator
-/// rejects a `url` on an image node outright, so [AiUiRemoteImage] is not
-/// reachable from a payload today — it exists so the sealed hierarchy and the
-/// renderer's switch are already shaped for a future version that admits
-/// allowlisted remote images.
-sealed class AiUiImageSource extends Equatable {
-  const AiUiImageSource();
-
-  Map<String, dynamic> toJson();
-}
-
-/// A bundled asset referenced by a stable id the app resolves.
-final class AiUiAssetImage extends AiUiImageSource {
-  const AiUiAssetImage(this.assetId);
-
-  final String assetId;
-
-  @override
-  Map<String, dynamic> toJson() => <String, dynamic>{'assetId': assetId};
-
-  @override
-  List<Object?> get props => [assetId];
-}
-
-/// A remote image.
+/// ```text
+/// image
+///  ├── url      optional, preferred
+///  └── assetId  optional, controlled local fallback
+/// ```
 ///
-/// **Not produced by schemaVersion 1.** No v1 payload can construct one: the
-/// validator rejects `image.url` before this point. Kept as future-ready
-/// infrastructure so admitting allowlisted remote images later is a validator
-/// change, not a model change.
-final class AiUiRemoteImage extends AiUiImageSource {
-  const AiUiRemoteImage(this.url);
+/// Both fields are optional and both may be present. The precedence is fixed
+/// and is the same for every image-bearing node — a `service_card` thumbnail,
+/// a `provider_card` avatar, a `list_item` leading square, the `image`
+/// primitive:
+///
+/// 1. a usable [url] renders from the network;
+/// 2. otherwise a usable [assetId] renders the bundled asset;
+/// 3. otherwise the node falls back to whatever it shows without an image.
+///
+/// There is deliberately no sealed either/or here. An earlier version modelled
+/// the two as separate subtypes, which meant the renderer had to know which
+/// kind it held and made "send both, prefer the URL" unrepresentable. One
+/// object with two optional fields is what lets the backend attach a local
+/// fallback to a remote image without the client changing behaviour.
+///
+/// **What each field is for.** [url] carries backend-owned, dynamic media: a
+/// service photo, a provider portrait, business artwork. [assetId] names one
+/// of a small, client-published set of static illustrations — the agent knows
+/// only the canonical id, and the client alone decides which bundled file it
+/// maps to. Neither field may carry a Flutter asset path, a package path, an
+/// Android or iOS resource path, or any other local file reference; the
+/// validator only admits an id the host has published.
+final class AiUiImageSource extends Equatable {
+  const AiUiImageSource({this.url, this.assetId});
 
-  final String url;
+  /// Convenience for the common single-source cases.
+  const AiUiImageSource.url(String this.url) : assetId = null;
+  const AiUiImageSource.asset(String this.assetId) : url = null;
+
+  /// A remote image, already checked against the host's image URL policy
+  /// during validation. Never an arbitrary string: an unparseable URL, a
+  /// non-https scheme, embedded userinfo or a non-allowlisted host is stripped
+  /// before this object is built.
+  final String? url;
+
+  /// A canonical id from the host's published asset catalog, already checked
+  /// during validation when the host declared its catalog.
+  final String? assetId;
+
+  /// Whether [url] is present and non-empty. An empty string is treated as
+  /// absent, which is what makes `{"url": "", "assetId": "..."}` fall through
+  /// to the asset rather than rendering nothing.
+  bool get hasUrl => (url ?? '').isNotEmpty;
+
+  bool get hasAssetId => (assetId ?? '').isNotEmpty;
+
+  /// Nothing usable — the owning node shows its no-image state.
+  bool get isEmpty => !hasUrl && !hasAssetId;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    if (hasUrl) 'url': url,
+    if (hasAssetId) 'assetId': assetId,
+  };
 
   @override
-  Map<String, dynamic> toJson() => <String, dynamic>{'url': url};
-
-  @override
-  List<Object?> get props => [url];
+  List<Object?> get props => [url, assetId];
 }
 
 /// One suggested reply in a `quick_reply` node.
@@ -129,4 +151,211 @@ final class AiUiQuickReplyOption extends Equatable {
 
   @override
   List<Object?> get props => [label, action];
+}
+
+// ── Shared card action row ──────────────────────────────────────────────────
+
+/// One button in a semantic card's attached `actions` row.
+///
+/// Every current Figma card places its calls to action **inside** the card's
+/// own border — a shared bottom row, equal-width, sharing the card's padding.
+/// Expressing that as sibling `row` + `button` primitives puts the buttons in
+/// a separate block underneath, which is a different design.
+///
+/// Deliberately the same vocabulary as the `button` primitive
+/// ([AiUiButtonVariant] / [AiUiButtonIntent]) rather than a new one: the agent
+/// already knows how to ask for an outline destructive control, and the
+/// renderer already knows how to draw one.
+///
+/// An entry whose action cannot be resolved is dropped exactly as a `button`
+/// is — a dead control is worse than a missing one — while the card survives.
+final class AiUiCardAction extends Equatable {
+  const AiUiCardAction({
+    required this.label,
+    required this.action,
+    this.variant = AiUiButtonVariant.primary,
+    this.intent = AiUiButtonIntent.standard,
+  });
+
+  final String label;
+  final AiUiAction action;
+  final AiUiButtonVariant variant;
+  final AiUiButtonIntent intent;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'label': label,
+    'action': action.toJson(),
+    'variant': variant.wire,
+    'intent': intent.wire,
+  };
+
+  @override
+  List<Object?> get props => [label, action, variant, intent];
+}
+
+// ── Summary / receipt building blocks ───────────────────────────────────────
+
+/// One label-and-value row inside a summary, receipt or details card.
+///
+/// The value is **prose the agent has already localized** — a service name, a
+/// masked card number, a formatted reference. Anything machine-typed (a price,
+/// an instant, a distance) belongs in a structured field instead so the client
+/// can format it for the reader's locale.
+final class AiUiDetailItem extends Equatable {
+  const AiUiDetailItem({
+    required this.label,
+    required this.value,
+    this.valueTone = AiUiTone.neutral,
+    this.isLtrValue = false,
+  });
+
+  final String label;
+  final String value;
+
+  /// Tints the value. `primary` is what Figma uses for the emphasised cost row.
+  final AiUiTone valueTone;
+
+  /// Set for an inherently left-to-right value — a reference id, a masked
+  /// card, an IBAN — so the renderer wraps it in Unicode bidi isolates and a
+  /// leading symbol does not reorder to the far end under RTL.
+  final bool isLtrValue;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'label': label,
+    'value': value,
+    'valueTone': valueTone.wire,
+    if (isLtrValue) 'isLtrValue': true,
+  };
+
+  @override
+  List<Object?> get props => [label, value, valueTone, isLtrValue];
+}
+
+/// The emphasised bottom line of a receipt: a label plus a structured amount.
+final class AiUiReceiptTotal extends Equatable {
+  const AiUiReceiptTotal({required this.label, required this.amount});
+
+  final String label;
+  final AiUiMoney amount;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'label': label,
+    'amount': amount.toJson(),
+  };
+
+  @override
+  List<Object?> get props => [label, amount];
+}
+
+/// One figure in a provider card's stats strip — "Completed jobs / 340+".
+final class AiUiStat extends Equatable {
+  const AiUiStat({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'label': label,
+    'value': value,
+  };
+
+  @override
+  List<Object?> get props => [label, value];
+}
+
+/// A place the user can open in the platform maps app.
+final class AiUiLocationRef extends Equatable {
+  const AiUiLocationRef({required this.addressText, this.label, this.action});
+
+  /// The address as the agent localized it.
+  final String addressText;
+
+  /// An optional name above the address — "Home", "Downtown branch".
+  final String? label;
+
+  /// Usually an `open_map` action. Without one the row renders as static text
+  /// rather than a tappable link.
+  final AiUiAction? action;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'addressText': addressText,
+    if (label != null) 'label': label,
+    if (action != null) 'action': action!.toJson(),
+  };
+
+  @override
+  List<Object?> get props => [addressText, label, action];
+}
+
+// ── Interactive building blocks ─────────────────────────────────────────────
+
+/// One selectable slot in a `time_slots` node.
+///
+/// [id] is what the node reports back through its `confirmTemplate`, and what
+/// `selectedSlotId` refers to. [enabled] `false` renders the slot visibly
+/// unavailable rather than omitting it, so the user can see that 11:00 exists
+/// and is taken.
+final class AiUiTimeSlot extends Equatable {
+  const AiUiTimeSlot({
+    required this.id,
+    required this.label,
+    this.enabled = true,
+  });
+
+  final String id;
+  final String label;
+  final bool enabled;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'id': id,
+    'label': label,
+    'enabled': enabled,
+  };
+
+  @override
+  List<Object?> get props => [id, label, enabled];
+}
+
+/// One saved place offered by a `location_picker` node.
+final class AiUiSavedLocation extends Equatable {
+  const AiUiSavedLocation({
+    required this.id,
+    required this.name,
+    required this.addressText,
+    this.icon,
+  });
+
+  final String id;
+  final String name;
+  final String addressText;
+
+  /// A SANAD icon token or Font Awesome class, resolved the same way as
+  /// `icon.name`. Unresolvable simply renders no glyph.
+  final String? icon;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'id': id,
+    'name': name,
+    'addressText': addressText,
+    if (icon != null) 'icon': icon,
+  };
+
+  @override
+  List<Object?> get props => [id, name, addressText, icon];
+}
+
+/// One way to supply media in a `media_request` node.
+final class AiUiMediaOption extends Equatable {
+  const AiUiMediaOption({required this.label, required this.source});
+
+  final String label;
+  final AiUiMediaSource source;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'label': label,
+    'source': source.wire,
+  };
+
+  @override
+  List<Object?> get props => [label, source];
 }

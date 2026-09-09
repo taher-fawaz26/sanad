@@ -1,5 +1,6 @@
 import 'package:authorization/authorization.dart';
 import 'package:branches/branches.dart';
+import 'package:sanad_provider/src/features/requests/requests.dart';
 import 'package:sanad_provider/src/routing/app_routes.dart';
 import 'package:services/services.dart';
 import 'package:workers/workers.dart';
@@ -78,6 +79,25 @@ final RouteAuthorizationTable providerRoutePermissions =
         RegExp(r'^/services/[^/]+$'),
         requires: const PermissionRequirement.single(
           ServicePermissions.providerServiceView,
+        ),
+      ),
+
+      // Client requests. The literal list path is registered ahead of the
+      // detail pattern because `RouteAuthorizationTable` is first-match-wins
+      // and `^/requests/[^/]+$` would otherwise be consulted for a path it
+      // cannot match anyway — same ordering discipline as Branches above.
+      //
+      // Both surfaces need only `view`: the write actions live behind
+      // `PermissionGate`s on the detail screen, because a manager may
+      // legitimately read a workspace they cannot bid in.
+      const RouteRule.exact(
+        {ProviderRequestRoutes.list},
+        requires: PermissionRequirement.single(ClientRequestPermissions.view),
+      ),
+      RouteRule.pattern(
+        ProviderRequestRoutes.detailMatcher,
+        requires: const PermissionRequirement.single(
+          ClientRequestPermissions.view,
         ),
       ),
 

@@ -11,6 +11,10 @@ import 'package:ai_ui_protocol/src/validation/ai_ui_parse_result.dart';
 import 'package:ai_ui_protocol/src/validation/ai_ui_url_policy.dart';
 import 'package:equatable/equatable.dart';
 
+part 'package:ai_ui_protocol/src/validation/parsers/primitive_parsers.dart';
+part 'package:ai_ui_protocol/src/validation/parsers/interactive_parsers.dart';
+part 'package:ai_ui_protocol/src/validation/parsers/semantic_parsers.dart';
+
 /// Host-specific knobs on validation behaviour.
 final class AiUiValidatorOptions extends Equatable {
   const AiUiValidatorOptions({this.keepUnsupportedNodes = false});
@@ -37,13 +41,27 @@ final class AiUiValidator {
   const AiUiValidator({
     this.limits = AiUiLimits.defaults,
     this.urlPolicy = AiUiUrlPolicy.denyAll,
+    this.imageUrlPolicy = AiUiUrlPolicy.httpsAnyHost,
     this.supportedActions,
     this.knownAssetIds,
     this.options = const AiUiValidatorOptions(),
   });
 
   final AiUiLimits limits;
+
+  /// Gates the `open_url` **action** — a whole web page. Deny-all by default.
   final AiUiUrlPolicy urlPolicy;
+
+  /// Gates an `image.url`. Defaults to [AiUiUrlPolicy.httpsAnyHost]: dynamic
+  /// business media lives on whatever CDN the backend uses, so an allowlist
+  /// here would mean no image renders until it is configured. Pass a policy
+  /// with `allowedHosts` to tighten it to specific origins.
+  ///
+  /// Separate from [urlPolicy] on purpose. Admitting a picture from a CDN and
+  /// admitting arbitrary navigation are different decisions with different
+  /// owners, and collapsing them into one field would make the safer choice
+  /// impossible to express.
+  final AiUiUrlPolicy imageUrlPolicy;
 
   /// The actions this host's registry actually implements. `null` means "the
   /// whole protocol catalog" — useful in protocol tests, wrong in an app,
@@ -73,6 +91,7 @@ final class AiUiValidator {
     final run = _Run(
       limits: limits,
       urlPolicy: urlPolicy,
+      imageUrlPolicy: imageUrlPolicy,
       supportedActions: supportedActions ?? AiUiActionType.all,
       knownAssetIds: knownAssetIds,
       options: options,
@@ -145,6 +164,7 @@ class _Run {
   _Run({
     required this.limits,
     required this.urlPolicy,
+    required this.imageUrlPolicy,
     required this.supportedActions,
     required this.knownAssetIds,
     required this.options,
@@ -152,6 +172,9 @@ class _Run {
 
   final AiUiLimits limits;
   final AiUiUrlPolicy urlPolicy;
+
+  /// Gates an `image.url`; separate from [urlPolicy], which gates `open_url`.
+  final AiUiUrlPolicy imageUrlPolicy;
   final Set<AiUiActionType> supportedActions;
   final Set<String>? knownAssetIds;
   final AiUiValidatorOptions options;
@@ -337,6 +360,90 @@ class _Run {
         a11yLabel,
         fallbackText,
       ),
+      AiUiNodeType.orderCard => _orderCard(
+        raw,
+        path,
+        id,
+        a11yLabel,
+        fallbackText,
+      ),
+      AiUiNodeType.providerCard => _providerCard(
+        raw,
+        path,
+        id,
+        a11yLabel,
+        fallbackText,
+      ),
+      AiUiNodeType.bookingSummary => _bookingSummary(
+        raw,
+        path,
+        id,
+        a11yLabel,
+        fallbackText,
+      ),
+      AiUiNodeType.requestSummary => _requestSummary(
+        raw,
+        path,
+        id,
+        a11yLabel,
+        fallbackText,
+      ),
+      AiUiNodeType.paymentReceipt => _paymentReceipt(
+        raw,
+        path,
+        id,
+        a11yLabel,
+        fallbackText,
+      ),
+      AiUiNodeType.timeSlots => _timeSlots(
+        raw,
+        path,
+        id,
+        a11yLabel,
+        fallbackText,
+      ),
+      AiUiNodeType.reviewRequest => _reviewRequest(
+        raw,
+        path,
+        id,
+        a11yLabel,
+        fallbackText,
+      ),
+      AiUiNodeType.locationPicker => _locationPicker(
+        raw,
+        path,
+        id,
+        a11yLabel,
+        fallbackText,
+      ),
+      AiUiNodeType.reminderCard => _reminderCard(
+        raw,
+        path,
+        id,
+        a11yLabel,
+        fallbackText,
+      ),
+      AiUiNodeType.mediaRequest => _mediaRequest(
+        raw,
+        path,
+        id,
+        a11yLabel,
+        fallbackText,
+      ),
+      AiUiNodeType.permissionRequest => _permissionRequest(
+        raw,
+        path,
+        id,
+        a11yLabel,
+        fallbackText,
+      ),
+      AiUiNodeType.locationConfirm => _locationConfirm(
+        raw,
+        path,
+        id,
+        a11yLabel,
+        fallbackText,
+      ),
     };
   }
 
@@ -369,1023 +476,493 @@ class _Run {
     return null;
   }
 
-  // ── Primitive parsers ─────────────────────────────────────────────────────
+  // ── Semantic collection helpers ───────────────────────────────────────────
 
-  AiUiNode? _text(
+  /// Parses a semantic node's attached `actions` row.
+  ///
+  /// An entry is dropped — not the card — when its label or action cannot be
+  /// resolved, which is the `button` rule rather than the `chip` rule: these
+  /// *are* buttons, and a button whose action no handler implements would be a
+  /// dead control.
+  List<AiUiCardAction> _cardActions(
     Map<String, dynamic> json,
     String path,
-    String id,
-    String? a11yLabel,
-    String? fallbackText,
+    String wire,
   ) {
-    const wire = 'text';
-    _unknownKeys(json, path, wire, const {
-      'text',
-      'style',
-      'emphasis',
-      'align',
-      'direction',
-      'maxLines',
-    });
-
-    final text = _requiredString(
-      json,
-      'text',
-      path,
-      wire,
-      maxLength: limits.maxTextLength,
-    );
-    if (text == null) return null;
-
-    return AiUiTextNode(
-      id: id,
-      text: text,
-      style: _enum(
-        json,
-        'style',
-        path,
-        wire,
-        AiUiTextStyleToken.tryFromWire,
-        AiUiTextStyleToken.body,
-      ),
-      emphasis: _enum(
-        json,
-        'emphasis',
-        path,
-        wire,
-        AiUiEmphasis.tryFromWire,
-        AiUiEmphasis.normal,
-      ),
-      align: _enum(
-        json,
-        'align',
-        path,
-        wire,
-        AiUiMainAxisAlign.tryFromWire,
-        AiUiMainAxisAlign.start,
-      ),
-      direction: _enum(
-        json,
-        'direction',
-        path,
-        wire,
-        AiUiTextDirectionHint.tryFromWire,
-        AiUiTextDirectionHint.auto,
-      ),
-      maxLines: _boundedInt(json, 'maxLines', path, wire, 1, limits.maxLines),
-      a11yLabel: a11yLabel,
-      fallbackText: fallbackText,
-    );
-  }
-
-  AiUiNode? _richText(
-    Map<String, dynamic> json,
-    String path,
-    String id,
-    String? a11yLabel,
-    String? fallbackText,
-  ) {
-    const wire = 'rich_text';
-    _unknownKeys(json, path, wire, const {'spans', 'align'});
-
-    final rawSpans = json['spans'];
-    if (rawSpans is! List || rawSpans.isEmpty) {
+    final raw = json['actions'];
+    if (raw == null) return const [];
+    if (raw is! List) {
       add(
-        AiUiDiagnosticCode.missingRequiredProperty,
-        path,
+        AiUiDiagnosticCode.invalidProperty,
+        '$path.actions',
         nodeType: wire,
-        detail: 'spans missing or empty',
+        detail: 'actions is ${raw.runtimeType}, expected array',
       );
-      return null;
+      return const [];
     }
 
-    var entries = rawSpans;
-    if (entries.length > limits.maxRichTextSpans) {
+    var entries = raw;
+    if (entries.length > limits.maxCardActions) {
       add(
         AiUiDiagnosticCode.limitExceeded,
-        '$path.spans',
+        '$path.actions',
         nodeType: wire,
-        detail:
-            '${entries.length} spans > ${limits.maxRichTextSpans}, '
-            'truncated',
+        detail: 'actions ${entries.length} > ${limits.maxCardActions}',
       );
-      entries = entries.sublist(0, limits.maxRichTextSpans);
+      entries = entries.sublist(0, limits.maxCardActions);
     }
 
-    final spans = <AiUiRichSpan>[];
+    final parsed = <AiUiCardAction>[];
     for (var i = 0; i < entries.length; i++) {
-      final spanPath = '$path.spans[$i]';
+      final entryPath = '$path.actions[$i]';
       final entry = entries[i];
       if (entry is! Map<String, dynamic>) {
         add(
           AiUiDiagnosticCode.invalidProperty,
-          spanPath,
+          entryPath,
           nodeType: wire,
-          detail: 'span is ${entry.runtimeType}, expected object',
+          detail: 'action entry is ${entry.runtimeType}, expected object',
         );
         continue;
       }
-      final text = _requiredString(
+      final label = _requiredString(
         entry,
-        'text',
-        spanPath,
+        'label',
+        entryPath,
         wire,
-        maxLength: limits.maxTextLength,
+        maxLength: limits.maxChipLabelLength,
       );
-      if (text == null) continue;
-      spans.add(
-        AiUiRichSpan(
-          text: text,
-          emphasis: _enum(
+      final resolved = action(entry['action'], '$entryPath.action', wire);
+      if (label == null || resolved == null) continue;
+      parsed.add(
+        AiUiCardAction(
+          label: label,
+          action: resolved,
+          variant: _enum(
             entry,
-            'emphasis',
-            spanPath,
+            'variant',
+            entryPath,
             wire,
-            AiUiEmphasis.tryFromWire,
-            AiUiEmphasis.normal,
+            AiUiButtonVariant.tryFromWire,
+            AiUiButtonVariant.primary,
           ),
-          action: entry.containsKey('action')
-              ? action(entry['action'], '$spanPath.action', wire)
-              : null,
+          intent: _enum(
+            entry,
+            'intent',
+            entryPath,
+            wire,
+            AiUiButtonIntent.tryFromWire,
+            AiUiButtonIntent.standard,
+          ),
         ),
       );
     }
-
-    if (spans.isEmpty) return null;
-
-    return AiUiRichTextNode(
-      id: id,
-      spans: spans,
-      align: _enum(
-        json,
-        'align',
-        path,
-        wire,
-        AiUiMainAxisAlign.tryFromWire,
-        AiUiMainAxisAlign.start,
-      ),
-      a11yLabel: a11yLabel,
-      fallbackText: fallbackText,
-    );
+    return parsed;
   }
 
-  AiUiNode? _icon(
+  /// Parses a summary / receipt / details card's label-and-value rows.
+  ///
+  /// Returns an empty list when nothing survives; the caller decides whether
+  /// that drops the node. A summary with no rows says nothing, so the callers
+  /// that require rows drop it.
+  List<AiUiDetailItem> _detailItems(
     Map<String, dynamic> json,
+    String key,
     String path,
-    String id,
-    String? a11yLabel,
-    String? fallbackText,
+    String wire,
   ) {
-    const wire = 'icon';
-    _unknownKeys(json, path, wire, const {'name', 'size', 'tone'});
-
-    final name = _requiredString(json, 'name', path, wire, maxLength: 120);
-    if (name == null) return null;
-
-    return AiUiIconNode(
-      id: id,
-      name: name,
-      size: _enum(
-        json,
-        'size',
-        path,
-        wire,
-        AiUiIconSize.tryFromWire,
-        AiUiIconSize.md,
-      ),
-      tone: _enum(
-        json,
-        'tone',
-        path,
-        wire,
-        AiUiTone.tryFromWire,
-        AiUiTone.neutral,
-      ),
-      a11yLabel: a11yLabel,
-      fallbackText: fallbackText,
-    );
-  }
-
-  AiUiNode? _image(
-    Map<String, dynamic> json,
-    String path,
-    String id,
-    String? a11yLabel,
-    String? fallbackText,
-  ) {
-    const wire = 'image';
-    _unknownKeys(json, path, wire, const {
-      'assetId',
-      'url',
-      'alt',
-      'aspect',
-      'fit',
-    });
-
-    final alt = _requiredString(
-      json,
-      'alt',
-      path,
-      wire,
-      maxLength: limits.maxLabelLength,
-    );
-    if (alt == null) return null;
-
-    final source = imageSource(json, path, wire);
-    if (source == null) return null;
-
-    return AiUiImageNode(
-      id: id,
-      source: source,
-      alt: alt,
-      aspect: _enum(
-        json,
-        'aspect',
-        path,
-        wire,
-        AiUiImageAspect.tryFromWire,
-        AiUiImageAspect.wide,
-      ),
-      fit: _enum(
-        json,
-        'fit',
-        path,
-        wire,
-        AiUiImageFit.tryFromWire,
-        AiUiImageFit.cover,
-      ),
-      a11yLabel: a11yLabel,
-      fallbackText: fallbackText,
-    );
-  }
-
-  AiUiNode _divider(
-    Map<String, dynamic> json,
-    String path,
-    String id,
-    String? a11yLabel,
-    String? fallbackText,
-  ) {
-    const wire = 'divider';
-    _unknownKeys(json, path, wire, const {'spacing'});
-    return AiUiDividerNode(
-      id: id,
-      spacing: _enum(
-        json,
-        'spacing',
-        path,
-        wire,
-        AiUiSpacingStep.tryFromWire,
-        AiUiSpacingStep.md,
-      ),
-      a11yLabel: a11yLabel,
-      fallbackText: fallbackText,
-    );
-  }
-
-  AiUiNode _spacer(
-    Map<String, dynamic> json,
-    String path,
-    String id,
-    String? a11yLabel,
-    String? fallbackText,
-  ) {
-    const wire = 'spacer';
-    _unknownKeys(json, path, wire, const {'size'});
-    return AiUiSpacerNode(
-      id: id,
-      size: _enum(
-        json,
-        'size',
-        path,
-        wire,
-        AiUiSpacingStep.tryFromWire,
-        AiUiSpacingStep.md,
-      ),
-      a11yLabel: a11yLabel,
-      fallbackText: fallbackText,
-    );
-  }
-
-  AiUiNode? _row(
-    Map<String, dynamic> json,
-    String path,
-    int depth,
-    String id,
-    String? a11yLabel,
-    String? fallbackText,
-  ) {
-    const wire = 'row';
-    _unknownKeys(json, path, wire, const {
-      'children',
-      'align',
-      'crossAlign',
-      'gap',
-      'wrap',
-    });
-
-    final kids = children(json, path, depth, AiUiNodeType.row, wire);
-    if (aborted || kids.isEmpty) return null;
-
-    return AiUiRowNode(
-      id: id,
-      children: kids,
-      align: _enum(
-        json,
-        'align',
-        path,
-        wire,
-        AiUiMainAxisAlign.tryFromWire,
-        AiUiMainAxisAlign.start,
-      ),
-      crossAlign: _enum(
-        json,
-        'crossAlign',
-        path,
-        wire,
-        AiUiCrossAxisAlign.tryFromWire,
-        AiUiCrossAxisAlign.center,
-      ),
-      gap: _enum(
-        json,
-        'gap',
-        path,
-        wire,
-        AiUiSpacingStep.tryFromWire,
-        AiUiSpacingStep.sm,
-      ),
-      wrap: _bool(json, 'wrap', path, wire, defaultValue: false),
-      a11yLabel: a11yLabel,
-      fallbackText: fallbackText,
-    );
-  }
-
-  AiUiNode? _column(
-    Map<String, dynamic> json,
-    String path,
-    int depth,
-    String id,
-    String? a11yLabel,
-    String? fallbackText,
-  ) {
-    const wire = 'column';
-    _unknownKeys(json, path, wire, const {'children', 'align', 'gap'});
-
-    final kids = children(json, path, depth, AiUiNodeType.column, wire);
-    if (aborted || kids.isEmpty) return null;
-
-    return AiUiColumnNode(
-      id: id,
-      children: kids,
-      align: _enum(
-        json,
-        'align',
-        path,
-        wire,
-        AiUiCrossAxisAlign.tryFromWire,
-        AiUiCrossAxisAlign.start,
-      ),
-      gap: _enum(
-        json,
-        'gap',
-        path,
-        wire,
-        AiUiSpacingStep.tryFromWire,
-        AiUiSpacingStep.sm,
-      ),
-      a11yLabel: a11yLabel,
-      fallbackText: fallbackText,
-    );
-  }
-
-  AiUiNode? _card(
-    Map<String, dynamic> json,
-    String path,
-    int depth,
-    String id,
-    String? a11yLabel,
-    String? fallbackText,
-  ) {
-    const wire = 'card';
-    _unknownKeys(json, path, wire, const {
-      'children',
-      'title',
-      'tone',
-      'action',
-    });
-
-    final kids = children(json, path, depth, AiUiNodeType.card, wire);
-    if (aborted) return null;
-
-    return AiUiCardNode(
-      id: id,
-      children: kids,
-      title: _optionalString(
-        json,
-        'title',
-        path,
-        wire,
-        maxLength: limits.maxLabelLength,
-      ),
-      tone: _enum(
-        json,
-        'tone',
-        path,
-        wire,
-        AiUiTone.tryFromWire,
-        AiUiTone.neutral,
-      ),
-      action: json.containsKey('action')
-          ? action(json['action'], '$path.action', wire)
-          : null,
-      a11yLabel: a11yLabel,
-      fallbackText: fallbackText,
-    );
-  }
-
-  AiUiNode? _button(
-    Map<String, dynamic> json,
-    String path,
-    String id,
-    String? a11yLabel,
-    String? fallbackText,
-  ) {
-    const wire = 'button';
-    _unknownKeys(json, path, wire, const {
-      'label',
-      'action',
-      'variant',
-      'intent',
-      'size',
-      'icon',
-      'enabled',
-    });
-
-    final label = _requiredString(
-      json,
-      'label',
-      path,
-      wire,
-      maxLength: limits.maxLabelLength,
-    );
-    if (label == null) return null;
-
-    // A button whose action we cannot honour is a dead control. Dropping the
-    // whole node is better UX than rendering something that does nothing.
-    final resolved = action(json['action'], '$path.action', wire);
-    if (resolved == null) return null;
-
-    return AiUiButtonNode(
-      id: id,
-      label: label,
-      action: resolved,
-      variant: _enum(
-        json,
-        'variant',
-        path,
-        wire,
-        AiUiButtonVariant.tryFromWire,
-        AiUiButtonVariant.primary,
-      ),
-      intent: _enum(
-        json,
-        'intent',
-        path,
-        wire,
-        AiUiButtonIntent.tryFromWire,
-        AiUiButtonIntent.standard,
-      ),
-      size: _enum(
-        json,
-        'size',
-        path,
-        wire,
-        AiUiButtonSize.tryFromWire,
-        AiUiButtonSize.block,
-      ),
-      icon: _optionalString(json, 'icon', path, wire, maxLength: 120),
-      enabled: _bool(json, 'enabled', path, wire, defaultValue: true),
-      a11yLabel: a11yLabel,
-      fallbackText: fallbackText,
-    );
-  }
-
-  AiUiNode? _chip(
-    Map<String, dynamic> json,
-    String path,
-    String id,
-    String? a11yLabel,
-    String? fallbackText,
-  ) {
-    const wire = 'chip';
-    _unknownKeys(json, path, wire, const {
-      'label',
-      'action',
-      'selected',
-      'tone',
-      'icon',
-    });
-
-    final label = _requiredString(
-      json,
-      'label',
-      path,
-      wire,
-      maxLength: limits.maxChipLabelLength,
-    );
-    if (label == null) return null;
-
-    AiUiAction? resolved;
-    if (json.containsKey('action')) {
-      resolved = action(json['action'], '$path.action', wire);
-      // Unlike a button, a chip is legible as a static label, so an
-      // unresolvable action downgrades it rather than dropping it.
+    final raw = json[key];
+    if (raw == null) return const [];
+    if (raw is! List) {
+      add(
+        AiUiDiagnosticCode.invalidProperty,
+        '$path.$key',
+        nodeType: wire,
+        detail: '$key is ${raw.runtimeType}, expected array',
+      );
+      return const [];
     }
 
-    return AiUiChipNode(
-      id: id,
-      label: label,
-      action: resolved,
-      selected: _bool(json, 'selected', path, wire, defaultValue: false),
-      tone: _enum(
-        json,
-        'tone',
-        path,
-        wire,
-        AiUiTone.tryFromWire,
-        AiUiTone.neutral,
-      ),
-      icon: _optionalString(json, 'icon', path, wire, maxLength: 120),
-      a11yLabel: a11yLabel,
-      fallbackText: fallbackText,
-    );
-  }
+    var entries = raw;
+    if (entries.length > limits.maxDetailItems) {
+      add(
+        AiUiDiagnosticCode.limitExceeded,
+        '$path.$key',
+        nodeType: wire,
+        detail: '$key ${entries.length} > ${limits.maxDetailItems}',
+      );
+      entries = entries.sublist(0, limits.maxDetailItems);
+    }
 
-  AiUiNode? _list(
-    Map<String, dynamic> json,
-    String path,
-    int depth,
-    String id,
-    String? a11yLabel,
-    String? fallbackText,
-  ) {
-    const wire = 'list';
-    _unknownKeys(json, path, wire, const {
-      'children',
-      'variant',
-      'emptyText',
-    });
-
-    final kids = children(json, path, depth, AiUiNodeType.list, wire);
-    if (aborted) return null;
-
-    final items = <AiUiListItemNode>[];
-    for (final child in kids) {
-      if (child is AiUiListItemNode) {
-        items.add(child);
-      } else {
+    final parsed = <AiUiDetailItem>[];
+    for (var i = 0; i < entries.length; i++) {
+      final entryPath = '$path.$key[$i]';
+      final entry = entries[i];
+      if (entry is! Map<String, dynamic>) {
         add(
           AiUiDiagnosticCode.invalidProperty,
-          '$path.children',
+          entryPath,
           nodeType: wire,
-          detail: 'child ${child.type?.wire ?? "unknown"} is not list_item',
+          detail: 'item is ${entry.runtimeType}, expected object',
         );
+        continue;
       }
-    }
-
-    if (items.isEmpty) return null;
-
-    return AiUiListNode(
-      id: id,
-      children: items,
-      variant: _enum(
-        json,
-        'variant',
-        path,
-        wire,
-        AiUiListVariant.tryFromWire,
-        AiUiListVariant.plain,
-      ),
-      emptyText: _optionalString(
-        json,
-        'emptyText',
-        path,
+      final label = _requiredString(
+        entry,
+        'label',
+        entryPath,
         wire,
         maxLength: limits.maxLabelLength,
-      ),
-      a11yLabel: a11yLabel,
-      fallbackText: fallbackText,
-    );
+      );
+      final value = _requiredString(
+        entry,
+        'value',
+        entryPath,
+        wire,
+        maxLength: limits.maxLabelLength,
+      );
+      if (label == null || value == null) continue;
+      parsed.add(
+        AiUiDetailItem(
+          label: label,
+          value: value,
+          valueTone: _enum(
+            entry,
+            'valueTone',
+            entryPath,
+            wire,
+            AiUiTone.tryFromWire,
+            AiUiTone.neutral,
+          ),
+          isLtrValue: _bool(
+            entry,
+            'isLtrValue',
+            entryPath,
+            wire,
+            defaultValue: false,
+          ),
+        ),
+      );
+    }
+    return parsed;
   }
 
-  AiUiNode? _listItem(
+  /// A receipt's emphasised bottom line. A malformed total drops the total, not
+  /// the receipt — the detail rows above it are still worth reading.
+  AiUiReceiptTotal? _receiptTotal(
     Map<String, dynamic> json,
     String path,
-    String id,
-    String? a11yLabel,
-    String? fallbackText,
+    String wire,
   ) {
-    const wire = 'list_item';
-    _unknownKeys(json, path, wire, const {
-      'title',
-      'subtitle',
-      'leadingIcon',
-      'leadingImage',
-      'badge',
-      'trailingText',
-      'action',
-    });
-
-    final title = _requiredString(
-      json,
-      'title',
-      path,
+    final raw = json['total'];
+    if (raw == null) return null;
+    if (raw is! Map<String, dynamic>) {
+      add(
+        AiUiDiagnosticCode.invalidProperty,
+        '$path.total',
+        nodeType: wire,
+        detail: 'total is ${raw.runtimeType}, expected object',
+      );
+      return null;
+    }
+    final label = _requiredString(
+      raw,
+      'label',
+      '$path.total',
       wire,
       maxLength: limits.maxLabelLength,
     );
-    if (title == null) return null;
-
-    return AiUiListItemNode(
-      id: id,
-      title: title,
-      subtitle: _optionalString(
-        json,
-        'subtitle',
-        path,
-        wire,
-        maxLength: limits.maxTextLength,
-      ),
-      leadingIcon: _optionalString(
-        json,
-        'leadingIcon',
-        path,
-        wire,
-        maxLength: 120,
-      ),
-      leadingImage: _nestedImage(json, 'leadingImage', path, wire),
-      badge: _badge(json, 'badge', path, wire),
-      trailingText: _optionalString(
-        json,
-        'trailingText',
-        path,
-        wire,
-        maxLength: limits.maxLabelLength,
-      ),
-      action: json.containsKey('action')
-          ? action(json['action'], '$path.action', wire)
-          : null,
-      a11yLabel: a11yLabel,
-      fallbackText: fallbackText,
-    );
+    final amount = _money(raw, 'amount', '$path.total', wire);
+    if (label == null || amount == null) return null;
+    return AiUiReceiptTotal(label: label, amount: amount);
   }
 
-  AiUiNode _progress(
-    Map<String, dynamic> json,
-    String path,
-    String id,
-    String? a11yLabel,
-    String? fallbackText,
-  ) {
-    const wire = 'progress';
-    _unknownKeys(json, path, wire, const {'value', 'label'});
+  /// A provider card's stats strip.
+  List<AiUiStat> _stats(Map<String, dynamic> json, String path, String wire) {
+    final raw = json['stats'];
+    if (raw == null) return const [];
+    if (raw is! List) {
+      add(
+        AiUiDiagnosticCode.invalidProperty,
+        '$path.stats',
+        nodeType: wire,
+        detail: 'stats is ${raw.runtimeType}, expected array',
+      );
+      return const [];
+    }
 
-    double? value;
-    final raw = json['value'];
-    if (raw != null) {
-      if (raw is num) {
-        value = raw.toDouble().clamp(0, 1);
-      } else {
+    var entries = raw;
+    if (entries.length > limits.maxStats) {
+      add(
+        AiUiDiagnosticCode.limitExceeded,
+        '$path.stats',
+        nodeType: wire,
+        detail: 'stats ${entries.length} > ${limits.maxStats}',
+      );
+      entries = entries.sublist(0, limits.maxStats);
+    }
+
+    final parsed = <AiUiStat>[];
+    for (var i = 0; i < entries.length; i++) {
+      final entryPath = '$path.stats[$i]';
+      final entry = entries[i];
+      if (entry is! Map<String, dynamic>) {
         add(
           AiUiDiagnosticCode.invalidProperty,
-          path,
+          entryPath,
           nodeType: wire,
-          detail: 'value is ${raw.runtimeType}, expected number',
+          detail: 'stat is ${entry.runtimeType}, expected object',
         );
+        continue;
       }
-    }
-
-    return AiUiProgressNode(
-      id: id,
-      value: value,
-      label: _optionalString(
-        json,
+      final label = _requiredString(
+        entry,
         'label',
-        path,
-        wire,
-        maxLength: limits.maxLabelLength,
-      ),
-      a11yLabel: a11yLabel,
-      fallbackText: fallbackText,
-    );
-  }
-
-  AiUiNode _loading(
-    Map<String, dynamic> json,
-    String path,
-    String id,
-    String? a11yLabel,
-    String? fallbackText,
-  ) {
-    const wire = 'loading';
-    _unknownKeys(json, path, wire, const {'label'});
-    return AiUiLoadingNode(
-      id: id,
-      label: _optionalString(
-        json,
-        'label',
-        path,
-        wire,
-        maxLength: limits.maxLabelLength,
-      ),
-      a11yLabel: a11yLabel,
-      fallbackText: fallbackText,
-    );
-  }
-
-  // ── Semantic parsers ──────────────────────────────────────────────────────
-
-  AiUiNode? _serviceCard(
-    Map<String, dynamic> json,
-    String path,
-    String id,
-    String? a11yLabel,
-    String? fallbackText,
-  ) {
-    const wire = 'service_card';
-    _unknownKeys(json, path, wire, const {
-      'serviceId',
-      'title',
-      'subtitle',
-      'price',
-      'ratingValue',
-      'image',
-      'badge',
-      'action',
-    });
-
-    final serviceId = _requiredString(json, 'serviceId', path, wire);
-    final title = _requiredString(
-      json,
-      'title',
-      path,
-      wire,
-      maxLength: limits.maxLabelLength,
-    );
-    if (serviceId == null || title == null) return null;
-
-    return AiUiServiceCardNode(
-      id: id,
-      serviceId: serviceId,
-      title: title,
-      subtitle: _optionalString(
-        json,
-        'subtitle',
-        path,
-        wire,
-        maxLength: limits.maxTextLength,
-      ),
-      price: _money(json, 'price', path, wire),
-      ratingValue: _boundedDouble(json, 'ratingValue', path, wire, 0, 5),
-      image: _nestedImage(json, 'image', path, wire),
-      badge: _badge(json, 'badge', path, wire),
-      action: json.containsKey('action')
-          ? action(json['action'], '$path.action', wire)
-          : null,
-      a11yLabel: a11yLabel,
-      fallbackText: fallbackText,
-    );
-  }
-
-  AiUiNode? _appointmentCard(
-    Map<String, dynamic> json,
-    String path,
-    String id,
-    String? a11yLabel,
-    String? fallbackText,
-  ) {
-    const wire = 'appointment_card';
-    _unknownKeys(json, path, wire, const {
-      'appointmentId',
-      'title',
-      'startsAt',
-      'whereText',
-      'status',
-      'statusTone',
-      'action',
-    });
-
-    final appointmentId = _requiredString(json, 'appointmentId', path, wire);
-    final title = _requiredString(
-      json,
-      'title',
-      path,
-      wire,
-      maxLength: limits.maxLabelLength,
-    );
-    final startsAt = _instant(json, 'startsAt', path, wire);
-    if (appointmentId == null || title == null || startsAt == null) return null;
-
-    return AiUiAppointmentCardNode(
-      id: id,
-      appointmentId: appointmentId,
-      title: title,
-      startsAt: startsAt,
-      whereText: _optionalString(
-        json,
-        'whereText',
-        path,
-        wire,
-        maxLength: limits.maxTextLength,
-      ),
-      status: _optionalString(
-        json,
-        'status',
-        path,
+        entryPath,
         wire,
         maxLength: limits.maxChipLabelLength,
-      ),
-      statusTone: _enum(
-        json,
-        'statusTone',
-        path,
+      );
+      final value = _requiredString(
+        entry,
+        'value',
+        entryPath,
         wire,
-        AiUiTone.tryFromWire,
-        AiUiTone.neutral,
-      ),
-      action: json.containsKey('action')
-          ? action(json['action'], '$path.action', wire)
-          : null,
-      a11yLabel: a11yLabel,
-      fallbackText: fallbackText,
-    );
+        maxLength: limits.maxChipLabelLength,
+      );
+      if (label == null || value == null) continue;
+      parsed.add(AiUiStat(label: label, value: value));
+    }
+    return parsed;
   }
 
-  AiUiNode? _branchCard(
+  /// A `request_summary`'s maps row. Its action is optional, so an
+  /// unresolvable one leaves static address text rather than removing the row —
+  /// the address is still information.
+  AiUiLocationRef? _locationRef(
     Map<String, dynamic> json,
     String path,
-    String id,
-    String? a11yLabel,
-    String? fallbackText,
+    String wire,
   ) {
-    const wire = 'branch_card';
-    _unknownKeys(json, path, wire, const {
-      'branchId',
-      'name',
+    final raw = json['location'];
+    if (raw == null) return null;
+    if (raw is! Map<String, dynamic>) {
+      add(
+        AiUiDiagnosticCode.invalidProperty,
+        '$path.location',
+        nodeType: wire,
+        detail: 'location is ${raw.runtimeType}, expected object',
+      );
+      return null;
+    }
+    final addressText = _requiredString(
+      raw,
       'addressText',
-      'distanceMeters',
-      'status',
-      'statusTone',
-      'action',
-    });
-
-    final branchId = _requiredString(json, 'branchId', path, wire);
-    final name = _requiredString(
-      json,
-      'name',
-      path,
+      '$path.location',
       wire,
       maxLength: limits.maxLabelLength,
     );
-    if (branchId == null || name == null) return null;
+    if (addressText == null) return null;
+    return AiUiLocationRef(
+      addressText: addressText,
+      label: _optionalString(
+        raw,
+        'label',
+        '$path.location',
+        wire,
+        maxLength: limits.maxLabelLength,
+      ),
+      action: raw.containsKey('action')
+          ? action(raw['action'], '$path.location.action', wire)
+          : null,
+    );
+  }
 
-    return AiUiBranchCardNode(
-      id: id,
-      branchId: branchId,
-      name: name,
-      addressText: _optionalString(
-        json,
-        'addressText',
-        path,
-        wire,
-        maxLength: limits.maxTextLength,
-      ),
-      distanceMeters: _boundedDouble(
-        json,
-        'distanceMeters',
-        path,
-        wire,
-        0,
-        40000000,
-      ),
-      status: _optionalString(
-        json,
-        'status',
-        path,
+  /// A `time_slots` grid. Slot ids must be unique — a duplicate would make
+  /// "which one is selected" ambiguous, so the later entry is dropped.
+  List<AiUiTimeSlot> _slots(
+    Map<String, dynamic> json,
+    String path,
+    String wire,
+  ) {
+    final raw = json['slots'];
+    if (raw is! List) {
+      add(
+        AiUiDiagnosticCode.missingRequiredProperty,
+        '$path.slots',
+        nodeType: wire,
+        detail: 'slots is ${raw.runtimeType}, expected array',
+      );
+      return const [];
+    }
+
+    var entries = raw;
+    if (entries.length > limits.maxTimeSlots) {
+      add(
+        AiUiDiagnosticCode.limitExceeded,
+        '$path.slots',
+        nodeType: wire,
+        detail: 'slots ${entries.length} > ${limits.maxTimeSlots}',
+      );
+      entries = entries.sublist(0, limits.maxTimeSlots);
+    }
+
+    final parsed = <AiUiTimeSlot>[];
+    final seen = <String>{};
+    for (var i = 0; i < entries.length; i++) {
+      final entryPath = '$path.slots[$i]';
+      final entry = entries[i];
+      if (entry is! Map<String, dynamic>) {
+        add(
+          AiUiDiagnosticCode.invalidProperty,
+          entryPath,
+          nodeType: wire,
+          detail: 'slot is ${entry.runtimeType}, expected object',
+        );
+        continue;
+      }
+      final slotId = _requiredString(entry, 'id', entryPath, wire);
+      final label = _requiredString(
+        entry,
+        'label',
+        entryPath,
         wire,
         maxLength: limits.maxChipLabelLength,
-      ),
-      statusTone: _enum(
-        json,
-        'statusTone',
-        path,
-        wire,
-        AiUiTone.tryFromWire,
-        AiUiTone.neutral,
-      ),
-      action: json.containsKey('action')
-          ? action(json['action'], '$path.action', wire)
-          : null,
-      a11yLabel: a11yLabel,
-      fallbackText: fallbackText,
-    );
+      );
+      if (slotId == null || label == null) continue;
+      if (!seen.add(slotId)) {
+        add(
+          AiUiDiagnosticCode.invalidProperty,
+          entryPath,
+          nodeType: wire,
+          detail: 'duplicate slot id',
+        );
+        continue;
+      }
+      parsed.add(
+        AiUiTimeSlot(
+          id: slotId,
+          label: label,
+          enabled: _bool(entry, 'enabled', entryPath, wire, defaultValue: true),
+        ),
+      );
+    }
+    return parsed;
   }
 
-  AiUiNode? _documentCard(
+  /// A `location_picker`'s saved places.
+  List<AiUiSavedLocation> _savedLocations(
     Map<String, dynamic> json,
     String path,
-    String id,
-    String? a11yLabel,
-    String? fallbackText,
+    String wire,
   ) {
-    const wire = 'document_card';
-    _unknownKeys(json, path, wire, const {
-      'documentId',
-      'title',
-      'status',
-      'statusTone',
-      'action',
-    });
+    final raw = json['savedLocations'];
+    if (raw == null) return const [];
+    if (raw is! List) {
+      add(
+        AiUiDiagnosticCode.invalidProperty,
+        '$path.savedLocations',
+        nodeType: wire,
+        detail: 'savedLocations is ${raw.runtimeType}, expected array',
+      );
+      return const [];
+    }
 
-    final documentId = _requiredString(json, 'documentId', path, wire);
-    final title = _requiredString(
-      json,
-      'title',
-      path,
-      wire,
-      maxLength: limits.maxLabelLength,
-    );
-    final status = _requiredString(
-      json,
-      'status',
-      path,
-      wire,
-      maxLength: limits.maxChipLabelLength,
-    );
-    if (documentId == null || title == null || status == null) return null;
+    var entries = raw;
+    if (entries.length > limits.maxSavedLocations) {
+      add(
+        AiUiDiagnosticCode.limitExceeded,
+        '$path.savedLocations',
+        nodeType: wire,
+        detail:
+            'savedLocations ${entries.length} > '
+            '${limits.maxSavedLocations}',
+      );
+      entries = entries.sublist(0, limits.maxSavedLocations);
+    }
 
-    return AiUiDocumentCardNode(
-      id: id,
-      documentId: documentId,
-      title: title,
-      status: status,
-      statusTone: _enum(
-        json,
-        'statusTone',
-        path,
+    final parsed = <AiUiSavedLocation>[];
+    for (var i = 0; i < entries.length; i++) {
+      final entryPath = '$path.savedLocations[$i]';
+      final entry = entries[i];
+      if (entry is! Map<String, dynamic>) {
+        add(
+          AiUiDiagnosticCode.invalidProperty,
+          entryPath,
+          nodeType: wire,
+          detail: 'saved location is ${entry.runtimeType}, expected object',
+        );
+        continue;
+      }
+      final placeId = _requiredString(entry, 'id', entryPath, wire);
+      final name = _requiredString(
+        entry,
+        'name',
+        entryPath,
         wire,
-        AiUiTone.tryFromWire,
-        AiUiTone.neutral,
-      ),
-      action: json.containsKey('action')
-          ? action(json['action'], '$path.action', wire)
-          : null,
-      a11yLabel: a11yLabel,
-      fallbackText: fallbackText,
-    );
+        maxLength: limits.maxLabelLength,
+      );
+      final addressText = _requiredString(
+        entry,
+        'addressText',
+        entryPath,
+        wire,
+        maxLength: limits.maxLabelLength,
+      );
+      if (placeId == null || name == null || addressText == null) continue;
+      parsed.add(
+        AiUiSavedLocation(
+          id: placeId,
+          name: name,
+          addressText: addressText,
+          icon: _optionalString(
+            entry,
+            'icon',
+            entryPath,
+            wire,
+            maxLength: 120,
+          ),
+        ),
+      );
+    }
+    return parsed;
   }
 
-  AiUiNode? _quickReply(
+  /// A `media_request`'s options.
+  List<AiUiMediaOption> _mediaOptions(
     Map<String, dynamic> json,
     String path,
-    String id,
-    String? a11yLabel,
-    String? fallbackText,
+    String wire,
   ) {
-    const wire = 'quick_reply';
-    _unknownKeys(json, path, wire, const {'options'});
-
     final raw = json['options'];
     if (raw is! List) {
       add(
         AiUiDiagnosticCode.missingRequiredProperty,
-        path,
+        '$path.options',
         nodeType: wire,
-        detail: 'options missing or not an array',
+        detail: 'options is ${raw.runtimeType}, expected array',
       );
-      return null;
+      return const [];
     }
 
     var entries = raw;
-    if (entries.length > limits.maxQuickReplyOptions) {
+    if (entries.length > limits.maxMediaOptions) {
       add(
         AiUiDiagnosticCode.limitExceeded,
         '$path.options',
         nodeType: wire,
-        detail:
-            '${entries.length} options > ${limits.maxQuickReplyOptions}, '
-            'truncated',
+        detail: 'options ${entries.length} > ${limits.maxMediaOptions}',
       );
-      entries = entries.sublist(0, limits.maxQuickReplyOptions);
+      entries = entries.sublist(0, limits.maxMediaOptions);
     }
 
-    final options = <AiUiQuickReplyOption>[];
+    final parsed = <AiUiMediaOption>[];
     for (var i = 0; i < entries.length; i++) {
-      final optionPath = '$path.options[$i]';
+      final entryPath = '$path.options[$i]';
       final entry = entries[i];
       if (entry is! Map<String, dynamic>) {
         add(
           AiUiDiagnosticCode.invalidProperty,
-          optionPath,
+          entryPath,
           nodeType: wire,
           detail: 'option is ${entry.runtimeType}, expected object',
         );
@@ -1394,33 +971,26 @@ class _Run {
       final label = _requiredString(
         entry,
         'label',
-        optionPath,
+        entryPath,
         wire,
-        maxLength: limits.maxChipLabelLength,
+        maxLength: limits.maxLabelLength,
       );
-      final resolved = action(entry['action'], '$optionPath.action', wire);
-      if (label == null || resolved == null) continue;
-      options.add(AiUiQuickReplyOption(label: label, action: resolved));
-    }
-
-    if (options.length < limits.minQuickReplyOptions) {
-      add(
-        AiUiDiagnosticCode.limitExceeded,
-        '$path.options',
-        nodeType: wire,
-        detail:
-            '${options.length} valid options < '
-            '${limits.minQuickReplyOptions}',
+      if (label == null) continue;
+      parsed.add(
+        AiUiMediaOption(
+          label: label,
+          source: _enum(
+            entry,
+            'source',
+            entryPath,
+            wire,
+            AiUiMediaSource.tryFromWire,
+            AiUiMediaSource.gallery,
+          ),
+        ),
       );
-      return null;
     }
-
-    return AiUiQuickReplyNode(
-      id: id,
-      options: options,
-      a11yLabel: a11yLabel,
-      fallbackText: fallbackText,
-    );
+    return parsed;
   }
 
   // ── Shared parsing helpers ────────────────────────────────────────────────
@@ -1576,62 +1146,117 @@ class _Run {
     return AiUiAction(type: type, params: params, routeParams: routeParams);
   }
 
-  /// Reads an image source from a map that carries an `assetId`.
+  /// Reads the one canonical image object — `{url?, assetId?}` — from [json].
   ///
-  /// **schemaVersion 1 is `assetId`-only.** A `url` is rejected outright
-  /// rather than host-checked: an agent-supplied image URL is a network and
-  /// tracking surface, and every image v1 needs is something the app already
-  /// ships. Semantic cards carry an entity id, so the app fetches the real
-  /// artwork itself instead of trusting a URL in the payload.
+  /// The same code runs for every image in the protocol, which is what makes
+  /// the precedence identical everywhere:
   ///
-  /// `AiUiUrlPolicy` still exists and still gates the `open_url` action; it is
-  /// deliberately not consulted here.
+  /// 1. a `url` that passes the host's image URL policy wins, even when an
+  ///    `assetId` sits beside it;
+  /// 2. an absent, empty or **rejected** `url` falls through to `assetId`,
+  ///    checked against the host's published catalog;
+  /// 3. neither usable yields `null`, and the owning node shows its no-image
+  ///    state (for the `image` primitive, whose whole purpose is the picture,
+  ///    that means the node is dropped).
+  ///
+  /// Falling *through* a rejected URL rather than failing on it is deliberate:
+  /// `{"url": "http://…", "assetId": "empty_state"}` should show the
+  /// illustration the backend attached as a fallback, not a hole. Every
+  /// rejection still records a diagnostic, so a misconfigured host or a bad
+  /// URL is visible rather than merely silent.
+  ///
+  /// `assetId` is never a path. It is matched against [knownAssetIds] — the
+  /// ids the host publishes — so a Flutter asset path, a package path, an
+  /// Android/iOS resource name or an invented filename resolves to nothing.
   AiUiImageSource? imageSource(
     Map<String, dynamic> json,
     String path,
     String wire,
   ) {
-    if (json.containsKey('url')) {
-      add(
-        AiUiDiagnosticCode.reservedProperty,
-        path,
-        nodeType: wire,
-        detail: 'remote image url is not supported in schemaVersion 1',
-      );
-    }
+    final url = _imageUrl(json, path, wire);
+    final assetId = _imageAssetId(json, path, wire);
 
-    final assetId = json['assetId'];
-    if (assetId == null) {
-      add(
-        AiUiDiagnosticCode.missingRequiredProperty,
-        path,
-        nodeType: wire,
-        detail: 'assetId is required',
-      );
+    if (url == null && assetId == null) {
+      // Neither half survived. Only say so when the agent supplied nothing to
+      // begin with — an explicit `null` counts as nothing, while a value that
+      // was *rejected* has already produced its own, more specific diagnostic.
+      if (json['url'] == null && json['assetId'] == null) {
+        add(
+          AiUiDiagnosticCode.missingRequiredProperty,
+          path,
+          nodeType: wire,
+          detail: 'image needs a url or an assetId',
+        );
+      }
       return null;
     }
-    if (assetId is! String || assetId.isEmpty) {
+
+    return _countedImage(
+      AiUiImageSource(url: url, assetId: assetId),
+      path,
+      wire,
+    );
+  }
+
+  /// The `url` half: absent, empty, wrong type or policy-rejected all yield
+  /// `null` so the caller can fall through to the asset.
+  String? _imageUrl(Map<String, dynamic> json, String path, String wire) {
+    final raw = json['url'];
+    if (raw == null) return null;
+    if (raw is! String) {
       add(
         AiUiDiagnosticCode.invalidProperty,
-        path,
+        '$path.url',
         nodeType: wire,
-        detail: 'assetId is ${assetId.runtimeType}, expected string',
+        detail: 'url is ${raw.runtimeType}, expected string',
       );
       return null;
     }
+    // An empty string is "no url", not a broken one: it is how a backend
+    // template says "I had nothing to put here" without dropping the key.
+    if (raw.isEmpty) return null;
+
+    final rejection = imageUrlPolicy.reject(raw);
+    if (rejection != null) {
+      // The reason never contains the URL itself — an AI-supplied URL can
+      // carry tracking identifiers, and diagnostics are logged.
+      add(
+        AiUiDiagnosticCode.invalidProperty,
+        '$path.url',
+        nodeType: wire,
+        detail: 'image url refused: $rejection',
+      );
+      return null;
+    }
+    return raw.trim();
+  }
+
+  /// The `assetId` half: only an id this host publishes survives.
+  String? _imageAssetId(Map<String, dynamic> json, String path, String wire) {
+    final raw = json['assetId'];
+    if (raw == null) return null;
+    if (raw is! String) {
+      add(
+        AiUiDiagnosticCode.invalidProperty,
+        '$path.assetId',
+        nodeType: wire,
+        detail: 'assetId is ${raw.runtimeType}, expected string',
+      );
+      return null;
+    }
+    if (raw.isEmpty) return null;
 
     final known = knownAssetIds;
-    if (known != null && !known.contains(assetId)) {
+    if (known != null && !known.contains(raw)) {
       add(
         AiUiDiagnosticCode.unknownAssetId,
         path,
         nodeType: wire,
-        detail: 'assetId "$assetId" not published by this host',
+        detail: 'assetId "$raw" not published by this host',
       );
       return null;
     }
-
-    return _countedImage(AiUiAssetImage(assetId), path, wire);
+    return raw;
   }
 
   AiUiImageSource? _countedImage(

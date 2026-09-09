@@ -18,7 +18,9 @@ import '../support/attachment_fixtures.dart';
 /// A token that must never appear anywhere but the request header.
 const String kProbeToken = 'tok_SECRET_c0ffee_do_not_leak';
 const String kConversationId = 'conv_multimodal_1';
-final Uri kStreamUrl = Uri.parse('https://agent.example/user-agent/chat/stream');
+final Uri kStreamUrl = Uri.parse(
+  'https://agent.example/user-agent/chat/stream',
+);
 final Uri kSocketUrl = Uri.parse('wss://agent.example/agent/chat/ws');
 
 // ─── fakes ──────────────────────────────────────────────────────────────────
@@ -154,11 +156,14 @@ abstract class _Transport {
   Map<String, String> get headers;
   Future<void> send(String text);
   Future<void> sendMultimodal(AiOutgoingMessage message);
+  Future<void> sendInteraction(
+    AiUiInteraction interaction, {
+    required String text,
+  });
   Future<void> dispose();
 
   String get body => bodies.last;
-  Map<String, dynamic> get decoded =>
-      jsonDecode(body) as Map<String, dynamic>;
+  Map<String, dynamic> get decoded => jsonDecode(body) as Map<String, dynamic>;
   List<AiChatErrorEvent> get errors =>
       events.whereType<AiChatErrorEvent>().toList();
 }
@@ -197,6 +202,15 @@ class _SseTransport extends _Transport {
   @override
   Future<void> sendMultimodal(AiOutgoingMessage message) async {
     await _source.sendMultimodal(message);
+    await pumpEventQueue();
+  }
+
+  @override
+  Future<void> sendInteraction(
+    AiUiInteraction interaction, {
+    required String text,
+  }) async {
+    await _source.sendInteraction(interaction, text: text);
     await pumpEventQueue();
   }
 
@@ -249,22 +263,46 @@ class _WebSocketTransport extends _Transport {
   }
 
   @override
+  Future<void> sendInteraction(
+    AiUiInteraction interaction, {
+    required String text,
+  }) async {
+    await _source.sendInteraction(interaction, text: text);
+    await pumpEventQueue();
+  }
+
+  @override
   Future<void> dispose() async {
     await _subscription.cancel();
     await _source.dispose();
   }
 }
 
+/// One answer, shared by both transports' cases.
+const _interaction = AiUiInteraction(
+  interactionId: 'int_1',
+  nodeId: 'slots_1',
+  nodeType: AiUiNodeType.timeSlots,
+  messageId: 'msg_7',
+  kind: AiUiInteractionKind.slotSelected,
+  value: AiUiSelectionValue(id: 's_0900', label: '9:00 AM'),
+  text: 'Book me the 9:00 AM slot',
+);
+
 void main() {
-  final transports = <String, _Transport Function({
-    AiAttachmentUploader? uploader,
-    String? token,
-  })>{
-    'SSE': ({uploader, token}) =>
-        _SseTransport(uploader: uploader, token: token),
-    'WebSocket': ({uploader, token}) =>
-        _WebSocketTransport(uploader: uploader, token: token),
-  };
+  final transports =
+      <
+        String,
+        _Transport Function({
+          AiAttachmentUploader? uploader,
+          String? token,
+        })
+      >{
+        'SSE': ({uploader, token}) =>
+            _SseTransport(uploader: uploader, token: token),
+        'WebSocket': ({uploader, token}) =>
+            _WebSocketTransport(uploader: uploader, token: token),
+      };
 
   for (final MapEntry(key: name, value: build) in transports.entries) {
     group('$name: a multimodal turn', () {
@@ -409,6 +447,69 @@ void main() {
       });
     });
 
+    group('$name: an interaction turn', () {
+      test('carries the structured answer beside the sentence', () async {
+        final transport = build();
+        addTearDown(transport.dispose);
+
+        await transport.sendInteraction(
+          _interaction,
+          text: 'Book me the 9:00 AM slot',
+        );
+
+        expect(transport.decoded, <String, dynamic>{
+          'conversation_id': kConversationId,
+          'message': 'Book me the 9:00 AM slot',
+          'interaction': <String, dynamic>{
+            'interactionId': 'int_1',
+            'nodeId': 'slots_1',
+            'nodeType': 'time_slots',
+            'messageId': 'msg_7',
+            'kind': 'slot_selected',
+            'status': 'submitted',
+            'value': <String, dynamic>{'id': 's_0900', 'label': '9:00 AM'},
+            'text': 'Book me the 9:00 AM slot',
+          },
+        });
+      });
+
+      test('uploads nothing — an answer carries no files', () async {
+        final uploader = _FakeUploader();
+        final transport = build(uploader: uploader);
+        addTearDown(transport.dispose);
+
+        await transport.sendInteraction(_interaction, text: 'x');
+
+        expect(uploader.batches, isEmpty);
+      });
+
+      test('the token stays out of the body', () async {
+        final transport = build(token: 'sanad-secret-token');
+        addTearDown(transport.dispose);
+
+        await transport.sendInteraction(
+          _interaction,
+          text: 'Book me the 9:00 AM slot',
+        );
+
+        expect(transport.bodies.single, isNot(contains('sanad-secret-token')));
+      });
+
+      test('a cancellation travels with its status intact', () async {
+        final transport = build();
+        addTearDown(transport.dispose);
+
+        await transport.sendInteraction(
+          _interaction.withStatus(AiUiInteractionStatus.cancelled),
+          text: 'Skipped for now.',
+        );
+
+        final interaction =
+            transport.decoded['interaction']! as Map<String, dynamic>;
+        expect(interaction['status'], 'cancelled');
+      });
+    });
+
     group('$name: after disposal', () {
       test('a multimodal turn uploads nothing and sends nothing', () async {
         final uploader = _FakeUploader();
@@ -420,6 +521,15 @@ void main() {
         );
 
         expect(uploader.batches, isEmpty);
+        expect(transport.bodies, isEmpty);
+      });
+
+      test('an interaction sends nothing', () async {
+        final transport = build();
+
+        await transport.dispose();
+        await transport.sendInteraction(_interaction, text: 'x');
+
         expect(transport.bodies, isEmpty);
       });
     });

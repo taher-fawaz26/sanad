@@ -30,6 +30,7 @@ final class AiAssetResolver extends Equatable {
         'empty_state': AiUiAssetRef.image(AppImages.emptyState),
         'service_tools': AiUiAssetRef.image(AppImages.serviceTools),
         'no_branch_locations': AiUiAssetRef.image(AppImages.noBranchLocations),
+        'ai_map_preview': AiUiAssetRef.image(AppImages.aiChatMapPreview),
       };
 
   final Map<String, AiUiAssetRef> assets;

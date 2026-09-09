@@ -1,10 +1,17 @@
+import 'package:ai_ui_renderer/ai_ui_renderer.dart';
+import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:sanad_client/src/features/ai_chat/src/ai_chat_config.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/platform/attachments/permissions_ai_permission_gateway.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/platform/audio/audio_session_manager.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/platform/audio/just_audio_player.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/platform/voice/mock_ai_voice_session.dart';
+import 'package:sanad_client/src/features/ai_chat/src/data/platform/voice/mock_voice_scenarios.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/platform/voice/record_voice_capture.dart';
+import 'package:sanad_client/src/features/ai_chat/src/presentation/actions/ai_chat_action_handlers.dart';
+import 'package:sanad_client/src/features/ai_chat/src/presentation/actions/ai_voice_interaction_sink.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/bloc/ai_voice_session_bloc.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/pages/ai_voice_session_page.dart';
 
@@ -45,8 +52,42 @@ class _AiVoiceSessionScreenState extends State<AiVoiceSessionScreen> {
         sessionMode: AudioSessionMode.recording,
       ),
       session: _audioSession,
+      // The scripted semantic beats. Opt-in: without it the session is the
+      // echo-only mock it has always been, which is what the existing mock
+      // tests exercise.
+      uiScript: MockVoiceScenarios.standard,
     ),
     permissions: const PermissionsAiPermissionGateway(),
+    validator: AiChatConfig.validator(keepUnsupportedNodes: !kReleaseMode),
+    diagnostics: const LoggingAiUiDiagnosticsSink(),
+  );
+
+  /// Built once, for the same reason the chat page builds its own once:
+  /// `AiUiHost` compares environments to decide whether to notify, and a fresh
+  /// instance per build would invalidate the panel on every frame.
+  late final AiUiEnvironment _environment = AiUiEnvironment(
+    registry: defaultRendererRegistry(
+      showUnsupportedMarker: !kReleaseMode,
+    ),
+    // A *narrowed* registry. `send_message` is absent on purpose: there is no
+    // conversation to post a turn into during a voice session, and the answer
+    // leaves over the session's own channel instead. Capability requests stay,
+    // because a permission prompt is as meaningful here as it is in chat.
+    actions: buildAiChatActionRegistry(
+      onSendMessage: (_) {},
+      interactions: AiVoiceInteractionSink(_bloc),
+    ),
+    diagnostics: const LoggingAiUiDiagnosticsSink(),
+    interactions: AiVoiceInteractionSink(_bloc),
+    ledger: _bloc.ledger,
+    strings: AiUiStrings(
+      metresSuffix: 'ai_chat.unit_metres'.tr(),
+      kilometresSuffix: 'ai_chat.unit_kilometres'.tr(),
+      unsupportedContent: 'ai_chat.unsupported_content'.tr(),
+      openInMaps: 'ai_chat.open_in_maps'.tr(),
+      ratingOutOfFive: 'ai_chat.rating_out_of_five'.tr(),
+      distanceLabel: 'ai_chat.distance_label'.tr(),
+    ),
   );
 
   /// This route's app-lifecycle boundary — the same concept as the chat
@@ -73,6 +114,11 @@ class _AiVoiceSessionScreenState extends State<AiVoiceSessionScreen> {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      BlocProvider.value(value: _bloc, child: const AiVoiceSessionPage());
+  Widget build(BuildContext context) => BlocProvider.value(
+    value: _bloc,
+    child: AiUiHost(
+      environment: _environment,
+      child: const AiVoiceSessionPage(),
+    ),
+  );
 }

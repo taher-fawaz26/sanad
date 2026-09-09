@@ -37,9 +37,12 @@ abstract final class AddBranchParamsMapper {
       workerIds: draft.selectedWorkers.map((w) => w.id).toList(growable: false),
       availabilityMode: _availabilityMode(isCustom),
       availability: schedule.isNotEmpty ? schedule : null,
-      servingAreaPlaceIds: servingAreaPlaceIds.isNotEmpty
-          ? servingAreaPlaceIds
-          : null,
+      // Both are sent as-is, empty or not. `POST /branches` requires them
+      // with at least one entry, so mapping an empty selection to `null` (as
+      // this used to) only converted a wizard bug into a server `400` with a
+      // less useful message. `AddBranchDraftState`'s step gates keep the
+      // submit button disabled until both are populated.
+      servingAreaPlaceIds: servingAreaPlaceIds,
       serviceIds: _serviceIds(draft),
     );
   }
@@ -71,19 +74,25 @@ abstract final class AddBranchParamsMapper {
       .toSet()
       .toList(growable: false);
 
-  static List<String>? _serviceIds(AddBranchDraft draft) =>
-      draft.selectedServices.isNotEmpty
-      ? draft.selectedServices.map((s) => s.id).toList(growable: false)
-      : null;
+  static List<String> _serviceIds(AddBranchDraft draft) =>
+      draft.selectedServices.map((s) => s.id).toList(growable: false);
 
   /// Builds a full-payload PATCH from the current [branch] state.
   ///
   /// Used by section-by-section Branch Details editing: apply a single
   /// section's change via [BranchEntity.copyWith] first, then pass the
   /// resulting entity here to reconstruct the complete update request so
-  /// unrelated fields are never dropped or nulled out. `serviceIds` is
-  /// intentionally omitted — the backend currently ignores it (deprecated;
-  /// `services` always returns `null`), so there is nothing to preserve.
+  /// unrelated fields are never dropped or nulled out.
+  ///
+  /// `serviceIds` is still omitted, but for a different reason than before:
+  /// `BranchEntity` does not carry the provider-service ids back (`services`
+  /// returns `null`), so there is nothing to echo. Omitting the key leaves the
+  /// server's own value untouched, which is the correct no-op. Sending an
+  /// empty array instead would now be rejected outright.
+  ///
+  /// `servingAreaPlaceIds` is filtered for the same reason: an empty list from
+  /// a branch whose areas failed to load must read as "no change", not as an
+  /// attempt to clear them.
   ///
   /// [workerIds] overrides the branch's current team — needed because the
   /// worker-selection sheet returns `WorkerEntity` (from the `workers`
@@ -108,7 +117,10 @@ abstract final class AddBranchParamsMapper {
       socialMediaLink: branch.socialMediaLink,
       availabilityMode: branch.availabilityMode,
       availability: branch.availability,
-      servingAreaPlaceIds: branch.servingAreaPlaceIds,
+      servingAreaPlaceIds:
+          (branch.servingAreaPlaceIds?.isEmpty ?? true)
+          ? null
+          : branch.servingAreaPlaceIds,
       workerIds:
           workerIds ?? branch.workers.map((w) => w.id).toList(growable: false),
     );

@@ -18,10 +18,17 @@ import 'package:go_router/go_router.dart';
 class AuthModule extends FeatureModule {
   /// [onSessionBoundary] — see [AuthDI.init]. Typically
   /// `() => moduleRegistry.disposeAll()`, wired by the app composition root.
-  AuthModule({void Function()? onSessionBoundary})
-    : _onSessionBoundary = onSessionBoundary;
+  AuthModule({
+    void Function()? onSessionBoundary,
+    void Function()? onSessionStarted,
+    Future<void> Function()? onBeforeSessionEnd,
+  }) : _onSessionBoundary = onSessionBoundary,
+       _onSessionStarted = onSessionStarted,
+       _onBeforeSessionEnd = onBeforeSessionEnd;
 
   final void Function()? _onSessionBoundary;
+  final void Function()? _onSessionStarted;
+  final Future<void> Function()? _onBeforeSessionEnd;
 
   @override
   String get name => 'auth';
@@ -33,8 +40,11 @@ class AuthModule extends FeatureModule {
   List<String> get dependencies => const [];
 
   @override
-  void registerDependencies() =>
-      AuthDI.init(onSessionBoundary: _onSessionBoundary);
+  void registerDependencies() => AuthDI.init(
+    onSessionBoundary: _onSessionBoundary,
+    onSessionStarted: _onSessionStarted,
+    onBeforeSessionEnd: _onBeforeSessionEnd,
+  );
 
   /// Rehydrate the persisted session from Hive so the splash screen can
   /// route the user without re-authenticating. Runs after DI registration

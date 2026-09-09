@@ -23,7 +23,7 @@ behavioral claims as `NEEDS_CONFIRMATION` until a dedicated page is written.
 | `registration` | Provider onboarding + document (Emirates ID / trade licence) OCR review | **[detailed](registration.md)** |
 | `organization_settings` | Business profile, identity, categories, social, working hours, legal docs | **[detailed](organization-settings.md)** |
 | `home` | Provider home/dashboard shell tab | location only |
-| `requests` | Incoming service requests | location only |
+| `requests` | Client request workspace: server-derived tabs, own offer thread, job actions | [provider-requests.md](provider-requests.md) **detailed** |
 | `messages` | Messaging tab | location only |
 | `schedule` | Availability calendar | location only |
 | `availability` | On/off-duty state | location only |
@@ -52,6 +52,7 @@ behavioral claims as `NEEDS_CONFIRMATION` until a dedicated page is written.
 | `favorites` | Saved services | location only |
 | `wallet` | Payment wallet | location only |
 | `support` | In-app support | location only |
+| `client_requests` | Request lifecycle: draft, submit, negotiate offers, confirm/dispute | [client-requests.md](client-requests.md) **detailed** |
 | `profile` | Client-specific profile | location only |
 
 ## Shared feature packages (`packages/`)
@@ -60,6 +61,8 @@ behavioral claims as `NEEDS_CONFIRMATION` until a dedicated page is written.
 |---------|---------|-----|
 | `otp` | OTP verification view/bloc (login & registration) | **[detailed](otp.md)** |
 | `auth` | Authentication vertical (login, session, splash) | **[detailed](auth.md)** |
+| `notifications` | Notification inbox, FCM registration lifecycle, tap routing | **[detailed](notifications.md)** |
+| `requests_core` | Lifecycle enums, shared negotiation bodies, ISO-8601 codec, structured-conflict reader | see the two request docs |
 | `account_settings` | Account credentials & settings shared UI; also hosts the app-lock gate | **[detailed](app-lock.md)** (app lock only) |
 | `contact_verification` | Phone/email verification | location only |
 | `document_flow` | Generic document capture/extraction/review pipeline | **[detailed](document-flow.md)** |

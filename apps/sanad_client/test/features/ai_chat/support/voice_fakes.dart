@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:ai_ui_protocol/ai_ui_protocol.dart';
+import 'package:sanad_client/src/features/ai_chat/src/domain/entities/ai_voice_event.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/enums/ai_voice_session_status.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/services/ai_voice_capture.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/services/ai_voice_session.dart';
@@ -55,6 +57,8 @@ class FakeVoiceSession implements AiVoiceSession {
       StreamController<AiVoiceSessionStatus>.broadcast();
   final StreamController<double> levelController =
       StreamController<double>.broadcast();
+  final StreamController<AiVoiceEvent> eventController =
+      StreamController<AiVoiceEvent>.broadcast();
 
   @override
   String? failureKey;
@@ -65,12 +69,16 @@ class FakeVoiceSession implements AiVoiceSession {
   int endCount = 0;
   int disposeCount = 0;
   final List<bool> muteCalls = <bool>[];
+  final List<AiUiInteraction> interactions = <AiUiInteraction>[];
 
   @override
   Stream<AiVoiceSessionStatus> get status => statusController.stream;
 
   @override
   Stream<double> get inputLevel => levelController.stream;
+
+  @override
+  Stream<AiVoiceEvent> get events => eventController.stream;
 
   @override
   Future<void> start() async => startCount++;
@@ -85,6 +93,10 @@ class FakeVoiceSession implements AiVoiceSession {
   Future<void> interrupt() async => interruptCount++;
 
   @override
+  Future<void> submitInteraction(AiUiInteraction interaction) async =>
+      interactions.add(interaction);
+
+  @override
   Future<void> end() async => endCount++;
 
   @override
@@ -92,6 +104,7 @@ class FakeVoiceSession implements AiVoiceSession {
     disposeCount++;
     if (!statusController.isClosed) await statusController.close();
     if (!levelController.isClosed) await levelController.close();
+    if (!eventController.isClosed) await eventController.close();
   }
 
   /// Pushes a transition and lets it land.
@@ -103,6 +116,12 @@ class FakeVoiceSession implements AiVoiceSession {
   /// Pushes a level reading and lets it land.
   Future<void> emitLevel(double value) async {
     levelController.add(value);
+    await Future<void>.delayed(Duration.zero);
+  }
+
+  /// Pushes a semantic event and lets it land.
+  Future<void> emitEvent(AiVoiceEvent event) async {
+    eventController.add(event);
     await Future<void>.delayed(Duration.zero);
   }
 }

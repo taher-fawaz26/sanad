@@ -3,7 +3,7 @@ import 'package:ai_ui_renderer/src/rendering/ai_node_renderer.dart';
 import 'package:ai_ui_renderer/src/rendering/ai_ui_render_scope.dart';
 import 'package:ai_ui_renderer/src/rendering/ai_ui_semantics.dart';
 import 'package:ai_ui_renderer/src/rendering/ai_ui_tokens.dart';
-import 'package:app_assets/app_assets.dart';
+import 'package:ai_ui_renderer/src/rendering/primitives/ai_ui_image_view.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
@@ -74,35 +74,11 @@ final class AiUiImageRenderer extends AiNodeRenderer<AiUiImageNode> {
     BuildContext context,
     AiUiImageNode node,
     AiUiRenderScope scope,
-  ) {
-    switch (node.source) {
-      case AiUiRemoteImage(:final url):
-        // The URL already passed AiUiUrlPolicy during validation, so this is
-        // never an arbitrary host. AppNetworkImage brings caching, a shimmer
-        // placeholder and a failure placeholder for free.
-        return AppNetworkImage(url, fit: AiUiTokens.boxFit(node.fit));
-
-      case AiUiAssetImage(:final assetId):
-        final asset = scope.assets.resolve(assetId);
-        if (asset == null) {
-          scope.diagnostics.report(
-            AiUiDiagnostic(
-              code: AiUiDiagnosticCode.unknownAssetId,
-              path: node.id,
-              nodeType: AiUiNodeType.image.wire,
-              detail: 'asset unresolved at render time',
-            ),
-          );
-          return const AppImagePlaceholder();
-        }
-        return asset.isSvg
-            ? AppSvgPicture.asset(asset.path, fit: AiUiTokens.boxFit(node.fit))
-            : Image.asset(
-                asset.path,
-                package: AppAssets.package,
-                fit: AiUiTokens.boxFit(node.fit),
-                errorBuilder: (_, _, _) => const AppImagePlaceholder(),
-              );
-    }
-  }
+  ) => AiUiImageView(
+    source: node.source,
+    scope: scope,
+    nodeType: AiUiNodeType.image.wire,
+    nodeId: node.id,
+    fit: AiUiTokens.boxFit(node.fit),
+  );
 }

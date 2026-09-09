@@ -1,0 +1,25 @@
+name: requests_core
+description: >
+  Shared contract primitives for the SANAD client-request lifecycle: status and
+  offer enums, attachment models, the negotiation request bodies both roles
+  send, and a typed reader for the structured submission conflicts. Deliberately
+  role-neutral — the client and provider request *views* are intentionally
+  different shapes and are modelled separately in each app. Only what is
+  byte-identical on both sides lives here.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+
+dependencies:
+  core:
+    path: ../core
+  equatable: ^2.1.0
+  meta: ^1.16.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: ^9.0.0

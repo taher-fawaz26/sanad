@@ -29,8 +29,17 @@ final class AiUiLimits extends Equatable {
     this.maxLabelLength = 64,
     this.maxChipLabelLength = 40,
     this.maxActions = 12,
-    this.maxImages = 4,
+    this.maxImages = 8,
     this.maxLines = 20,
+    this.maxCardActions = 3,
+    this.maxDetailItems = 8,
+    this.maxTimeSlots = 12,
+    this.minTimeSlots = 2,
+    this.maxSavedLocations = 6,
+    this.maxMediaOptions = 4,
+    this.maxStats = 4,
+    this.maxCommentLength = 500,
+    this.maxInteractionTextLength = 2000,
   });
 
   static const AiUiLimits defaults = AiUiLimits();
@@ -52,8 +61,44 @@ final class AiUiLimits extends Equatable {
   final int maxLabelLength;
   final int maxChipLabelLength;
   final int maxActions;
+
+  /// Images per message. Raised from 4 when `image.url` was admitted: with
+  /// dynamic media the common case, four is one order list plus an avatar, and
+  /// the fifth picture would vanish silently. Still bounded — it caps how many
+  /// network fetches one bubble can start.
   final int maxImages;
   final int maxLines;
+
+  /// Buttons in a semantic card's attached `actions` row. Three is what the
+  /// widest Figma card uses; a fourth would wrap and stop reading as a row.
+  final int maxCardActions;
+
+  /// Label-and-value rows in a summary, receipt or details card.
+  final int maxDetailItems;
+
+  /// Selectable slots in a `time_slots` node. Twelve fills six rows of two,
+  /// which is already the tallest card in the set.
+  final int maxTimeSlots;
+
+  /// Below this a slot grid is not a choice — one option should be a
+  /// `quick_reply`, not a selector with a confirm button.
+  final int minTimeSlots;
+
+  final int maxSavedLocations;
+  final int maxMediaOptions;
+  final int maxStats;
+
+  /// Characters the user may type into a `review_request` comment field. The
+  /// agent may lower it per node; it can never raise it.
+  final int maxCommentLength;
+
+  /// Caps every free-text field on an outgoing interaction result.
+  ///
+  /// A backstop, not the primary guard: `review_request` already clamps the
+  /// comment box and the agent's own labels are bounded. What is *not*
+  /// bounded upstream is what a user types into a `location_picker`'s search
+  /// field, which is why the encoder applies this to every path.
+  final int maxInteractionTextLength;
 
   /// Child cap for a given container type.
   int childLimitFor(AiUiNodeType type) => switch (type) {
@@ -83,5 +128,14 @@ final class AiUiLimits extends Equatable {
     maxActions,
     maxImages,
     maxLines,
+    maxCardActions,
+    maxDetailItems,
+    maxTimeSlots,
+    minTimeSlots,
+    maxSavedLocations,
+    maxMediaOptions,
+    maxStats,
+    maxCommentLength,
+    maxInteractionTextLength,
   ];
 }

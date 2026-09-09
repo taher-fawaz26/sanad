@@ -144,10 +144,17 @@ class AddBranchDraft extends Equatable {
   bool get hasCustomWorkingHours =>
       customSchedule.any((day) => day.slots.isNotEmpty);
 
+  /// Location, radius **and** at least one serving area.
+  ///
+  /// The serving-area requirement is not cosmetic: `POST /branches` rejects an
+  /// empty `servingAreaPlaceIds`, and a branch with no serving area could
+  /// never be matched to a request anyway. Blocking the step is a better
+  /// answer than letting the wizard reach submit and fail with a `400`.
   bool get isStepTwoComplete =>
       coverageRadiusKm != null &&
       branchAddress != null &&
-      branchAddress!.isNotEmpty;
+      branchAddress!.isNotEmpty &&
+      servingAreas.isNotEmpty;
 
   bool get isStepThreeComplete => selectedServices.isNotEmpty;
 

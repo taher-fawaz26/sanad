@@ -151,6 +151,50 @@ abstract final class AiUiTokens {
     AiUiImageAspect.thumb => null,
   };
 
+  /// The AI surface's own green — Figma `#1A7E6B` (`main/700`).
+  ///
+  /// Not `AppColors.primary`, which is `main/600` (`#26A68C`): every AI Chat
+  /// frame specifies the darker shade for its accented text, its filled
+  /// call-to-action and its selected slot, and following `primary` here would
+  /// miss the design on the most prominent element of every card. The same
+  /// choice `AiComposerTokens.accent` documents on the client side.
+  ///
+  /// Figma also uses `#127A60` on a few of the in-card button rows — a literal
+  /// the palette does not carry, sitting between `main/700` and `main/800`.
+  /// Standardised onto `main/700` rather than admitting a fourth green.
+  static Color accent(BuildContext context) =>
+      context.appColors.palettes.main.shade700;
+
+  /// The tinted container behind a status disc or a brand badge.
+  ///
+  /// `primary` maps to the brand tint rather than the design system's blue
+  /// `info`, because Figma's `POPULAR` badge is brand-coloured — the one
+  /// protocol tone `AppStatusBadge` has no equivalent for.
+  static Color toneContainer(BuildContext context, AiUiTone tone) {
+    final colors = context.appColors;
+    return switch (tone) {
+      AiUiTone.neutral => colors.controlFill,
+      AiUiTone.primary => colors.surfaceVariant,
+      AiUiTone.info => colors.infoContainer,
+      AiUiTone.success => colors.successContainer,
+      AiUiTone.warning => colors.warningContainer,
+      AiUiTone.error => colors.errorContainer,
+    };
+  }
+
+  /// Readable foreground for [toneContainer].
+  static Color onToneContainer(BuildContext context, AiUiTone tone) {
+    final colors = context.appColors;
+    return switch (tone) {
+      AiUiTone.neutral => colors.textPrimary,
+      AiUiTone.primary => colors.palettes.main.shade700,
+      AiUiTone.info => colors.onInfoContainer,
+      AiUiTone.success => colors.onSuccessContainer,
+      AiUiTone.warning => colors.onWarningContainer,
+      AiUiTone.error => colors.onErrorContainer,
+    };
+  }
+
   static const double thumbSize = 56;
 
   /// Const because it sits inside `const AppLoadingIndicator(...)`, which

@@ -3,11 +3,14 @@ import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/pages/ai_chat_screen.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/pages/ai_home_shell.dart';
+import 'package:sanad_client/src/features/ai_chat/src/presentation/pages/ai_ui_showcase_page.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/pages/ai_voice_session_screen.dart';
 import 'package:sanad_client/src/features/ai_chat/src/routes/ai_chat_routes.dart';
 import 'package:sanad_client/src/features/history/history_page.dart';
+import 'package:sanad_client/src/features/history/src/data/mock_conversation_history_source.dart';
 import 'package:sanad_client/src/features/my_life/my_life_page.dart';
-import 'package:sanad_client/src/features/requests/requests_page.dart';
+import 'package:sanad_client/src/features/client_requests/src/presentation/bloc/client_requests_list/client_requests_list_bloc.dart';
+import 'package:sanad_client/src/features/client_requests/src/presentation/pages/client_requests_page.dart';
 
 /// Contributes the AI chat prototype route.
 ///
@@ -32,6 +35,9 @@ class AiChatModule extends FeatureModule {
     // visit (see AiChatScreen), and the validator is built from
     // AiChatConfig's compile-time policy rather than injected.
   }
+
+  static ClientRequestsListBloc _buildRequestsListBloc() =>
+      sl<ClientRequestsListBloc>();
 
   @override
   List<RouteBase> routes(FeatureRouteContext context) => [
@@ -62,7 +68,11 @@ class AiChatModule extends FeatureModule {
             routes: [
               GoRoute(
                 path: AiChatRoutes.requests,
-                builder: (context, state) => const RequestsPage(),
+                // The real feature, not the old placeholder. The shell branch
+                // and the top-level `/requests` route render the same page;
+                // only this one carries the shell's header chrome.
+                builder: (context, state) =>
+                    ClientRequestsPage(buildBloc: _buildRequestsListBloc),
               ),
             ],
           ),
@@ -88,7 +98,23 @@ class AiChatModule extends FeatureModule {
     if (!kReleaseMode)
       GoRoute(
         path: AiChatRoutes.history,
-        builder: (context, state) => const HistoryPage(),
+        // `?state=empty` serves the empty fixture, following the `?mock=` /
+        // `?transport=` affordances on the chat route above. Both of
+        // History's Figma states are reachable in a debug build without a
+        // rebuild, a switch in the UI, or any mock behaviour that could
+        // survive into release — the route itself does not exist there.
+        builder: (context, state) => HistoryPage(
+          source: MockConversationHistorySource(
+            fixture: ConversationHistoryFixture.fromQuery(
+              state.uri.queryParameters['state'],
+            ),
+          ),
+        ),
+      ),
+    if (!kReleaseMode)
+      GoRoute(
+        path: AiChatRoutes.showcase,
+        builder: (context, state) => const AiUiShowcasePage(),
       ),
   ];
 }

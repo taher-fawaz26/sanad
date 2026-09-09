@@ -235,6 +235,47 @@ enum AiUiTextDirectionHint {
       _lookup(values, value, (e) => e.wire);
 }
 
+/// Which device capability a `permission_request` node is asking for.
+///
+/// A closed set, deliberately: the node names a *capability*, and the client
+/// maps it onto its own `PermissionType`. The agent cannot name a platform
+/// permission string, so it cannot ask for one the app has no rationale copy
+/// or manifest entry for.
+enum AiUiPermissionKind {
+  camera('camera'),
+  photos('photos'),
+  microphone('microphone'),
+  location('location'),
+  notifications('notifications')
+  ;
+
+  const AiUiPermissionKind(this.wire);
+
+  final String wire;
+
+  static AiUiPermissionKind? tryFromWire(String value) =>
+      _lookup(values, value, (e) => e.wire);
+}
+
+/// Where a `media_request` option takes its media from.
+///
+/// Maps onto the composer's existing attachment intents — the same picker,
+/// permission gateway and validation the paperclip already uses.
+enum AiUiMediaSource {
+  camera('camera'),
+  gallery('gallery'),
+  video('video'),
+  document('document')
+  ;
+
+  const AiUiMediaSource(this.wire);
+
+  final String wire;
+
+  static AiUiMediaSource? tryFromWire(String value) =>
+      _lookup(values, value, (e) => e.wire);
+}
+
 T? _lookup<T>(List<T> values, String value, String Function(T) wireOf) {
   for (final candidate in values) {
     if (wireOf(candidate) == value) return candidate;

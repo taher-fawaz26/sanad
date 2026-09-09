@@ -35,13 +35,13 @@ class CreateBranchParams extends Equatable {
     required this.lng,
     required this.radiusKm,
     required this.workerIds,
+    required this.serviceIds,
+    required this.servingAreaPlaceIds,
     this.branchManagerId,
     this.googleMapsLink,
     this.socialMediaLink,
     this.availabilityMode = BranchAvailabilityMode.coreHours,
     this.availability,
-    this.serviceIds,
-    this.servingAreaPlaceIds,
   });
 
   final String branchName;
@@ -61,8 +61,13 @@ class CreateBranchParams extends Equatable {
   final String? socialMediaLink;
   final BranchAvailabilityMode availabilityMode;
   final List<BranchAvailabilityEntity>? availability;
-  final List<String>? serviceIds;
-  final List<String>? servingAreaPlaceIds;
+
+  /// At least one provider-service id is required by the API (minItems: 1).
+  final List<String> serviceIds;
+
+  /// At least one serving-area `place_id` is required by the API
+  /// (minItems: 1). A branch with no serving area can never be matched.
+  final List<String> servingAreaPlaceIds;
 
   @override
   List<Object?> get props => [
