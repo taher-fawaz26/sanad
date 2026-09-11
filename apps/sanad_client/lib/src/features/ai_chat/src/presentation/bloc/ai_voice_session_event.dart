@@ -45,6 +45,18 @@ final class AiVoiceSessionEndRequested extends AiVoiceSessionEvent {
   const AiVoiceSessionEndRequested();
 }
 
+/// The user asked to leave the voice screen entirely (A-05).
+///
+/// Ends the session through the same teardown as [AiVoiceSessionEndRequested]
+/// — there is only ever one way down — and additionally records that the user
+/// is *leaving*, which is what lets the route owner pop. Backgrounding also
+/// ends the session but must not close the screen, so the two cannot share an
+/// event.
+final class AiVoiceSessionCloseRequested extends AiVoiceSessionEvent {
+  /// Creates the close request.
+  const AiVoiceSessionCloseRequested();
+}
+
 /// The app went to the background.
 ///
 /// Deliberately not an audio-session interruption: that is another app taking

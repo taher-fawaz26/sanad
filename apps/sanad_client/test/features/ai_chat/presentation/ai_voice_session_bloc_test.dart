@@ -275,4 +275,103 @@ void main() {
       expect(session.disposeCount, 1);
     });
   });
+
+  // Regression for A-05: the close control ended the session but never left
+  // the screen, so the user was stranded on a page labelled "Session ended"
+  // with the system back gesture as the only way out.
+  group('closing the screen', () {
+    test('tears the session down and asks the route to pop', () async {
+      await withBloc((bloc) async {
+        bloc.add(const AiVoiceSessionStartRequested());
+        await pumpEventQueue();
+        session.statusController.add(AiVoiceSessionStatus.listening);
+        await pumpEventQueue();
+
+        bloc.add(const AiVoiceSessionCloseRequested());
+        await pumpEventQueue();
+
+        expect(session.endCount, 1);
+        expect(bloc.state.closeRequested, isTrue);
+      });
+    });
+
+    test('closing from idle still asks to pop, without ending twice', () async {
+      await withBloc((bloc) async {
+        bloc.add(const AiVoiceSessionCloseRequested());
+        await pumpEventQueue();
+
+        // Nothing was running, so there is nothing to tear down — but the
+        // user still asked to leave and must not be stranded.
+        expect(session.endCount, 0);
+        expect(bloc.state.closeRequested, isTrue);
+      });
+    });
+
+    test('closing after the session already ended is safe', () async {
+      await withBloc((bloc) async {
+        bloc.add(const AiVoiceSessionStartRequested());
+        await pumpEventQueue();
+        session.statusController.add(AiVoiceSessionStatus.ended);
+        await pumpEventQueue();
+
+        bloc.add(const AiVoiceSessionCloseRequested());
+        await pumpEventQueue();
+
+        expect(session.endCount, 0);
+        expect(bloc.state.closeRequested, isTrue);
+      });
+    });
+
+    test('repeated taps end the session once and stay latched', () async {
+      // The user will tap more than once, because the first tap used to do
+      // nothing visible.
+      await withBloc((bloc) async {
+        bloc.add(const AiVoiceSessionStartRequested());
+        await pumpEventQueue();
+        session.statusController.add(AiVoiceSessionStatus.listening);
+        await pumpEventQueue();
+
+        bloc
+          ..add(const AiVoiceSessionCloseRequested())
+          ..add(const AiVoiceSessionCloseRequested())
+          ..add(const AiVoiceSessionCloseRequested());
+        await pumpEventQueue();
+
+        expect(session.endCount, 1);
+        expect(bloc.state.closeRequested, isTrue);
+      });
+    });
+
+    test('ending the session on its own never asks the route to pop', () async {
+      // The distinction that matters: plain end must not close the screen.
+      await withBloc((bloc) async {
+        bloc.add(const AiVoiceSessionStartRequested());
+        await pumpEventQueue();
+        session.statusController.add(AiVoiceSessionStatus.listening);
+        await pumpEventQueue();
+
+        bloc.add(const AiVoiceSessionEndRequested());
+        await pumpEventQueue();
+
+        expect(session.endCount, 1);
+        expect(bloc.state.closeRequested, isFalse);
+      });
+    });
+
+    test('backgrounding ends the session but leaves the screen open', () async {
+      // Otherwise taking a phone call would yank the voice screen away.
+      await withBloc((bloc) async {
+        bloc.add(const AiVoiceSessionStartRequested());
+        await pumpEventQueue();
+        session.statusController.add(AiVoiceSessionStatus.listening);
+        await pumpEventQueue();
+
+        bloc.add(const AiVoiceSessionBackgrounded());
+        await pumpEventQueue();
+
+        expect(session.endCount, 1);
+        expect(bloc.state.closeRequested, isFalse);
+      });
+    });
+  });
 }

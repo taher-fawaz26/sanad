@@ -9,8 +9,8 @@ import 'package:sanad_client/src/features/ai_chat/src/domain/entities/ai_outgoin
 /// attached, with no randomness and no clock. A test can assert the exact
 /// prose, and two runs of the same turn produce identical events.
 ///
-/// The reply is *about* the attachments — it names the file, counts the
-/// photos, reads back the recording's length — because a mock that answered
+/// The reply is *about* the attachments — it names the file and counts the
+/// photos — because a mock that answered
 /// "I received your message" regardless would prove nothing about whether the
 /// attachments actually reached the conversation.
 abstract final class MultimodalMockScenarios {
@@ -32,7 +32,6 @@ abstract final class MultimodalMockScenarios {
     final documents = message.attachments
         .whereType<AiDocumentAttachment>()
         .toList();
-    final audio = message.attachments.whereType<AiAudioAttachment>().toList();
 
     final parts = <String>[];
 
@@ -49,13 +48,6 @@ abstract final class MultimodalMockScenarios {
       );
     }
 
-    for (final take in audio) {
-      parts.add(
-        'From your recording (${_readableDuration(take.duration)}), '
-        'here is what I understood.',
-      );
-    }
-
     final text = message.text.trim();
     parts.add(
       text.isEmpty
@@ -64,13 +56,6 @@ abstract final class MultimodalMockScenarios {
     );
 
     return parts.join(' ');
-  }
-
-  /// `mm:ss`, which is how a voice note reads everywhere else in the app.
-  static String _readableDuration(Duration duration) {
-    final minutes = duration.inMinutes;
-    final seconds = duration.inSeconds % 60;
-    return '$minutes:${seconds.toString().padLeft(2, '0')}';
   }
 
   static String _readableSize(int bytes) {

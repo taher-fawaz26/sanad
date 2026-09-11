@@ -136,6 +136,17 @@ GoRouter buildClientRouter() {
             },
           ),
           ...filteredModuleRoutes,
+          // Inside the shell, alongside the module routes, because Profile
+          // pushes one of them: Account Settings (C-11). A `ShellRoute` builds
+          // its own page, so pushing an in-shell route from an out-of-shell
+          // one stacks a *second* shell page with the same key and trips
+          // Navigator's `!keyReservation.contains(key)` assert. Keeping the
+          // two on the same side of the shell means the push reuses the shell
+          // already on the stack.
+          GoRoute(
+            path: ClientRoutes.profile,
+            builder: (context, state) => const ClientProfilePage(),
+          ),
           AuthShell.otpRoute(
             // No post-signup onboarding token flow for the client app yet
             // (unrelated to the pre-auth OAuth screens above); a brand-new
@@ -190,10 +201,6 @@ GoRouter buildClientRouter() {
         // has a permanent entry point.
         redirect: (context, state) => kReleaseMode ? null : AiChatRoutes.chat,
         builder: (context, state) => const ClientHomePage(),
-      ),
-      GoRoute(
-        path: ClientRoutes.profile,
-        builder: (context, state) => const ClientProfilePage(),
       ),
       GoRoute(
         path: ClientRoutes.offline,

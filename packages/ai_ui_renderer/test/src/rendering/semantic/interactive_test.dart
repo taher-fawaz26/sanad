@@ -446,4 +446,153 @@ void main() {
       expect(find.text('Submit review'), findsOneWidget);
     });
   });
+
+  group('review_request with a rating', () {
+    Map<String, dynamic> rated({bool required = true}) => {
+      'type': 'review_request',
+      'id': 'rv_rated',
+      'serviceName': 'How was your experience?',
+      'commentPlaceholder': 'Leave a comment (optional)...',
+      'maxRating': 5,
+      'ratingRequired': required,
+      'submitLabel': 'Submit Review',
+      'submitTemplate': '{rating} stars: {comment}',
+    };
+
+    testWidgets("draws one star per point of the agent's own scale", (
+      tester,
+    ) async {
+      await pumpNodes(tester, [rated()]);
+
+      expect(find.byIcon(Icons.star_outline_rounded), findsNWidgets(5));
+      expect(find.byIcon(Icons.star_rounded), findsNothing);
+    });
+
+    testWidgets('a card with no scale draws no stars at all', (tester) async {
+      await pumpNodes(tester, [
+        {
+          'type': 'review_request',
+          'id': 'rv_plain',
+          'serviceName': 'Deep Cleaning',
+          'submitLabel': 'Submit',
+          'submitTemplate': 'Review: {comment}',
+        },
+      ]);
+
+      expect(find.byType(AiStarRating), findsNothing);
+    });
+
+    testWidgets('tapping a star fills it and the ones before it', (
+      tester,
+    ) async {
+      await pumpNodes(tester, [rated()]);
+
+      await tester.tap(find.byIcon(Icons.star_outline_rounded).at(3));
+      await tester.pump();
+
+      expect(find.byIcon(Icons.star_rounded), findsNWidgets(4));
+      expect(find.byIcon(Icons.star_outline_rounded), findsOneWidget);
+    });
+
+    testWidgets('a required rating gates the submit control', (tester) async {
+      await pumpNodes(tester, [rated()]);
+
+      await tapText(tester, 'Submit Review');
+      expect(find.text('Submit Review'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.star_outline_rounded).at(4));
+      await tester.pump();
+      await tapText(tester, 'Submit Review');
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('an optional rating never blocks submitting', (tester) async {
+      // Adding stars to an existing comment card must not make its button
+      // unreachable for someone who only wants to leave words.
+      final harness = await pumpNodes(
+        tester,
+        [rated(required: false)],
+        harness: RendererHarness(recordInteractions: true),
+      );
+
+      await tapText(tester, 'Submit Review');
+
+      expect(
+        harness.submissions.single.value,
+        const AiUiReviewValue(comment: ''),
+      );
+    });
+
+    testWidgets('submitting carries the rating and the comment together', (
+      tester,
+    ) async {
+      final harness = await pumpNodes(
+        tester,
+        [rated()],
+        harness: RendererHarness(recordInteractions: true),
+      );
+
+      await tester.tap(find.byIcon(Icons.star_outline_rounded).at(3));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), 'Quick and tidy');
+      await tapText(tester, 'Submit Review');
+
+      final result = harness.submissions.single;
+      expect(result.kind, AiUiInteractionKind.reviewSubmitted);
+      expect(
+        result.value,
+        const AiUiReviewValue(rating: 4, comment: 'Quick and tidy'),
+      );
+      expect(result.text, '4 stars: Quick and tidy');
+    });
+
+    testWidgets('an unrated card still answers as plain text', (tester) async {
+      // The v1 shape, kept so a backend reading `value.text` is unaffected by
+      // stars existing.
+      final harness = await pumpNodes(
+        tester,
+        [
+          {
+            'type': 'review_request',
+            'id': 'rv_plain',
+            'serviceName': 'Deep Cleaning',
+            'submitLabel': 'Submit',
+            'submitTemplate': 'Review: {comment}',
+          },
+        ],
+        harness: RendererHarness(recordInteractions: true),
+      );
+
+      await tester.enterText(find.byType(TextField), 'Good');
+      await tapText(tester, 'Submit');
+
+      expect(harness.submissions.single.value, const AiUiTextValue('Good'));
+    });
+
+    testWidgets('the stars stop responding once the review has gone', (
+      tester,
+    ) async {
+      final harness = await pumpNodes(
+        tester,
+        [rated(required: false)],
+        harness: RendererHarness(recordInteractions: true),
+      );
+
+      await tapText(tester, 'Submit Review');
+      await tester.tap(find.byIcon(Icons.star_outline_rounded).first);
+      await tester.pump();
+
+      expect(find.byIcon(Icons.star_rounded), findsNothing);
+      expect(harness.submissions, hasLength(1));
+    });
+
+    testWidgets('it renders in both directions', (tester) async {
+      await pumpNodes(tester, [rated()], textDirection: TextDirection.rtl);
+
+      expect(find.text('How was your experience?'), findsOneWidget);
+      expect(find.byType(AiStarRating), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
 }

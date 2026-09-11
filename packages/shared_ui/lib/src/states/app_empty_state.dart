@@ -1,3 +1,4 @@
+import 'package:app_animations/app_animations.dart';
 import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
@@ -138,7 +139,10 @@ class AppEmptyState extends StatelessWidget {
     // child's intrinsic height, and `LayoutBuilder` throws under intrinsic
     // sizing ("does not support returning intrinsic dimensions"). `Center`
     // supports intrinsics, so every paged list can show this state safely.
-    return Center(child: content);
+    //
+    // A single restrained entrance here covers every consumer (empty, error,
+    // network-failure) since they all build on this widget.
+    return Center(child: content.appFadeSlideUp(context));
   }
 }
 

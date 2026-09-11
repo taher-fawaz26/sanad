@@ -32,8 +32,9 @@ export 'tokens/action_sheet_tokens.dart'
     show ActionSheetStyleSpec, ActionSheetTokens;
 export 'tokens/alert_tokens.dart'
     show AlertStyleSpec, AlertTokens, AppAlertType;
+export 'tokens/ambient_background_tokens.dart' show AmbientBackgroundTokens;
 export 'tokens/avatar_stack_tokens.dart'
-    show AvatarStackStyleSpec, AvatarStackTokens;
+    show AppAvatarStackTone, AvatarStackStyleSpec, AvatarStackTokens;
 export 'tokens/avatar_tokens.dart'
     show AppAvatarSize, AvatarStyleSpec, AvatarTokens;
 export 'tokens/bottom_sheet_tokens.dart'

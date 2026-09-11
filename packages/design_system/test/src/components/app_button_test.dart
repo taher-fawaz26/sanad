@@ -132,5 +132,71 @@ void main() {
       expect(button.variant, AppButtonVariant.outline);
       expect(button.intent, AppButtonIntent.standard);
     });
+
+    testWidgets('press scales the button down; release restores it', (
+      tester,
+    ) async {
+      await _pump(tester, AppButton(label: 'Confirm', onPressed: () {}));
+
+      AnimatedScale scaleOf() =>
+          tester.widget<AnimatedScale>(find.byType(AnimatedScale));
+      expect(scaleOf().scale, 1.0);
+
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byType(AppButton)),
+      );
+      await tester.pump();
+      expect(scaleOf().scale, lessThan(1.0));
+
+      await gesture.up();
+      await tester.pump();
+      expect(scaleOf().scale, 1.0);
+    });
+
+    testWidgets('a disabled button never scales on press', (tester) async {
+      await _pump(tester, const AppButton(label: 'Confirm', onPressed: null));
+
+      // Disabled: InkWell's onTapDown/onHighlightChanged are both null, so
+      // `_pressed` can never become true regardless of the gesture below.
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byType(AppButton)),
+      );
+      await tester.pump();
+      expect(
+        tester.widget<AnimatedScale>(find.byType(AnimatedScale)).scale,
+        1.0,
+      );
+      await gesture.up();
+    });
+
+    testWidgets('reduced motion keeps the button at full scale while pressed', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ScreenUtilInit(
+          designSize: const Size(360, 800),
+          minTextAdapt: true,
+          builder: (_, _) => MediaQuery(
+            data: const MediaQueryData(disableAnimations: true),
+            child: MaterialApp(
+              theme: AppTheme.light(),
+              home: Scaffold(
+                body: Center(child: AppButton(label: 'Confirm', onPressed: () {})),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byType(AppButton)),
+      );
+      await tester.pump();
+      expect(
+        tester.widget<AnimatedScale>(find.byType(AnimatedScale)).scale,
+        1.0,
+      );
+      await gesture.up();
+    });
   });
 }

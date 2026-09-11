@@ -9,12 +9,10 @@ import 'package:network/network.dart';
 import 'package:sanad_client/src/config/app_config.dart';
 import 'package:sanad_client/src/features/ai_chat/src/ai_chat_config.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/mock_ai_chat_event_source.dart';
+import 'package:sanad_client/src/features/ai_chat/src/data/mock_connectivity_service.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/platform/attachments/asset_picker_attachment_source.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/platform/attachments/media_upload_ai_attachment_uploader.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/platform/attachments/permissions_ai_permission_gateway.dart';
-import 'package:sanad_client/src/features/ai_chat/src/data/platform/audio/audio_session_manager.dart';
-import 'package:sanad_client/src/features/ai_chat/src/data/platform/audio/just_audio_player.dart';
-import 'package:sanad_client/src/features/ai_chat/src/data/platform/audio/record_audio_recorder.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/platform/speech/speech_to_text_recognizer.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/sse_ai_chat_event_source.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/websocket_ai_chat_event_source.dart';
@@ -58,12 +56,12 @@ enum AiChatTransport {
 /// Owns everything scoped to one visit to the chat.
 ///
 /// Stateful rather than building inside a `GoRoute.builder`, which can run more
-/// than once and would leak a source, a recorder and a player per rebuild.
+/// than once and would leak an event source and a recogniser per rebuild.
 ///
 /// This is the composition root for the feature: it is the only place that
 /// knows which concrete adapters exist. Everything below it — both blocs, every
-/// widget — sees interfaces. The blocs own disposal, so the microphone and the
-/// player are released when the screen goes away.
+/// widget — sees interfaces. The blocs own disposal, so the recogniser is
+/// released when the screen goes away.
 class AiChatScreen extends StatefulWidget {
   /// Creates the chat screen.
   const AiChatScreen({super.key, this.transport = AiChatTransport.sse});
@@ -80,14 +78,18 @@ class _AiChatScreenState extends State<AiChatScreen> {
   late final MockAiChatEventSource? _mock =
       widget.transport == AiChatTransport.mock ? MockAiChatEventSource() : null;
 
+  /// Non-null only in mock mode, for the same reason [_mock] is: it is how the
+  /// dev picker's Offline chip reaches the bloc's queueing path without any
+  /// mock behaviour existing on a live transport.
+  late final MockConnectivityService? _mockConnectivity =
+      widget.transport == AiChatTransport.mock
+      ? MockConnectivityService()
+      : null;
+
   /// Stable for this visit, so the server keeps conversation memory across
   /// turns — including across the separate HTTP request each SSE turn makes.
   final String _conversationId =
       'conv_${DateTime.now().microsecondsSinceEpoch}';
-
-  /// Shared by the recorder and the player so audio focus is handed back and
-  /// forth rather than fought over.
-  late final AudioSessionManager _audioSession = AudioSessionManager();
 
   late final AiPermissionGateway _permissions =
       const PermissionsAiPermissionGateway();
@@ -97,8 +99,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
   /// provider still owns closing it.
   late final AiComposerBloc _composer = AiComposerBloc(
     attachmentSource: AssetPickerAttachmentSource(permissions: _permissions),
-    recorder: RecordAudioRecorder(session: _audioSession),
-    player: JustAudioPlayer(session: _audioSession),
     permissions: _permissions,
     recognizer: SpeechToTextRecognizer(),
     // The same indirection `app_di.dart` already uses for the network layer's
@@ -110,11 +110,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
   /// The AI chat feature's one app-lifecycle boundary.
   ///
   /// Distinct from audio-session interruptions, which are a different signal
-  /// with a different meaning and their own handlers: an interruption is
-  /// another app taking the audio path, this is the OS putting us behind
-  /// something else. Nothing downstream reports the latter — and on Android a
-  /// backgrounded app without a foreground service stops receiving microphone
-  /// data at all, so a capture that survives here is already dead.
+  /// with a different meaning and their own handler over in the live-voice
+  /// session: an interruption is another app taking the audio path, this is the
+  /// OS putting us behind something else. Nothing downstream reports the latter
+  /// — and on Android a backgrounded app without a foreground service stops
+  /// receiving microphone data at all, so a recogniser that survives here is
+  /// already dead.
   ///
   /// One listener, one event, and the bloc decides what that means for each
   /// capability it owns. The widget starts no work and holds no state.
@@ -166,13 +167,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
   @override
   void dispose() {
     _lifecycle?.dispose();
+    _mockConnectivity?.dispose().ignore();
     // `BlocProvider.value` does not close what it is handed, so the composer
-    // is closed here — and closing it is what releases the recorder, the
-    // player and the recogniser.
+    // is closed here — and closing it is what releases the recogniser.
     _composer.close().ignore();
-    // The session the recorder and player share is owned here because neither
-    // bloc can know when the other has finished with it.
-    _audioSession.dispose().ignore();
     super.dispose();
   }
 
@@ -188,10 +186,17 @@ class _AiChatScreenState extends State<AiChatScreen> {
             keepUnsupportedNodes: !kReleaseMode,
           ),
           diagnostics: const LoggingAiUiDiagnosticsSink(),
+          // Whether a turn can leave the device at all. The live transports
+          // read the app's own service; the prototype reads the one the dev
+          // picker can flip.
+          connectivity: _mockConnectivity ?? sl<ConnectivityService>(),
         )..add(const AiChatStarted()),
       ),
       BlocProvider.value(value: _composer),
     ],
-    child: AiChatPage(mockSource: _mock),
+    child: AiChatPage(
+      mockSource: _mock,
+      mockConnectivity: _mockConnectivity,
+    ),
   );
 }

@@ -79,9 +79,10 @@
 	<string>Sanad uses the camera so you can take a photo to send to the assistant.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Sanad needs access to your photos so you can attach them to a message for the assistant.</string>
-	<!-- Microphone — required to record a voice note and to run live voice. -->
+	<!-- Microphone — required by speech-to-text dictation and by live voice.
+	     AI Chat records no audio and sends no voice notes. -->
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Sanad uses the microphone so you can record a voice message or talk to the assistant.</string>
+	<string>Sanad uses the microphone so you can dictate a message or talk to the assistant.</string>
 	<!-- Speech recognition — a separate iOS grant from the microphone, needed
 	     to turn dictation into text in the chat composer. -->
 	<key>NSSpeechRecognitionUsageDescription</key>

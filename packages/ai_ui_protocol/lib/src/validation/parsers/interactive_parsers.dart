@@ -107,6 +107,8 @@ extension _InteractiveParsers on _Run {
       'providerText',
       'commentPlaceholder',
       'maxCommentLength',
+      'maxRating',
+      'ratingRequired',
       'submitLabel',
       'submitTemplate',
     });
@@ -164,6 +166,24 @@ extension _InteractiveParsers on _Run {
         wire,
         1,
         limits.maxCommentLength,
+      ),
+      // Absent means no rating control at all, which is the card the protocol
+      // has always had. A scale below two stars is not a scale, so it clamps
+      // up rather than drawing a single tappable star.
+      maxRating: _boundedInt(
+        json,
+        'maxRating',
+        path,
+        wire,
+        2,
+        limits.maxRating,
+      ),
+      ratingRequired: _bool(
+        json,
+        'ratingRequired',
+        path,
+        wire,
+        defaultValue: false,
       ),
       a11yLabel: a11yLabel,
       fallbackText: fallbackText,
@@ -474,6 +494,7 @@ extension _InteractiveParsers on _Run {
       'addressText',
       'confirmLabel',
       'changeLabel',
+      'cancelLabel',
       'actions',
     });
 
@@ -515,7 +536,82 @@ extension _InteractiveParsers on _Run {
         wire,
         maxLength: limits.maxChipLabelLength,
       ),
+      cancelLabel: _optionalString(
+        json,
+        'cancelLabel',
+        path,
+        wire,
+        maxLength: limits.maxChipLabelLength,
+      ),
       actions: _cardActions(json, path, wire),
+      a11yLabel: a11yLabel,
+      fallbackText: fallbackText,
+    );
+  }
+
+  AiUiNode? _confirmPrompt(
+    Map<String, dynamic> json,
+    String path,
+    String id,
+    String? a11yLabel,
+    String? fallbackText,
+  ) {
+    const wire = 'confirm_prompt';
+    _unknownKeys(json, path, wire, const {
+      'title',
+      'body',
+      'subjectTitle',
+      'subjectSubtitle',
+      'tone',
+      'confirm',
+    });
+
+    final title = _requiredString(
+      json,
+      'title',
+      path,
+      wire,
+      maxLength: limits.maxLabelLength,
+    );
+    // Required here, unlike on `request_summary`: the controls *are* this
+    // node. A question the user cannot answer is a dead end, and the
+    // conversation is a better place to ask it.
+    final confirm = _confirmChoice(json, path, wire, required: true);
+    if (title == null || confirm == null) return null;
+
+    return AiUiConfirmPromptNode(
+      id: id,
+      title: title,
+      confirm: confirm,
+      body: _optionalString(
+        json,
+        'body',
+        path,
+        wire,
+        maxLength: limits.maxTextLength,
+      ),
+      subjectTitle: _optionalString(
+        json,
+        'subjectTitle',
+        path,
+        wire,
+        maxLength: limits.maxLabelLength,
+      ),
+      subjectSubtitle: _optionalString(
+        json,
+        'subjectSubtitle',
+        path,
+        wire,
+        maxLength: limits.maxLabelLength,
+      ),
+      tone: _enum(
+        json,
+        'tone',
+        path,
+        wire,
+        AiUiTone.tryFromWire,
+        AiUiTone.warning,
+      ),
       a11yLabel: a11yLabel,
       fallbackText: fallbackText,
     );

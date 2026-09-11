@@ -6,8 +6,8 @@ import 'package:sanad_client/src/features/ai_chat/src/domain/enums/ai_attachment
 /// ## Why a path and never bytes
 ///
 /// [localPath] points at a file on disk; there is no `bytes` field anywhere in
-/// this hierarchy. Holding image or audio bytes in a domain object would mean
-/// a second copy alive for as long as the message is in the list, which for a
+/// this hierarchy. Holding file bytes in a domain object would mean a second
+/// copy alive for as long as the message is in the list, which for a
 /// conversation with a few photos is tens of megabytes of avoidable heap. The
 /// picker is configured with `loadBytes: false` for the same reason, and a
 /// preview widget reads the file lazily.
@@ -20,10 +20,14 @@ import 'package:sanad_client/src/features/ai_chat/src/domain/enums/ai_attachment
 /// which wraps one of these rather than widening it. A message that outlives
 /// its turn must not hold a location-shaped string that can expire under it.
 ///
-/// What this hierarchy *does* carry is client-derived facts about the file
-/// itself: duration, waveform, and for a voice note the on-device transcript.
-/// Those describe the recording rather than the wire, and they are as true
-/// after the send as before it.
+/// ## Why there is no audio variant
+///
+/// AI Chat does not send recorded audio. Its one voice input method is
+/// Speech-to-Text, which produces editable composer text and reaches the agent
+/// as an ordinary text message — never a file, never an attachment. An
+/// `AiAudioAttachment` existed here once, carrying a duration, a waveform and
+/// an on-device transcript; the capability was retired, so the variant went
+/// with it rather than sitting dormant for something to pick up again.
 sealed class AiChatAttachment extends Equatable {
   const AiChatAttachment({
     required this.id,
@@ -159,76 +163,4 @@ final class AiDocumentAttachment extends AiChatAttachment {
 
   @override
   List<Object?> get props => [...super.props, extension];
-}
-
-/// A voice note recorded in the composer.
-///
-/// Distinct from a live-voice session, which produces no attachment at all.
-final class AiAudioAttachment extends AiChatAttachment {
-  /// Creates an audio attachment.
-  const AiAudioAttachment({
-    required super.id,
-    required super.fileName,
-    required super.sizeBytes,
-    required super.mimeType,
-    required super.localPath,
-    required this.duration,
-    super.status,
-    super.failureKey,
-    this.waveform = const [],
-    this.transcript = '',
-  });
-
-  /// How long the take runs. Shown on the bubble without decoding the file.
-  final Duration duration;
-
-  /// Normalised 0..1 amplitude samples for the static waveform.
-  ///
-  /// Capped at [maxWaveformSamples] when built, so a long recording costs the
-  /// same to draw as a short one and the entity stays cheap to compare.
-  final List<double> waveform;
-
-  /// The most samples a waveform will ever hold.
-  static const int maxWaveformSamples = 40;
-
-  /// What the device's own recogniser heard while this was being recorded.
-  ///
-  /// A client-derived fact about the recording, exactly like [duration] and
-  /// [waveform] — not a backend field. It is what lets a voice note reach the
-  /// agent as one message carrying both the audio and its words, so nothing
-  /// transcribes the file a second time.
-  ///
-  /// Empty is normal and not an error: the recogniser may be unavailable,
-  /// unable to share the microphone with the recorder, or may simply have heard
-  /// nothing. The voice note is the deliverable; this is a bonus.
-  final String transcript;
-
-  @override
-  AiAudioAttachment withStatus(
-    AiAttachmentStatus status, {
-    String? failureKey,
-  }) => copyWith(status: status, failureKey: failureKey);
-
-  /// Returns a copy with the given fields replaced.
-  AiAudioAttachment copyWith({
-    AiAttachmentStatus? status,
-    String? failureKey,
-    Duration? duration,
-    List<double>? waveform,
-    String? transcript,
-  }) => AiAudioAttachment(
-    id: id,
-    fileName: fileName,
-    sizeBytes: sizeBytes,
-    mimeType: mimeType,
-    localPath: localPath,
-    duration: duration ?? this.duration,
-    status: status ?? this.status,
-    failureKey: failureKey ?? this.failureKey,
-    waveform: waveform ?? this.waveform,
-    transcript: transcript ?? this.transcript,
-  );
-
-  @override
-  List<Object?> get props => [...super.props, duration, waveform, transcript];
 }

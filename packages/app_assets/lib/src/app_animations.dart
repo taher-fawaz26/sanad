@@ -26,20 +26,33 @@ abstract final class AppAnimations {
   /// palette (brand teal + red danger accents) — used by `AppForbiddenPage`.
   static const String forbidden403 = '$_base/forbidden_403.json';
 
-  /// AI chat's animated center visual (Figma `7118:29597`, "Chat – 01 Home").
+  /// AI chat's animated center visual — the green bloom behind Sanad's mark
+  /// on Home (Figma `Chat - 01 Home`, `7118:29598`).
   ///
-  /// A **self-contained vector** export (shape layers only, zero image
-  /// assets), so it renders from this file alone.
+  /// A rotating aura ring behind an orb that fades up, looping every 5s
+  /// (512 square, 30fps, 150 frames). Built from the supplied dotLottie kept
+  /// beside it at `source/ai_assistant_hero.lottie`.
   ///
-  /// That property is the whole point, and is why this is not the
-  /// LottieFiles-authored export of the same mark. That export
-  /// (`source/ai_assistant_hero_image_based.json`, kept for reference) draws
-  /// everything through two `ty:2` image layers pointing at eight PNGs under
-  /// `"u":"/i/"`, and its only other layer is a precomp with `"layers":[]`.
-  /// Without that image package it has literally nothing to draw, so it
-  /// rendered an empty box no matter how correctly it was wired — which is
-  /// exactly what it did here for several iterations. If the `/i/` PNGs are
-  /// ever added to this package, that file can replace this one in place; a
-  /// vector re-export is the better fix.
+  /// **Self-contained.** This animation draws through image layers rather
+  /// than shapes, and it previously painted an empty box here because those
+  /// images were not in this package. They are now recoloured and embedded
+  /// in the composition as `data:image/webp;base64` asset sources
+  /// (`"e": 1`), so it renders from this file alone — no `/i/` folder, and
+  /// no dependence on `LottieComposition.decodeZip`, whose `.lottie`
+  /// handling picks the first `.json` in the archive (the manifest) and
+  /// resolves image paths that this export's leading-slash `"u": "/i/"`
+  /// does not match.
+  ///
+  /// **Recoloured, not redrawn.** Its artwork shipped violet; every pixel's
+  /// hue was mapped onto Figma's own bloom gradient hues for this node
+  /// (`#30C9A9` `main/500` at the ring's cool end, `#87FC00` `accent/200` at
+  /// its warm end), preserving saturation, value and alpha — so the motion,
+  /// timing, easing, loop, opacity ramps and soft falloff are the source
+  /// file's, untouched. Six image assets the composition never references
+  /// were dropped; no layer or keyframe was.
+  ///
+  /// The Sanad mark is **not** in this file — it is a bloom only. The white
+  /// sparkle and its dark-teal check ride on top from
+  /// `AppSvgs.aiChatHeroMark`; see `_AiCenterVisual` in `ai_chat_page.dart`.
   static const String aiAssistantLoading = '$_base/ai_assistant_loading.json';
 }

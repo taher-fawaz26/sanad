@@ -40,7 +40,10 @@ abstract interface class AiPermissionGateway {
   /// Requests photo-library access.
   Future<AiPermissionOutcome> ensureGallery();
 
-  /// Requests microphone access. Used by both recording and live voice.
+  /// Requests microphone access.
+  ///
+  /// Used by dictation — the system speech recogniser needs it — and by the
+  /// live-voice session. Nothing in AI Chat records audio.
   Future<AiPermissionOutcome> ensureMicrophone();
 
   /// Requests speech-recognition access.

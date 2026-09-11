@@ -444,6 +444,48 @@ class _Run {
         a11yLabel,
         fallbackText,
       ),
+      AiUiNodeType.confirmPrompt => _confirmPrompt(
+        raw,
+        path,
+        id,
+        a11yLabel,
+        fallbackText,
+      ),
+      AiUiNodeType.requestNotice => _requestNotice(
+        raw,
+        path,
+        id,
+        a11yLabel,
+        fallbackText,
+      ),
+      AiUiNodeType.serviceAreaNotice => _serviceAreaNotice(
+        raw,
+        path,
+        id,
+        a11yLabel,
+        fallbackText,
+      ),
+      AiUiNodeType.providerSearch => _providerSearch(
+        raw,
+        path,
+        id,
+        a11yLabel,
+        fallbackText,
+      ),
+      AiUiNodeType.serviceTimeline => _serviceTimeline(
+        raw,
+        path,
+        id,
+        a11yLabel,
+        fallbackText,
+      ),
+      AiUiNodeType.verificationCode => _verificationCode(
+        raw,
+        path,
+        id,
+        a11yLabel,
+        fallbackText,
+      ),
     };
   }
 
@@ -988,6 +1030,386 @@ class _Run {
             AiUiMediaSource.gallery,
           ),
         ),
+      );
+    }
+    return parsed;
+  }
+
+  /// The provider named by a card that is not itself a `provider_card`.
+  ///
+  /// A malformed ref drops the ref, not the card: a booking that cannot name
+  /// its provider is still a booking the user needs to read.
+  AiUiProviderRef? _providerRef(
+    Map<String, dynamic> json,
+    String path,
+    String wire,
+  ) {
+    final raw = json['provider'];
+    if (raw == null) return null;
+    if (raw is! Map<String, dynamic>) {
+      add(
+        AiUiDiagnosticCode.invalidProperty,
+        '$path.provider',
+        nodeType: wire,
+        detail: 'provider is ${raw.runtimeType}, expected object',
+      );
+      return null;
+    }
+
+    final entryPath = '$path.provider';
+    final providerId = _requiredString(raw, 'providerId', entryPath, wire);
+    final name = _requiredString(
+      raw,
+      'name',
+      entryPath,
+      wire,
+      maxLength: limits.maxLabelLength,
+    );
+    if (providerId == null || name == null) return null;
+
+    return AiUiProviderRef(
+      providerId: providerId,
+      name: name,
+      roleText: _optionalString(
+        raw,
+        'roleText',
+        entryPath,
+        wire,
+        maxLength: limits.maxLabelLength,
+      ),
+      image: _nestedImage(raw, 'image', entryPath, wire),
+      verified: _bool(raw, 'verified', entryPath, wire, defaultValue: false),
+    );
+  }
+
+  /// A `provider_card`'s accept/decline pair.
+  ///
+  /// Both labels are required: an offer with only one control is not an offer,
+  /// and a decline the user cannot express would leave the agent waiting.
+  AiUiProviderOffer? _providerOffer(
+    Map<String, dynamic> json,
+    String path,
+    String wire,
+  ) {
+    final raw = json['offer'];
+    if (raw == null) return null;
+    if (raw is! Map<String, dynamic>) {
+      add(
+        AiUiDiagnosticCode.invalidProperty,
+        '$path.offer',
+        nodeType: wire,
+        detail: 'offer is ${raw.runtimeType}, expected object',
+      );
+      return null;
+    }
+
+    final entryPath = '$path.offer';
+    final acceptLabel = _requiredString(
+      raw,
+      'acceptLabel',
+      entryPath,
+      wire,
+      maxLength: limits.maxChipLabelLength,
+    );
+    final declineLabel = _requiredString(
+      raw,
+      'declineLabel',
+      entryPath,
+      wire,
+      maxLength: limits.maxChipLabelLength,
+    );
+    if (acceptLabel == null || declineLabel == null) return null;
+
+    return AiUiProviderOffer(
+      acceptLabel: acceptLabel,
+      declineLabel: declineLabel,
+      offerId: _optionalString(raw, 'offerId', entryPath, wire),
+      acceptTemplate: _optionalString(
+        raw,
+        'acceptTemplate',
+        entryPath,
+        wire,
+        maxLength: limits.maxTextLength,
+      ),
+      declineTemplate: _optionalString(
+        raw,
+        'declineTemplate',
+        entryPath,
+        wire,
+        maxLength: limits.maxTextLength,
+      ),
+    );
+  }
+
+  /// The shared confirm/cancel block.
+  ///
+  /// [required] drives what a malformed block costs. On a `confirm_prompt`
+  /// the block *is* the node — a question with no controls is a dead end — so
+  /// the node drops. On a `request_summary` the block is an addition to a card
+  /// that already reads correctly without it, so only the block drops.
+  AiUiConfirmChoice? _confirmChoice(
+    Map<String, dynamic> json,
+    String path,
+    String wire, {
+    required bool required,
+  }) {
+    final raw = json['confirm'];
+    if (raw == null) {
+      if (required) {
+        add(
+          AiUiDiagnosticCode.missingRequiredProperty,
+          '$path.confirm',
+          nodeType: wire,
+          detail: 'confirm missing',
+        );
+      }
+      return null;
+    }
+    if (raw is! Map<String, dynamic>) {
+      add(
+        AiUiDiagnosticCode.invalidProperty,
+        '$path.confirm',
+        nodeType: wire,
+        detail: 'confirm is ${raw.runtimeType}, expected object',
+      );
+      return null;
+    }
+
+    final entryPath = '$path.confirm';
+    final confirmLabel = _requiredString(
+      raw,
+      'confirmLabel',
+      entryPath,
+      wire,
+      maxLength: limits.maxChipLabelLength,
+    );
+    if (confirmLabel == null) return null;
+
+    return AiUiConfirmChoice(
+      confirmLabel: confirmLabel,
+      cancelLabel: _optionalString(
+        raw,
+        'cancelLabel',
+        entryPath,
+        wire,
+        maxLength: limits.maxChipLabelLength,
+      ),
+      confirmTemplate: _optionalString(
+        raw,
+        'confirmTemplate',
+        entryPath,
+        wire,
+        maxLength: limits.maxTextLength,
+      ),
+      cancelTemplate: _optionalString(
+        raw,
+        'cancelTemplate',
+        entryPath,
+        wire,
+        maxLength: limits.maxTextLength,
+      ),
+      reference: _optionalString(
+        raw,
+        'reference',
+        entryPath,
+        wire,
+        maxLength: limits.maxLabelLength,
+      ),
+      destructive: _bool(
+        raw,
+        'destructive',
+        entryPath,
+        wire,
+        defaultValue: false,
+      ),
+    );
+  }
+
+  /// A `service_timeline`'s steps.
+  ///
+  /// A step whose `state` is unknown falls back to `pending` rather than being
+  /// dropped: losing a step would silently renumber the user's progress, which
+  /// is worse than drawing one step under-emphasised.
+  List<AiUiTimelineItem> _timelineItems(
+    Map<String, dynamic> json,
+    String path,
+    String wire,
+  ) {
+    final raw = json['items'];
+    if (raw is! List) {
+      add(
+        AiUiDiagnosticCode.missingRequiredProperty,
+        '$path.items',
+        nodeType: wire,
+        detail: 'items is ${raw.runtimeType}, expected array',
+      );
+      return const [];
+    }
+
+    var entries = raw;
+    if (entries.length > limits.maxTimelineItems) {
+      add(
+        AiUiDiagnosticCode.limitExceeded,
+        '$path.items',
+        nodeType: wire,
+        detail: 'items ${entries.length} > ${limits.maxTimelineItems}',
+      );
+      entries = entries.sublist(0, limits.maxTimelineItems);
+    }
+
+    final parsed = <AiUiTimelineItem>[];
+    for (var i = 0; i < entries.length; i++) {
+      final entryPath = '$path.items[$i]';
+      final entry = entries[i];
+      if (entry is! Map<String, dynamic>) {
+        add(
+          AiUiDiagnosticCode.invalidProperty,
+          entryPath,
+          nodeType: wire,
+          detail: 'timeline item is ${entry.runtimeType}, expected object',
+        );
+        continue;
+      }
+      final title = _requiredString(
+        entry,
+        'title',
+        entryPath,
+        wire,
+        maxLength: limits.maxLabelLength,
+      );
+      if (title == null) continue;
+
+      parsed.add(
+        AiUiTimelineItem(
+          state: _enum(
+            entry,
+            'state',
+            entryPath,
+            wire,
+            AiUiTimelineState.tryFromWire,
+            AiUiTimelineState.pending,
+          ),
+          title: title,
+          description: _optionalString(
+            entry,
+            'description',
+            entryPath,
+            wire,
+            maxLength: limits.maxLabelLength,
+          ),
+          // Optional here, unlike `appointment_card.startsAt`: a step that has
+          // not happened has no time, and requiring one would force the agent
+          // to invent it.
+          at: entry['at'] == null
+              ? null
+              : _instant(entry, 'at', entryPath, wire),
+        ),
+      );
+    }
+    return parsed;
+  }
+
+  /// A strip of pictures — a `provider_card`'s work samples, a
+  /// `request_summary`'s attachments.
+  ///
+  /// Each entry goes through the same [imageSource] precedence as every other
+  /// image, so one unusable entry drops that picture and leaves the strip.
+  List<AiUiImageSource> _imageList(
+    Map<String, dynamic> json,
+    String key,
+    String path,
+    String wire,
+  ) {
+    final raw = json[key];
+    if (raw == null) return const [];
+    if (raw is! List) {
+      add(
+        AiUiDiagnosticCode.invalidProperty,
+        '$path.$key',
+        nodeType: wire,
+        detail: '$key is ${raw.runtimeType}, expected array',
+      );
+      return const [];
+    }
+
+    var entries = raw;
+    if (entries.length > limits.maxPhotos) {
+      add(
+        AiUiDiagnosticCode.limitExceeded,
+        '$path.$key',
+        nodeType: wire,
+        detail: '$key ${entries.length} > ${limits.maxPhotos}',
+      );
+      entries = entries.sublist(0, limits.maxPhotos);
+    }
+
+    final parsed = <AiUiImageSource>[];
+    for (var i = 0; i < entries.length; i++) {
+      final entryPath = '$path.$key[$i]';
+      final entry = entries[i];
+      if (entry is! Map<String, dynamic>) {
+        add(
+          AiUiDiagnosticCode.invalidProperty,
+          entryPath,
+          nodeType: wire,
+          detail: 'image is ${entry.runtimeType}, expected object',
+        );
+        continue;
+      }
+      final source = imageSource(entry, entryPath, wire);
+      if (source != null) parsed.add(source);
+    }
+    return parsed;
+  }
+
+  /// A list of short labels — a `provider_card`'s service chips.
+  ///
+  /// Strings rather than objects: a chip here carries no action and no id,
+  /// because choosing a service belongs to the conversation. Giving it a shape
+  /// it does not need would invite an action onto it later.
+  List<String> _labelList(
+    Map<String, dynamic> json,
+    String key,
+    String path,
+    String wire,
+    int max,
+  ) {
+    final raw = json[key];
+    if (raw == null) return const [];
+    if (raw is! List) {
+      add(
+        AiUiDiagnosticCode.invalidProperty,
+        '$path.$key',
+        nodeType: wire,
+        detail: '$key is ${raw.runtimeType}, expected array',
+      );
+      return const [];
+    }
+
+    var entries = raw;
+    if (entries.length > max) {
+      add(
+        AiUiDiagnosticCode.limitExceeded,
+        '$path.$key',
+        nodeType: wire,
+        detail: '$key ${entries.length} > $max',
+      );
+      entries = entries.sublist(0, max);
+    }
+
+    final parsed = <String>[];
+    for (final entry in entries) {
+      if (entry is! String || entry.trim().isEmpty) {
+        add(
+          AiUiDiagnosticCode.invalidProperty,
+          '$path.$key',
+          nodeType: wire,
+          detail: '$key entry is ${entry.runtimeType}, expected string',
+        );
+        continue;
+      }
+      parsed.add(
+        _truncate(entry, key, path, wire, limits.maxChipLabelLength),
       );
     }
     return parsed;

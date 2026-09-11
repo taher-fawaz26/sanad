@@ -359,3 +359,212 @@ final class AiUiMediaOption extends Equatable {
   @override
   List<Object?> get props => [label, source];
 }
+
+// ── Provider offer building blocks ──────────────────────────────────────────
+
+/// The person or company a card is *about*, when that card is not itself a
+/// `provider_card`.
+///
+/// Exists so a `booking_summary` can name who is coming without either
+/// restating the provider as two more [AiUiDetailItem] rows — which loses the
+/// avatar and the verification mark — or nesting a whole `provider_card`
+/// inside a summary, which would give the user two sets of controls for one
+/// booking.
+///
+/// Carries identity ([providerId]) rather than only a name, so the agent can
+/// resolve the same person across the conversation.
+final class AiUiProviderRef extends Equatable {
+  const AiUiProviderRef({
+    required this.providerId,
+    required this.name,
+    this.roleText,
+    this.image,
+    this.verified = false,
+  });
+
+  final String providerId;
+  final String name;
+
+  /// What they do — "AC & Plumbing Specialist".
+  final String? roleText;
+
+  /// The portrait. The usual `{url?, assetId?}` contract; a failed or absent
+  /// image falls back to the card's own person glyph.
+  final AiUiImageSource? image;
+
+  /// Whether SANAD has verified this provider. A *fact about the account*,
+  /// which is why it is a boolean the agent asserts rather than a badge label
+  /// it composes — the tick and its colour are the client's.
+  final bool verified;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'providerId': providerId,
+    'name': name,
+    if (roleText != null) 'roleText': roleText,
+    if (image != null) 'image': image!.toJson(),
+    if (verified) 'verified': true,
+  };
+
+  @override
+  List<Object?> get props => [providerId, name, roleText, image, verified];
+}
+
+/// The accept-or-decline pair on a `provider_card` that is an *offer*.
+///
+/// Separate from the card's generic `actions` row because the two mean
+/// different things. An `actions` entry is a request to run an app action —
+/// call, message, open. An offer is a **question the agent asked**, and its
+/// answer is an `offer_resolved` interaction carrying the decision and the
+/// provider it was about, so the agent never has to infer "they accepted"
+/// from a sentence.
+///
+/// A card without one is a provider the user is merely being shown.
+final class AiUiProviderOffer extends Equatable {
+  const AiUiProviderOffer({
+    required this.acceptLabel,
+    required this.declineLabel,
+    this.offerId,
+    this.acceptTemplate,
+    this.declineTemplate,
+  });
+
+  /// The agent's own identifier for this offer, when it has one. Travels back
+  /// on the result so the agent resolves the offer rather than the provider.
+  final String? offerId;
+
+  final String acceptLabel;
+  final String declineLabel;
+
+  /// Posted as the user turn on accept. Absent means the interaction travels
+  /// with no prose and the host supplies its own words, exactly as a
+  /// permission outcome does.
+  final String? acceptTemplate;
+
+  /// Posted as the user turn on decline.
+  final String? declineTemplate;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    if (offerId != null) 'offerId': offerId,
+    'acceptLabel': acceptLabel,
+    'declineLabel': declineLabel,
+    if (acceptTemplate != null) 'acceptTemplate': acceptTemplate,
+    if (declineTemplate != null) 'declineTemplate': declineTemplate,
+  };
+
+  @override
+  List<Object?> get props => [
+    offerId,
+    acceptLabel,
+    declineLabel,
+    acceptTemplate,
+    declineTemplate,
+  ];
+}
+
+/// A yes-or-no the agent is asking, as a pair of labelled controls.
+///
+/// **One block, reused wherever a card ends in "confirm or cancel"** — the
+/// `request_summary` about to be submitted, the `confirm_prompt` asking
+/// whether to cancel a booking, the `location_confirm` reading an address
+/// back. All three answer through the same `confirmation_resolved`
+/// interaction, so there is one result shape rather than one per card.
+///
+/// Why not three `actions` entries with `send_message`: a card whose answer
+/// arrives only as prose leaves the agent parsing its own template to find out
+/// whether the user agreed, and leaves the *client* with no structured record
+/// that this particular node was answered. The ledger needs the latter to stop
+/// a second tap.
+final class AiUiConfirmChoice extends Equatable {
+  const AiUiConfirmChoice({
+    required this.confirmLabel,
+    this.cancelLabel,
+    this.confirmTemplate,
+    this.cancelTemplate,
+    this.reference,
+    this.destructive = false,
+  });
+
+  final String confirmLabel;
+
+  /// Omitted means the card offers no way to decline *here* — the
+  /// conversation is then the way out.
+  final String? cancelLabel;
+
+  /// Posted as the user turn on confirm. No placeholder is substituted: there
+  /// is nothing the user supplied to substitute.
+  final String? confirmTemplate;
+
+  /// Posted as the user turn on cancel.
+  final String? cancelTemplate;
+
+  /// The agent's identifier for the thing being decided — a request id, a
+  /// booking reference. Travels back on the result so the answer is
+  /// unambiguous even if the same question is asked twice.
+  final String? reference;
+
+  /// Draws the *confirm* control as destructive. Set when confirming is the
+  /// damaging choice — "Yes, cancel my booking" — which is the one case where
+  /// the affirmative button must not look like the safe one.
+  final bool destructive;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'confirmLabel': confirmLabel,
+    if (cancelLabel != null) 'cancelLabel': cancelLabel,
+    if (confirmTemplate != null) 'confirmTemplate': confirmTemplate,
+    if (cancelTemplate != null) 'cancelTemplate': cancelTemplate,
+    if (reference != null) 'reference': reference,
+    if (destructive) 'destructive': true,
+  };
+
+  @override
+  List<Object?> get props => [
+    confirmLabel,
+    cancelLabel,
+    confirmTemplate,
+    cancelTemplate,
+    reference,
+    destructive,
+  ];
+}
+
+// ── Timeline building blocks ────────────────────────────────────────────────
+
+/// One step in a `service_timeline`.
+///
+/// [state] is the machine-readable half and drives every visual decision; the
+/// strings beside it are what the reader sees. Both are needed: the agent
+/// knows the lifecycle, the client owns the rail.
+final class AiUiTimelineItem extends Equatable {
+  const AiUiTimelineItem({
+    required this.state,
+    required this.title,
+    this.description,
+    this.at,
+  });
+
+  final AiUiTimelineState state;
+
+  /// The step as the user recognises it — "Provider Assigned".
+  final String title;
+
+  /// One line of detail — "Ahmed K has been assigned".
+  final String? description;
+
+  /// When the step happened. Always UTC; the renderer converts to device time
+  /// and formats it, so a timeline reads correctly in Dubai and in London.
+  /// Absent for a step that has not happened yet.
+  final DateTime? at;
+
+  /// Whether this is the step the user is waiting on.
+  bool get isCurrent => state.isActive;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'state': state.wire,
+    'title': title,
+    if (description != null) 'description': description,
+    if (at != null) 'at': at!.toUtc().toIso8601String(),
+  };
+
+  @override
+  List<Object?> get props => [state, title, description, at];
+}

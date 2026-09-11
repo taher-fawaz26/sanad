@@ -692,6 +692,452 @@ List<AiChatEvent> _buildMixedComponents(String messageId) {
   ];
 }
 
+
+// ─── The offer, status and confirmation set ─────────────────────────────────
+
+/// `provider_search` — the compact "we are looking" state.
+const providerSearchScenario = MockScenario(
+  id: 'provider_search',
+  label: 'Searching for providers',
+  keywords: ['find a provider', 'searching', 'find providers'],
+  build: _buildProviderSearch,
+);
+
+List<AiChatEvent> _buildProviderSearch(String messageId) {
+  const text = 'Let me find someone near you.';
+  return [
+    scenarioStart(messageId),
+    ...scenarioStream(messageId, text),
+    scenarioEnd(messageId, text),
+    scenarioUi(
+      messageId,
+      scenarioPayload([
+        {
+          'type': 'provider_search',
+          'id': 'ps1',
+          'statusLabel': 'Finding providers...',
+          'title': 'Searching nearby providers',
+          'body':
+              "We're matching your request with available providers in your "
+              'area.',
+          // No `progress`: a provider search has no meaningful percentage, and
+          // inventing one would be a number the backend cannot back up.
+          'fallbackText': 'Searching for providers near you',
+        },
+      ]),
+    ),
+  ];
+}
+
+/// `provider_card` as an offer — the compact reading, with Accept and Decline.
+const providerOfferScenario = MockScenario(
+  id: 'provider_offer',
+  label: 'Provider offer',
+  keywords: ['offer', 'accept offer', 'who can come'],
+  build: _buildProviderOffer,
+);
+
+List<AiChatEvent> _buildProviderOffer(String messageId) {
+  const text = 'Ahmed can take this one:';
+  return [
+    scenarioStart(messageId),
+    ...scenarioStream(messageId, text),
+    scenarioEnd(messageId, text),
+    scenarioUi(messageId, scenarioPayload([_providerOfferBlock()])),
+  ];
+}
+
+/// The same offer opened out — distance, description, services and photos.
+const providerOfferExpandedScenario = MockScenario(
+  id: 'provider_offer_expanded',
+  label: 'Provider offer — expanded',
+  keywords: ['tell me about ahmed', 'provider details'],
+  build: _buildProviderOfferExpanded,
+);
+
+List<AiChatEvent> _buildProviderOfferExpanded(String messageId) {
+  const text = 'Here is everything about Ahmed:';
+  return [
+    scenarioStart(messageId),
+    ...scenarioStream(messageId, text),
+    scenarioEnd(messageId, text),
+    scenarioUi(
+      messageId,
+      scenarioPayload([_providerOfferBlock(expanded: true)]),
+    ),
+  ];
+}
+
+/// One block builder for both readings, because they are one node.
+///
+/// The payload is **identical apart from `presentation`** — which is the point
+/// Figma's two frames make: the collapsed card is the same provider with the
+/// same detail, not a smaller payload. Sending the detail either way is also
+/// what earns the card its chevron; a compact card with nothing behind it
+/// would show a control that does nothing.
+Map<String, dynamic> _providerOfferBlock({bool expanded = false}) =>
+    <String, dynamic>{
+      'type': 'provider_card',
+      'id': expanded ? 'po_expanded' : 'po_compact',
+      'providerId': 'prv_ahmed',
+      'name': 'Ahmed K',
+      'roleText': 'AC & Plumbing Specialist',
+      'verified': true,
+      'presentation': expanded ? 'expanded' : 'compact',
+      'image': {'url': 'https://picsum.photos/seed/ahmed/160/160'},
+      'proposedTimeLabel': 'Proposed Time',
+      // Structured and in UTC: the client converts to device time and formats
+      // it, so "Thursday · 5:00 PM" is never something the agent typed.
+      'proposedTime': '2026-11-19T13:00:00Z',
+      'distanceMeters': 2500,
+      'description':
+          'Premium eco-friendly yacht & vehicle cleaning specialist. '
+          'Utilizing high-gloss marine coatings and protective waxes. '
+          'Frequently servicing vessels docked around the Marina.',
+      'services': ['Interior clean', 'Polishing'],
+      'servicesLabel': 'Services',
+      'photos': [
+        {'url': 'https://picsum.photos/seed/work1/240/240'},
+        {'url': 'https://picsum.photos/seed/work2/240/240'},
+        {'url': 'https://picsum.photos/seed/work3/240/240'},
+      ],
+      'offer': {
+        'offerId': 'off_77',
+        'acceptLabel': 'Accept Offer',
+        'declineLabel': 'Decline',
+        'acceptTemplate': "I'll take Ahmed's offer",
+        'declineTemplate': 'Not this one, thanks',
+      },
+      'fallbackText': 'Ahmed K offers Thursday at 5:00 PM — accept or decline',
+    };
+
+/// `booking_summary` carrying an outcome and a provider — Figma's
+/// booking-confirmed card.
+const bookingConfirmedScenario = MockScenario(
+  id: 'booking_confirmed',
+  label: 'Booking confirmed',
+  keywords: ['booking confirmed', 'is it booked'],
+  build: _buildBookingConfirmed,
+);
+
+List<AiChatEvent> _buildBookingConfirmed(String messageId) {
+  const text = 'All set.';
+  return [
+    scenarioStart(messageId),
+    ...scenarioStream(messageId, text),
+    scenarioEnd(messageId, text),
+    scenarioUi(
+      messageId,
+      scenarioPayload([
+        {
+          'type': 'booking_summary',
+          'id': 'bc1',
+          'statusText': 'Booking Confirmed!',
+          'statusTone': 'success',
+          'provider': {
+            'providerId': 'prv_ahmed',
+            'name': 'Ahmed K',
+            'roleText': 'AC & Plumbing Specialist',
+            'image': {'url': 'https://picsum.photos/seed/ahmed/160/160'},
+            'verified': true,
+          },
+          'items': [
+            {'label': 'Date', 'value': 'Thursday, Oct 24'},
+            {'label': 'Time', 'value': '5:00 PM'},
+            {'label': 'Location', 'value': '91 Orchard St, New York'},
+            {
+              'label': 'Booking Reference',
+              'value': '#SND-8829-AQ',
+              // Marked LTR so the leading hash stays at the visual start in
+              // Arabic rather than reordering to the far end.
+              'isLtrValue': true,
+            },
+          ],
+          'fallbackText': 'Booking confirmed with Ahmed K — #SND-8829-AQ',
+        },
+      ]),
+    ),
+  ];
+}
+
+/// `service_timeline` — the job lifecycle, mid-flight.
+const serviceTimelineScenario = MockScenario(
+  id: 'service_timeline',
+  label: 'Service timeline',
+  keywords: ['timeline', 'where is my provider', 'status'],
+  build: _buildServiceTimeline,
+);
+
+List<AiChatEvent> _buildServiceTimeline(String messageId) {
+  const text = 'Here is where your service has got to:';
+  return [
+    scenarioStart(messageId),
+    ...scenarioStream(messageId, text),
+    scenarioEnd(messageId, text),
+    scenarioUi(
+      messageId,
+      scenarioPayload([
+        {
+          'type': 'service_timeline',
+          'id': 'tl1',
+          'title': 'Timeline',
+          'status': 'In Progress',
+          'statusTone': 'success',
+          // Each step carries a closed state alongside its prose, so the client
+          // decides the rail glyph and the agent can answer "where are we?"
+          // from its own payload.
+          'items': [
+            {
+              'state': 'completed',
+              'title': 'Booking Confirmed',
+              'description': 'Your booking has been confirmed',
+              'at': '2026-11-17T09:45:00Z',
+            },
+            {
+              'state': 'completed',
+              'title': 'Provider Assigned',
+              'description': 'Ahmed K has been assigned',
+              'at': '2026-11-17T09:52:00Z',
+            },
+            {
+              'state': 'active',
+              'title': 'En Route',
+              'description': 'Provider is on the way',
+              'at': '2026-11-17T10:45:00Z',
+            },
+            {
+              'state': 'pending',
+              'title': 'Service In Progress',
+              'description': 'Provider is working on your service',
+            },
+            {
+              'state': 'pending',
+              'title': 'Service Completed',
+              'description': 'Awaiting service completion',
+            },
+          ],
+          'actions': [
+            {
+              'label': 'Mark as Complete',
+              'action': {
+                'type': 'send_message',
+                'text': 'The service is complete',
+              },
+            },
+          ],
+          'fallbackText': 'Your service is in progress — Ahmed is on the way',
+        },
+      ]),
+    ),
+  ];
+}
+
+/// `verification_code` — the completion code the user shows the provider.
+const verificationCodeScenario = MockScenario(
+  id: 'verification_code',
+  label: 'Verification code',
+  keywords: ['code', 'completion code', 'verification code'],
+  build: _buildVerificationCode,
+);
+
+List<AiChatEvent> _buildVerificationCode(String messageId) {
+  const text = 'Here is your completion code.';
+  return [
+    scenarioStart(messageId),
+    ...scenarioStream(messageId, text),
+    scenarioEnd(messageId, text),
+    scenarioUi(
+      messageId,
+      scenarioPayload([
+        {
+          'type': 'verification_code',
+          'id': 'vc1',
+          'label': 'verification code',
+          'body':
+              'Share this code with the service provider after completing the '
+              'service for confirmation',
+          'code': '65066',
+          'actions': [
+            {
+              'label': 'Copy code',
+              'variant': 'outline',
+              'action': {'type': 'copy_text', 'text': '65066'},
+            },
+          ],
+          'fallbackText': 'Your completion code is 65066',
+        },
+      ]),
+    ),
+  ];
+}
+
+/// `confirm_prompt` — the destructive yes-or-no.
+const cancelConfirmScenario = MockScenario(
+  id: 'cancel_confirm',
+  label: 'Cancel confirmation',
+  keywords: ['cancel my booking', 'cancel it'],
+  build: _buildCancelConfirm,
+);
+
+List<AiChatEvent> _buildCancelConfirm(String messageId) {
+  const text = 'Before I do that —';
+  return [
+    scenarioStart(messageId),
+    ...scenarioStream(messageId, text),
+    scenarioEnd(messageId, text),
+    scenarioUi(
+      messageId,
+      scenarioPayload([
+        {
+          'type': 'confirm_prompt',
+          'id': 'cp1',
+          'title': 'Are you sure you want to cancel?',
+          'subjectTitle': 'AC Maintenance',
+          'subjectSubtitle': 'Lina M • Tomorrow 10:00 AM',
+          'tone': 'error',
+          'confirm': {
+            'confirmLabel': 'Yes, Cancel',
+            'cancelLabel': 'Keep It',
+            'confirmTemplate': 'Yes, cancel my AC Maintenance booking',
+            'cancelTemplate': 'Keep it',
+            'reference': 'req_1042',
+            // Confirming is the damaging choice here, so it leads and is drawn
+            // destructive — the safe option takes the trailing position.
+            'destructive': true,
+          },
+          'fallbackText': 'Cancel your AC Maintenance booking?',
+        },
+      ]),
+    ),
+  ];
+}
+
+/// `location_confirm` reading a chosen place back, with a structured cancel.
+const selectedLocationScenario = MockScenario(
+  id: 'selected_location',
+  label: 'Selected delivery location',
+  keywords: ['delivery location', 'selected location'],
+  build: _buildSelectedLocation,
+);
+
+List<AiChatEvent> _buildSelectedLocation(String messageId) {
+  const text = 'I have this as your delivery address:';
+  return [
+    scenarioStart(messageId),
+    ...scenarioStream(messageId, text),
+    scenarioEnd(messageId, text),
+    scenarioUi(
+      messageId,
+      scenarioPayload([
+        {
+          'type': 'location_confirm',
+          'id': 'lc_sel',
+          'title': 'Selected Delivery Location',
+          'addressText': 'Tahrir St, Downtown, Cairo',
+          'confirmLabel': 'Confirm location',
+          // A structured refusal rather than silence: the agent hears "not
+          // this one" and can offer another.
+          'cancelLabel': 'Cancel',
+          'fallbackText': 'Deliver to Tahrir St, Downtown, Cairo?',
+        },
+      ]),
+    ),
+  ];
+}
+
+/// `review_request` with the star rating Figma added.
+const ratedReviewScenario = MockScenario(
+  id: 'rated_review',
+  label: 'Review with a rating',
+  keywords: ['rate', 'how was it', 'leave a review'],
+  build: _buildRatedReview,
+);
+
+List<AiChatEvent> _buildRatedReview(String messageId) {
+  const text = 'One last thing —';
+  return [
+    scenarioStart(messageId),
+    ...scenarioStream(messageId, text),
+    scenarioEnd(messageId, text),
+    scenarioUi(
+      messageId,
+      scenarioPayload([
+        {
+          'type': 'review_request',
+          'id': 'rv_rated',
+          'serviceName': 'How was your experience?',
+          'commentPlaceholder': 'Leave a comment (optional)...',
+          'maxRating': 5,
+          'ratingRequired': true,
+          'submitLabel': 'Submit Review',
+          'submitTemplate': '{rating} stars: {comment}',
+          'fallbackText': 'How was your experience?',
+        },
+      ]),
+    ),
+  ];
+}
+
+/// `request_summary` with attachments and a structured submit — Figma's full
+/// service summary.
+const serviceSummaryScenario = MockScenario(
+  id: 'service_summary',
+  label: 'Service summary',
+  keywords: ['summary', 'review my request', 'submit my request'],
+  build: _buildServiceSummary,
+);
+
+List<AiChatEvent> _buildServiceSummary(String messageId) {
+  const text = 'Here is your request. Shall I send it?';
+  return [
+    scenarioStart(messageId),
+    ...scenarioStream(messageId, text),
+    scenarioEnd(messageId, text),
+    scenarioUi(
+      messageId,
+      scenarioPayload([
+        {
+          'type': 'request_summary',
+          'id': 'ss1',
+          'items': [
+            {'label': 'Service', 'value': 'Home Cleaning'},
+            {'label': 'Date & time', 'value': 'Tomorrow · 10:00 AM'},
+            {'label': 'Location', 'value': 'Home - Dubai Marina'},
+          ],
+          'summaryTitle': 'Summary',
+          'summaryText':
+              'The customer requested a full home cleaning service. Agreed on '
+              'cleaning the entire apartment (3 bedrooms, living room, '
+              'kitchen, 2 bathrooms). Prefers eco-friendly cleaning products. '
+              'Preferred time: next Saturday morning. Note: there is a pet in '
+              'the house.',
+          'photosLabel': 'photos',
+          'photos': [
+            {'url': 'https://picsum.photos/seed/req1/240/240'},
+            {'url': 'https://picsum.photos/seed/req2/240/240'},
+            {'url': 'https://picsum.photos/seed/req3/240/240'},
+          ],
+          'location': {
+            'label': 'Home - Dubai Marina',
+            'addressText': 'Home - Dubai Marina',
+            'action': {'type': 'open_map', 'query': 'Dubai Marina'},
+          },
+          // The decision travels as a structured answer correlated with this
+          // node, not as a sentence the agent would have to re-read.
+          'confirm': {
+            'confirmLabel': 'Confirm',
+            'cancelLabel': 'Cancel',
+            'confirmTemplate': 'Yes, submit my request',
+            'cancelTemplate': 'Not yet — let me change something',
+            'reference': 'req_1042',
+          },
+          'fallbackText': 'Home Cleaning tomorrow at 10:00 AM — confirm?',
+        },
+      ]),
+    ),
+  ];
+}
+
 /// Every scenario in this file, in the order the dev picker shows them.
 const componentScenarios = <MockScenario>[
   orderTrackingScenario,
@@ -707,5 +1153,18 @@ const componentScenarios = <MockScenario>[
   cameraPermissionScenario,
   locationPermissionScenario,
   locationConfirmScenario,
+
+  // The offer, status and confirmation set the current Figma frames added.
+  providerSearchScenario,
+  providerOfferScenario,
+  providerOfferExpandedScenario,
+  bookingConfirmedScenario,
+  serviceTimelineScenario,
+  verificationCodeScenario,
+  cancelConfirmScenario,
+  selectedLocationScenario,
+  ratedReviewScenario,
+  serviceSummaryScenario,
+
   mixedComponentsScenario,
 ];

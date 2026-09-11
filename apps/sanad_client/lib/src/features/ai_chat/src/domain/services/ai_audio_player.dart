@@ -36,9 +36,11 @@ final class AiPlaybackProgress extends Equatable {
 
 /// Plays one audio file at a time.
 ///
+/// Live-voice infrastructure: the assistant's spoken reply is what gets
+/// played. The chat conversation carries no audio to play at all.
+///
 /// **One instance serves the whole screen.** Playing a second clip stops the
-/// first, which is what stops the feature from retaining a player per message
-/// — the failure mode a chat full of voice notes would otherwise hit.
+/// first, so a long session cannot accumulate a player per turn.
 ///
 /// The implementation is the only thing in the feature that knows `just_audio`
 /// exists.

@@ -4,10 +4,8 @@ import 'package:sanad_client/src/features/client_requests/src/di/client_requests
 import 'package:sanad_client/src/features/client_requests/src/domain/usecases/client_request_usecases.dart';
 import 'package:sanad_client/src/features/client_requests/src/presentation/bloc/client_request_detail/client_request_detail_bloc.dart';
 import 'package:sanad_client/src/features/client_requests/src/presentation/bloc/client_requests_list/client_requests_list_bloc.dart';
-import 'package:sanad_client/src/features/client_requests/src/presentation/bloc/request_draft/request_draft_bloc.dart';
 import 'package:sanad_client/src/features/client_requests/src/presentation/pages/client_request_detail_page.dart';
 import 'package:sanad_client/src/features/client_requests/src/presentation/pages/client_requests_page.dart';
-import 'package:sanad_client/src/features/client_requests/src/presentation/pages/request_composer_page.dart';
 import 'package:sanad_client/src/features/client_requests/src/routes/client_request_routes.dart';
 
 /// Contributes the client request lifecycle.
@@ -36,15 +34,6 @@ class ClientRequestsModule extends FeatureModule {
       path: ClientRequestRoutes.list,
       builder: (_, _) => const ClientRequestsPage(buildBloc: _buildListBloc),
       routes: [
-        // Nested so `/requests/new` is matched before the `:id` pattern —
-        // otherwise "new" would be read as a request id.
-        GoRoute(
-          path: 'new',
-          builder: (_, _) => RequestComposerPage(
-            buildBloc: _buildDraftBloc,
-            browseServices: sl<BrowseCatalogueServicesUseCase>(),
-          ),
-        ),
         GoRoute(
           path: ':id',
           builder: (context, state) {
@@ -59,16 +48,6 @@ class ClientRequestsModule extends FeatureModule {
                   .queryParameters[ClientRequestRoutes.offerQueryParam],
             );
           },
-          routes: [
-            GoRoute(
-              path: 'edit',
-              builder: (context, state) => RequestComposerPage(
-                buildBloc: _buildDraftBloc,
-                browseServices: sl<BrowseCatalogueServicesUseCase>(),
-                requestId: state.pathParameters['id'],
-              ),
-            ),
-          ],
         ),
       ],
     ),
@@ -76,8 +55,6 @@ class ClientRequestsModule extends FeatureModule {
 
   static ClientRequestsListBloc _buildListBloc() =>
       sl<ClientRequestsListBloc>();
-
-  static RequestDraftBloc _buildDraftBloc() => sl<RequestDraftBloc>();
 
   static ClientRequestDetailBloc _buildDetailBloc(String requestId) =>
       ClientRequestDetailBloc(

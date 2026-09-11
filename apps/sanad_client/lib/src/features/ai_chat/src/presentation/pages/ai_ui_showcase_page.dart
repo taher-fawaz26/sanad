@@ -8,7 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sanad_client/src/features/ai_chat/src/ai_chat_config.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/showcase_fixtures.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/actions/ai_chat_action_handlers.dart';
-import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/home/ai_chat_background.dart';
+import 'package:sanad_client/src/ui/background/client_ambient_background.dart';
 
 /// Every semantic component in the catalog, rendered through the real
 /// protocol — the validation surface for a design change.
@@ -70,6 +70,11 @@ class _AiUiShowcasePageState extends State<AiUiShowcasePage> {
         unsupportedContent: 'ai_chat.unsupported_content'.tr(),
         openInMaps: 'ai_chat.open_in_maps'.tr(),
         ratingOutOfFive: 'ai_chat.rating_out_of_five'.tr(),
+        distanceLabel: 'ai_chat.distance_label'.tr(),
+        verifiedLabel: 'ai_chat.verified_label'.tr(),
+        showMoreLabel: 'ai_chat.show_more'.tr(),
+        showLessLabel: 'ai_chat.show_less'.tr(),
+        ratingStarsLabel: 'ai_chat.rating_stars'.tr(),
       ),
     );
     _validator = AiChatConfig.validator(keepUnsupportedNodes: !kReleaseMode);
@@ -92,7 +97,7 @@ class _AiUiShowcasePageState extends State<AiUiShowcasePage> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: AiChatBackground(
+      body: ClientAmbientBackground(
         child: SafeArea(
           bottom: false,
           child: AiUiHost(

@@ -36,6 +36,10 @@ class CounterOfferSheet extends StatefulWidget {
   }) => SheetNavigator.push<CounterOfferResult>(
     context,
     CounterOfferSheet(initial: initial),
+    // See `ReasonSheet.show` — one scaffold, owned by the route (A-12).
+    settings: SheetRouteSettings(
+      title: 'client_requests.counter_sheet_title'.tr(),
+    ),
   );
 
   /// Seeds the time picker, typically with the provider's proposal.
@@ -89,45 +93,42 @@ class _CounterOfferSheetState extends State<CounterOfferSheet> {
     final colors = context.appColors;
     final proposedAt = _proposedAt;
 
-    return SheetScaffold(
-      title: 'client_requests.counter_sheet_title'.tr(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'client_requests.counter_sheet_description'.tr(),
-            style: typography.bodySmall.copyWith(color: colors.slate600),
-          ),
-          SizedBox(height: AppSpacing.lg),
-          AppSelectField(
-            label: 'client_requests.time_label'.tr(),
-            value: proposedAt == null
-                ? null
-                : formatRequestDateTime(context, proposedAt),
-            hint: 'client_requests.time_placeholder'.tr(),
-            errorText: _error,
-            isRequired: true,
-            onTap: _pickTime,
-          ),
-          SizedBox(height: AppSpacing.md),
-          AppTextField(
-            controller: _note,
-            label: 'client_requests.note_optional_label'.tr(),
-            maxLines: 3,
-            inputFormatters: [
-              LengthLimitingTextInputFormatter(
-                RequestFieldLimits.offerNoteMaxLength,
-              ),
-            ],
-          ),
-          SizedBox(height: AppSpacing.lg),
-          AppButton(
-            label: 'client_requests.send'.tr(),
-            onPressed: _submit,
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'client_requests.counter_sheet_description'.tr(),
+          style: typography.bodySmall.copyWith(color: colors.slate600),
+        ),
+        SizedBox(height: AppSpacing.lg),
+        AppSelectField(
+          label: 'client_requests.time_label'.tr(),
+          value: proposedAt == null
+              ? null
+              : formatRequestDateTime(context, proposedAt),
+          hint: 'client_requests.time_placeholder'.tr(),
+          errorText: _error,
+          isRequired: true,
+          onTap: _pickTime,
+        ),
+        SizedBox(height: AppSpacing.md),
+        AppTextField(
+          controller: _note,
+          label: 'client_requests.note_optional_label'.tr(),
+          maxLines: 3,
+          inputFormatters: [
+            LengthLimitingTextInputFormatter(
+              RequestFieldLimits.offerNoteMaxLength,
+            ),
+          ],
+        ),
+        SizedBox(height: AppSpacing.lg),
+        AppButton(
+          label: 'client_requests.send'.tr(),
+          onPressed: _submit,
+        ),
+      ],
     );
   }
 }

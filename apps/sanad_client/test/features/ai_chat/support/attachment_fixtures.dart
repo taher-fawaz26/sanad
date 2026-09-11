@@ -44,30 +44,6 @@ AiDocumentAttachment documentFixture({
   failureKey: failureKey,
 );
 
-AiAudioAttachment audioFixture({
-  String id = 'att_aud_1',
-  String fileName = 'voice.m4a',
-  int sizeBytes = 4096,
-  String mimeType = 'audio/mp4',
-  String localPath = '/tmp/voice.m4a',
-  Duration duration = const Duration(seconds: 12),
-  AiAttachmentStatus status = AiAttachmentStatus.picked,
-  String? failureKey,
-  List<double> waveform = const [0.1, 0.5, 0.9],
-  String transcript = '',
-}) => AiAudioAttachment(
-  id: id,
-  fileName: fileName,
-  sizeBytes: sizeBytes,
-  mimeType: mimeType,
-  localPath: localPath,
-  duration: duration,
-  status: status,
-  failureKey: failureKey,
-  waveform: waveform,
-  transcript: transcript,
-);
-
 /// An attachment that has already been uploaded, as the send path sees it.
 AiUploadedAttachment uploadedFixture({
   AiChatAttachment? source,

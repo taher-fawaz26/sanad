@@ -331,29 +331,24 @@ void main() {
         });
       });
 
-      test('a voice note travels as one message with its words', () async {
+      test('a dictated turn travels as one plain text message', () async {
+        // Speech-to-Text produces composer text, so it reaches the transport
+        // through the ordinary `message` field with no attachment of any kind
+        // — the whole of what replaced the retired voice-note path.
         final transport = build(uploader: _FakeUploader());
         addTearDown(transport.dispose);
 
         await transport.sendMultimodal(
-          AiOutgoingMessage(
-            attachments: [
-              audioFixture(id: 'v1', transcript: 'book me a plumber'),
-            ],
-          ),
+          const AiOutgoingMessage(text: 'book me a plumber'),
         );
 
         final body = transport.decoded;
-        final attachments = body['attachments'] as List<dynamic>;
         expect(body['message'], 'book me a plumber');
-        expect(attachments.single, <String, dynamic>{
-          'id': 'upl_v1',
-          'url': 'https://cdn.invalid/upl_v1',
-          'type': 'audio',
-          'transcript': 'book me a plumber',
-        });
-        // One request, one message — never a second turn for the transcript.
+        expect(body.containsKey('attachments'), isFalse);
+        // One request, one message — and nothing audio-shaped in it.
         expect(transport.bodies, hasLength(1));
+        expect(transport.bodies.single, isNot(contains('audio')));
+        expect(transport.bodies.single, isNot(contains('transcript')));
       });
 
       test('a text-only turn is identical to a plain send', () async {

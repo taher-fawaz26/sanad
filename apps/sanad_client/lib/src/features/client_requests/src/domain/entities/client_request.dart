@@ -137,6 +137,19 @@ class ClientRequest extends Equatable {
   bool get canConfirmOrDispute =>
       status == ClientRequestStatus.awaitingConfirmation;
 
+  /// Whether this request is waiting on the **client** for something.
+  ///
+  /// Drives Figma's `Needs your attention` section and its count badge
+  /// (`8385:4387`). Three things can put a request there, and all three are
+  /// already answered by fields the server sends: an unfinished draft, a
+  /// finished job the client has not confirmed, and an offer whose turn is
+  /// the client's. Nothing here is a new rule — it is the existing
+  /// action-availability getters, read as one question.
+  bool get needsAttention =>
+      (status.isDraft && missingForSubmit.isNotEmpty) ||
+      canConfirmOrDispute ||
+      threadsAwaitingClient.isNotEmpty;
+
   /// The thread whose pending offer is waiting on the **client**, if any.
   ///
   /// Whose turn it is comes from the pending offer's actor, never from the

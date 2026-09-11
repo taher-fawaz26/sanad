@@ -5,19 +5,20 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 /// Dictation with the device's own speech recogniser.
 ///
-/// The only file in the feature that names `speech_to_text`.
+/// The only file in the feature that names `speech_to_text`, and the whole of
+/// AI Chat's microphone capability: it returns words, writes no file and
+/// produces no attachment. What it recognises becomes editable composer text
+/// and is sent as an ordinary text turn.
 ///
 /// ## It does not touch the audio session — on purpose
 ///
-/// Every other microphone path here activates `AudioSessionManager` first. This
-/// one must not, and that is a decision rather than an oversight. On Android
-/// the plugin binds the system `SpeechRecognizer`, which runs in the recogniser
-/// app's process and manages its own capture; the plugin itself requests no
-/// audio focus at all. Taking `GAIN_TRANSIENT_EXCLUSIVE` here would therefore
-/// not protect anything — it would only give us a focus grant to fight the
-/// recogniser with, and hand our own listener a loss to misread. Mutual
-/// exclusion against recording and playback is enforced one level up, in
-/// `AiComposerBloc`, where it can be a decision instead of a race.
+/// The live-voice session activates `AudioSessionManager` first. This one must
+/// not, and that is a decision rather than an oversight. On Android the plugin
+/// binds the system `SpeechRecognizer`, which runs in the recogniser app's
+/// process and manages its own capture; the plugin itself requests no audio
+/// focus at all. Taking `GAIN_TRANSIENT_EXCLUSIVE` here would therefore not
+/// protect anything — it would only give us a focus grant to fight the
+/// recogniser with, and hand our own listener a loss to misread.
 ///
 /// ## The plugin is a singleton
 ///
@@ -69,8 +70,7 @@ class SpeechToTextRecognizer implements AiSpeechRecognizer {
   /// Maps a platform error onto a product reason.
   ///
   /// Pure and static so the whole table is assertable without a device — the
-  /// same shape as `PermissionsAiPermissionGateway.mapPermissionResult` and
-  /// `RecordAudioRecorder.abortFor`.
+  /// same shape as `PermissionsAiPermissionGateway.mapPermissionResult`.
   ///
   /// The identifiers are Android's `SpeechRecognizer` error names, which the
   /// plugin also uses on iOS. [permanent] is the plugin's own flag for "this

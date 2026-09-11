@@ -72,6 +72,18 @@ AiChatEvent scenarioUi(String messageId, Map<String, dynamic> payload) =>
       payload: payload,
     );
 
+/// An agent-side failure.
+///
+/// The only way a scripted source can drive the *message lifecycle* rather
+/// than the message list: the bloc marks whatever turn was in flight as
+/// `failed` when this lands, which is exactly what a dropped send does on a
+/// live transport. Nothing about the failed bubble is faked.
+AiChatEvent scenarioError(String code, {String? message}) => AiChatErrorEvent(
+  eventId: 'evt_${generateUuidV4()}',
+  code: code,
+  message: message,
+);
+
 /// Splits [text] into word-sized deltas so streaming looks like streaming.
 List<AiChatEvent> scenarioStream(String messageId, String text) {
   final words = text.split(' ');

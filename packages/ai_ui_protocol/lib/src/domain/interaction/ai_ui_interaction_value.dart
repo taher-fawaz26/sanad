@@ -213,6 +213,115 @@ final class AiUiMediaValue extends AiUiInteractionValue {
   List<Object?> get props => [source, count];
 }
 
+/// Which way an offer went.
+enum AiUiOfferDecision {
+  /// The user took the offer.
+  accepted('accepted'),
+
+  /// The user turned it down. Distinct from a *cancelled* interaction: the
+  /// user answered the question, and the answer was no.
+  declined('declined');
+
+  const AiUiOfferDecision(this.wire);
+
+  /// The exact JSON value on the wire.
+  final String wire;
+
+  /// Resolves [value], or `null` when it names no member.
+  static AiUiOfferDecision? tryFromWire(String value) {
+    for (final candidate in values) {
+      if (candidate.wire == value) return candidate;
+    }
+    return null;
+  }
+}
+
+/// A rating, with the words that came with it. Used by `review_request`.
+///
+/// Separate from [AiUiTextValue] rather than replacing it: a review with no
+/// star rating — the card the agent has been sending since v1 — still travels
+/// as plain text, so a backend reading `value.text` keeps working. A card that
+/// asks for stars sends this instead, and `value.text` is still there.
+final class AiUiReviewValue extends AiUiInteractionValue {
+  /// Creates a review value.
+  const AiUiReviewValue({required this.comment, this.rating});
+
+  /// Whole stars, `1..maxRating`. `null` when the card offered no rating, or
+  /// offered one the user did not set.
+  final int? rating;
+
+  /// The user's own words, trimmed. May be empty — an empty comment beside a
+  /// five-star rating is a complete answer.
+  final String comment;
+
+  @override
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    if (rating != null) 'rating': rating,
+    // Under the same key `AiUiTextValue` uses, so a reader that only knows
+    // the older shape still finds the comment where it expects it.
+    'text': comment,
+  };
+
+  @override
+  List<Object?> get props => [rating, comment];
+}
+
+/// A yes-or-no answer. Used by everything that carries an `AiUiConfirmChoice`.
+final class AiUiConfirmationValue extends AiUiInteractionValue {
+  /// Creates a confirmation value.
+  const AiUiConfirmationValue({required this.confirmed, this.reference});
+
+  /// `true` when the user took the affirmative control.
+  ///
+  /// Note this is *the answer*, not the interaction's status: declining is a
+  /// deliberate answer (`submitted` + `confirmed: false`), where dismissing
+  /// the card without choosing is a `cancelled` interaction. An agent that
+  /// conflated the two would re-ask a question the user already said no to.
+  final bool confirmed;
+
+  /// The agent's own identifier for what was decided, echoed back from
+  /// `AiUiConfirmChoice.reference`.
+  final String? reference;
+
+  @override
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'confirmed': confirmed,
+    if (reference != null) 'reference': reference,
+  };
+
+  @override
+  List<Object?> get props => [confirmed, reference];
+}
+
+/// How a `provider_card`'s offer was answered.
+final class AiUiOfferValue extends AiUiInteractionValue {
+  /// Creates an offer value.
+  const AiUiOfferValue({
+    required this.decision,
+    this.providerId,
+    this.offerId,
+  });
+
+  /// Accepted or declined.
+  final AiUiOfferDecision decision;
+
+  /// The provider the offer was for, from the card's own `providerId`.
+  final String? providerId;
+
+  /// The agent's identifier for the offer, when it published one.
+  final String? offerId;
+
+  @override
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'decision': decision.wire,
+    if (providerId != null) 'providerId': providerId,
+    if (offerId != null) 'offerId': offerId,
+  };
+
+  @override
+  List<Object?> get props => [decision, providerId, offerId];
+}
+
 /// No payload.
 ///
 /// The value of a cancellation, and of any acknowledgement whose meaning is

@@ -14,121 +14,122 @@ deliberately-broken payloads) with no network.
 
 ## Multimodal
 
-The chat accepts **images, documents and voice notes**, offers **dictation**
-(speech-to-text), and has a separate **live-voice** surface at
+The chat accepts **images and documents**, offers **Speech-to-Text** from the
+composer microphone, and has a separate **live-voice** surface at
 `/dev/ai-chat/voice`. All of it is real on the device — real camera, real file
-picker, real microphone, real speech recognition, real playback, real
-permissions. Attachments now reach the backend for real: they are uploaded
-through `packages/media_upload` and sent on the turn as `{id, url}` pairs. Live
-voice is still the exception — it has no realtime protocol and echoes its own
-capture.
+picker, real speech recognition, real permissions. Attachments reach the backend
+for real: they are uploaded through `packages/media_upload` and sent on the turn
+as `{id, url}` pairs. Live voice is still the exception — it has no realtime
+protocol and echoes its own capture.
 
-### Three microphone capabilities, kept distinct
+**AI Chat does not send recorded audio.** Speech is converted to text on the
+client and submitted as a normal text message; there is no voice-note
+attachment, no audio upload and no audio field on the wire. A recorded-audio
+capability existed here once — a held microphone producing an AAC file, a
+waveform, a preview player and an `AiAudioAttachment` carrying its own
+transcript — and it was **retired as a product decision**, removed rather than
+disabled. See [§Retired: recorded audio](#retired-recorded-audio).
+
+### Two microphone capabilities, kept distinct
 
 They share a device but nothing else: different outputs, different lifecycles,
-different future backend contracts. The composer gives each its own affordance
-rather than one overloaded button.
+different backend contracts. The composer gives each its own affordance rather
+than one overloaded button.
 
 | Capability | Path | Produces | Affordance |
 |---|---|---|---|
-| **Voice note** | mic → AAC file → attachment **+ on-device transcript** | a message attachment carrying its own words | the microphone, trailing edge — **hold** it |
-| **Dictation** | mic → native recogniser → text | editable composer text | inside the `+` attach sheet |
-| **Live voice** | continuous mic → session → assistant audio | a conversation turn | the waveform button, beside the microphone |
+| **Speech-to-Text** | mic → native recogniser → text | editable composer text, sent as an ordinary text turn | the microphone, trailing edge — **tap** it |
+| **Live voice** | continuous mic → session → assistant audio | a conversation turn, no attachment | the waveform button, beside the microphone |
 
-`AiComposerBloc` owns the first two and refuses to run either while the other
-holds the microphone; live voice is its own bloc on its own route, reached by
-`push` so the conversation stays alive underneath.
+`AiComposerBloc` owns the first; live voice is its own bloc on its own route,
+reached by `push` so the conversation stays alive underneath. Neither can hold
+the microphone while the other does — the dictation bar replaces the composer's
+input row, so the live-voice control is not on screen while recognition runs.
 
-The first two swapped places. The prominent microphone used to mean dictation
-while recording hid inside the attach sheet, which put the capability that
-produces a *message* two taps behind the one that produces *text*, and left two
-microphone meanings competing on one row. The microphone is now the voice-note
-path and nothing else; dictation moved into the sheet with the other things you
-reach for occasionally.
+### Speech-to-Text
 
-### The record gesture
-
-Held, not tapped — `AiHoldToRecordButton` over a `LongPressGestureRecognizer`
-whose deadline, lock distance and cancel distance are constants in
-`ai_recording_gesture.dart`.
+Tapped, not held. There is no take to protect against a mis-tap and no coaching
+hint, because nothing is recorded:
 
 ```text
-tap            → a hint, never a take
-hold           → recording, and it ends when you let go
-hold + swipe ↑ → lockedRecording: hands-free, ends at an explicit Stop
-hold + swipe ⇤ → discarded, file deleted        (mirrored under RTL)
-release        → encoding → preview → send
+tap mic     → requestingPermission → starting → listening
+speaking    → partial results stream into the text field, live
+stop        → finalizing → completed; the words are ordinary editable text
+cancel      → idle, and the words are discarded
+send        → an ordinary text turn: { conversation_id, message }
 ```
 
-`lockedRecording` is one extra value on `AiRecordingStatus`, not a second
-recording path: nothing is asked of the recorder when a take locks, because the
-microphone is already open. It joins `isCapturing`, which is what carries it
-into the duration cap, backgrounding cleanup and the mutual-exclusion check
-without a new call site.
+The user can edit the transcript before sending, and the request the agent
+receives is byte-identical to one the user typed.
 
-A take shorter than `AiAttachmentRules.minRecordingDuration` is discarded rather
-than attached — a fumbled release is a mis-tap, not a message.
+- **Real device recognition** (`speech_to_text`), not a mock. The recognition
+  locale is chosen by `SpeechLocaleResolver` from what the device actually
+  offers; a language with no recogniser installed falls back to the device
+  default rather than failing.
+- **Partial transcripts travel on `SpeechTranscriptController`**, never through
+  bloc state, so the conversation does not rebuild on every recognised word.
+  `AiSpeechStatus` — the lifecycle the user can see — is the only part that is
+  state.
+- The recogniser can end a phrase itself after its own pause; the bloc follows
+  with `AiComposerSpeechEnded` rather than going on claiming to listen.
+- Two grants are requested, in order: the microphone (Android's `RECORD_AUDIO`,
+  which the system recogniser needs) and then iOS's separate speech-recognition
+  grant. `SpeechToTextRecognizer` deliberately does **not** touch
+  `AudioSessionManager` — the platform recogniser owns its own capture, and
+  taking focus here would only give us a grant to fight it with.
+- The microphone gives way to the send pill as soon as there is anything to
+  send, which is why dictation always begins from an empty composer and
+  replaces rather than appends.
 
-**`sequential()` orders events only within one event type.** `Bloc.on<E>`
-filters the event stream by `E` before applying the transformer, so a stop runs
-*concurrently* with a start rather than queueing behind it. A release that beats
-the take it belongs to — the shape of the first-ever permission dialog, which
-steals the pointer while the handler is parked on `ensureMicrophone()` — is
-therefore latched by `_startInFlight` / `_pendingRelease` and replayed once the
-take exists. Without that the take starts with nobody holding it and runs to the
-five-minute cap. `_releaseInFlight` is the same idea for the other pair: at most
-one terminal transition per take, so a cancel-drag that also ends in a release
-cannot call `stop()` on a recorder the cancel already tore down.
+### Attachments
 
-Screen-reader users get a plain tap that starts an *already locked* take, so
-Stop and Delete are the whole interaction and no gesture is required to reach
-any function. The drag path stays available to everyone else.
-
-A voice note also gets a transcript, and that does **not** make it a fourth
-capability. `speech_to_text` can only transcribe the live microphone — there is
-no file API — so the recogniser runs alongside the recorder for the duration of
-the take, writing to an accumulator instead of the composer's text field. It
-never enters `state.speech`, which is what keeps the mutual-exclusion rule,
-`canSend` and the composer's bar-swapping exactly as they were. Capture is
-best-effort: an unavailable recogniser, a microphone it cannot share, or silence
-all yield an empty transcript, no banner, and a voice note that still sends.
-
-- All three sources now implement `AiMultimodalEventSource`. A turn's
-  attachments are uploaded at send time and travel as `{id, url}` — plus
-  `type: "audio"` and `transcript` for a voice note — so the agent never
-  resolves a storage location itself and never re-transcribes. See
+- All three sources implement `AiMultimodalEventSource`. A turn's attachments
+  are uploaded at send time and travel as exactly `{id, url}` — no
+  discriminator, no per-type extras. See
   [`../ai-chat/PROTOCOL_V1.md`](../ai-chat/PROTOCOL_V1.md) §12 for the
   normative shape.
 - An upload failure sends nothing and raises one error bubble; the user's text
-  and their audio stay in their own bubble, and the audio stays playable.
+  stays in their own bubble.
 - Live voice captures genuine PCM and plays it back as the "assistant" reply.
   Echoing the capture is the point: a canned clip would leave capture and
   playback unconnected, so a broken microphone would still demo convincingly.
-- One conversation holds every modality — image, audio, document and text turns
-  interleave in the same list.
-- Attachments are bounded by `FileSizePolicy` (5 MiB, repo-wide, not loosened);
-  recordings are capped at five minutes, which keeps a take well inside it.
-- Dictation is **real** device recognition (`speech_to_text`), not a mock. The
-  recognition locale is chosen by `SpeechLocaleResolver` from what the device
-  actually offers; a language with no recogniser installed falls back to the
-  device default rather than failing.
-- Partial transcripts travel on `SpeechTranscriptController`, never through
-  bloc state — the same hot-path rule as the recording meter and the playback
-  position, so the conversation does not rebuild on every recognised word.
+- One conversation holds text, image and document turns interleaved in the same
+  list.
+- Attachments are bounded by `FileSizePolicy` (5 MiB, repo-wide, not loosened).
+
+### Retired: recorded audio
+
+The composer used to record voice notes. That capability is gone, and the code
+went with it — model, serialization, recorder, playback, waveform, gesture,
+preview UI, state machine, localization and tests. It is **not** dormant behind
+a flag, and it must not be reintroduced through the wire contract: an AI Chat
+turn has no `type: "audio"` attachment and no `transcript` field, and
+`ai_chat_turn_payload_test.dart` asserts that no audio vocabulary can be
+serialized at all.
+
+What remains, and why it is legitimate:
+
+| Kept | Why |
+|---|---|
+| `record` (package), `RecordVoiceCapture` | live-voice PCM capture |
+| `just_audio`, `AiAudioPlayer`, `JustAudioPlayer` | live voice plays the assistant's reply |
+| `audio_session`, `AudioSessionManager` | live voice is the app's one audio-focus client |
+| `AudioLevelScale`, `LevelHistory`, `WavHeader` | live-voice level metering and PCM framing |
+| `RECORD_AUDIO`, `NSMicrophoneUsageDescription`, `PermissionType.microphone` | required by the system speech recogniser *and* by live voice |
 
 ### Two lifecycle signals, deliberately not merged
 
 An **audio-session interruption** (a call, another app taking the audio path)
-arrives on `AudioSessionManager.events` and is classified by
-`RecordAudioRecorder.abortFor`. An **app-lifecycle transition** (the OS putting
-us behind something else) arrives on an `AppLifecycleListener` owned by each
-screen and becomes `AiComposerBackgrounded` / `AiVoiceSessionBackgrounded`.
+arrives on `AudioSessionManager.events` and belongs to live voice. An
+**app-lifecycle transition** (the OS putting us behind something else) arrives
+on an `AppLifecycleListener` owned by each screen and becomes
+`AiComposerBackgrounded` / `AiVoiceSessionBackgrounded`.
 
 They are separate because they mean different things and nothing reports the
 second: Android stops delivering microphone data to a backgrounded app without
 a foreground service, so a capture that survives it is already dead. On
-background the composer cancels dictation, aborts a recording *and deletes its
-partial file*, and stops playback; the voice route ends its session.
+background the composer cancels dictation and discards the partial transcript;
+the voice route ends its session.
 
 > **Backend gap:** the streaming endpoint emits **no `ui` event** — replies are
 > prose only, in Markdown. The whole structured-UI pipeline (codec, validator,
@@ -303,19 +304,19 @@ renderers are one implementation.
 | `domain/ai_chat_message.dart` | One bubble: role, text, validated document, lifecycle |
 | `domain/ai_chat_event_source.dart` | The transport seam — three members |
 | `data/sse_ai_chat_event_source.dart` | The live transport: streamed `POST`, `Sanad-Access-Token`, one request per turn |
-| `domain/entities/ai_chat_attachment.dart` | Sealed image / document / audio attachment; a path, never bytes |
-| `domain/services/*.dart` | The capability seams: picker, permissions, recorder, player, voice capture, voice session |
+| `domain/entities/ai_chat_attachment.dart` | Sealed image / document attachment; a path, never bytes, never audio |
+| `domain/services/*.dart` | The capability seams: picker, permissions, recogniser, player, voice capture, voice session |
 | `domain/usecases/validate_attachment.dart` | Type, size and count rules; delegates the ceiling to `FileSizePolicy` |
 | `data/platform/attachments/*.dart` | The only files that name `asset_picker` / `packages/permissions` |
-| `data/platform/audio/*.dart` | The only files that name `record`, `just_audio`, `audio_session` |
+| `data/platform/speech/speech_to_text_recognizer.dart` | The only file that names `speech_to_text`; the whole of the composer mic |
+| `data/platform/audio/*.dart` | Live-voice audio focus, playback and PCM framing — the only files that name `just_audio` / `audio_session` |
+| `data/platform/voice/record_voice_capture.dart` | The only file that names `record`; live-voice PCM capture |
 | `data/platform/voice/mock_ai_voice_session.dart` | Real microphone, mocked assistant (it echoes the capture) |
-| `presentation/bloc/ai_composer_bloc.dart` | Staging a turn: attachments, validation, the recording state machine |
+| `presentation/bloc/ai_composer_bloc.dart` | Staging a turn: attachments, validation, the dictation state machine |
 | `presentation/bloc/ai_voice_session_bloc.dart` | The live-voice subsystem's lifecycle |
-| `presentation/bloc/recording_level_controller.dart` | Live mic level + elapsed, off bloc state |
-| `presentation/widgets/composer/ai_hold_to_record_button.dart` | The record gesture: hold, swipe to lock, swipe to discard |
-| `presentation/widgets/composer/ai_recording_gesture.dart` | The gesture's thresholds, as constants |
+| `presentation/bloc/speech_transcript_controller.dart` | The live partial transcript, off bloc state |
+| `presentation/widgets/composer/ai_speech_bar.dart` | What the composer card wears while the recogniser is listening |
 | `src/ui/glass/` | `ClientGlassSurface` / `ClientGlassTokens` — the client's translucent chrome |
-| `presentation/bloc/audio_playback_controller.dart` | Playback position, off bloc state; one player for the screen |
 | `data/sse_frame_parser.dart` | `text/event-stream` framing — incremental, total, never throws |
 | `data/websocket_ai_chat_event_source.dart` | Reference transport (`?transport=ws`): `wss`, `Sanad-Access-Token`, reconnect |
 | `data/mock_ai_chat_event_source.dart` | Scripted replay with realistic pacing |
@@ -418,14 +419,15 @@ fvm flutter test apps/sanad_client/test/features/ai_chat apps/sanad_client/test/
 - `ai_ui_renderer` — 125 tests: one per node type, the interactive cards'
   input and template substitution, degradation, action dispatch, RTL
   mirroring, accessibility.
-- `ai_chat` — 667 tests across transports, the two blocs, the composer widgets
+- `ai_chat` — 593 tests across transports, the two blocs, the composer widgets
   and the module's route tree, plus the showcase net that validates and renders
   every fixture in both directions. The ones most worth knowing about:
-  `ai_composer_bloc_test.dart` (the recording state machine, including the
-  concurrency latches — every test in *a release that beats the take it belongs
-  to* fails without them), `ai_hold_to_record_test.dart` (the gesture, driven
-  pointer by pointer in both text directions), and `ai_composer_widget_test.dart`
-  (which surface renders for which state).
+  `ai_composer_bloc_test.dart` (the dictation state machine, plus *speech is
+  text, and only text* — the group that pins the product decision that a
+  dictated turn stages no attachment), `ai_chat_turn_payload_test.dart`
+  (*no audio attachment can be serialized*, which is the wire half of the same
+  invariant), and `ai_composer_widget_test.dart` (which surface renders for
+  which state, and that the mic dictates on a plain tap).
 - `history` — 35 tests over a real router: both Figma states, search
   (matching, non-matching, cleared), scrolling, the preview's two-line cap, the
   interaction boundary, RTL and large text scale, plus the empty state's
@@ -467,13 +469,11 @@ fvm flutter test apps/sanad_client/test/features/ai_chat apps/sanad_client/test/
   `nodeId`, so there is no question for the outcome to answer.
 - The backend does not read `attachments` yet — see
   [`../ai-chat/BACKEND_TICKET.md`](../ai-chat/BACKEND_TICKET.md) §11. Until it
-  does, a voice note is still understood, because its transcript also fills
-  `message` when nothing was typed.
+  does, an image- or document-only turn reaches the agent as an empty
+  `message`, which the live agent answers with `200` and zero frames. A
+  dictated turn is unaffected: its words are ordinary `message` text.
 - A failed turn has no retry affordance: `AiChatMessage.user` is always
   `complete`, so a bubble cannot render as failed.
-- Concurrent recording and speech recognition is **unverified on real
-  hardware**. If a platform refuses to share the microphone the transcript is
-  simply empty; the wire contract is unaffected either way.
 - The transport carries no conversation history — a new visit is a new
   `conversation_id`, so server-side memory starts empty. Within a visit the
   server does remember: turn 2 recalls turn 1 (verified live).

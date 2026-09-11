@@ -2,7 +2,6 @@ import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/home/ai_chat_background.dart';
 import 'package:sanad_client/src/features/ai_chat/src/routes/ai_chat_routes.dart';
 import 'package:sanad_client/src/features/history/src/data/mock_conversation_history_source.dart';
 import 'package:sanad_client/src/features/history/src/domain/conversation_history_entry.dart';
@@ -14,6 +13,7 @@ import 'package:sanad_client/src/features/history/src/presentation/widgets/conve
 import 'package:sanad_client/src/features/history/src/presentation/widgets/conversation_history_placeholder.dart';
 import 'package:sanad_client/src/features/history/src/presentation/widgets/conversation_history_search_field.dart';
 import 'package:sanad_client/src/features/history/src/presentation/widgets/conversation_history_start_button.dart';
+import 'package:sanad_client/src/ui/background/client_ambient_background.dart';
 
 /// Conversation History — Figma `8120:2918` (with conversations) and
 /// `8124:3867` (without).
@@ -27,9 +27,10 @@ import 'package:sanad_client/src/features/history/src/presentation/widgets/conve
 /// Reached by push from the Home header, on top of `AiHomeShell` rather than
 /// inside one of its branches, so it covers the whole shell — including the
 /// persistent header, which is why this page draws navigation of its own.
-/// It repaints `AiChatBackground` for the same reason `AiChatPage` does: a
-/// pushed route gets its own opaque page, so without the wash here the screen
-/// would render flat white and lose the green Figma puts along the bottom.
+/// It repaints `ClientAmbientBackground` for the same reason `AiChatPage`
+/// does: a pushed route gets its own opaque page, so without the wash here the
+/// screen would render flat white and lose the green Figma puts along the
+/// bottom.
 ///
 /// No bloc. The screen loads a list once and filters it in memory; there is
 /// no async lifecycle to model, no mutation to guard and no failure to
@@ -103,7 +104,7 @@ class _HistoryPageState extends State<HistoryPage> {
       // Transparent so the wash below is the page's only background — the
       // same arrangement `AiHomeShell` and `AiChatPage` use.
       backgroundColor: Colors.transparent,
-      body: AiChatBackground(
+      body: ClientAmbientBackground(
         // `bottom: false`: the list and the bottom bar apply the bottom inset
         // themselves, so the wash still runs to the physical edge as Figma
         // draws it.

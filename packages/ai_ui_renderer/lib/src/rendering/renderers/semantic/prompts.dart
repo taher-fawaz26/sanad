@@ -193,14 +193,20 @@ class AiUiPermissionRequestRenderer
           mainAxisSize: MainAxisSize.min,
           spacing: AppSpacing.xxl,
           children: [
-            AiPromptHeader(title: node.title, body: node.body),
-            if (node.image != null)
-              AiMapPreview(
-                source: node.image,
-                scope: scope,
-                nodeType: AiUiNodeType.permissionRequest.wire,
-                nodeId: node.id,
-              ),
+            // Figma centres the rationale inside a tinted panel on both
+            // variants — the capability glyph on camera, the map preview on
+            // location — which is what separates "why we are asking" from the
+            // conversation around it. Which capability it is comes from
+            // `permission`, so the two frames are one component with different
+            // data rather than two payload shapes.
+            AiPermissionPanel(
+              permission: node.permission,
+              title: node.title,
+              body: node.body,
+              image: node.image,
+              scope: scope,
+              nodeId: node.id,
+            ),
             AiInteractionGate(
               nodeId: node.id,
               ledger: scope.ledger,
@@ -288,7 +294,44 @@ class AiUiLocationConfirmRenderer
         mainAxisSize: MainAxisSize.min,
         spacing: AppSpacing.xl,
         children: [
-          AiPromptHeader(title: node.title),
+          // Figma leads the selected place with a pin rather than a headline
+          // above a boxed address: the title and the address are one fact, and
+          // the map preview is what separates them when there is one.
+          Row(
+            spacing: AppSpacing.md,
+            children: [
+              Icon(
+                Icons.location_on_rounded,
+                size: AiCardTokens.discGlyphSize,
+                color: AiUiTokens.accent(context),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      node.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: typography
+                          .bold(typography.regularNone)
+                          .copyWith(color: colors.textPrimary),
+                    ),
+                    SizedBox(height: AppSpacing.xs / 2),
+                    Text(
+                      node.addressText,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: typography.smallNone.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
           if (node.image != null)
             AiMapPreview(
               source: node.image,
@@ -296,76 +339,99 @@ class AiUiLocationConfirmRenderer
               nodeType: AiUiNodeType.locationConfirm.wire,
               nodeId: node.id,
             ),
-          Container(
-            padding: EdgeInsets.all(AppSpacing.lg),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AiCardTokens.addressRadius),
-              border: Border.all(color: colors.border),
-            ),
-            child: Row(
-              spacing: AppSpacing.md,
-              children: [
-                Icon(
-                  Icons.location_on_outlined,
-                  size: AiCardTokens.discGlyphSize,
-                  color: AiUiTokens.accent(context),
-                ),
-                Expanded(
-                  child: Text(
-                    node.addressText,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: typography
-                        .semiBold(typography.smallNone)
-                        .copyWith(color: colors.textPrimary),
-                  ),
-                ),
-              ],
-            ),
-          ),
           AiInteractionGate(
             nodeId: node.id,
             ledger: scope.ledger,
-            builder: (context, state) => Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              spacing: AppSpacing.md,
-              children: [
-                AiPromptButton(
-                  label: node.confirmLabel,
-                  // The address is still posted verbatim as the user turn —
-                  // the agent authored it — and now also as a structured
-                  // place, so a confirmation is distinguishable from someone
-                  // typing the same words.
-                  onTap: state.isInteractive
-                      ? () => scope.submitInteraction(
-                          context,
-                          nodeId: node.id,
-                          nodeType: AiUiNodeType.locationConfirm,
-                          kind: AiUiInteractionKind.locationConfirmed,
-                          value: AiUiLocationValue(
-                            name: node.addressText,
-                            source: AiUiLocationSource.saved,
+            builder: (context, state) {
+              final confirm = AiPromptButton(
+                label: node.confirmLabel,
+                // The address is still posted verbatim as the user turn — the
+                // agent authored it — and now also as a structured place, so a
+                // confirmation is distinguishable from someone typing the same
+                // words.
+                onTap: state.isInteractive
+                    ? () => scope.submitInteraction(
+                        context,
+                        nodeId: node.id,
+                        nodeType: AiUiNodeType.locationConfirm,
+                        kind: AiUiInteractionKind.locationConfirmed,
+                        value: AiUiLocationValue(
+                          name: node.addressText,
+                          source: AiUiLocationSource.saved,
+                        ),
+                        text: node.addressText,
+                      )
+                    : null,
+              );
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                spacing: AppSpacing.md,
+                children: [
+                  // Which control shares the row with Confirm is a *semantic*
+                  // decision, not a guess at how long the labels are.
+                  //
+                  // `cancelLabel` dismisses the question, so it pairs beside
+                  // Confirm as an equal-weight either/or — Figma's "Selected
+                  // Delivery Location". `changeLabel` re-runs the app's own
+                  // picker, which is a substantial action rather than the
+                  // other half of a choice, so it takes its own full-width row
+                  // — Figma's "Location Confirmation". Putting a long
+                  // "Change location" in a half-width pill is what truncated
+                  // it on device.
+                  if (node.cancelLabel != null)
+                    Row(
+                      spacing: AppSpacing.md,
+                      children: [
+                        // Two thirds to one, which is the proportion Figma
+                        // draws and not a cosmetic choice: "Confirm location"
+                        // is three times the length of "Cancel", and splitting
+                        // the row evenly ellipsized the affirmative control
+                        // into "Confirm loca…" on a 393dp device.
+                        Expanded(flex: 2, child: confirm),
+                        Expanded(
+                          child: AiPromptButton(
+                            label: node.cancelLabel!,
+                            filled: false,
+                            // Refusing this address is an answer, not a
+                            // dismissal: the agent hears "not this one" and can
+                            // offer another, where silence would leave it
+                            // waiting.
+                            onTap: state.isInteractive
+                                ? () => scope.submitInteraction(
+                                    context,
+                                    nodeId: node.id,
+                                    nodeType: AiUiNodeType.locationConfirm,
+                                    kind: AiUiInteractionKind
+                                        .confirmationResolved,
+                                    value: const AiUiConfirmationValue(
+                                      confirmed: false,
+                                    ),
+                                  )
+                                : null,
                           ),
-                          text: node.addressText,
-                        )
-                      : null,
-                ),
-                if (node.changeLabel != null)
-                  AiPromptButton(
-                    label: node.changeLabel!,
-                    filled: false,
-                    onTap: scope.onCapabilityTap(
-                      context,
-                      nodeId: node.id,
-                      action: const AiUiAction(
-                        type: AiUiActionType.requestLocationShare,
+                        ),
+                      ],
+                    )
+                  else
+                    confirm,
+                  if (node.changeLabel != null)
+                    AiPromptButton(
+                      label: node.changeLabel!,
+                      filled: false,
+                      onTap: scope.onCapabilityTap(
+                        context,
+                        nodeId: node.id,
+                        action: const AiUiAction(
+                          type: AiUiActionType.requestLocationShare,
+                        ),
+                        enabled: state.isInteractive,
                       ),
-                      enabled: state.isInteractive,
                     ),
-                  ),
-              ],
-            ),
+                ],
+              );
+            },
           ),
           if (node.actions.isNotEmpty)
             AiCardActionRow(actions: node.actions, scope: scope),

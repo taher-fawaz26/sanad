@@ -41,12 +41,12 @@ final class MediaUploadAiAttachmentUploader implements AiAttachmentUploader {
   ///
   /// The classification comes from `AssetType.fromMimeType` rather than a table
   /// of our own: `asset_picker` already owns that vocabulary, and a second copy
-  /// would drift from it.
+  /// would drift from it. Only images and documents ever arrive here — AI Chat
+  /// uploads no audio.
   ///
-  /// A recording's `sizeBytes` is the documented `1` stub the composer sets —
-  /// harmless, because the repository uploads from `path` and never reads
-  /// `size`. It is carried through rather than recomputed so that no bloc and
-  /// no adapter in this feature has to touch `dart:io`.
+  /// `sizeBytes` is carried straight through from the picker rather than
+  /// recomputed, so that no bloc and no adapter in this feature has to touch
+  /// `dart:io`.
   static PickedAsset assetFor(AiChatAttachment attachment) => PickedAsset(
     name: attachment.fileName,
     path: attachment.localPath,

@@ -8,7 +8,6 @@ import 'package:sanad_client/src/features/client_requests/src/domain/repositorie
 import 'package:sanad_client/src/features/client_requests/src/domain/repositories/client_requests_repository.dart';
 import 'package:sanad_client/src/features/client_requests/src/domain/usecases/client_request_usecases.dart';
 import 'package:sanad_client/src/features/client_requests/src/presentation/bloc/client_requests_list/client_requests_list_bloc.dart';
-import 'package:sanad_client/src/features/client_requests/src/presentation/bloc/request_draft/request_draft_bloc.dart';
 
 /// Dependency registration for the client request lifecycle.
 ///
@@ -77,14 +76,7 @@ abstract final class ClientRequestsDI {
       ..registerFactory(
         () => ClientRequestsListBloc(
           listRequests: sl<ListClientRequestsUseCase>(),
-        ),
-      )
-      ..registerFactory(
-        () => RequestDraftBloc(
-          createDraft: sl<CreateDraftRequestUseCase>(),
-          updateDraft: sl<UpdateDraftRequestUseCase>(),
-          submitRequest: sl<SubmitRequestUseCase>(),
-          getRequest: sl<GetClientRequestUseCase>(),
+          cancelRequest: sl<CancelClientRequestUseCase>(),
         ),
       );
   }

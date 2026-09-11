@@ -1,3 +1,4 @@
+import 'package:app_animations/app_animations.dart';
 import 'package:design_system/src/dimensions/responsive_dimension.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
 import 'package:design_system/src/theme/tokens/chip_tokens.dart';
@@ -79,9 +80,13 @@ class AppChip extends StatelessWidget {
       ],
     );
 
-    // Compact chips must size to their content. `Ink` with only a height
-    // expands to the parent's max width (e.g. inside [Wrap]), which makes
-    // every chip full-bleed — never set a null width on an expanding box.
+    // Compact chips must size to their content. A fixed width expands to the
+    // parent's max width (e.g. inside [Wrap]), which makes every chip
+    // full-bleed — never set a null width on an expanding box.
+    //
+    // `AnimatedContainer` in place of a plain `Ink` so a `selected` toggle
+    // cross-fades the fill/border instead of snapping — there is no visible
+    // splash to layer under either way (`splashFactory: NoSplash`).
     final chip = Material(
       color: clear,
       child: InkWell(
@@ -89,7 +94,9 @@ class AppChip extends StatelessWidget {
         borderRadius: radius,
         splashFactory: NoSplash.splashFactory,
         highlightColor: clear,
-        child: Ink(
+        child: AnimatedContainer(
+          duration: AppMotionDuration.fast,
+          curve: AppMotionCurve.standard,
           width: expandedWidth,
           height: minHeight,
           padding: ChipTokens.padding(iconPosition: effectiveIconPosition),

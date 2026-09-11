@@ -1,7 +1,9 @@
 import 'package:ai_ui_protocol/ai_ui_protocol.dart';
 import 'package:ai_ui_renderer/src/rendering/ai_ui_strings.dart';
 import 'package:flutter/widgets.dart';
-import 'package:intl/intl.dart';
+// `hide TextDirection`: intl exports one of its own, which would shadow
+// Flutter's and make `valueDirection` return the wrong type.
+import 'package:intl/intl.dart' hide TextDirection;
 
 /// Renders the protocol's *structured* values in the device locale.
 ///
@@ -11,6 +13,28 @@ import 'package:intl/intl.dart';
 /// is 12- or 24-hour. It says what the value *is*; this file decides how it
 /// looks, using the same `intl` conventions as the rest of the app.
 abstract final class AiUiFormatters {
+  /// The direction a short, agent-supplied value shown verbatim in a card —
+  /// a time slot, a reference, a plate — must be laid out in.
+  ///
+  /// Under Arabic, "10:30 AM" rendered as "AM 10:30": the meridiem is a run of
+  /// Latin letters and the paragraph's RTL base direction pushed it to the
+  /// visual start (R-02). Wrapping the value in an LTR isolate is the app's
+  /// standing answer to that class of bug (SAN-770/771/775).
+  ///
+  /// Returns `TextDirection.ltr` for such a value, or `null` to inherit.
+  ///
+  /// `null` when the value carries strong RTL characters of its own: a label
+  /// the agent already localized ("صباحاً") must keep its own direction —
+  /// forcing an LTR base on it would reorder its words, trading one bidi bug
+  /// for another.
+  ///
+  /// A direction rather than `String.ltrIsolated` because this is the whole
+  /// content of its own `Text`, not a value embedded in a sentence — and
+  /// because leaving the string itself untouched keeps it matchable by
+  /// `find.text` and readable by a screen reader.
+  static TextDirection? valueDirection(String value) =>
+      Bidi.detectRtlDirectionality(value) ? null : TextDirection.ltr;
+
   static String money(BuildContext context, AiUiMoney money) {
     final locale = Localizations.localeOf(context).toString();
     // Whole amounts read better without trailing zeros in a chat bubble;

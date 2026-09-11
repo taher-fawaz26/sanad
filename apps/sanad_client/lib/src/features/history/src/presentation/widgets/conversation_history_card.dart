@@ -1,12 +1,10 @@
 import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
-// `show Bidi`: intl exports a `TextDirection` of its own, which would
-// shadow Flutter's.
-import 'package:intl/intl.dart' show Bidi;
 import 'package:sanad_client/src/features/history/src/domain/conversation_history_entry.dart';
 import 'package:sanad_client/src/features/history/src/presentation/conversation_history_time_formatter.dart';
 import 'package:sanad_client/src/features/history/src/presentation/conversation_history_tokens.dart';
+import 'package:sanad_client/src/ui/text/auto_text_direction.dart';
 
 /// One past conversation — Figma's history card (`8102:35064`).
 ///
@@ -165,16 +163,7 @@ class ConversationHistoryCard extends StatelessWidget {
 /// Figma's `dir="auto"` on the card's title and preview, which the design sets
 /// on every string a conversation supplies.
 ///
-/// Conversation content is not necessarily in the app's language: an Arabic UI
-/// can hold a conversation about an English-named service, and inheriting the
-/// page's RTL for that paragraph pushes its sentence-final punctuation to the
-/// visual left. Resolving each string's own direction from its first strong
-/// character is what a browser does for `dir="auto"`, and what
-/// `Bidi.detectRtlDirectionality` does here.
-///
-/// Not `String.ltrIsolated`: that is for an inherently-LTR *value* embedded in
-/// surrounding text (a phone number, a URL). These are whole paragraphs on
-/// their own lines, where the correct treatment is a paragraph direction
-/// rather than an isolate.
-TextDirection _autoDirection(String text) =>
-    Bidi.detectRtlDirectionality(text) ? TextDirection.rtl : TextDirection.ltr;
+/// Delegates to the app-level [autoTextDirection] so the chat bubble and this
+/// card cannot drift on what "follow the content" means — they had the same
+/// bug for the same reason (A-02).
+TextDirection _autoDirection(String text) => autoTextDirection(text);

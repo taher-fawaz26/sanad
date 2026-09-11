@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:app_animations/app_animations.dart';
 import 'package:design_system/src/components/app_snackbar.dart';
 import 'package:design_system/src/spacing/responsive_spacing.dart';
 import 'package:design_system/src/theme/tokens/snackbar_tokens.dart';
@@ -7,9 +8,13 @@ import 'package:flutter/material.dart';
 
 // A single active notification, tracked at module scope so a new call replaces
 // the previous one instead of stacking duplicates (e.g. a user repeatedly
-// tapping an action that keeps failing).
+// tapping an action that keeps failing). `_activeKey` is a fresh GlobalKey per
+// call (never reused while a prior entry may still be mid-exit-animation), so
+// `dismissAppOverlayNotification` can reach the still-showing widget's State
+// to play its exit transition before removing it.
 OverlayEntry? _activeEntry;
 OverlayState? _activeOverlay;
+GlobalKey<_TopNotificationState>? _activeKey;
 Timer? _dismissTimer;
 
 /// Shows a transient notification anchored to the **top** of the screen in the
@@ -37,8 +42,12 @@ void showAppOverlayNotification({
   final overlay = Overlay.maybeOf(context, rootOverlay: true);
   if (overlay == null) return;
 
+  // Starts the previous notification (if any) sliding/fading out; it removes
+  // itself asynchronously once that finishes, so it can briefly coexist with
+  // the new one being inserted below rather than snapping away.
   dismissAppOverlayNotification();
 
+  final key = GlobalKey<_TopNotificationState>();
   late final OverlayEntry entry;
   void handleAction() {
     dismissAppOverlayNotification();
@@ -47,6 +56,7 @@ void showAppOverlayNotification({
 
   entry = OverlayEntry(
     builder: (context) => _TopNotification(
+      key: key,
       child: AppSnackbar(
         title: title,
         caption: caption,
@@ -60,31 +70,46 @@ void showAppOverlayNotification({
 
   _activeEntry = entry;
   _activeOverlay = overlay;
+  _activeKey = key;
   overlay.insert(entry);
   _dismissTimer = Timer(duration, dismissAppOverlayNotification);
 }
 
-/// Removes the active overlay notification, if any. Safe to call when none is
-/// showing. Exposed so callers can dismiss on teardown.
+/// Dismisses the active overlay notification, if any — playing its exit
+/// transition first, then removing it once that completes. Safe to call when
+/// none is showing. Exposed so callers can dismiss on teardown.
 void dismissAppOverlayNotification() {
   _dismissTimer?.cancel();
   _dismissTimer = null;
   final entry = _activeEntry;
   final overlay = _activeOverlay;
+  final key = _activeKey;
   _activeEntry = null;
   _activeOverlay = null;
+  _activeKey = null;
   if (entry == null) return;
-  // Remove only while the host overlay is still alive. An inserted entry can
-  // be removed before its first build (a rapid replace), so we can't gate on
-  // `entry.mounted`; but if the overlay itself was torn down (its route/sheet
-  // closed), the entry is already gone with it and removing again would throw.
-  if (overlay != null && overlay.mounted) entry.remove();
+
+  // Remove only while the host overlay is still alive. If the overlay itself
+  // was torn down (its route/sheet closed), the entry is already gone with
+  // it and removing again would throw.
+  void remove() {
+    if (overlay != null && overlay.mounted) entry.remove();
+  }
+
+  // An entry can be dismissed before its first build (a rapid replace), so
+  // there may be no State to animate yet — fall back to an instant removal.
+  final state = key?.currentState;
+  if (state == null) {
+    remove();
+    return;
+  }
+  state.playExit(remove);
 }
 
 /// Top-anchored container with a short slide-and-fade entrance so the
 /// notification reads as arriving from the top edge, above the modal.
 class _TopNotification extends StatefulWidget {
-  const _TopNotification({required this.child});
+  const _TopNotification({required this.child, super.key});
 
   final Widget child;
 
@@ -96,17 +121,28 @@ class _TopNotificationState extends State<_TopNotification>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 220),
+    duration: AppMotionDuration.fast,
   )..forward();
 
   late final Animation<double> _fade = CurvedAnimation(
     parent: _controller,
-    curve: Curves.easeOut,
+    curve: AppMotionCurve.decelerated,
+    reverseCurve: AppMotionCurve.accelerated,
   );
   late final Animation<Offset> _slide = Tween<Offset>(
     begin: const Offset(0, -0.25),
     end: Offset.zero,
   ).animate(_fade);
+
+  /// Reverses the entrance transition, then calls [onComplete] — used by
+  /// [dismissAppOverlayNotification] so the notification slides/fades back
+  /// out instead of disappearing instantly. Functional motion (it
+  /// communicates the notification leaving), so — matching this widget's own
+  /// entrance — it is not gated by reduced motion; at
+  /// [AppMotionDuration.fast] it is short enough not to be disruptive.
+  void playExit(VoidCallback onComplete) {
+    _controller.reverse().whenComplete(onComplete);
+  }
 
   @override
   void dispose() {

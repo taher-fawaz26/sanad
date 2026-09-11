@@ -12,6 +12,7 @@ class AppAvatarStack extends StatelessWidget {
     this.maxVisible = 4,
     this.overflowCount = 0,
     this.size = AppAvatarSize.small,
+    this.tone = AppAvatarStackTone.brand,
   });
 
   final List<Widget> avatars;
@@ -19,11 +20,15 @@ class AppAvatarStack extends StatelessWidget {
   final int overflowCount;
   final AppAvatarSize size;
 
+  /// Colours the "+N" overflow chip. See [AppAvatarStackTone].
+  final AppAvatarStackTone tone;
+
   @override
   Widget build(BuildContext context) {
     final spec = AvatarStackTokens.resolve(
       colors: context.appColors,
       typography: context.appTypography,
+      tone: tone,
     );
 
     final visible = avatars.take(maxVisible).toList();

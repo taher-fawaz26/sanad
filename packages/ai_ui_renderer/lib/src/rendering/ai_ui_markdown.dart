@@ -31,7 +31,11 @@ abstract final class AiUiMarkdown {
   /// a single `Text`, which keeps `maxLines` and ellipsis behaviour intact.
   static final RegExp _hasMarkup = RegExp(
     r'(\*\*|__|[*_`]|!?\[[^\]]*\]\([^)]*\)'
-    r'|^\s{0,3}#{1,6}\s|^\s*[-*+]\s|^\s*\d+\.\s)',
+    r'|^\s{0,3}#{1,6}\s|^\s*[-*+]\s|^\s*\d+\.\s'
+    // A thematic break or a blockquote is markup too. Without these a reply
+    // that is only a rule or only a quote short-circuited to plain `Text` and
+    // showed its `---` / `>` verbatim (A-15).
+    r'|^\s{0,3}(?:-{3,}|\*{3,}|_{3,})\s*$|^\s{0,3}>\s?)',
     multiLine: true,
   );
 
@@ -114,6 +118,35 @@ abstract final class AiUiMarkdown {
         continue;
       }
 
+      // A thematic break — `---`, `***`, `___` — before the bullet rule,
+      // which would otherwise read `---` as a bullet with `--` for content.
+      if (RegExp(r'^(?:-{3,}|\*{3,}|_{3,})$').hasMatch(trimmed)) {
+        flushParagraph();
+        widgets.add(
+          Divider(
+            height: AppSpacing.lg,
+            color: baseStyle.color?.withValues(alpha: 0.24),
+          ),
+        );
+        continue;
+      }
+
+      // A blockquote. Rendered as an indented, quieter line rather than
+      // dropped: the agent uses it for asides ("> 💡 Tip: …"), and the marker
+      // itself is syntax the reader should never see.
+      final quote = RegExp(r'^>\s?(.*)$').firstMatch(trimmed);
+      if (quote != null) {
+        flushParagraph();
+        widgets.add(
+          _quoteRow(
+            context,
+            content: quote.group(1)!,
+            style: baseStyle,
+          ),
+        );
+        continue;
+      }
+
       final bullet = RegExp(r'^[-*+]\s+(.*)$').firstMatch(trimmed);
       if (bullet != null) {
         flushParagraph();
@@ -171,6 +204,35 @@ abstract final class AiUiMarkdown {
       ],
     ),
   );
+
+  /// A blockquote line — indented behind a rule on the leading edge.
+  ///
+  /// `EdgeInsetsDirectional` and a `Border` on `start`, so the rule sits on
+  /// the visual left in English and the visual right in Arabic.
+  static Widget _quoteRow(
+    BuildContext context, {
+    required String content,
+    required TextStyle style,
+  }) {
+    final accent = style.color?.withValues(alpha: 0.32);
+    return Container(
+      padding: EdgeInsetsDirectional.only(start: AppSpacing.sm),
+      decoration: BoxDecoration(
+        border: BorderDirectional(
+          start: BorderSide(color: accent ?? const Color(0x33000000), width: 2),
+        ),
+      ),
+      child: Text.rich(
+        TextSpan(
+          children: inlineSpans(
+            context,
+            content,
+            style.copyWith(color: style.color?.withValues(alpha: 0.86)),
+          ),
+        ),
+      ),
+    );
+  }
 
   /// Converts inline markup into spans.
   ///

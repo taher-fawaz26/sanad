@@ -19,6 +19,28 @@ typedef AiVoiceUiScript = Map<String, dynamic>? Function(int turn);
 abstract final class MockVoiceScenarios {
   MockVoiceScenarios._();
 
+  /// The default demo in [languageCode].
+  ///
+  /// These strings stand in for **agent** copy — `dateLabel`, `confirmLabel`
+  /// and a slot's `label` are payload fields the real agent supplies, already
+  /// localized server-side from `x-lang`. So they are deliberately *not*
+  /// client i18n keys: adding keys here would duplicate copy the backend owns
+  /// (see `.claude/rules/localization.md`).
+  ///
+  /// The mock still has to answer in the user's language, though — an Arabic
+  /// session showing "Tomorrow / Confirm" is the demo lying about what the
+  /// real agent would send (R-05). So the fixture itself is bilingual, which
+  /// is what the live agent will do for real.
+  static AiVoiceUiScript standardFor(String languageCode) {
+    final arabic = languageCode == 'ar';
+    return (turn) => switch (turn) {
+      1 => arabic ? timeSlotsAr : timeSlots,
+      2 => arabic ? locationPickerAr : locationPicker,
+      3 => arabic ? locationPermissionAr : locationPermission,
+      _ => null,
+    };
+  }
+
   /// The default demo: slots, then a place, then a capability.
   ///
   /// Three turns because the three cover the three shapes an answer can take —
@@ -77,6 +99,69 @@ abstract final class MockVoiceScenarios {
         ],
         'confirmLabel': 'Use this place',
         'confirmTemplate': 'Look around {location}',
+      },
+    ],
+  };
+
+  /// Arabic counterpart of [timeSlots].
+  static const Map<String, dynamic> timeSlotsAr = {
+    'schemaVersion': 1,
+    'blocks': [
+      {
+        'type': 'time_slots',
+        'id': 'voice_slots',
+        'dateLabel': 'غدًا',
+        'slots': [
+          {'id': 's_0900', 'label': '9:00 AM'},
+          {'id': 's_1030', 'label': '10:30 AM'},
+          {'id': 's_1400', 'label': '2:00 PM'},
+        ],
+        'confirmLabel': 'تأكيد',
+        'confirmTemplate': 'احجز لي موعد {slot}',
+      },
+    ],
+  };
+
+  /// Arabic counterpart of [locationPicker].
+  static const Map<String, dynamic> locationPickerAr = {
+    'schemaVersion': 1,
+    'blocks': [
+      {
+        'type': 'location_picker',
+        'id': 'voice_location',
+        'title': 'أين تريد أن أبحث؟',
+        'useCurrentLabel': 'استخدم موقعي الحالي',
+        'savedLabel': 'المحفوظة',
+        'savedLocations': [
+          {
+            'id': 'home',
+            'name': 'المنزل',
+            'addressText': 'برج مارينا 3، دبي',
+          },
+          {
+            'id': 'work',
+            'name': 'العمل',
+            'addressText': 'الخليج التجاري، دبي',
+          },
+        ],
+        'confirmLabel': 'استخدم هذا المكان',
+        'confirmTemplate': 'ابحث حول {location}',
+      },
+    ],
+  };
+
+  /// Arabic counterpart of [locationPermission].
+  static const Map<String, dynamic> locationPermissionAr = {
+    'schemaVersion': 1,
+    'blocks': [
+      {
+        'type': 'permission_request',
+        'id': 'voice_permission',
+        'permission': 'location',
+        'title': 'مشاركة موقعك؟',
+        'body': 'يساعدني ذلك في إيجاد خدمات قريبة منك أثناء حديثنا.',
+        'allowLabel': 'السماح',
+        'denyLabel': 'ليس الآن',
       },
     ],
   };

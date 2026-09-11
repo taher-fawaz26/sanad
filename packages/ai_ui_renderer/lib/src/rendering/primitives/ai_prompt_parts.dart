@@ -1,5 +1,6 @@
 import 'package:ai_ui_protocol/ai_ui_protocol.dart';
 import 'package:ai_ui_renderer/src/rendering/ai_card_tokens.dart';
+import 'package:ai_ui_renderer/src/rendering/ai_ui_formatters.dart';
 import 'package:ai_ui_renderer/src/rendering/ai_ui_render_scope.dart';
 import 'package:ai_ui_renderer/src/rendering/ai_ui_tokens.dart';
 import 'package:ai_ui_renderer/src/rendering/primitives/ai_ui_image_view.dart';
@@ -16,10 +17,20 @@ import 'package:flutter/material.dart';
 /// A prompt's headline and supporting paragraph — Figma's `header-text-group`.
 class AiPromptHeader extends StatelessWidget {
   /// Creates the block.
-  const AiPromptHeader({required this.title, this.body, super.key});
+  const AiPromptHeader({
+    required this.title,
+    this.body,
+    this.compact = false,
+    super.key,
+  });
 
   final String title;
   final String? body;
+
+  /// Figma's smaller question, used by `confirm_prompt`. A cancellation card
+  /// asks about one booking and sits beside it; the 24dp headline the
+  /// permission sheets use would make it shout.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +45,7 @@ class AiPromptHeader extends StatelessWidget {
         Text(
           title,
           style: typography
-              .bold(typography.title3)
+              .bold(compact ? typography.smallNone : typography.title3)
               .copyWith(color: colors.textPrimary, letterSpacing: 0),
         ),
         if (body != null)
@@ -320,6 +331,9 @@ class _Slot extends StatelessWidget {
             ),
             child: Text(
               slot.label,
+              // A time reads left-to-right in both languages: under Arabic
+              // "10:30 AM" was rendering as "AM 10:30" (R-02).
+              textDirection: AiUiFormatters.valueDirection(slot.label),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style:
@@ -333,4 +347,127 @@ class _Slot extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The rationale block on a `permission_request` — Figma's tinted panel.
+///
+/// **One panel, every capability.** Figma draws the camera variant with a
+/// glyph and the location variant with a map preview, but they are the same
+/// component: a tinted region containing why the app is asking. The capability
+/// picks the glyph, and an [image] replaces it when the agent attached one —
+/// which is why a second `permission_request` node type for cameras would have
+/// bought nothing.
+///
+/// Centred, unlike every other prompt header: the panel is a standalone
+/// statement rather than the opening of a card that continues underneath it.
+class AiPermissionPanel extends StatelessWidget {
+  /// Creates the panel.
+  const AiPermissionPanel({
+    required this.permission,
+    required this.title,
+    required this.scope,
+    required this.nodeId,
+    this.body,
+    this.image,
+    super.key,
+  });
+
+  /// Picks the glyph when there is no [image]. The agent names a capability,
+  /// never an icon.
+  final AiUiPermissionKind permission;
+
+  final String title;
+  final String? body;
+
+  /// The illustration — the map preview on the location variant. Its
+  /// precedence is [AiUiImageView]'s, so a rejected URL falls through to the
+  /// asset and an unusable image falls through to the glyph.
+  final AiUiImageSource? image;
+
+  final AiUiRenderScope scope;
+  final String nodeId;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final typography = context.appTypography;
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(AppSpacing.xl),
+      decoration: BoxDecoration(
+        color: colors.background,
+        borderRadius: BorderRadius.circular(AiCardTokens.tileRadius),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        spacing: AppSpacing.md,
+        children: [
+          if (image == null) _CapabilityGlyph(permission: permission),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: typography
+                .bold(typography.regularNone)
+                .copyWith(color: colors.textPrimary),
+          ),
+          if (body != null)
+            Text(
+              body!,
+              textAlign: TextAlign.center,
+              style: typography.tinyNormal.copyWith(
+                color: colors.textSecondary,
+              ),
+            ),
+          if (image != null)
+            AiMapPreview(
+              source: image,
+              scope: scope,
+              nodeType: AiUiNodeType.permissionRequest.wire,
+              nodeId: nodeId,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The glyph for a capability, in its own rounded tile.
+class _CapabilityGlyph extends StatelessWidget {
+  const _CapabilityGlyph({required this.permission});
+
+  final AiUiPermissionKind permission;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return Container(
+      width: AiCardTokens.discSize,
+      height: AiCardTokens.discSize,
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AiCardTokens.optionRadius),
+        border: Border.all(color: colors.border),
+      ),
+      child: Center(
+        child: Icon(
+          _glyphFor(permission),
+          size: AiCardTokens.discGlyphSize,
+          color: colors.textPrimary,
+        ),
+      ),
+    );
+  }
+
+  /// Total over the capability catalog, so a new [AiUiPermissionKind] cannot
+  /// be added without deciding what it looks like.
+  static IconData _glyphFor(AiUiPermissionKind permission) =>
+      switch (permission) {
+        AiUiPermissionKind.camera => Icons.photo_camera_outlined,
+        AiUiPermissionKind.photos => Icons.photo_library_outlined,
+        AiUiPermissionKind.microphone => Icons.mic_none_rounded,
+        AiUiPermissionKind.location => Icons.location_on_outlined,
+        AiUiPermissionKind.notifications => Icons.notifications_none_rounded,
+      };
 }

@@ -183,4 +183,53 @@ void main() {
       }
     });
   });
+
+  // Regression for A-15: `---` and `> ` reached the reader verbatim. A
+  // renderer that claims to speak Markdown must not show its syntax.
+  group('thematic breaks and blockquotes', () {
+    testWidgets('a thematic break becomes a rule, not three dashes', (
+      tester,
+    ) async {
+      await pumpNodes(tester, [
+        {'type': 'text', 'id': 't', 'text': 'Before\n\n---\n\nAfter'},
+      ]);
+
+      expect(_renderedText(tester), isNot(contains('---')));
+      expect(find.byType(Divider), findsOneWidget);
+      expect(_renderedText(tester), contains('Before'));
+      expect(_renderedText(tester), contains('After'));
+    });
+
+    testWidgets('asterisk and underscore rules are breaks too', (tester) async {
+      await pumpNodes(tester, [
+        {'type': 'text', 'id': 't', 'text': 'a\n\n***\n\nb\n\n___\n\nc'},
+      ]);
+
+      expect(find.byType(Divider), findsNWidgets(2));
+    });
+
+    testWidgets('a blockquote drops its marker', (tester) async {
+      await pumpNodes(tester, [
+        {
+          'type': 'text',
+          'id': 't',
+          'text': '> Tip: check the official site',
+        },
+      ]);
+
+      final text = _renderedText(tester);
+      expect(text, isNot(contains('>')));
+      expect(text, contains('Tip: check the official site'));
+    });
+
+    testWidgets('a bullet is still a bullet, not a break', (tester) async {
+      // `---` must not swallow `- item`, and vice versa.
+      await pumpNodes(tester, [
+        {'type': 'text', 'id': 't', 'text': '- item one\n- item two'},
+      ]);
+
+      expect(find.byType(Divider), findsNothing);
+      expect(_renderedText(tester), contains('item one'));
+    });
+  });
 }

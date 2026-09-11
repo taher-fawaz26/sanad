@@ -34,25 +34,41 @@ class AiChatSuggestions extends StatelessWidget {
   final ValueChanged<AiChatSuggestion> onSelected;
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    mainAxisSize: MainAxisSize.min,
-    spacing: _rowGap,
-    children: [
-      for (final suggestion in suggestions)
-        // A full-width row whose child hugs its text: this is what keeps the
-        // pill start-aligned (and therefore correctly mirrored under RTL)
-        // without stretching it to the row's width.
-        Align(
-          key: ValueKey(suggestion.id),
-          alignment: AlignmentDirectional.centerStart,
-          child: _SuggestionPill(
-            label: suggestion.labelKey.tr(),
-            onTap: () => onSelected(suggestion),
+  Widget build(BuildContext context) {
+    // Subscribes this widget to the app locale so a language change rebuilds
+    // it. Home lives in a `StatefulShellRoute.indexedStack`, which keeps the
+    // branch mounted — so without a dependency on the locale the pills kept
+    // whatever language they were first built in, and an Arabic UI went on
+    // showing English prompts (visible as "?When does my passport expire",
+    // English text laid out RTL). Only reachable at all since Account
+    // Settings gained an entry point (C-11).
+    //
+    // `Localizations.localeOf` rather than easy_localization's `context.locale`
+    // so the dependency also exists under a bare `MaterialApp` — the widget
+    // tests pump this without an EasyLocalization ancestor, and that extension
+    // throws there.
+    Localizations.localeOf(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      spacing: _rowGap,
+      children: [
+        for (final suggestion in suggestions)
+          // A full-width row whose child hugs its text: this is what keeps the
+          // pill start-aligned (and therefore correctly mirrored under RTL)
+          // without stretching it to the row's width.
+          Align(
+            key: ValueKey(suggestion.id),
+            alignment: AlignmentDirectional.centerStart,
+            child: _SuggestionPill(
+              label: suggestion.labelKey.tr(),
+              onTap: () => onSelected(suggestion),
+            ),
           ),
-        ),
-    ],
-  );
+      ],
+    );
+  }
 }
 
 /// One prompt — Figma `suggestion-pill` (`5153:42724`).

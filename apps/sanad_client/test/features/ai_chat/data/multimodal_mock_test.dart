@@ -99,29 +99,16 @@ void main() {
       expect(text, contains('2.0 MB'));
     });
 
-    test('a recording reads its length back', () {
-      final text = MultimodalMockScenarios.describe(
-        AiOutgoingMessage(
-          attachments: [
-            audioFixture(duration: const Duration(seconds: 78)),
-          ],
-        ),
-      );
-
-      expect(text, contains('1:18'));
-    });
-
     test('a mixed turn acknowledges every kind', () {
       final text = MultimodalMockScenarios.describe(
         AiOutgoingMessage(
           text: 'compare these',
-          attachments: [imageFixture(), documentFixture(), audioFixture()],
+          attachments: [imageFixture(), documentFixture()],
         ),
       );
 
       expect(text, contains('photo.jpg'));
       expect(text, contains('report.pdf'));
-      expect(text, contains('recording'));
       expect(text, contains('compare these'));
     });
 
@@ -136,7 +123,7 @@ void main() {
     test('it is deterministic', () {
       final message = AiOutgoingMessage(
         text: 'hi',
-        attachments: [imageFixture(), audioFixture()],
+        attachments: [imageFixture(), documentFixture()],
       );
 
       expect(
@@ -174,32 +161,6 @@ void main() {
       final end = events.whereType<AiChatMessageEndEvent>().single;
       expect(end.text, contains('bill.png'));
       expect(end.text, contains('what is this?'));
-
-      await sub.cancel();
-    });
-
-    test('an audio-only turn still produces a reply', () async {
-      final source = MockAiChatEventSource(
-        deltaDelay: Duration.zero,
-        eventDelay: Duration.zero,
-        thinkingDelay: Duration.zero,
-      );
-      addTearDown(source.dispose);
-
-      final events = <AiChatEvent>[];
-      final sub = source.events.listen(events.add);
-
-      await source.sendMultimodal(
-        AiOutgoingMessage(
-          attachments: [audioFixture(duration: const Duration(seconds: 5))],
-        ),
-      );
-      await pumpEventQueue();
-
-      expect(
-        events.whereType<AiChatMessageEndEvent>().single.text,
-        contains('0:05'),
-      );
 
       await sub.cancel();
     });

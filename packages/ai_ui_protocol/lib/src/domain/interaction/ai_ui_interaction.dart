@@ -30,7 +30,18 @@ enum AiUiInteractionKind {
   permissionResult('permission_result'),
 
   /// A `media_request` resolved.
-  mediaResult('media_result');
+  mediaResult('media_result'),
+
+  /// A yes-or-no the agent asked was answered — the `confirm` block on a
+  /// `request_summary`, a `confirm_prompt`, a `location_confirm`'s cancel.
+  ///
+  /// One kind for all three rather than one per card: the agent asked "shall
+  /// I?", and what comes back is whether it may. Which card carried the
+  /// question is already in [AiUiInteraction.nodeType].
+  confirmationResolved('confirmation_resolved'),
+
+  /// A `provider_card` offer was accepted or declined.
+  offerResolved('offer_resolved');
 
   const AiUiInteractionKind(this.wire);
 

@@ -53,6 +53,26 @@ abstract final class AiCardTokens {
   /// A status badge's corner. Tighter than `AppDimension.radiusSm` (8).
   static double get badgeRadius => responsiveDimension(6);
 
+  /// The filled disc that leads a notice card's status pill.
+  static double get statusDotSize => responsiveDimension(8);
+
+  /// The full-width chip naming the request a conversation already belongs to,
+  /// and the tile holding a refused address. Figma draws both at 11–12dp,
+  /// tighter than [tileRadius]'s 12 by a hair; standardised onto one value
+  /// rather than admitting two.
+  static double get noticeTileRadius => responsiveDimension(12);
+
+  /// The illustration slot on a notice banner — a coverage warning's crossed
+  /// pin, sized as an illustration rather than as an icon.
+  static double get noticeGlyphSize => responsiveDimension(40);
+
+  /// The centred glyph on an empty state inside a card — the exhausted
+  /// `provider_search`. Figma's 56dp rounded square.
+  static double get emptyStateDiscSize => responsiveDimension(56);
+
+  /// The glyph inside [emptyStateDiscSize].
+  static double get emptyStateGlyphSize => responsiveDimension(28);
+
   /// The address box on `location_confirm`.
   static double get addressRadius => responsiveDimension(14);
 
@@ -109,4 +129,49 @@ abstract final class AiCardTokens {
   /// Figma draws the map at 60% so it reads as an illustration rather than a
   /// live map the user could pan.
   static const double mapPreviewOpacity = 0.6;
+
+  // ── Provider offer / expanded detail ──────────────────────────────────────
+
+  /// The verification tick beside a provider's name.
+  static double get verifiedGlyphSize => responsiveDimension(16);
+
+  /// One picture in a work-sample or attachment strip. Square, three across
+  /// at card width with the gaps Figma uses.
+  static double get photoThumbSize => responsiveDimension(76);
+
+  /// The disclosure chevron on an expandable card. Its 40dp tap target is what
+  /// makes the control reachable; the glyph itself is smaller.
+  static double get disclosureSize => responsiveDimension(40);
+
+  // ── Timeline ──────────────────────────────────────────────────────────────
+
+  /// Diameter of a timeline step's rail marker.
+  static double get timelineMarkerSize => responsiveDimension(24);
+
+  /// The glyph inside [timelineMarkerSize].
+  static double get timelineGlyphSize => responsiveDimension(14);
+
+  /// The vertical rule joining two markers. Figma draws it 1dp and inset, so
+  /// it reads as a connector rather than a border.
+  static double get timelineConnectorWidth => responsiveDimension(1);
+
+  /// Minimum height of the connector under a step, so two short steps do not
+  /// collapse into each other.
+  static double get timelineConnectorMinHeight => responsiveDimension(20);
+
+  // ── Verification code ─────────────────────────────────────────────────────
+
+  /// One character's box in a `verification_code`. Square, so a five- and a
+  /// six-character code both read as a code rather than as a number.
+  static double get codeBoxSize => responsiveDimension(44);
+
+  /// Corner of a code box.
+  static double get codeBoxRadius => responsiveDimension(10);
+
+  // ── Review rating ─────────────────────────────────────────────────────────
+
+  /// A tappable star in a `review_request`. Larger than [starSize], which is
+  /// the read-only star beside a rating value — this one is a control and has
+  /// to clear the minimum tap target.
+  static double get ratingStarSize => responsiveDimension(32);
 }

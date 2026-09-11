@@ -1,3 +1,4 @@
+import 'package:app_animations/app_animations.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -80,9 +81,13 @@ class _NotificationsView extends StatelessWidget {
                       state: toPagingState(state.data),
                       fetchNextPage: () =>
                           bloc.add(const NotificationsNextPageRequested()),
-                      itemBuilder: (context, item, index) => NotificationRow(
-                        notification: item,
-                        onTap: () => _open(context, item),
+                      itemBuilder: (context, item, index) => AppListEntrance(
+                        key: ValueKey(item.id),
+                        index: index,
+                        child: NotificationRow(
+                          notification: item,
+                          onTap: () => _open(context, item),
+                        ),
                       ),
                       separatorBuilder: (_, _) => const AppDivider(),
                       firstPageErrorIndicatorBuilder: (context) =>

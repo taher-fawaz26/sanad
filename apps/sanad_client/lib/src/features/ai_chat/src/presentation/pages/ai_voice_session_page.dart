@@ -110,6 +110,15 @@ class _VoiceBody extends StatelessWidget {
                       AiVoiceHero(status: state.status),
                       SizedBox(height: AppSpacing.xxxl),
                       _StatusLabel(status: state.status),
+                      // What the user just answered, if anything (A-08). The
+                      // card vanishes the moment it is confirmed and the
+                      // assistant acknowledges in audio only, so without this
+                      // a user who missed the audio has no record of what
+                      // they chose.
+                      if (state.lastAnswer case final answer?) ...[
+                        SizedBox(height: AppSpacing.sm),
+                        _AnsweredLine(text: answer),
+                      ],
                       // Figma shows the trace only while listening — it is the
                       // user's own voice, so there is nothing to draw when the
                       // microphone is not the subject.
@@ -151,9 +160,14 @@ class _VoiceBody extends StatelessWidget {
 
 /// Close (X) in the top safe area — Figma `7880:16685`, 32dp at 20/12.
 ///
-/// Ends the session through the bloc's existing end event, which is what
-/// releases the microphone, the audio session and the mock's temp takes. The
-/// route pop is left to the screen that owns navigation.
+/// Ends the session *and* leaves the screen. The teardown — microphone, audio
+/// session, the mock's temp takes — still happens through the bloc; the pop
+/// itself is performed by `AiVoiceSessionScreen`, which owns the route and
+/// listens for `closeRequested`.
+///
+/// It used to dispatch `AiVoiceSessionEndRequested` alone, which ended the
+/// session but left the route on screen: the label changed to "Session ended"
+/// and the user was stuck there, since nothing anywhere popped (A-05).
 class _CloseRow extends StatelessWidget {
   const _CloseRow();
 
@@ -172,7 +186,7 @@ class _CloseRow extends StatelessWidget {
           label: 'ai_chat.voice_end'.tr(),
           child: InkWell(
             onTap: () => context.read<AiVoiceSessionBloc>().add(
-              const AiVoiceSessionEndRequested(),
+              const AiVoiceSessionCloseRequested(),
             ),
             customBorder: const CircleBorder(),
             child: Padding(
@@ -187,6 +201,32 @@ class _CloseRow extends StatelessWidget {
           ),
         ),
       ],
+    ),
+  );
+}
+
+/// The user's last answer to a card, echoed back under the status line.
+///
+/// Deliberately quiet — the status line is what the screen is *about*; this is
+/// a receipt. Uses the interaction's own prose ("Book me the 9:00 AM slot"),
+/// which the sink already builds for the agent, so there is no second
+/// description of the same answer to keep in step.
+class _AnsweredLine extends StatelessWidget {
+  const _AnsweredLine({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: EdgeInsetsDirectional.symmetric(horizontal: AppSpacing.xxl),
+    child: Text(
+      text,
+      textAlign: TextAlign.center,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: context.appTypography.smallNormal.copyWith(
+        color: context.appColors.palettes.dark.shade50.withValues(alpha: 0.72),
+      ),
     ),
   );
 }

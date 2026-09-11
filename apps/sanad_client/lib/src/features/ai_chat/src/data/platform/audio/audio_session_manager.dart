@@ -9,10 +9,10 @@ import 'package:audio_session/audio_session.dart';
 /// playback-shaped session and then opening the microphone fails at the
 /// platform layer rather than at ours.
 enum AudioSessionMode {
-  /// A voice note or a live-voice turn. Capture must be permitted.
+  /// A live-voice turn. Capture must be permitted.
   recording,
 
-  /// Playing a voice note back.
+  /// Playing the assistant's reply back.
   playback,
 }
 
@@ -24,9 +24,9 @@ enum AudioSessionEvent {
   /// Another app asked to be heard over us without stopping us.
   ///
   /// Distinct from [interrupted] on purpose. Ducking is a *mixing* request:
-  /// playback should drop its volume, and a recording is not affected at all.
-  /// Treating it as an interruption is what would throw away a take because a
-  /// notification chimed.
+  /// playback should drop its volume, and capture is not affected at all.
+  /// Treating it as an interruption is what would end a live-voice turn
+  /// because a notification chimed.
   ducked,
 
   /// The interruption ended and audio may resume.
@@ -39,12 +39,16 @@ enum AudioSessionEvent {
   becameNoisy,
 }
 
-/// Owns audio focus and route changes for the whole feature.
+/// Owns audio focus and route changes for the feature's live-voice session.
 ///
-/// The only file that names `audio_session`. It exists because recording and
-/// playback both have to cooperate with the rest of the phone: a call arriving
-/// mid-recording must end the take, and unplugging headphones mid-playback
-/// must not blast audio out of the speaker.
+/// The only file that names `audio_session`. It exists because a duplex voice
+/// session has to cooperate with the rest of the phone: a call arriving
+/// mid-turn must end that turn, and unplugging headphones while the assistant
+/// is speaking must not blast audio out of the speaker.
+///
+/// Live voice is its only client. The chat composer holds no audio session at
+/// all — its microphone capability is speech recognition, and the platform's
+/// recogniser manages its own session (see `SpeechToTextRecognizer`).
 ///
 /// ## One focus owner, deliberately
 ///
@@ -56,16 +60,16 @@ enum AudioSessionEvent {
 /// with this session — it *replaces* it, and the eviction arrives here looking
 /// exactly like a phone call. That is why every `RecordConfig` in this feature
 /// passes `audioInterruption: AudioInterruptionMode.none`; see
-/// `RecordAudioRecorder.recordingConfig`.
+/// `RecordVoiceCapture.captureConfig`.
 class AudioSessionManager {
   /// Creates the manager.
   AudioSessionManager();
 
   /// The session used to capture.
   ///
-  /// `playAndRecord` because the same session plays a take back moments later,
-  /// and because `playback` alone cannot capture on iOS at all.
-  /// `gainTransientExclusive` because a recording is transient and must not be
+  /// `playAndRecord` because the same session plays the assistant's reply back
+  /// moments later, and because `playback` alone cannot capture on iOS at all.
+  /// `gainTransientExclusive` because a session is transient and must not be
   /// mixed into — the OS should hand the previous owner its audio back when we
   /// are done, and should not offer to duck us instead of pausing.
   ///
@@ -79,8 +83,8 @@ class AudioSessionManager {
             AVAudioSessionCategoryOptions.allowBluetooth,
         // `defaultMode` rather than `voiceChat`: voice chat engages the
         // communication path and its aggressive processing, which is right for
-        // a duplex call and wrong for a voice memo the user expects to sound
-        // like their voice.
+        // a duplex call and wrong for capture the user expects to sound like
+        // their own voice.
         avAudioSessionMode: AVAudioSessionMode.defaultMode,
         androidAudioAttributes: const AndroidAudioAttributes(
           contentType: AndroidAudioContentType.speech,
@@ -88,16 +92,16 @@ class AudioSessionManager {
         ),
         androidAudioFocusGainType:
             AndroidAudioFocusGainType.gainTransientExclusive,
-        // A duck request must not stop a take, so it is delivered as a duck
+        // A duck request must not stop capture, so it is delivered as a duck
         // rather than rewritten into a pause. See [AudioSessionEvent.ducked].
         androidWillPauseWhenDucked: false,
       );
 
-  /// The session used to play a take back.
+  /// The session used to play the assistant's reply back.
   ///
-  /// `speech()` asks the OS for the spoken-word profile, which is what a voice
-  /// note is. Ducking is rewritten to a pause here because a half-audible
-  /// voice note is worse than a paused one.
+  /// `speech()` asks the OS for the spoken-word profile, which is what a
+  /// spoken reply is. Ducking is rewritten to a pause here because a
+  /// half-audible sentence is worse than a paused one.
   static const AudioSessionConfiguration playbackConfiguration =
       AudioSessionConfiguration.speech();
 

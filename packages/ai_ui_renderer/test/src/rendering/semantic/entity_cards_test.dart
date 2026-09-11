@@ -411,4 +411,222 @@ void main() {
       expect(find.byType(AppButton), findsNWidgets(2));
     });
   });
+
+  group('provider_card as an offer', () {
+    Map<String, dynamic> offerCard({
+      String presentation = 'compact',
+      bool verified = true,
+    }) => {
+      'type': 'provider_card',
+      'id': 'prv_card',
+      'providerId': 'prv_ahmed',
+      'name': 'Ahmed K',
+      'roleText': 'AC & Plumbing Specialist',
+      'verified': verified,
+      'presentation': presentation,
+      'distanceMeters': 2500,
+      'description':
+          'Premium eco-friendly yacht & vehicle cleaning specialist.',
+      'services': ['Interior clean', 'Polishing'],
+      'servicesLabel': 'Services',
+      'photos': [
+        {'url': 'https://cdn.trysanad.us/work/1.jpg'},
+        {'url': 'https://cdn.trysanad.us/work/2.jpg'},
+      ],
+      'proposedTimeLabel': 'Proposed Time',
+      'proposedTime': '2026-11-19T13:00:00Z',
+      'offer': {
+        'offerId': 'off_77',
+        'acceptLabel': 'Accept Offer',
+        'declineLabel': 'Decline',
+        'acceptTemplate': "I'll take Ahmed's offer",
+        'declineTemplate': 'Not this one',
+      },
+    };
+
+    testWidgets('the compact reading shows identity, time and controls', (
+      tester,
+    ) async {
+      await pumpNodes(tester, [offerCard()]);
+
+      expect(find.text('Ahmed K'), findsOneWidget);
+      expect(find.text('AC & Plumbing Specialist'), findsOneWidget);
+      expect(find.text('Proposed Time'), findsOneWidget);
+      expect(find.text('Accept Offer'), findsOneWidget);
+      expect(find.text('Decline'), findsOneWidget);
+    });
+
+    testWidgets('the compact reading withholds the detail', (tester) async {
+      await pumpNodes(tester, [offerCard()]);
+
+      expect(find.text('Services'), findsNothing);
+      expect(find.text('Interior clean'), findsNothing);
+      expect(find.byType(AiPhotoStrip), findsNothing);
+    });
+
+    testWidgets('the expanded reading shows it', (tester) async {
+      await pumpNodes(tester, [offerCard(presentation: 'expanded')]);
+
+      expect(find.text('Services'), findsOneWidget);
+      expect(find.text('Interior clean'), findsOneWidget);
+      expect(find.text('Polishing'), findsOneWidget);
+      expect(find.byType(AiPhotoStrip), findsOneWidget);
+      expect(find.textContaining('eco-friendly'), findsOneWidget);
+    });
+
+    testWidgets('the disclosure control toggles between them', (tester) async {
+      // Expansion is presentation, so it stays widget-local and reports
+      // nothing — unlike the offer underneath it.
+      await pumpNodes(tester, [offerCard()]);
+
+      expect(find.byType(AiDisclosureButton), findsOneWidget);
+      await tester.tap(find.byType(AiDisclosureButton));
+      await tester.pump();
+
+      expect(find.text('Services'), findsOneWidget);
+    });
+
+    testWidgets('a card with nothing more to show has no chevron', (
+      tester,
+    ) async {
+      await pumpNodes(tester, [
+        {
+          'type': 'provider_card',
+          'id': 'prv_plain',
+          'providerId': 'prv_1',
+          'name': 'Ahmed K',
+        },
+      ]);
+
+      expect(find.byType(AiDisclosureButton), findsNothing);
+    });
+
+    testWidgets('the verification tick appears only when asserted', (
+      tester,
+    ) async {
+      await pumpNodes(tester, [offerCard()]);
+      expect(find.byIcon(Icons.verified_rounded), findsOneWidget);
+
+      await pumpNodes(tester, [offerCard(verified: false)]);
+      expect(find.byIcon(Icons.verified_rounded), findsNothing);
+    });
+
+    testWidgets('accepting submits a typed decision naming the provider', (
+      tester,
+    ) async {
+      final harness = await pumpNodes(
+        tester,
+        [offerCard()],
+        harness: RendererHarness(recordInteractions: true),
+        messageId: 'msg_4',
+      );
+
+      await tapText(tester, 'Accept Offer');
+
+      final result = harness.submissions.single;
+      expect(result.kind, AiUiInteractionKind.offerResolved);
+      expect(result.nodeType, AiUiNodeType.providerCard);
+      expect(result.messageId, 'msg_4');
+      expect(
+        result.value,
+        const AiUiOfferValue(
+          decision: AiUiOfferDecision.accepted,
+          providerId: 'prv_ahmed',
+          offerId: 'off_77',
+        ),
+      );
+      expect(result.text, "I'll take Ahmed's offer");
+    });
+
+    testWidgets('declining is an answer, not a cancellation', (tester) async {
+      final harness = await pumpNodes(
+        tester,
+        [offerCard()],
+        harness: RendererHarness(recordInteractions: true),
+      );
+
+      await tapText(tester, 'Decline');
+
+      final result = harness.submissions.single;
+      expect(result.status, AiUiInteractionStatus.submitted);
+      expect(
+        (result.value as AiUiOfferValue).decision,
+        AiUiOfferDecision.declined,
+      );
+    });
+
+    testWidgets('an offer cannot be answered twice', (tester) async {
+      final harness = await pumpNodes(
+        tester,
+        [offerCard()],
+        harness: RendererHarness(recordInteractions: true),
+      );
+
+      await tapText(tester, 'Accept Offer');
+      await tapText(tester, 'Decline');
+
+      expect(harness.submissions, hasLength(1));
+    });
+
+    testWidgets("with no sink it posts the agent's sentence as before", (
+      tester,
+    ) async {
+      final harness = await pumpNodes(tester, [offerCard()]);
+
+      await tapText(tester, 'Accept Offer');
+
+      expect(
+        harness.callsTo(AiUiActionType.sendMessage).single.text,
+        "I'll take Ahmed's offer",
+      );
+    });
+
+    testWidgets('the proposed time is not squeezed by its own label', (
+      tester,
+    ) async {
+      // Caught on device: a `Spacer` between the label and the value claimed
+      // half the free space for itself, ellipsizing "19 Nov · 3:00 PM" into
+      // "19 Nov · 3:0…". The value has to get the larger share of the row.
+      await pumpNodes(tester, [offerCard()]);
+
+      final label = tester.getRect(find.text('Proposed Time'));
+      final value = tester.getRect(
+        find.textContaining('19 Nov', findRichText: true),
+      );
+
+      expect(value.width, greaterThan(label.width));
+    });
+
+    testWidgets('it renders expanded in both directions', (tester) async {
+      await pumpNodes(
+        tester,
+        [offerCard(presentation: 'expanded')],
+        textDirection: TextDirection.rtl,
+      );
+
+      expect(find.text('Ahmed K'), findsOneWidget);
+      expect(find.text('Interior clean'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a photo with no usable source falls back to the placeholder', (
+      tester,
+    ) async {
+      await pumpNodes(tester, [
+        {
+          'type': 'provider_card',
+          'id': 'prv_img',
+          'providerId': 'prv_1',
+          'name': 'Ahmed K',
+          'presentation': 'expanded',
+          'photos': [
+            {'assetId': 'ai_map_preview'},
+          ],
+        },
+      ]);
+
+      expect(find.byType(AiPhotoStrip), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
 }

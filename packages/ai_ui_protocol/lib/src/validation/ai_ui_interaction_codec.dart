@@ -125,6 +125,14 @@ abstract final class AiUiInteractionCodec {
 
       case AiUiInteractionKind.reviewSubmitted:
         final text = _string(json['text']);
+        final rating = json['rating'];
+        // The rating key is what distinguishes the two shapes. A card with no
+        // stars still round-trips as plain text, so a reader that only knows
+        // `AiUiTextValue` keeps working — which is the whole reason the rating
+        // did not simply replace it.
+        if (rating is int) {
+          return AiUiReviewValue(rating: rating, comment: text ?? '');
+        }
         return text == null ? const AiUiEmptyValue() : AiUiTextValue(text);
 
       case AiUiInteractionKind.locationSelected:
@@ -156,6 +164,27 @@ abstract final class AiUiInteractionCodec {
         final count = json['count'];
         if (count is! int) return const AiUiEmptyValue();
         return AiUiMediaValue(count: count, source: _string(json['source']));
+
+      case AiUiInteractionKind.confirmationResolved:
+        final confirmed = json['confirmed'];
+        // No default: "the user agreed" is the reading with consequences, and
+        // a missing flag must not become a yes.
+        if (confirmed is! bool) return const AiUiEmptyValue();
+        return AiUiConfirmationValue(
+          confirmed: confirmed,
+          reference: _string(json['reference']),
+        );
+
+      case AiUiInteractionKind.offerResolved:
+        final decisionWire = _string(json['decision']);
+        if (decisionWire == null) return const AiUiEmptyValue();
+        final decision = AiUiOfferDecision.tryFromWire(decisionWire);
+        if (decision == null) return const AiUiEmptyValue();
+        return AiUiOfferValue(
+          decision: decision,
+          providerId: _string(json['providerId']),
+          offerId: _string(json['offerId']),
+        );
     }
   }
 
@@ -173,6 +202,10 @@ abstract final class AiUiInteractionCodec {
     final value = switch (interaction.value) {
       final AiUiTextValue v when v.text.length > max => AiUiTextValue(
         v.text.substring(0, max),
+      ),
+      final AiUiReviewValue v when v.comment.length > max => AiUiReviewValue(
+        comment: v.comment.substring(0, max),
+        rating: v.rating,
       ),
       final AiUiLocationValue v when v.name.length > max => AiUiLocationValue(
         name: v.name.substring(0, max),

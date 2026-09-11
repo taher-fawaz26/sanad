@@ -14,14 +14,21 @@ import 'package:sanad_client/src/ui/glass/client_glass_tokens.dart';
 /// the shell decides what a tap on the avatar or History means (both are
 /// pushes, not shell branches, so they belong to the shell's navigation, not
 /// to this row).
+///
+/// **No notifications bell.** It lived here while the inbox had no other
+/// entry point (C-09), which Figma's header never drew — `header-actions`
+/// (`8385:4371`) is one 55dp control, not two. For this phase the inbox is
+/// reached from Profile instead (`ClientProfilePage`), which keeps the route
+/// and the feature exactly as they were and changes only where the door is.
+/// Temporary: when the final placement is decided, it is one row to move.
 class AiHomeHeader extends StatelessWidget {
   /// Creates the header.
   const AiHomeHeader({
     required this.selected,
     required this.onSelected,
     required this.onProfileTap,
-    required this.onHistoryTap,
     super.key,
+    this.onHistoryTap,
   });
 
   /// The active nav-pill destination.
@@ -33,8 +40,14 @@ class AiHomeHeader extends StatelessWidget {
   /// Fired when the profile avatar is tapped.
   final VoidCallback onProfileTap;
 
-  /// Fired when the History button is tapped.
-  final VoidCallback onHistoryTap;
+  /// Fired when the History button is tapped, or null to hide the button.
+  ///
+  /// Nullable because History is a `/dev`-namespaced route registered only
+  /// under `!kReleaseMode`. Rendering the control unconditionally while its
+  /// route exists conditionally is a button that navigates nowhere in a
+  /// release build (A-10), so the caller that knows the build mode decides
+  /// whether it exists at all.
+  final VoidCallback? onHistoryTap;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -64,21 +77,31 @@ class AiHomeHeader extends StatelessWidget {
         Flexible(
           child: AiHomeNavPill(selected: selected, onSelected: onSelected),
         ),
-        // 55dp with a 24dp glyph — Figma `history-button` (`7124:29686`),
-        // now glass to match the pill beside it. It was `background`
-        // (`#F9F9FA`), the page's own colour, so the control had no visible
-        // surface at all; a flat white fixed that and hid the wash instead.
-        ClientGlassSurface(
-          level: ClientGlassLevel.nav,
-          borderRadius: BorderRadius.circular(55 / 2),
-          child: AiCircleIconButton(
-            svgAsset: AppSvgs.aiChatNavHistory,
-            semanticLabel: 'ai_chat.nav_history'.tr(),
-            size: 55,
-            iconSize: 24,
-            iconColor: context.appColors.textSecondary,
-            onTap: onHistoryTap,
-          ),
+        // The trailing controls, in one group so the row still reads as
+        // three zones when History is absent in a release build.
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          spacing: AppSpacing.sm,
+          children: [
+            // 55dp with a 24dp glyph — Figma `history-button` (`7124:29686`),
+            // now glass to match the pill beside it. It was `background`
+            // (`#F9F9FA`), the page's own colour, so the control had no
+            // visible surface at all; a flat white fixed that and hid the
+            // wash instead.
+            if (onHistoryTap != null)
+              ClientGlassSurface(
+                level: ClientGlassLevel.nav,
+                borderRadius: BorderRadius.circular(55 / 2),
+                child: AiCircleIconButton(
+                  svgAsset: AppSvgs.aiChatNavHistory,
+                  semanticLabel: 'ai_chat.nav_history'.tr(),
+                  size: 55,
+                  iconSize: 24,
+                  iconColor: context.appColors.textSecondary,
+                  onTap: onHistoryTap,
+                ),
+              ),
+          ],
         ),
       ],
     ),

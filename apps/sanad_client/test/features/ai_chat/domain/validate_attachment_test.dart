@@ -147,35 +147,6 @@ void main() {
     });
   });
 
-  group('audio', () {
-    test('is accepted without an extension check', () {
-      // Audio is produced by the recorder, not chosen by the user, so there is
-      // no untrusted extension to police.
-      final result = validate(audioFixture(), currentCount: 0);
-
-      expect(result.status, AiAttachmentStatus.ready);
-    });
-
-    test('is still subject to the size ceiling', () {
-      final result = validate(
-        audioFixture(sizeBytes: FileSizePolicy.maxBytes + 1),
-        currentCount: 0,
-      );
-
-      expect(result.failureKey, AiAttachmentFailureKeys.tooLarge);
-    });
-
-    test('the recording cap keeps a take inside the size ceiling', () {
-      // AAC ~32 kbps mono is ~4 KB/s. The cap must leave real headroom
-      // against the 5 MiB ceiling, or a long take would be recorded and then
-      // rejected — the worst possible moment to tell someone.
-      const bytesPerSecond = 4 * 1024;
-      final worstCase = rules.maxRecordingDuration.inSeconds * bytesPerSecond;
-
-      expect(worstCase, lessThan(FileSizePolicy.maxBytes));
-    });
-  });
-
   group('purity', () {
     test('validation never mutates its input', () {
       final original = imageFixture();

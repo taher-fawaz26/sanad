@@ -17,8 +17,8 @@ part 'ai_voice_session_state.dart';
 
 /// Carries the live microphone level for the voice screen.
 ///
-/// The third member of the same family as `ActiveStreamController` and
-/// `RecordingLevelController`, for the same reason: a level that ticks with
+/// The same family as `ActiveStreamController` and
+/// `SpeechTranscriptController`, for the same reason: a level that ticks with
 /// every audio frame must not become bloc state, or the whole voice screen
 /// rebuilds dozens of times a second. Only the waveform listens here.
 class VoiceLevelController extends ValueNotifier<double> {
@@ -85,6 +85,7 @@ class AiVoiceSessionBloc
     );
     on<AiVoiceSessionInterrupted>(_onInterrupted, transformer: sequential());
     on<AiVoiceSessionEndRequested>(_onEnd, transformer: sequential());
+    on<AiVoiceSessionCloseRequested>(_onClose, transformer: sequential());
     on<AiVoiceSessionBackgrounded>(
       _onBackgrounded,
       transformer: sequential(),
@@ -199,6 +200,33 @@ class AiVoiceSessionBloc
     level.reset();
   }
 
+  /// The user is leaving the screen (A-05).
+  ///
+  /// Tears the session down through the same [_onEnd] path — one way down —
+  /// then latches [AiVoiceSessionState.closeRequested] so the route owner
+  /// pops. Navigation itself stays out of here: this bloc knows the session is
+  /// finished and that the user asked to leave, and nothing about routes.
+  ///
+  /// Idempotent, so tapping the close control repeatedly (which the user will
+  /// do, because the first tap used to do nothing) is safe: the second call
+  /// finds the session already ended and re-emits the same latched state.
+  Future<void> _onClose(
+    AiVoiceSessionCloseRequested event,
+    Emitter<AiVoiceSessionState> emit,
+  ) async {
+    // The latch, not the status, is what says "already closing". `end()`
+    // drives the status stream asynchronously, so a second tap arriving
+    // before that lands would still see `listening` and tear down twice.
+    if (state.closeRequested) return;
+
+    if (!state.status.isTerminal && state.status != AiVoiceSessionStatus.idle) {
+      await _session.end();
+      level.reset();
+    }
+    if (_closed) return;
+    emit(state.copyWith(closeRequested: true));
+  }
+
   /// The app left the foreground.
   ///
   /// The same destination as the user pressing end, reached for a different
@@ -234,7 +262,10 @@ class AiVoiceSessionBloc
         // rather than staring at an empty panel. The assistant's audio still
         // arrives; only the card is missing.
         if (!result.hasRenderableUi) return;
-        emit(state.copyWith(document: result.document));
+        // A new question replaces the previous answer's line.
+        emit(
+          state.copyWith(document: result.document, clearLastAnswer: true),
+        );
 
       case AiVoiceUiResolved(:final nodeId):
         // The card comes down. A node still pending when the session dropped
@@ -258,6 +289,18 @@ class AiVoiceSessionBloc
     await _session.submitInteraction(event.interaction);
     if (_closed) return;
     ledger.resolve(event.interaction.nodeId, event.interaction.status);
+
+    // Keep what was answered on screen (A-08). The card is gone the moment it
+    // is confirmed and the assistant's acknowledgement is audio only, so
+    // without this the user has no record of what they just chose.
+    //
+    // A cancellation gets no line: nothing was chosen, and "you chose
+    // nothing" is noise.
+    emit(
+      event.interaction.isSubmitted
+          ? state.copyWith(lastAnswer: event.interaction.text)
+          : state.copyWith(clearLastAnswer: true),
+    );
   }
 
   void _onStatusChanged(

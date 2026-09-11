@@ -54,10 +54,6 @@ void main() {
         AssetType.pdf,
       );
       expect(
-        MediaUploadAiAttachmentUploader.assetFor(audioFixture()).assetType,
-        AssetType.audio,
-      );
-      expect(
         MediaUploadAiAttachmentUploader.assetFor(
           documentFixture(
             fileName: 'notes.docx',
@@ -122,17 +118,6 @@ void main() {
       ).called(1);
     });
 
-    test('a recording uploads despite its stub size', () async {
-      // The composer sets `sizeBytes: 1` because it does not stat files. The
-      // repository uploads from the path and never reads size, so this must
-      // not be treated as a gate.
-      stubSuccess(_media(id: 'upl_audio'));
-
-      final result = await uploader.upload([audioFixture(sizeBytes: 1)]);
-
-      expect(result, isA<AiAttachmentsUploaded>());
-    });
-
     test('preserves order across a batch', () async {
       final ids = ['upl_a', 'upl_b', 'upl_c'];
       var call = 0;
@@ -146,7 +131,7 @@ void main() {
       final result = await uploader.upload([
         imageFixture(id: 'a'),
         documentFixture(id: 'b'),
-        audioFixture(id: 'c'),
+        imageFixture(id: 'c', fileName: 'second.jpg'),
       ]);
 
       final uploaded = (result as AiAttachmentsUploaded).attachments;

@@ -1,11 +1,9 @@
 /// Where dictation is.
 ///
-/// Deliberately its own axis, separate from `AiRecordingStatus`. The two look
-/// alike from a distance — both open the microphone — but they are different
-/// capabilities with different outputs: dictation produces **text in the
-/// composer**, a recording produces **a file attached to a message**. Merging
-/// them into one "audio" state would make every consumer ask which mode it is
-/// in, and would tie two lifecycles that must be able to refuse each other.
+/// The composer's one and only microphone axis. Dictation produces **text in
+/// the composer** and nothing else: no file, no attachment, nothing uploaded.
+/// (A live-voice *session* has its own status type, for a capability that
+/// holds the microphone for a whole conversation rather than a phrase.)
 enum AiSpeechStatus {
   /// Nothing is listening.
   idle,
@@ -37,7 +35,6 @@ enum AiSpeechStatus {
       this == starting || this == listening || this == finalizing;
 
   /// Whether the composer should show the dictation bar instead of the input
-  /// row. The same shape as `AiRecordingStatus.occupiesComposer`, so the
-  /// composer asks both the same question.
+  /// row.
   bool get occupiesComposer => isActive;
 }

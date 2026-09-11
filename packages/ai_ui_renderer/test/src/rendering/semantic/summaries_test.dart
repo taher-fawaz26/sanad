@@ -381,4 +381,208 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  group('booking_summary as a confirmation', () {
+    Map<String, dynamic> confirmed({String tone = 'success'}) => {
+      'type': 'booking_summary',
+      'id': 'bs_1',
+      'statusText': 'Booking Confirmed!',
+      'statusTone': tone,
+      'provider': {
+        'providerId': 'prv_ahmed',
+        'name': 'Ahmed K',
+        'roleText': 'AC & Plumbing Specialist',
+        'verified': true,
+      },
+      'items': [
+        {'label': 'Date', 'value': 'Thursday, Oct 24'},
+        {'label': 'Time', 'value': '5:00 PM'},
+        {'label': 'Location', 'value': '91 Orchard St, New York'},
+        {
+          'label': 'Booking Reference',
+          'value': '#SND-8829-AQ',
+          'isLtrValue': true,
+        },
+      ],
+    };
+
+    testWidgets('renders the outcome, the provider and every fact', (
+      tester,
+    ) async {
+      await pumpNodes(tester, [confirmed()]);
+
+      expect(find.text('Booking Confirmed!'), findsOneWidget);
+      expect(find.text('Ahmed K'), findsOneWidget);
+      expect(find.text('AC & Plumbing Specialist'), findsOneWidget);
+      expect(find.text('Thursday, Oct 24'), findsOneWidget);
+      expect(find.text('91 Orchard St, New York'), findsOneWidget);
+    });
+
+    testWidgets('a status turns the rows into the stacked reading', (
+      tester,
+    ) async {
+      // The layout follows the data: a booking that has happened is a set of
+      // facts, not a table of values to compare.
+      await pumpNodes(tester, [confirmed()]);
+
+      expect(find.byType(AiStackedDetails), findsOneWidget);
+      expect(find.byType(AiDetailRows), findsNothing);
+    });
+
+    testWidgets('without a status it stays the summary it always was', (
+      tester,
+    ) async {
+      await pumpNodes(tester, [
+        {
+          'type': 'booking_summary',
+          'id': 'bs_2',
+          'title': 'Booking summary',
+          'items': [
+            {'label': 'Service', 'value': 'Deep Cleaning'},
+          ],
+        },
+      ]);
+
+      expect(find.byType(AiDetailRows), findsOneWidget);
+      expect(find.byType(AiStackedDetails), findsNothing);
+    });
+
+    testWidgets('the status glyph follows the tone', (tester) async {
+      await pumpNodes(tester, [confirmed()]);
+      expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+
+      await pumpNodes(tester, [confirmed(tone: 'error')]);
+      expect(find.byIcon(Icons.error_outline_rounded), findsOneWidget);
+    });
+
+    testWidgets('a provider with no portrait shows the person glyph', (
+      tester,
+    ) async {
+      await pumpNodes(tester, [confirmed()]);
+
+      expect(find.byIcon(Icons.person_outline_rounded), findsOneWidget);
+    });
+
+    testWidgets('the reference keeps its leading hash under RTL', (
+      tester,
+    ) async {
+      // `isLtrValue` wraps the value in bidi isolates — the SAN-770 bug class.
+      await pumpNodes(
+        tester,
+        [confirmed()],
+        textDirection: TextDirection.rtl,
+      );
+
+      expect(find.textContaining('SND-8829-AQ'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('request_summary photos and confirm', () {
+    Map<String, dynamic> summary({bool withConfirm = true}) => {
+      'type': 'request_summary',
+      'id': 'rs_1',
+      'items': [
+        {'label': 'Service', 'value': 'Home Cleaning'},
+        {'label': 'Location', 'value': 'Home - Dubai Marina'},
+      ],
+      'summaryTitle': 'Summery',
+      'summaryText': 'The customer requested a full home cleaning service.',
+      'photosLabel': 'photos',
+      'photos': [
+        {'url': 'https://cdn.trysanad.us/requests/1.jpg'},
+        {'url': 'https://cdn.trysanad.us/requests/2.jpg'},
+        {'url': 'https://cdn.trysanad.us/requests/3.jpg'},
+      ],
+      'location': {
+        'addressText': 'Home - Dubai Marina',
+        'action': {'type': 'open_map', 'query': 'Dubai Marina'},
+      },
+      if (withConfirm)
+        'confirm': {
+          'confirmLabel': 'Confirm',
+          'cancelLabel': 'Cancel',
+          'confirmTemplate': 'Yes, submit my request',
+          'cancelTemplate': 'Not yet',
+          'reference': 'req_1042',
+        },
+    };
+
+    testWidgets('renders the photo strip under its label', (tester) async {
+      await pumpNodes(tester, [summary()]);
+
+      expect(find.text('photos'), findsOneWidget);
+      expect(find.byType(AiPhotoStrip), findsOneWidget);
+    });
+
+    testWidgets('confirming submits a typed yes rather than only prose', (
+      tester,
+    ) async {
+      final harness = await pumpNodes(
+        tester,
+        [summary()],
+        harness: RendererHarness(recordInteractions: true),
+      );
+
+      await tapText(tester, 'Confirm');
+
+      final result = harness.submissions.single;
+      expect(result.kind, AiUiInteractionKind.confirmationResolved);
+      expect(result.nodeType, AiUiNodeType.requestSummary);
+      expect(
+        result.value,
+        const AiUiConfirmationValue(confirmed: true, reference: 'req_1042'),
+      );
+    });
+
+    testWidgets('cancelling submits the negative answer', (tester) async {
+      final harness = await pumpNodes(
+        tester,
+        [summary()],
+        harness: RendererHarness(recordInteractions: true),
+      );
+
+      await tapText(tester, 'Cancel');
+
+      expect(
+        harness.submissions.single.value,
+        const AiUiConfirmationValue(confirmed: false, reference: 'req_1042'),
+      );
+    });
+
+    testWidgets('the card cannot be submitted twice', (tester) async {
+      final harness = await pumpNodes(
+        tester,
+        [summary()],
+        harness: RendererHarness(recordInteractions: true),
+      );
+
+      await tapText(tester, 'Confirm');
+      await tapText(tester, 'Confirm');
+
+      expect(harness.submissions, hasLength(1));
+    });
+
+    testWidgets('a summary with no confirm block renders without controls', (
+      tester,
+    ) async {
+      await pumpNodes(tester, [summary(withConfirm: false)]);
+
+      expect(find.text('Confirm'), findsNothing);
+      expect(find.text('Home Cleaning'), findsOneWidget);
+    });
+
+    testWidgets('it renders in both directions without overflowing', (
+      tester,
+    ) async {
+      await pumpNodes(
+        tester,
+        [summary()],
+        textDirection: TextDirection.rtl,
+      );
+
+      expect(find.text('Home Cleaning'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
 }

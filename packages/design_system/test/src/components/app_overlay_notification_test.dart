@@ -133,9 +133,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 250));
 
       await tester.tap(find.text('Retry'));
-      await tester.pump();
-
+      await tester.pump(); // action fires + exit animation starts
       expect(actioned, isTrue);
+      await tester.pumpAndSettle(); // exit completes (bounded, one-shot)
+
       expect(find.text('Permission denied'), findsNothing);
     });
 
@@ -157,8 +158,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 250));
       expect(find.text('Network error'), findsOneWidget);
 
-      await tester.pump(const Duration(seconds: 2));
-      await tester.pump();
+      await tester.pump(const Duration(seconds: 2)); // timer fires dismiss
+      await tester.pumpAndSettle(); // exit completes (bounded, one-shot)
       expect(find.text('Network error'), findsNothing);
     });
 
@@ -252,28 +253,76 @@ void main() {
       },
     );
 
-    testWidgets('dismissAppOverlayNotification removes it immediately', (
-      tester,
-    ) async {
-      await _pump(
-        tester,
-        _sheetHost(
-          (ctx) => showAppOverlayNotification(
-            context: ctx,
-            title: 'Outside the UAE',
+    testWidgets(
+      'dismissAppOverlayNotification plays an exit transition, then removes '
+      'it',
+      (tester) async {
+        await _pump(
+          tester,
+          _sheetHost(
+            (ctx) => showAppOverlayNotification(
+              context: ctx,
+              title: 'Outside the UAE',
+            ),
           ),
-        ),
-      );
+        );
 
-      await _openSheet(tester);
-      await tester.tap(find.text('trigger'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 250));
-      expect(find.text('Outside the UAE'), findsOneWidget);
+        await _openSheet(tester);
+        await tester.tap(find.text('trigger'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        expect(find.text('Outside the UAE'), findsOneWidget);
 
-      dismissAppOverlayNotification();
-      await tester.pump();
-      expect(find.text('Outside the UAE'), findsNothing);
-    });
+        dismissAppOverlayNotification();
+        // Mid-exit: the reverse animation has started but not finished, so
+        // the notification is still on screen (it slides/fades out rather
+        // than disappearing instantly).
+        await tester.pump();
+        expect(find.text('Outside the UAE'), findsOneWidget);
+
+        await tester.pumpAndSettle(); // exit completes (bounded, one-shot)
+        expect(find.text('Outside the UAE'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'a call arriving mid-exit does not throw — a rapid replace never '
+      'double-removes the outgoing entry',
+      (tester) async {
+        late BuildContext sheetContext;
+        await _pump(
+          tester,
+          _sheetHost((ctx) {
+            sheetContext = ctx;
+            showAppOverlayNotification(context: ctx, title: 'First');
+          }),
+        );
+
+        await _openSheet(tester);
+        await tester.tap(find.text('trigger'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        expect(find.text('First'), findsOneWidget);
+
+        // Start the first notification's exit, then replace it before that
+        // exit finishes — the outgoing entry must keep animating out on its
+        // own schedule instead of throwing when it later tries to remove
+        // itself from a module state that has already moved on.
+        dismissAppOverlayNotification();
+        await tester.pump();
+        showAppOverlayNotification(context: sheetContext, title: 'Second');
+        await tester.pump();
+        expect(find.text('Second'), findsOneWidget);
+
+        // Both the outgoing "First" (exiting) and incoming "Second"
+        // (entering) transitions are bounded, one-shot animations.
+        await tester.pumpAndSettle();
+        expect(find.text('First'), findsNothing);
+        expect(find.text('Second'), findsOneWidget);
+
+        dismissAppOverlayNotification();
+        await tester.pumpAndSettle();
+      },
+    );
   });
 }

@@ -11,16 +11,15 @@ import 'package:sanad_client/src/features/ai_chat/src/domain/services/ai_audio_p
 /// ## One player, on purpose
 ///
 /// A single [ja.AudioPlayer] is created here and reused for every clip. The
-/// alternative — a player per message — is the failure mode a conversation full
-/// of voice notes hits: each one holds a platform decoder and a buffer, and
-/// twenty of them will be killed by the OS long before the user scrolls that
-/// far. Loading a second clip stops and replaces the first, which is also the
-/// behaviour people expect from a chat.
+/// alternative — a player per turn — is the failure mode a long live-voice
+/// session hits: each one holds a platform decoder and a buffer, and twenty of
+/// them will be killed by the OS. Loading a second clip stops and replaces the
+/// first, which is also what a spoken conversation wants.
 class JustAudioPlayer implements AiAudioPlayer {
   /// Creates the player.
   ///
-  /// [session] is shared with the recorder so focus is handed back and forth
-  /// rather than fought over.
+  /// [session] is shared with the capture path so focus is handed back and
+  /// forth rather than fought over.
   ///
   /// [sessionMode] is the category this player asks for. It defaults to
   /// [AudioSessionMode.playback], which is right when playback is the only

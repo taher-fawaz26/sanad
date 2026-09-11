@@ -10,7 +10,7 @@ handling. Every feature depends on this package — no feature may import
 Asset Picker  ─┐
 Maps          ─┤
 QR Scanner    ─┤──▶  permissions  ──▶  permission_handler
-Voice Recorder─┘
+Speech / Voice─┘
 ```
 
 ---

@@ -172,8 +172,7 @@ performs a storage lookup to find a file the client can already point at.
   "message": "what does this say?",
   "attachments": [
     { "id": "68f1…", "url": "https://…" },
-    { "id": "9ab2…", "url": "https://…", "type": "audio",
-      "transcript": "book me a plumber for tomorrow morning" }
+    { "id": "9ab2…", "url": "https://…" }
   ]
 }
 ```
@@ -211,9 +210,8 @@ provider-only and the client cannot withdraw an orphan.
 
 A batch is **all or nothing**. The first failure abandons the rest, no request
 is made, and one `AiChatErrorEvent` carrying `ai_chat.attachment_upload_failed`
-reaches the existing snackbar. Nothing is lost: the typed text and the audio are
-already in the user's own bubble, and a submitted recording's file is
-deliberately not deleted.
+reaches the existing snackbar. Nothing is lost: the typed text is already in
+the user's own bubble, and the picked files stay where the picker put them.
 
 #### Why upload identity is a wrapper, not a field
 
@@ -224,23 +222,27 @@ conversation while an upload id is valid for one request — and because a
 message's `props` include its attachments, a mutable backend field there would
 re-emit the whole message list every time an upload resolved.
 
-#### A voice note is one message
+#### Speech is text, and only text
 
-The transcript is **not** a second message and not a top-level field. It rides
-on the audio attachment, because `message` already belongs to what the user
-typed and a turn can carry both a caption and a voice note.
+An attachment object is exactly `id` and `url`, with no discriminator and no
+per-type extras. There is no audio attachment: **AI Chat does not send recorded
+audio.**
 
-It is produced on the device, during the take: `speech_to_text` can only
-transcribe the live microphone, so `AiComposerBloc` starts the recogniser
-alongside the recorder and routes its results to a `VoiceNoteTranscript`
-accumulator instead of the composer's text field. This never touches
-`state.speech` — that describes the dictation capability the user can see and
-start, and every invariant built on it (the mutual-exclusion guards, `canSend`,
-which bar the composer shows) is left exactly as it was.
+It used to. A held microphone produced an AAC file, a waveform and an
+`AiAudioAttachment` carrying the transcript its own device recogniser captured
+during the take, and the wire had `type: "audio"` plus `transcript` for it. That
+capability was **retired as a product decision** and removed rather than
+disabled — model, serialization, recorder, playback, gesture, state machine and
+all.
 
-Capture is **best-effort**. If the recogniser is unavailable, cannot share the
-microphone, or hears nothing, the transcript is empty, no banner appears, and
-the turn still ships the audio. The recording is the deliverable.
+What replaced it is simpler than a contract: `AiComposerBloc`'s one microphone
+capability is speech recognition, whose results go to
+`SpeechTranscriptController` and from there into the composer's text field as
+the user speaks. When the recogniser lets go the words are ordinary editable
+text. By encode time a dictated turn is byte-identical to a typed one, which is
+why no protocol addition was needed and why the old one could simply be
+deleted. `ai_chat_turn_payload_test.dart` pins that no audio vocabulary can be
+serialized at all.
 
 ## 4. Parse once, at ingestion
 

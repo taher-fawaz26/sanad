@@ -422,14 +422,19 @@ abstract final class AppSvgs {
   /// Filled microphone — composer dictation button, Default/Focused states.
   static const String aiChatComposerMic = '$_base/ai_chat_composer_mic.svg';
 
-  /// Outline microphone — composer dictation button, Disabled state. A
-  /// distinct Figma export, not a recolor of [aiChatComposerMic].
-  static const String aiChatComposerMicDisabled =
-      '$_base/ai_chat_composer_mic_disabled.svg';
-
   /// Plus — composer attach button.
   static const String aiChatComposerPlus = '$_base/ai_chat_composer_plus.svg';
 
   /// Right-arrow chevron — composer Send button.
   static const String aiChatComposerSend = '$_base/ai_chat_composer_send.svg';
+
+  // ── Client requests (`8385:4513`) ──────────────────────────────────────────
+
+  /// Outline calendar — the request card's date pill (`8385:4522`). 16dp,
+  /// single-stroke, so it recolors via `colorFilter`.
+  static const String requestCalendar = '$_base/request_calendar.svg';
+
+  /// Diagonal maps arrow — the request card's area pill (`8385:4531`). 16dp,
+  /// single-stroke.
+  static const String requestAreaArrow = '$_base/request_area_arrow.svg';
 }

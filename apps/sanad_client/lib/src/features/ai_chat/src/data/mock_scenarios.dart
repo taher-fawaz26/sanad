@@ -1,5 +1,6 @@
 import 'package:ai_ui_protocol/ai_ui_protocol.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/scenarios/component_scenarios.dart';
+import 'package:sanad_client/src/features/ai_chat/src/data/scenarios/edge_case_scenarios.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/scenarios/scenario_support.dart';
 
 Map<String, dynamic> _serviceCard({
@@ -622,6 +623,11 @@ const mockScenarios = <MockScenario>[
 
   // One per component the current library added, plus its state variants.
   ...componentScenarios,
+
+  // The conversational edge cases — a request that already owns the
+  // conversation, a cancellation, a no-show, a search and its empty result, a
+  // refused address, and a turn that never arrived.
+  ...edgeCaseScenarios,
 
   // Payload hostility. These stay last because they are the ones a developer
   // reaches for deliberately, not by keyword.

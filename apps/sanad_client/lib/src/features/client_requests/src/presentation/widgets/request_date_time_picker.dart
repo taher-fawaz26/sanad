@@ -44,3 +44,22 @@ String formatRequestDateTime(BuildContext context, DateTime value) =>
 /// Formats a time-only value for the alternative-window chips.
 String formatRequestTime(BuildContext context, DateTime value) =>
     DateFormat.jm(context.locale.toString()).format(value);
+
+/// Month and day, no year — the card subtitle's leading `Aug 28`
+/// (`8385:4519`).
+String formatRequestDate(BuildContext context, DateTime value) =>
+    DateFormat.MMMd(context.locale.toString()).format(value);
+
+/// Weekday plus month and day — the card's date pill `mon , 28 Aug`
+/// (`8385:4529`).
+///
+/// Built from `DateFormat.E` and `DateFormat.MMMd` rather than a literal
+/// skeleton so an Arabic locale gets Arabic weekday and month names, and the
+/// separator is the locale's own list separator rather than a hard-coded
+/// comma.
+String formatRequestDayAndDate(BuildContext context, DateTime value) {
+  final locale = context.locale.toString();
+  final weekday = DateFormat.E(locale).format(value);
+  final date = DateFormat.MMMd(locale).format(value);
+  return '$weekday, $date';
+}

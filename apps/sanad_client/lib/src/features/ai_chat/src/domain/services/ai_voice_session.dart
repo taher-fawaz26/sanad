@@ -4,13 +4,14 @@ import 'package:sanad_client/src/features/ai_chat/src/domain/enums/ai_voice_sess
 
 /// A realtime spoken conversation with the assistant.
 ///
-/// ## Why this is separate from `AiAudioRecorder`
+/// ## Why this is separate from the composer's dictation
 ///
-/// A recorder produces one file and hands the microphone back. A session holds
-/// the microphone for its whole life, never produces a message attachment, and
-/// has states — `processing`, `speaking`, barge-in — that a recorder has no
-/// concept of. Modelling both with one type would make every consumer ask
-/// which mode it is in.
+/// Dictation recognises one phrase into the composer and hands the microphone
+/// back, leaving editable text behind. A session holds the microphone for its
+/// whole life, produces no message at all on its own, and has states —
+/// `processing`, `speaking`, barge-in — that dictation has no concept of.
+/// Modelling both with one type would make every consumer ask which mode it
+/// is in.
 ///
 /// ## Why it is an interface with one mock implementation
 ///

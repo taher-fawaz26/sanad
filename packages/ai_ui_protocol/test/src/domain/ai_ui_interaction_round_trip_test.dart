@@ -73,6 +73,26 @@ final Map<AiUiInteractionKind, AiUiInteraction> _fixtures = {
     kind: AiUiInteractionKind.mediaResult,
     value: AiUiMediaValue(count: 2, source: 'gallery'),
   ),
+  AiUiInteractionKind.confirmationResolved: const AiUiInteraction(
+    interactionId: 'int_8',
+    nodeId: 'cancel_1',
+    nodeType: AiUiNodeType.confirmPrompt,
+    kind: AiUiInteractionKind.confirmationResolved,
+    value: AiUiConfirmationValue(confirmed: true, reference: 'req_1042'),
+    text: 'Yes, cancel it',
+  ),
+  AiUiInteractionKind.offerResolved: const AiUiInteraction(
+    interactionId: 'int_9',
+    nodeId: 'offer_1',
+    nodeType: AiUiNodeType.providerCard,
+    kind: AiUiInteractionKind.offerResolved,
+    value: AiUiOfferValue(
+      decision: AiUiOfferDecision.accepted,
+      providerId: 'prv_ahmed',
+      offerId: 'off_77',
+    ),
+    text: "I'll take Ahmed K's offer",
+  ),
 };
 
 void main() {
@@ -102,8 +122,82 @@ void main() {
           AiUiLocationValue,
           AiUiPermissionValue,
           AiUiMediaValue,
+          AiUiConfirmationValue,
+          AiUiOfferValue,
         ]),
       );
+    });
+
+    // Not in the table above because `review_submitted` already has a fixture
+    // there: the two shapes share one kind, which is the whole point of the
+    // compatibility rule. A rating makes it an `AiUiReviewValue`; no rating
+    // leaves it the `AiUiTextValue` a v1 backend already reads.
+    test('a rated review round-trips as its own value type', () {
+      const interaction = AiUiInteraction(
+        interactionId: 'int_10',
+        nodeId: 'review_2',
+        nodeType: AiUiNodeType.reviewRequest,
+        kind: AiUiInteractionKind.reviewSubmitted,
+        value: AiUiReviewValue(rating: 4, comment: 'Quick and tidy'),
+        text: '4 stars: Quick and tidy',
+      );
+
+      expect(
+        AiUiInteractionCodec.tryDecode(
+          AiUiInteractionCodec.encode(interaction),
+        ),
+        interaction,
+      );
+    });
+
+    test('a rated review still carries its comment under `text`', () {
+      // The compatibility guarantee stated as a property: a reader that only
+      // knows the older shape finds the words where it has always looked.
+      final json = AiUiInteractionCodec.encodeMap(
+        const AiUiInteraction(
+          interactionId: 'int_11',
+          nodeId: 'review_3',
+          kind: AiUiInteractionKind.reviewSubmitted,
+          value: AiUiReviewValue(rating: 5, comment: 'Spotless'),
+        ),
+      );
+
+      expect((json['value']! as Map<String, dynamic>)['text'], 'Spotless');
+    });
+
+    test('an unrated review stays an AiUiTextValue', () {
+      final decoded = AiUiInteractionCodec.tryDecodeMap(<String, dynamic>{
+        'interactionId': 'int_12',
+        'nodeId': 'review_4',
+        'kind': 'review_submitted',
+        'value': <String, dynamic>{'text': 'Fine'},
+      });
+
+      expect(decoded!.value, const AiUiTextValue('Fine'));
+    });
+
+    test('a confirmation with no `confirmed` flag does not become a yes', () {
+      // "The user agreed" is the reading with consequences, so an unreadable
+      // payload degrades to no answer rather than to the affirmative one.
+      final decoded = AiUiInteractionCodec.tryDecodeMap(<String, dynamic>{
+        'interactionId': 'int_13',
+        'nodeId': 'cancel_2',
+        'kind': 'confirmation_resolved',
+        'value': <String, dynamic>{'reference': 'req_1042'},
+      });
+
+      expect(decoded!.value, const AiUiEmptyValue());
+    });
+
+    test('an offer with an unknown decision degrades to empty', () {
+      final decoded = AiUiInteractionCodec.tryDecodeMap(<String, dynamic>{
+        'interactionId': 'int_14',
+        'nodeId': 'offer_2',
+        'kind': 'offer_resolved',
+        'value': <String, dynamic>{'decision': 'maybe'},
+      });
+
+      expect(decoded!.value, const AiUiEmptyValue());
     });
 
     test('an empty value round-trips on any kind', () {

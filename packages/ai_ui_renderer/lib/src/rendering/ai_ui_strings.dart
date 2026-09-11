@@ -18,6 +18,10 @@ final class AiUiStrings extends Equatable {
     this.openInMaps = 'Open in maps',
     this.ratingOutOfFive = 'out of 5',
     this.distanceLabel = 'Distance',
+    this.verifiedLabel = 'Verified',
+    this.showMoreLabel = 'Show more',
+    this.showLessLabel = 'Show less',
+    this.ratingStarsLabel = 'stars',
   });
 
   static const AiUiStrings fallback = AiUiStrings();
@@ -44,6 +48,23 @@ final class AiUiStrings extends Equatable {
   /// the agent never sends it.
   final String distanceLabel;
 
+  /// Announced for the tick beside a verified provider's name. The tick is a
+  /// glyph with no text, so without this a screen reader reads the name and
+  /// silently drops the one fact the mark exists to convey.
+  final String verifiedLabel;
+
+  /// The provider card's disclosure control, when collapsed. Names a *client*
+  /// affordance — whether the card can expand at all is the renderer's
+  /// decision — so the agent does not author it.
+  final String showMoreLabel;
+
+  /// The same control when expanded.
+  final String showLessLabel;
+
+  /// Read after a chosen star count in a `review_request`, so "3" is announced
+  /// as a rating rather than a bare number.
+  final String ratingStarsLabel;
+
   @override
   List<Object?> get props => [
     metresSuffix,
@@ -52,5 +73,9 @@ final class AiUiStrings extends Equatable {
     openInMaps,
     ratingOutOfFive,
     distanceLabel,
+    verifiedLabel,
+    showMoreLabel,
+    showLessLabel,
+    ratingStarsLabel,
   ];
 }

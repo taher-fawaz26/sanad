@@ -2,18 +2,13 @@ import 'package:ai_ui_protocol/ai_ui_protocol.dart';
 import 'package:ai_ui_renderer/ai_ui_renderer.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sanad_client/src/features/ai_chat/src/ai_chat_config.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/ai_chat_message.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/enums/ai_attachment_status.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/actions/ai_chat_action_handlers.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/bloc/active_stream_controller.dart';
-import 'package:sanad_client/src/features/ai_chat/src/presentation/bloc/ai_composer_bloc.dart';
-import 'package:sanad_client/src/features/ai_chat/src/presentation/bloc/audio_playback_controller.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/ai_chat_bubble.dart';
-import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/composer/ai_audio_attachment_row.dart';
-import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/composer/ai_level_meter.dart';
 import 'package:testing/testing.dart';
 
 import 'support/attachment_fixtures.dart';
@@ -34,9 +29,6 @@ import 'support/attachment_fixtures.dart';
 /// no-state-per-token guarantee) is covered in `ai_chat_bloc_test.dart`, which
 /// is plain `test()` and has no such constraint. What is left for here is
 /// rendering and dispatch, and those need no bloc.
-class MockAiComposerBloc extends MockBloc<AiComposerEvent, AiComposerState>
-    implements AiComposerBloc {}
-
 void main() {
   late List<AiUiAction> dispatched;
   late List<String> sentMessages;
@@ -915,101 +907,51 @@ void main() {
     });
   });
 
-  group('a voice note is still playable', () {
-    late MockAiComposerBloc composer;
-    late AudioPlaybackController playback;
-
-    setUp(() {
-      composer = MockAiComposerBloc();
-      playback = AudioPlaybackController();
-      when(() => composer.playback).thenReturn(playback);
-      whenListen(
-        composer,
-        const Stream<AiComposerState>.empty(),
-        initialState: const AiComposerState(),
-      );
-    });
-
-    tearDown(() => playback.dispose());
-
-    /// Renders the row a voice note becomes inside a bubble.
-    ///
-    /// The row rather than the whole bubble on purpose: a user bubble caps its
-    /// content at 300pt, which this row does not fit inside under the test
-    /// harness's scaling — a pre-existing layout issue unrelated to the
-    /// transcript, and not something this no-regression check should be
-    /// hostage to. What matters here is that the waveform and the play control
-    /// are what a transcript-carrying attachment still renders as.
-    Future<void> pumpVoiceNote(
-      WidgetTester tester, {
-      String transcript = '',
-    }) => pumpDsWidget(
-      tester,
-      BlocProvider<AiComposerBloc>.value(
-        value: composer,
-        child: Material(
-          child: Center(
-            child: SizedBox(
-              width: 700,
-              child: AiAudioAttachmentRow(
-                attachment: audioFixture(
-                  status: AiAttachmentStatus.ready,
-                  transcript: transcript,
-                ),
-                foreground: const Color(0xFFFFFFFF),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    testWidgets('it draws its waveform and a play control', (tester) async {
-      // The no-regression guard for the transcript work: the transcript is
-      // metadata bound for the backend and must change nothing on screen.
-      await pumpVoiceNote(tester, transcript: 'book me a plumber tomorrow');
-
-      expect(find.byType(AiStaticWaveform), findsOneWidget);
-      expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
-    });
-
-    testWidgets('the transcript is never rendered as text', (tester) async {
-      // A voice message shows a waveform, not a wall of recognised words. The
-      // transcript exists so the model can read the note, not the user.
-      await pumpVoiceNote(tester, transcript: 'book me a plumber tomorrow');
-
-      expect(find.text('book me a plumber tomorrow'), findsNothing);
-    });
-
-    testWidgets('a note with no transcript renders identically', (
+  group('a user turn carries images and documents, never audio', () {
+    // AI Chat retired recorded audio, so no message can hold a voice note and
+    // no bubble can draw one. What a turn with attachments renders is tiles,
+    // and these assertions are what stops an audio row reappearing under one.
+    testWidgets('each attachment renders as a read-only tile', (
       tester,
     ) async {
-      await pumpVoiceNote(tester);
+      await pumpBubbles(tester, [
+        AiChatMessage.user(
+          id: 'u1',
+          text: 'what do these say?',
+          // Delivered, so the tiles are at rest: no upload spinner and
+          // nothing left to remove.
+          status: AiChatMessageStatus.complete,
+          attachments: [
+            imageFixture(status: AiAttachmentStatus.ready),
+            documentFixture(status: AiAttachmentStatus.ready),
+          ],
+        ),
+      ]);
 
-      expect(find.byType(AiStaticWaveform), findsOneWidget);
-      expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
+      expect(find.text('what do these say?'), findsOneWidget);
+      // The document tile names its extension.
+      expect(find.text('PDF'), findsOneWidget);
+      // Read-only really means read-only: a sent turn is not editable, so the
+      // remove control is absent rather than present and inert (A-21).
+      expect(find.byIcon(Icons.close_rounded), findsNothing);
     });
 
-    testWidgets('tapping play asks the composer to start playback', (
+    testWidgets('no playback or waveform affordance exists in a bubble', (
       tester,
     ) async {
-      await pumpVoiceNote(tester, transcript: 'book me a plumber tomorrow');
-
-      await tester.tap(find.byIcon(Icons.play_arrow_rounded));
-      await tester.pump();
-
-      // The exact event, so this pins which attachment the tap toggles rather
-      // than merely that something was dispatched.
-      verify(
-        () => composer.add(
-          AiComposerPlaybackToggled(
-            audioFixture(
-              status: AiAttachmentStatus.ready,
-              transcript: 'book me a plumber tomorrow',
-            ),
-          ),
+      await pumpBubbles(tester, [
+        AiChatMessage.user(
+          id: 'u1',
+          text: 'have a look',
+          attachments: [imageFixture(status: AiAttachmentStatus.ready)],
         ),
-      ).called(1);
+      ]);
+
+      // The controls a voice note used to draw. None of them has a widget
+      // left to come from.
+      expect(find.byIcon(Icons.play_arrow_rounded), findsNothing);
+      expect(find.byIcon(Icons.pause_rounded), findsNothing);
+      expect(find.byIcon(Icons.graphic_eq_rounded), findsNothing);
     });
   });
 }

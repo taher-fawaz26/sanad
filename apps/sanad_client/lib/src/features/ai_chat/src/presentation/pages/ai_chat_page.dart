@@ -12,25 +12,33 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/default_ai_chat_suggestions.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/mock_ai_chat_event_source.dart';
+import 'package:sanad_client/src/features/ai_chat/src/data/mock_connectivity_service.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/mock_scenarios.dart';
+import 'package:sanad_client/src/features/ai_chat/src/domain/ai_chat_message.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/actions/ai_chat_action_handlers.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/actions/ai_chat_interaction_sink.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/bloc/ai_chat_bloc.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/bloc/ai_composer_bloc.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/ai_chat_bubble.dart';
+import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/ai_transport_banner.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/composer/ai_composer.dart';
-import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/home/ai_chat_background.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/home/ai_chat_suggestions.dart';
 import 'package:sanad_client/src/features/ai_chat/src/routes/ai_chat_routes.dart';
+import 'package:sanad_client/src/ui/background/client_ambient_background.dart';
 
 /// The chat surface: message list, scenario picker and composer.
 class AiChatPage extends StatefulWidget {
   /// Creates the chat page.
-  const AiChatPage({super.key, this.mockSource});
+  const AiChatPage({super.key, this.mockSource, this.mockConnectivity});
 
   /// Present only in the prototype: lets the dev scenario picker force a
   /// specific scripted reply. A production source would not expose this.
   final MockAiChatEventSource? mockSource;
+
+  /// Present only in the prototype: lets the dev picker flip the device's
+  /// apparent connectivity, which is the only way to reach the offline
+  /// queueing path without a real radio. See [MockConnectivityService].
+  final MockConnectivityService? mockConnectivity;
 
   @override
   State<AiChatPage> createState() => _AiChatPageState();
@@ -79,6 +87,13 @@ class _AiChatPageState extends State<AiChatPage> {
       openInMaps: 'ai_chat.open_in_maps'.tr(),
       ratingOutOfFive: 'ai_chat.rating_out_of_five'.tr(),
       distanceLabel: 'ai_chat.distance_label'.tr(),
+      // Client affordances, not agent copy: the verification mark's meaning,
+      // the disclosure control's label and the word after a star count are all
+      // decisions the renderer makes, so the words come from here.
+      verifiedLabel: 'ai_chat.verified_label'.tr(),
+      showMoreLabel: 'ai_chat.show_more'.tr(),
+      showLessLabel: 'ai_chat.show_less'.tr(),
+      ratingStarsLabel: 'ai_chat.rating_stars'.tr(),
     ),
   );
 
@@ -118,7 +133,9 @@ class _AiChatPageState extends State<AiChatPage> {
           // the conversation had no green at all. The two do not seam,
           // because Figma's gradient holds a flat `#F9F9FA` until 59% of its
           // run, and both boxes are in that flat region where they meet.
-          const Positioned.fill(child: AiChatBackground(child: SizedBox())),
+          const Positioned.fill(
+            child: ClientAmbientBackground(child: SizedBox()),
+          ),
           // Layer 1: the landing state's drifting glow, over the wash and
           // under everything else. Only the landing state animates — see
           // `_LandingAmbience`.
@@ -131,12 +148,16 @@ class _AiChatPageState extends State<AiChatPage> {
               // conversation: a snackbar says so without leaving a
               // permanent error bubble in the history the user then has to
               // scroll past.
+              // Compares the failure's *id*, not its text. Two identical
+              // failures in a row carry different ids, so the second one
+              // still reads as a change and still reaches the user — keying
+              // this off the message left every repeat silent (A-03).
               listenWhen: (previous, current) =>
-                  previous.failureMessage != current.failureMessage &&
-                  current.failureMessage != null,
+                  previous.failure?.id != current.failure?.id &&
+                  current.failure != null,
               listener: (context, state) => showAppErrorSnackbar(
                 context: context,
-                title: _resolveFailureText(state.failureMessage!),
+                title: _resolveFailureText(state.failure!.message),
               ),
               child: BlocListener<AiComposerBloc, AiComposerState>(
                 // The composer's own failures — a refused permission, a
@@ -148,6 +169,11 @@ class _AiChatPageState extends State<AiChatPage> {
                 listener: _onComposerNotice,
                 child: Column(
                   children: [
+                    // Above the transcript, not inside it: the connection is a
+                    // property of the whole conversation rather than of one
+                    // turn, and a banner that scrolled away with the messages
+                    // would stop answering "why is nothing sending?".
+                    const _TransportBanner(),
                     // One slot, two compositions. The hero and the transcript
                     // are alternatives, never neighbours, so they share the
                     // same flexible region rather than the hero floating over
@@ -165,6 +191,7 @@ class _AiChatPageState extends State<AiChatPage> {
                       _ScenarioPicker(
                         selectedId: _selectedScenarioId,
                         onSelected: _selectScenario,
+                        connectivity: widget.mockConnectivity,
                       ),
                     _Suggestions(onSelected: (text) => _send(context, text)),
                     AiComposer(
@@ -183,10 +210,9 @@ class _AiChatPageState extends State<AiChatPage> {
 
   void _onComposerNotice(BuildContext context, AiComposerState state) {
     final notice = state.notice!;
-    // Not everything the composer says is a failure. "Hold the microphone to
-    // record" is coaching, and it fires on every accidental tap — rendering
-    // that in the error snackbar's red would tell the user they broke
-    // something each time they brushed the button.
+    // Not everything the composer says is a failure, so the tone decides
+    // which snackbar renders it: guidance must not arrive in the error
+    // snackbar's red and tell the user they broke something.
     switch (notice.tone) {
       case AiNoticeTone.error:
         showAppErrorSnackbar(context: context, title: notice.messageKey.tr());
@@ -216,21 +242,11 @@ class _AiChatPageState extends State<AiChatPage> {
   /// event source — stays alive underneath. Coming back returns to the same
   /// conversation rather than starting a second one.
   ///
-  /// Playback stops first: the voice route brings up its own audio session for
-  /// a duplex call, and leaving a voice note playing underneath it would mean
-  /// two sessions competing for the same speaker.
-  void _openVoice(BuildContext context) {
-    context.read<AiComposerBloc>()
-      ..add(const AiComposerPlaybackStopped())
-      // A locked take keeps recording with nobody holding it, including
-      // across a push. The voice route brings up its own duplex audio
-      // session and the two would fight over the microphone, so the take is
-      // discarded here rather than left to fail there. A held take cannot
-      // reach this — the live-voice button is not on screen while one is
-      // running — but a locked one can, which is exactly what locking is for.
-      ..add(const AiComposerRecordingCancelled());
-    context.push(AiChatRoutes.voice);
-  }
+  /// Nothing is released on the way out. The composer owns no audio at all any
+  /// more — its microphone capability is speech recognition, and the live-voice
+  /// button is not on screen while that is running — so there is no session for
+  /// the voice route's own duplex one to fight over.
+  void _openVoice(BuildContext context) => context.push(AiChatRoutes.voice);
 
   void _send(BuildContext context, String text) {
     final composer = context.read<AiComposerBloc>();
@@ -293,11 +309,29 @@ class _MessageList extends StatelessWidget {
 
             // A stable key plus a repaint boundary: an unchanged bubble is
             // neither rebuilt nor repainted when its neighbours change.
-            return RepaintBoundary(
+            // `AppListEntrance` wraps the boundary, not its contents, and
+            // plays once per `ValueKey(message.id)` — so it never touches
+            // `ActiveStreamController`/the per-token text rebuild below it:
+            // a freshly-loaded history batch gets a bounded stagger, and the
+            // common case (one new message arriving at index 0) gets a
+            // single, immediate, un-delayed reveal.
+            return AppListEntrance(
               key: ValueKey(message.id),
-              child: AiChatBubble(
-                message: message,
-                activeStream: activeStream,
+              index: index,
+              child: RepaintBoundary(
+                child: AiChatBubble(
+                  message: message,
+                  activeStream: activeStream,
+                  // Only a failed or queued user turn gets one; the bubble
+                  // ignores it otherwise. A queued turn is retryable because
+                  // tapping it re-checks the radio, which is a real "try now"
+                  // rather than a second attempt at the same failure.
+                  onRetry: message.status.isRetryable
+                      ? () => context.read<AiChatBloc>().add(
+                          AiChatMessageRetryRequested(message.id),
+                        )
+                      : null,
+                ),
               ),
             );
           },
@@ -392,23 +426,25 @@ class _HeroFitted extends StatelessWidget {
 /// bloom with Sanad's sparkle riding on it, which together read as one
 /// visual.
 ///
-/// ## Why this is not a Lottie
+/// ## Two halves, two sources
 ///
-/// It should be, and the wiring for one is still in place
-/// (`AppLottie.aiAssistant`). Neither available export can render it:
+/// The **bloom is the Lottie** (`AppLottie.aiAssistant` →
+/// `AppAnimations.aiAssistantLoading`): a rotating aura ring behind an orb
+/// that fades up, looping every 5s. That file used to paint an empty box
+/// because its image layers had no images in this package — the supplied
+/// dotLottie carried them, and they are now recoloured and embedded in the
+/// composition itself, so it renders from that one file.
 ///
-/// - The authored export registered at `AppAnimations.aiAssistantLoading`
-///   draws entirely through image layers whose PNGs are not in this package,
-///   so it paints an empty box (see that constant's own doc).
-/// - `source/ai_logo_foriday.json` is vector and does render — but its layers
-///   are named `bubble`, and it is an iridescent soap bubble, not Sanad's
-///   mark. Wrong artwork renders worse than none.
+/// The **mark is not in the Lottie**. That animation is a bloom and nothing
+/// else: no sparkle, no check. So Figma's own exported mark still rides on
+/// top — [AppSvgs.aiChatHeroMark] is the node's exact asset, and the geometry
+/// below is transcribed from the node.
 ///
-/// So the hero is composed from Figma's own exported mark plus its own
-/// documented motion, and nothing here is invented: [AppSvgs.aiChatHeroMark]
-/// is the node's exact asset, the geometry below is transcribed from the
-/// node, and the breathe is Figma's published keyframe track for it.
-/// Swapping a corrected Lottie back in later replaces one widget.
+/// The hand-written breathe that used to wrap this is gone: the Lottie owns
+/// the hero's motion now, and a second rhythm on top of it would read as two
+/// animations rather than one visual. `AppLottie` keeps the reduced-motion
+/// contract (frozen to frame one, since this is identity rather than
+/// progress) and its own `RepaintBoundary`.
 class _AiCenterVisual extends StatelessWidget {
   const _AiCenterVisual();
 
@@ -418,146 +454,52 @@ class _AiCenterVisual extends StatelessWidget {
   static const _markHeight = 91.82;
   static const _markOffsetY = -6.95;
 
-  /// The bloom is painted a little past Figma's 200dp frame so its falloff
-  /// completes before the edge — clipping it exactly at 200 would turn the
-  /// wash into a visible disc. Not much past it, though: at 320 the glow
-  /// spread most of the screen's width and went so pale that the mark looked
-  /// unlit, where Figma keeps a compact, clearly-green core around it.
-  static const _bloomSize = 240.0;
+  /// The composition is drawn larger than the box it occupies, because most
+  /// of its 512-square canvas is empty: the widest painted element (the aura
+  /// ring) spans only ~59% of it, and the orb ~37%.
+  ///
+  /// Sized by measurement rather than by eye. Figma's bloom measures ~145dp
+  /// of green across the mark's centre line (`7118:29598`, thresholded the
+  /// same way); rendering the file at its own 340 gave 109dp on device, so
+  /// the canvas is drawn at [_compositionSize] to land on Figma's figure.
+  /// Everything painted still fits inside [_bloomSize] — 266dp of content in
+  /// a 280dp box — so nothing is clipped and only dead margin falls outside.
+  ///
+  /// Reserving the full 452 as layout would have been worse than useless:
+  /// `_HeroFitted` would scale it back down to the slot and give the 109dp
+  /// bloom straight back.
+  static const _bloomSize = 280.0;
+  static const _compositionSize = 452.0;
 
   /// Figma applies a 179.66° rotation to the mark inside this node.
   static const double _markTurns = 179.66 / 360;
 
   @override
-  Widget build(BuildContext context) {
-    final primary = context.appColors.primary;
-
-    return _HeroBreathe(
-      child: SizedBox.square(
-        dimension: _bloomSize,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Figma builds the wash from two large blurred shapes; a radial
-            // gradient is the same result with far less to composite, and it
-            // takes its color from the theme rather than baking the brand
-            // green into an export that a palette change would strand.
-            DecoratedBox(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                // Figma's bloom is a saturated green core that falls away
-                // fast, not an even haze — at lower alphas the mark read as
-                // unlit and the glow disappeared into the page.
-                //
-                // Four stops rather than three: with a single midpoint the
-                // falloff was linear enough to read as the edge of a disc.
-                // Front-loading the decay keeps the core strong while the
-                // outer half fades to nothing, which is what makes it a cloud.
-                gradient: RadialGradient(
-                  colors: [
-                    primary.withValues(alpha: 0.70),
-                    primary.withValues(alpha: 0.44),
-                    primary.withValues(alpha: 0.14),
-                    primary.withValues(alpha: 0),
-                  ],
-                  stops: const [0, 0.32, 0.62, 1],
-                ),
-              ),
-              child: const SizedBox.expand(),
-            ),
-            Transform.translate(
-              offset: const Offset(0, _markOffsetY),
-              child: Transform.rotate(
-                angle: _markTurns * 2 * math.pi,
-                child: SvgPicture.asset(
-                  AppSvgs.aiChatHeroMark,
-                  package: AppAssets.package,
-                  width: _markWidth,
-                  height: _markHeight,
-                ),
-              ),
-            ),
-          ],
+  Widget build(BuildContext context) => SizedBox.square(
+    dimension: _bloomSize,
+    child: Stack(
+      alignment: Alignment.center,
+      children: [
+        OverflowBox(
+          maxWidth: _compositionSize,
+          maxHeight: _compositionSize,
+          child: AppLottie.aiAssistant(size: _compositionSize),
         ),
-      ),
-    );
-  }
-}
-
-/// The hero's idle breathe — Figma's own published keyframe track for
-/// `7118:29598`: a 4s infinite loop easing opacity `0.85 → 1 → 0.85` and
-/// scale `1 → 1.02 → 1`.
-///
-/// Transcribed, not invented: those are the exact values and duration Figma
-/// reports for this node, which is why the motion is as slight as it is —
-/// the hero is meant to feel alive without competing with the composer.
-///
-/// A `StatefulWidget` with its own controller rather than anything in a
-/// Bloc: this ticks 60 times a second, and high-frequency animation values
-/// never belong in Bloc state. The controller drives a
-/// `AnimatedBuilder`/`FadeTransition` pair beneath a `RepaintBoundary`, so
-/// each tick repaints this subtree alone.
-class _HeroBreathe extends StatefulWidget {
-  const _HeroBreathe({required this.child});
-
-  final Widget child;
-
-  @override
-  State<_HeroBreathe> createState() => _HeroBreatheState();
-}
-
-class _HeroBreatheState extends State<_HeroBreathe>
-    with SingleTickerProviderStateMixin {
-  static const _period = Duration(seconds: 4);
-  static const _minOpacity = 0.85;
-  static const _maxScale = 1.02;
-
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: _period,
-  );
-
-  late final CurvedAnimation _pulse = CurvedAnimation(
-    parent: _controller,
-    // 0 → 1 → 0 across the period, so one controller drives both halves of
-    // the loop and the midpoint lands exactly at 50% as Figma specifies.
-    curve: Curves.easeInOut,
-  );
-
-  @override
-  void initState() {
-    super.initState();
-    _controller.repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Decorative motion: reduced motion pins it to the resting frame rather
-    // than breathing, matching how `AppLottie` treats decorative animations.
-    if (AppMotion.reduceMotionOf(context)) return widget.child;
-
-    return RepaintBoundary(
-      child: AnimatedBuilder(
-        animation: _pulse,
-        // The subtree is built once and passed through — the builder only
-        // re-wraps it, so the SVG is not rebuilt on every tick.
-        child: widget.child,
-        builder: (context, child) => Opacity(
-          opacity: _minOpacity + (1 - _minOpacity) * _pulse.value,
-          child: Transform.scale(
-            scale: 1 + (_maxScale - 1) * _pulse.value,
-            child: child,
+        Transform.translate(
+          offset: const Offset(0, _markOffsetY),
+          child: Transform.rotate(
+            angle: _markTurns * 2 * math.pi,
+            child: SvgPicture.asset(
+              AppSvgs.aiChatHeroMark,
+              package: AppAssets.package,
+              width: _markWidth,
+              height: _markHeight,
+            ),
           ),
         ),
-      ),
-    );
-  }
+      ],
+    ),
+  );
 }
 
 /// Starter prompts shown only while the conversation is empty and the
@@ -628,13 +570,55 @@ class _TypingIndicator extends StatelessWidget {
   );
 }
 
+/// Reads the two transport flags off the bloc and hands them to
+/// [AiTransportBanner].
+///
+/// A `BlocSelector` over exactly those two booleans, so a streaming token — or
+/// any other message-list change — cannot rebuild the banner.
+class _TransportBanner extends StatelessWidget {
+  const _TransportBanner();
+
+  @override
+  Widget build(BuildContext context) =>
+      BlocSelector<AiChatBloc, AiChatState, (bool, bool)>(
+        selector: (state) => (state.isOffline, state.hasUndeliveredMessage),
+        builder: (context, flags) => AiTransportBanner(
+          isOffline: flags.$1,
+          hasUndeliveredMessage: flags.$2,
+        ),
+      );
+}
+
 /// Prototype-only affordance for replaying a specific scripted reply,
 /// including the deliberately broken ones.
-class _ScenarioPicker extends StatelessWidget {
-  const _ScenarioPicker({required this.selectedId, required this.onSelected});
+class _ScenarioPicker extends StatefulWidget {
+  const _ScenarioPicker({
+    required this.selectedId,
+    required this.onSelected,
+    this.connectivity,
+  });
 
   final String? selectedId;
   final void Function(String? id) onSelected;
+
+  /// The fake radio, when this visit has one.
+  final MockConnectivityService? connectivity;
+
+  @override
+  State<_ScenarioPicker> createState() => _ScenarioPickerState();
+}
+
+class _ScenarioPickerState extends State<_ScenarioPicker> {
+  /// Extra leading chips before the scenarios: keyword-driven replay, a way
+  /// into the component showcase, and — when this visit owns a fake radio —
+  /// the offline toggle.
+  int get _leadingChips => widget.connectivity == null ? 2 : 3;
+
+  void _toggleOffline() {
+    final connectivity = widget.connectivity;
+    if (connectivity == null) return;
+    setState(() => connectivity.isOffline = !connectivity.isOffline);
+  }
 
   @override
   Widget build(BuildContext context) => SizedBox(
@@ -642,22 +626,20 @@ class _ScenarioPicker extends StatelessWidget {
     child: ListView.separated(
       scrollDirection: Axis.horizontal,
       padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      // Two leading chips before the scenarios: keyword-driven replay, and a
-      // way into the component showcase. The showcase is where a design change
-      // gets reviewed; reaching it from here means it needs no entry point of
-      // its own.
-      itemCount: mockScenarios.length + 2,
+      itemCount: mockScenarios.length + _leadingChips,
       separatorBuilder: (_, _) => SizedBox(width: AppSpacing.sm),
       itemBuilder: (context, index) {
         if (index == 0) {
           return AppChip(
             label: 'ai_chat.scenario_auto'.tr(),
-            selected: selectedId == null,
+            selected: widget.selectedId == null,
             style: AppChipStyle.outline,
-            onTap: () => onSelected(null),
+            onTap: () => widget.onSelected(null),
           );
         }
         if (index == 1) {
+          // The showcase is where a design change gets reviewed; reaching it
+          // from here means it needs no entry point of its own.
           return AppChip(
             label: 'ai_chat.showcase_open'.tr(),
             style: AppChipStyle.outline,
@@ -665,12 +647,26 @@ class _ScenarioPicker extends StatelessWidget {
             onTap: () => context.push(AiChatRoutes.showcase),
           );
         }
-        final scenario = mockScenarios[index - 2];
+        if (index == 2 && widget.connectivity != null) {
+          // The offline edge case's fixture. It is a chip rather than a
+          // scenario because a scenario builds *assistant events*, and there
+          // are none: losing signal is a device fact. Everything after the
+          // flip is the real path — the bloc queues, the banner appears, and
+          // flipping back flushes.
+          return AppChip(
+            label: 'ai_chat.scenario_offline'.tr(),
+            selected: widget.connectivity!.isOffline,
+            style: AppChipStyle.outline,
+            icon: const Icon(Icons.wifi_off_rounded),
+            onTap: _toggleOffline,
+          );
+        }
+        final scenario = mockScenarios[index - _leadingChips];
         return AppChip(
           label: scenario.label,
-          selected: selectedId == scenario.id,
+          selected: widget.selectedId == scenario.id,
           style: AppChipStyle.outline,
-          onTap: () => onSelected(scenario.id),
+          onTap: () => widget.onSelected(scenario.id),
         );
       },
     ),

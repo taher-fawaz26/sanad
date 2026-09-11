@@ -709,15 +709,22 @@ Normative. `AiChatTurnPayload.encode` is the only thing that builds this, and
   "message":         String,   // always; may be ""
   "attachments":     [         // only when the turn carries files
     {
-      "id":         String,    // always — the upload id
-      "url":        String,    // always — the resolved location
-      "type":       "audio",   // audio attachments only
-      "transcript": String     // audio only, and only when non-empty
+      "id":  String,           // always — the upload id
+      "url": String            // always — the resolved location
     }
   ],
   "interaction":     { … }     // only when the turn IS an answer — see §13
 }
 ```
+
+> **Retired capability.** AI Chat used to send recorded voice notes: an
+> audio attachment with `type: "audio"` and the on-device `transcript` its
+> recogniser produced. That capability was removed as a product decision.
+> The client's one voice input is now **Speech-to-Text**: speech is
+> converted to text on the device and submitted as an ordinary text
+> message, so it arrives in `message` like anything the user typed. **No
+> audio attachment is generated, uploaded or serialized, and the agent will
+> never receive one from this client.**
 
 ### Rules
 
@@ -726,38 +733,40 @@ Normative. `AiChatTurnPayload.encode` is the only thing that builds this, and
    v1.0, so this addition is not a protocol bump and the existing
    request-shape tests hold unchanged. Do not "tidy" it into always emitting
    the key.
-2. **A non-audio attachment object has exactly `id` and `url`.** Nothing else
-   is sent — no file name, MIME type, size, local path, duration or waveform.
-   The URL is already resolved, so the agent performs no storage lookup, and no
-   device path ever leaves the phone.
-3. **An audio attachment adds `type: "audio"`**, whether or not it has words —
-   so the agent can tell speech it has no transcript for from an opaque file.
-4. **`transcript` is present only when non-empty.** It is client-side device
-   STT captured during the recording, and is best-effort: empty is the normal
-   outcome when the recogniser was unavailable or heard nothing.
-5. **`message` is never empty when the turn has something to say.** With no
-   typed caption and a transcript available, `message` takes the transcript.
-   Not decoration — the live agent answers an empty `message` with `200` and
-   zero frames (see `ARCHITECTURE.md` §3), so a voice-only turn would otherwise
-   be met with silence. It also means a voice note is understood by a backend
-   that has not yet learned to read `attachments`.
-6. **`message` is passed through verbatim, untrimmed.** Trimming happens once,
-   in `AiChatBloc`; doing it again here would silently change a pinned body.
-7. **Nothing credential-shaped is ever in the body.** The session token is a
+2. **An attachment object has exactly `id` and `url`.** Every attachment,
+   with no type discriminator and no per-type extras. Nothing else is sent —
+   no file name, MIME type, size or local path. The URL is already resolved,
+   so the agent performs no storage lookup, and no device path ever leaves
+   the phone.
+3. **There is no audio attachment, and this client cannot produce one.**
+   Speech-to-Text is the only voice input: it yields editable composer text
+   that travels in `message`. Do not add a `type` or `transcript` field here,
+   and do not expect one — `ai_chat_turn_payload_test.dart` asserts that the
+   encoded body contains no audio vocabulary at all.
+4. **`message` is passed through as given, including empty.** It is empty
+   only for a turn that genuinely has no words — an image or document with no
+   caption. Note that the live agent answers an empty `message` with `200`
+   and zero frames (see `ARCHITECTURE.md` §3), so such a turn is met with
+   silence until the backend learns to read `attachments`. A dictated turn is
+   never affected: its words *are* `message`.
+5. **`message` is untrimmed.** Trimming happens once, in `AiChatBloc`; doing
+   it again here would silently change a pinned body.
+6. **Nothing credential-shaped is ever in the body.** The session token is a
    header (`Sanad-Access-Token`) on both transports.
-8. **`interaction` is omitted unless the turn is an answer**, by the same rule
+7. **`interaction` is omitted unless the turn is an answer**, by the same rule
    and for the same reason as `attachments`. When it *is* present, `message`
    still carries the sentence the agent's template produced — so a backend that
    ignores `interaction` receives exactly the body a tapped card has always
    sent. See §13.
 
-### Why the transcript is on the attachment
+### Why Speech-to-Text needs no protocol of its own
 
-`message` already belongs to what the user *typed*, and a turn can carry both a
-caption and a voice note. A top-level `transcript` would either collide with the
-caption or need a rule about which wins. On the attachment, the words stay
-attached to the audio they came from, and a turn with two recordings would still
-be unambiguous.
+Because it produces text, and the protocol already carries text. The recogniser
+writes into the composer as the user speaks; when it lets go, the words are
+ordinary editable content that the user can correct before sending. By the time
+a turn is encoded there is nothing to distinguish it from one that was typed —
+which is precisely the property that let the recorded-audio contract be deleted
+rather than versioned.
 
 ---
 

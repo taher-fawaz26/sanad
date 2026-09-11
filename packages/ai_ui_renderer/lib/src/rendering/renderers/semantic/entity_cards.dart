@@ -1,4 +1,6 @@
 import 'package:ai_ui_protocol/ai_ui_protocol.dart';
+import 'package:ai_ui_renderer/src/interaction/ai_interaction_gate.dart';
+import 'package:ai_ui_renderer/src/interaction/ai_ui_interaction_ledger.dart';
 import 'package:ai_ui_renderer/src/rendering/ai_card_tokens.dart';
 import 'package:ai_ui_renderer/src/rendering/ai_node_renderer.dart';
 import 'package:ai_ui_renderer/src/rendering/ai_ui_formatters.dart';
@@ -6,7 +8,7 @@ import 'package:ai_ui_renderer/src/rendering/ai_ui_render_scope.dart';
 import 'package:ai_ui_renderer/src/rendering/ai_ui_tokens.dart';
 import 'package:ai_ui_renderer/src/rendering/primitives/ai_card_content.dart';
 import 'package:ai_ui_renderer/src/rendering/primitives/ai_card_surface.dart';
-import 'package:ai_ui_renderer/src/rendering/primitives/ai_ui_image_view.dart';
+import 'package:ai_ui_renderer/src/rendering/primitives/ai_status_parts.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
@@ -358,7 +360,14 @@ class AiUiOrderCardRenderer extends AiNodeRenderer<AiUiOrderCardNode> {
   }
 }
 
-/// `provider_card` — Figma `provider-card` (`8015:29509`).
+/// `provider_card` — Figma `provider-card` (`8015:29509`) and the offer card
+/// in both its collapsed and expanded readings.
+///
+/// The expansion is **widget state seeded by the payload**, not an interaction:
+/// `presentation` is where the agent wants the card to start, and which one the
+/// reader wants after that is theirs. Nothing about it is reported back, so
+/// there is nothing for the ledger to hold — unlike the offer underneath it,
+/// which is a question and does go through `submitInteraction`.
 class AiUiProviderCardRenderer extends AiNodeRenderer<AiUiProviderCardNode> {
   /// Creates the renderer.
   const AiUiProviderCardRenderer();
@@ -368,7 +377,68 @@ class AiUiProviderCardRenderer extends AiNodeRenderer<AiUiProviderCardNode> {
     BuildContext context,
     AiUiProviderCardNode node,
     AiUiRenderScope scope,
-  ) {
+  ) => _ProviderCard(node: node, scope: scope, key: ValueKey(node.id));
+}
+
+class _ProviderCard extends StatefulWidget {
+  const _ProviderCard({required this.node, required this.scope, super.key});
+
+  final AiUiProviderCardNode node;
+  final AiUiRenderScope scope;
+
+  @override
+  State<_ProviderCard> createState() => _ProviderCardState();
+}
+
+class _ProviderCardState extends State<_ProviderCard> {
+  late bool _expanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _expanded = widget.node.presentation == AiUiPresentation.expanded;
+  }
+
+  /// Whether there is anything the compact reading leaves out.
+  ///
+  /// Drives the disclosure control's existence rather than its state: a
+  /// chevron on a card with nothing more to show is a control that does
+  /// nothing, which is worse than no control.
+  bool get _hasDetail {
+    final node = widget.node;
+    return node.description != null ||
+        node.services.isNotEmpty ||
+        node.photos.isNotEmpty ||
+        node.distanceMeters != null;
+  }
+
+  void _resolveOffer(AiUiProviderOffer offer, {required bool accepted}) {
+    widget.scope.submitInteraction(
+      context,
+      nodeId: widget.node.id,
+      nodeType: AiUiNodeType.providerCard,
+      kind: AiUiInteractionKind.offerResolved,
+      // The provider's own id travels with the decision so the agent resolves
+      // the booking by identifier rather than by matching the name it printed.
+      value: AiUiOfferValue(
+        decision: accepted
+            ? AiUiOfferDecision.accepted
+            : AiUiOfferDecision.declined,
+        providerId: widget.node.providerId,
+        offerId: offer.offerId,
+      ),
+      text: accepted ? offer.acceptTemplate : offer.declineTemplate,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final node = widget.node;
+    final scope = widget.scope;
+    final colors = context.appColors;
+    final typography = context.appTypography;
+    final showDetail = _expanded && _hasDetail;
+
     return AiSemanticCard(
       semanticsLabel: node.a11yLabel ?? node.name,
       onTap: scope.onTapFor(context, node.action),
@@ -377,25 +447,117 @@ class AiUiProviderCardRenderer extends AiNodeRenderer<AiUiProviderCardNode> {
         mainAxisSize: MainAxisSize.min,
         spacing: AppSpacing.lg,
         children: [
-          AiCardHeader(
-            leading: _ProviderAvatar(node: node, scope: scope),
-            title: node.name,
-            subtitle: node.roleText,
-            trailing: node.ratingValue == null
-                ? null
-                : AiRatingRow(
-                    value: node.ratingValue!,
-                    formatted: AiUiFormatters.rating(
-                      context,
-                      node.ratingValue!,
+          Row(
+            spacing: AppSpacing.md,
+            children: [
+              AiProviderAvatar(
+                source: node.image,
+                scope: scope,
+                nodeType: AiUiNodeType.providerCard.wire,
+                nodeId: node.id,
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AiVerifiedName(
+                      name: node.name,
+                      verified: node.verified,
+                      verifiedLabel: scope.strings.verifiedLabel,
                     ),
-                    outOfLabel: scope.strings.ratingOutOfFive,
-                  ),
+                    if (node.roleText != null) ...[
+                      SizedBox(height: AppSpacing.xs / 2),
+                      Text(
+                        node.roleText!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: typography.tinyNormal.copyWith(
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (node.ratingValue != null)
+                AiRatingRow(
+                  value: node.ratingValue!,
+                  formatted: AiUiFormatters.rating(context, node.ratingValue!),
+                  outOfLabel: scope.strings.ratingOutOfFive,
+                ),
+              if (_hasDetail)
+                AiDisclosureButton(
+                  expanded: _expanded,
+                  label: _expanded
+                      ? scope.strings.showLessLabel
+                      : scope.strings.showMoreLabel,
+                  onTap: () => setState(() => _expanded = !_expanded),
+                ),
+            ],
           ),
+          if (node.proposedTime != null) ...[
+            const AppDivider(),
+            _LabelledFact(
+              icon: Icons.schedule_rounded,
+              label: node.proposedTimeLabel,
+              value: AiUiFormatters.dateTime(context, node.proposedTime!),
+            ),
+          ],
+          if (showDetail && node.distanceMeters != null) ...[
+            const AppDivider(),
+            _LabelledFact(
+              icon: Icons.straighten_rounded,
+              label: scope.strings.distanceLabel,
+              value: AiUiFormatters.distance(
+                context,
+                node.distanceMeters!,
+                strings: scope.strings,
+              ),
+            ),
+          ],
           if (node.stats.isNotEmpty) ...[
             const AppDivider(),
             AiStatStrip(stats: node.stats),
           ],
+          if (showDetail) ...[
+            if (node.description != null)
+              AiCardBody(
+                text: node.description!,
+                emphasised: true,
+                maxLines: 8,
+              ),
+            if (node.services.isNotEmpty)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                spacing: AppSpacing.sm,
+                children: [
+                  if (node.servicesLabel != null)
+                    Text(
+                      node.servicesLabel!,
+                      style: typography
+                          .semiBold(typography.smallNone)
+                          .copyWith(color: colors.textPrimary),
+                    ),
+                  AiTagChips(labels: node.services),
+                ],
+              ),
+            if (node.photos.isNotEmpty)
+              AiPhotoStrip(
+                photos: node.photos,
+                scope: scope,
+                nodeType: AiUiNodeType.providerCard.wire,
+                nodeId: node.id,
+              ),
+          ],
+          if (node.offer != null)
+            _OfferControls(
+              offer: node.offer!,
+              nodeId: node.id,
+              ledger: scope.ledger,
+              onResolved: _resolveOffer,
+            ),
           if (node.actions.isNotEmpty)
             AiCardActionRow(actions: node.actions, scope: scope),
         ],
@@ -404,49 +566,107 @@ class AiUiProviderCardRenderer extends AiNodeRenderer<AiUiProviderCardNode> {
   }
 }
 
-/// The provider's portrait.
+/// A glyph, a muted label and an emphasised value on one row — the proposed
+/// time and the distance.
 ///
-/// `AppAvatar` is the design system's avatar and would be the reuse here, but
-/// its size tiers are `small` and `medium` and neither is Figma's 48dp; it
-/// also takes an `ImageProvider`, where the resolved asset may be an SVG.
-/// Falls back to initials the same way `AppAvatar` does.
-class _ProviderAvatar extends StatelessWidget {
-  const _ProviderAvatar({required this.node, required this.scope});
+/// The 3:4 split is [AiDetailRow]'s, for the same reason: the value takes the
+/// larger share and aligns to the trailing edge, so a formatted instant
+/// ("19 Nov · 3:00 PM") fits beside a short label instead of ellipsizing. A
+/// `Spacer` between the two looked equivalent and was not — it claimed half
+/// the free space for itself and truncated the value on a 393dp device.
+class _LabelledFact extends StatelessWidget {
+  const _LabelledFact({required this.icon, required this.value, this.label});
 
-  final AiUiProviderCardNode node;
-  final AiUiRenderScope scope;
+  final IconData icon;
+  final String? label;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final typography = context.appTypography;
 
-    return Container(
-      width: AiCardTokens.avatarSize,
-      height: AiCardTokens.avatarSize,
-      decoration: BoxDecoration(
-        color: colors.controlFill,
-        shape: BoxShape.circle,
-      ),
-      clipBehavior: Clip.antiAlias,
-      // A provider portrait is backend-owned media, so in practice it arrives
-      // as a URL. The person glyph is the no-image state: what a card with
-      // neither a URL nor an asset shows, and what a failed download falls
-      // back to.
-      child: AiUiImageView(
-        source: node.image,
-        scope: scope,
-        nodeType: AiUiNodeType.providerCard.wire,
-        nodeId: node.id,
-        width: AiCardTokens.avatarSize,
-        height: AiCardTokens.avatarSize,
-        fallback: Center(
-          child: Icon(
-            Icons.person_outline_rounded,
-            size: AiCardTokens.discGlyphSize,
-            color: colors.textSecondary,
+    return Row(
+      spacing: AppSpacing.md,
+      children: [
+        Icon(
+          icon,
+          size: AiCardTokens.rowGlyphSize,
+          color: colors.textSecondary,
+        ),
+        Flexible(
+          flex: 3,
+          child: Text(
+            label ?? '',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: typography.tinyNone.copyWith(color: colors.textSecondary),
           ),
         ),
-      ),
+        Expanded(
+          flex: 4,
+          child: Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.end,
+            // A formatted date or distance is one left-to-right run in both
+            // languages — the same reason a time slot's label forces it.
+            textDirection: AiUiFormatters.valueDirection(value),
+            style: typography
+                .semiBold(typography.smallNone)
+                .copyWith(color: colors.textPrimary),
+          ),
+        ),
+      ],
     );
   }
+}
+
+/// The accept/decline pair on a card that is an offer.
+///
+/// Gated on the ledger like every other answerable control: accepting twice
+/// would book twice, and the card has to stay legible afterwards as a record
+/// of what was agreed.
+class _OfferControls extends StatelessWidget {
+  const _OfferControls({
+    required this.offer,
+    required this.nodeId,
+    required this.ledger,
+    required this.onResolved,
+  });
+
+  final AiUiProviderOffer offer;
+  final String nodeId;
+  final AiUiInteractionLedger ledger;
+  final void Function(AiUiProviderOffer offer, {required bool accepted})
+  onResolved;
+
+  @override
+  Widget build(BuildContext context) => AiInteractionGate(
+    nodeId: nodeId,
+    ledger: ledger,
+    builder: (context, state) => Row(
+      spacing: AppSpacing.md,
+      children: [
+        Expanded(
+          child: AiCardButton(
+            label: offer.acceptLabel,
+            onTap: state.isInteractive
+                ? () => onResolved(offer, accepted: true)
+                : null,
+          ),
+        ),
+        Expanded(
+          child: AiCardButton(
+            label: offer.declineLabel,
+            variant: AiUiButtonVariant.outline,
+            onTap: state.isInteractive
+                ? () => onResolved(offer, accepted: false)
+                : null,
+          ),
+        ),
+      ],
+    ),
+  );
 }

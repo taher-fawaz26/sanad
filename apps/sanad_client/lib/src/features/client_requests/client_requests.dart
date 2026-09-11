@@ -1,5 +1,8 @@
-/// The client half of the service-request lifecycle: draft, submit, negotiate,
-/// confirm.
+/// The client half of the service-request lifecycle: view, negotiate, confirm.
+///
+/// **Viewing and managing only.** A request is created by asking the agent in
+/// AI Chat; the client has no manual create-or-edit form, so there is no
+/// composer here and no route to one.
 ///
 /// Deliberately app-local. The provider app models the same requests through a
 /// *different* payload — a matched provider never sees rival offers, and never

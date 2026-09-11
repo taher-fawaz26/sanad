@@ -1,10 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/home/ai_chat_background.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/home/ai_home_header.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/home/ai_home_nav_pill.dart';
 import 'package:sanad_client/src/features/ai_chat/src/routes/ai_chat_routes.dart';
 import 'package:sanad_client/src/routing/client_routes.dart';
+import 'package:sanad_client/src/ui/background/client_ambient_background.dart';
 
 /// Wraps the Sanad / Requests / My Life branches with the persistent header
 /// — Figma `Chat – 01 Home`'s top row, present no matter which branch is
@@ -58,7 +59,7 @@ class AiHomeShell extends StatelessWidget {
     // continuous background run the full height, with the nav floating on top
     // of it as Figma draws it, and gives the sibling branches the same page
     // rather than a bare surface.
-    body: AiChatBackground(
+    body: ClientAmbientBackground(
       child: SafeArea(
         bottom: false,
         child: Column(
@@ -67,7 +68,12 @@ class AiHomeShell extends StatelessWidget {
               selected: _destinations[navigationShell.currentIndex],
               onSelected: _goBranch,
               onProfileTap: () => context.push(ClientRoutes.profile),
-              onHistoryTap: () => context.push(AiChatRoutes.history),
+              // Gated with the same constant that gates the route itself, in
+              // `AiChatModule.routes` — otherwise a release build renders a
+              // button whose destination does not exist (A-10).
+              onHistoryTap: kReleaseMode
+                  ? null
+                  : () => context.push(AiChatRoutes.history),
             ),
             Expanded(child: navigationShell),
           ],

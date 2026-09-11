@@ -24,10 +24,12 @@ scenarios. The route exists only in non-release builds.
   degrades one bubble — the chat never breaks.
 - `schemaVersion` is the integer `1`. Images are `assetId`-only. Six actions are
   implemented. Every semantic node needs a `fallbackText`.
-- Going the other way, a turn carries `attachments` as `{id, url}` pairs,
-  uploaded before the request — so the agent resolves no storage. A voice note
-  adds `type: "audio"` and the transcript its own device produced, so nothing
-  transcribes it twice. One message, audio and words together.
+- Going the other way, a turn carries `attachments` as `{id, url}` pairs and
+  nothing else, uploaded before the request — so the agent resolves no
+  storage. Images and documents only: **AI Chat sends no recorded audio.**
+  Speech-to-Text converts speech to text on the client and submits it as a
+  normal text message, so there is no audio attachment and no `transcript`
+  field on the wire.
 
 ## Source of truth
 

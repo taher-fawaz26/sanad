@@ -427,6 +427,16 @@ extension _SemanticParsers on _Run {
       'stats',
       'action',
       'actions',
+      'verified',
+      'presentation',
+      'distanceMeters',
+      'description',
+      'services',
+      'servicesLabel',
+      'photos',
+      'proposedTimeLabel',
+      'proposedTime',
+      'offer',
     });
 
     final providerId = _requiredString(json, 'providerId', path, wire);
@@ -457,6 +467,58 @@ extension _SemanticParsers on _Run {
           ? action(json['action'], '$path.action', wire)
           : null,
       actions: _cardActions(json, path, wire),
+      verified: _bool(json, 'verified', path, wire, defaultValue: false),
+      presentation: _enum(
+        json,
+        'presentation',
+        path,
+        wire,
+        AiUiPresentation.tryFromWire,
+        AiUiPresentation.compact,
+      ),
+      distanceMeters: _boundedDouble(
+        json,
+        'distanceMeters',
+        path,
+        wire,
+        0,
+        40000000,
+      ),
+      description: _optionalString(
+        json,
+        'description',
+        path,
+        wire,
+        maxLength: limits.maxTextLength,
+      ),
+      services: _labelList(
+        json,
+        'services',
+        path,
+        wire,
+        limits.maxServiceTags,
+      ),
+      servicesLabel: _optionalString(
+        json,
+        'servicesLabel',
+        path,
+        wire,
+        maxLength: limits.maxLabelLength,
+      ),
+      photos: _imageList(json, 'photos', path, wire),
+      proposedTimeLabel: _optionalString(
+        json,
+        'proposedTimeLabel',
+        path,
+        wire,
+        maxLength: limits.maxLabelLength,
+      ),
+      // Optional, so an unparseable instant drops the row rather than the
+      // card: a provider is still worth showing without a proposed time.
+      proposedTime: json['proposedTime'] == null
+          ? null
+          : _instant(json, 'proposedTime', path, wire),
+      offer: _providerOffer(json, path, wire),
       a11yLabel: a11yLabel,
       fallbackText: fallbackText,
     );
@@ -472,7 +534,14 @@ extension _SemanticParsers on _Run {
     String? fallbackText,
   ) {
     const wire = 'booking_summary';
-    _unknownKeys(json, path, wire, const {'title', 'items', 'actions'});
+    _unknownKeys(json, path, wire, const {
+      'title',
+      'items',
+      'actions',
+      'statusText',
+      'statusTone',
+      'provider',
+    });
 
     final items = _detailItems(json, 'items', path, wire);
     // A summary is its rows. Without them there is nothing to confirm, and a
@@ -498,6 +567,22 @@ extension _SemanticParsers on _Run {
         maxLength: limits.maxLabelLength,
       ),
       actions: _cardActions(json, path, wire),
+      statusText: _optionalString(
+        json,
+        'statusText',
+        path,
+        wire,
+        maxLength: limits.maxLabelLength,
+      ),
+      statusTone: _enum(
+        json,
+        'statusTone',
+        path,
+        wire,
+        AiUiTone.tryFromWire,
+        AiUiTone.success,
+      ),
+      provider: _providerRef(json, path, wire),
       a11yLabel: a11yLabel,
       fallbackText: fallbackText,
     );
@@ -517,6 +602,9 @@ extension _SemanticParsers on _Run {
       'summaryText',
       'location',
       'actions',
+      'photos',
+      'photosLabel',
+      'confirm',
     });
 
     final items = _detailItems(json, 'items', path, wire);
@@ -549,6 +637,15 @@ extension _SemanticParsers on _Run {
       ),
       location: _locationRef(json, path, wire),
       actions: _cardActions(json, path, wire),
+      photos: _imageList(json, 'photos', path, wire),
+      photosLabel: _optionalString(
+        json,
+        'photosLabel',
+        path,
+        wire,
+        maxLength: limits.maxLabelLength,
+      ),
+      confirm: _confirmChoice(json, path, wire, required: false),
       a11yLabel: a11yLabel,
       fallbackText: fallbackText,
     );
@@ -603,6 +700,337 @@ extension _SemanticParsers on _Run {
         AiUiTone.success,
       ),
       total: _receiptTotal(json, path, wire),
+      actions: _cardActions(json, path, wire),
+      a11yLabel: a11yLabel,
+      fallbackText: fallbackText,
+    );
+  }
+
+  // ── Status ────────────────────────────────────────────────────────────────
+
+  AiUiNode? _providerSearch(
+    Map<String, dynamic> json,
+    String path,
+    String id,
+    String? a11yLabel,
+    String? fallbackText,
+  ) {
+    const wire = 'provider_search';
+    _unknownKeys(json, path, wire, const {
+      'statusLabel',
+      'title',
+      'state',
+      'body',
+      'progress',
+      'actions',
+      'confirm',
+    });
+
+    final title = _requiredString(
+      json,
+      'title',
+      path,
+      wire,
+      maxLength: limits.maxLabelLength,
+    );
+    if (title == null) return null;
+
+    return AiUiProviderSearchNode(
+      id: id,
+      title: title,
+      // An unknown state falls back to `searching` rather than dropping the
+      // node: a card that says a search is running is still true, where no
+      // card at all would leave the conversation silent about it.
+      state: _enum(
+        json,
+        'state',
+        path,
+        wire,
+        AiUiProviderSearchState.tryFromWire,
+        AiUiProviderSearchState.searching,
+      ),
+      statusLabel: _optionalString(
+        json,
+        'statusLabel',
+        path,
+        wire,
+        maxLength: limits.maxChipLabelLength,
+      ),
+      body: _optionalString(
+        json,
+        'body',
+        path,
+        wire,
+        maxLength: limits.maxTextLength,
+      ),
+      // Clamped rather than rejected, matching the `progress` primitive: a
+      // search reported as 140% complete is a backend bug, not a reason to
+      // hide the fact that a search is running.
+      progress: _boundedDouble(json, 'progress', path, wire, 0, 1),
+      actions: _cardActions(json, path, wire),
+      confirm: _confirmChoice(json, path, wire, required: false),
+      a11yLabel: a11yLabel,
+      fallbackText: fallbackText,
+    );
+  }
+
+  AiUiNode? _serviceTimeline(
+    Map<String, dynamic> json,
+    String path,
+    String id,
+    String? a11yLabel,
+    String? fallbackText,
+  ) {
+    const wire = 'service_timeline';
+    _unknownKeys(json, path, wire, const {
+      'title',
+      'status',
+      'statusTone',
+      'items',
+      'actions',
+    });
+
+    final items = _timelineItems(json, path, wire);
+    // A timeline is its steps. A heading and a badge with nothing under them
+    // would tell the user a job exists and nothing about where it has got to.
+    if (items.isEmpty) {
+      add(
+        AiUiDiagnosticCode.missingRequiredProperty,
+        '$path.items',
+        nodeType: wire,
+        detail: 'no valid items',
+      );
+      return null;
+    }
+
+    return AiUiServiceTimelineNode(
+      id: id,
+      items: items,
+      title: _optionalString(
+        json,
+        'title',
+        path,
+        wire,
+        maxLength: limits.maxLabelLength,
+      ),
+      status: _optionalString(
+        json,
+        'status',
+        path,
+        wire,
+        maxLength: limits.maxChipLabelLength,
+      ),
+      statusTone: _enum(
+        json,
+        'statusTone',
+        path,
+        wire,
+        AiUiTone.tryFromWire,
+        AiUiTone.info,
+      ),
+      actions: _cardActions(json, path, wire),
+      a11yLabel: a11yLabel,
+      fallbackText: fallbackText,
+    );
+  }
+
+  AiUiNode? _verificationCode(
+    Map<String, dynamic> json,
+    String path,
+    String id,
+    String? a11yLabel,
+    String? fallbackText,
+  ) {
+    const wire = 'verification_code';
+    _unknownKeys(json, path, wire, const {
+      'label',
+      'body',
+      'code',
+      'actions',
+    });
+
+    final code = _requiredString(
+      json,
+      'code',
+      path,
+      wire,
+      maxLength: limits.maxVerificationCodeLength,
+    );
+    if (code == null) return null;
+
+    return AiUiVerificationCodeNode(
+      id: id,
+      // Whitespace inside a code is never meaningful and would draw an empty
+      // box, so "65 066" and "65066" are the same code.
+      code: code.replaceAll(RegExp(r'\s+'), ''),
+      label: _optionalString(
+        json,
+        'label',
+        path,
+        wire,
+        maxLength: limits.maxChipLabelLength,
+      ),
+      body: _optionalString(
+        json,
+        'body',
+        path,
+        wire,
+        maxLength: limits.maxTextLength,
+      ),
+      actions: _cardActions(json, path, wire),
+      a11yLabel: a11yLabel,
+      fallbackText: fallbackText,
+    );
+  }
+
+  AiUiNode? _requestNotice(
+    Map<String, dynamic> json,
+    String path,
+    String id,
+    String? a11yLabel,
+    String? fallbackText,
+  ) {
+    const wire = 'request_notice';
+    _unknownKeys(json, path, wire, const {
+      'title',
+      'body',
+      'requestId',
+      'reference',
+      'status',
+      'contextLabel',
+      'draftLabel',
+      'draftText',
+      'actions',
+      'confirm',
+    });
+
+    final title = _requiredString(
+      json,
+      'title',
+      path,
+      wire,
+      maxLength: limits.maxLabelLength,
+    );
+    if (title == null) return null;
+
+    return AiUiRequestNoticeNode(
+      id: id,
+      title: title,
+      body: _optionalString(
+        json,
+        'body',
+        path,
+        wire,
+        maxLength: limits.maxTextLength,
+      ),
+      requestId: _optionalString(
+        json,
+        'requestId',
+        path,
+        wire,
+        maxLength: limits.maxLabelLength,
+      ),
+      reference: _optionalString(
+        json,
+        'reference',
+        path,
+        wire,
+        maxLength: limits.maxChipLabelLength,
+      ),
+      status: _badge(json, 'status', path, wire),
+      contextLabel: _optionalString(
+        json,
+        'contextLabel',
+        path,
+        wire,
+        maxLength: limits.maxTextLength,
+      ),
+      draftLabel: _optionalString(
+        json,
+        'draftLabel',
+        path,
+        wire,
+        maxLength: limits.maxChipLabelLength,
+      ),
+      draftText: _optionalString(
+        json,
+        'draftText',
+        path,
+        wire,
+        maxLength: limits.maxTextLength,
+      ),
+      actions: _cardActions(json, path, wire),
+      // Optional: the already-active-request and provider-cancelled readings
+      // both carry one, the third does not, and a notice with neither a
+      // `confirm` nor an `actions` row is still a legitimate statement.
+      confirm: _confirmChoice(json, path, wire, required: false),
+      a11yLabel: a11yLabel,
+      fallbackText: fallbackText,
+    );
+  }
+
+  AiUiNode? _serviceAreaNotice(
+    Map<String, dynamic> json,
+    String path,
+    String id,
+    String? a11yLabel,
+    String? fallbackText,
+  ) {
+    const wire = 'service_area_notice';
+    _unknownKeys(json, path, wire, const {
+      'title',
+      'addressText',
+      'body',
+      'tone',
+      'changeLabel',
+      'actions',
+    });
+
+    final title = _requiredString(
+      json,
+      'title',
+      path,
+      wire,
+      maxLength: limits.maxLabelLength,
+    );
+    // Dropped without an address rather than rendered as a bare warning: the
+    // point of the card is telling the user *which* place was refused, and a
+    // coverage notice that cannot name one leaves them with nothing to change.
+    final addressText = _requiredString(
+      json,
+      'addressText',
+      path,
+      wire,
+      maxLength: limits.maxTextLength,
+    );
+    if (title == null || addressText == null) return null;
+
+    return AiUiServiceAreaNoticeNode(
+      id: id,
+      title: title,
+      addressText: addressText,
+      body: _optionalString(
+        json,
+        'body',
+        path,
+        wire,
+        maxLength: limits.maxTextLength,
+      ),
+      tone: _enum(
+        json,
+        'tone',
+        path,
+        wire,
+        AiUiTone.tryFromWire,
+        AiUiTone.warning,
+      ),
+      changeLabel: _optionalString(
+        json,
+        'changeLabel',
+        path,
+        wire,
+        maxLength: limits.maxChipLabelLength,
+      ),
       actions: _cardActions(json, path, wire),
       a11yLabel: a11yLabel,
       fallbackText: fallbackText,

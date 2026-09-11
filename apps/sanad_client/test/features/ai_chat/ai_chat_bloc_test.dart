@@ -267,7 +267,7 @@ void main() {
       await settle();
 
       expect(bloc.state.messages.single.status, AiChatMessageStatus.failed);
-      expect(bloc.state.failureMessage, 'Please try again shortly.');
+      expect(bloc.state.failure?.message, 'Please try again shortly.');
       expect(bloc.activeStream.messageId, isNull);
     });
 
@@ -316,6 +316,156 @@ void main() {
         AiChatConfig.supportedActions,
         isNot(contains(AiUiActionType.openRoute)),
       );
+    });
+  });
+
+  // Regression for A-03: a turn that never reached the agent was rendered
+  // exactly like a delivered one, and every failure after the first was
+  // silent because the snackbar compared failure *strings*.
+  group('delivery lifecycle', () {
+    AiChatEvent failure([String message = 'Connection lost']) =>
+        AiChatErrorEvent(
+          eventId: 'err_${DateTime.now().microsecondsSinceEpoch}',
+          code: 'connection_failed',
+          message: message,
+        );
+
+    test('a submitted turn starts as sending, not delivered', () async {
+      await settle();
+      bloc.add(const AiChatMessageSubmitted('hello'));
+      await settle();
+
+      expect(bloc.state.messages.single.status, AiChatMessageStatus.sending);
+    });
+
+    test('the agent starting a reply marks the turn delivered', () async {
+      await settle();
+      bloc.add(const AiChatMessageSubmitted('hello'));
+      await settle();
+      source.emit(start());
+      await settle();
+
+      final user = bloc.state.messages.first;
+      expect(user.role, AiChatRole.user);
+      expect(user.status, AiChatMessageStatus.complete);
+    });
+
+    test('a transport error marks the turn failed', () async {
+      await settle();
+      bloc.add(const AiChatMessageSubmitted('hello'));
+      await settle();
+      source.emit(failure());
+      await settle();
+
+      expect(bloc.state.messages.single.status, AiChatMessageStatus.failed);
+    });
+
+    test('two identical failures carry different ids', () async {
+      // The whole point: keyed off the message text, the second failure left
+      // the state unchanged and never reached the user.
+      await settle();
+      bloc.add(const AiChatMessageSubmitted('one'));
+      await settle();
+      source.emit(failure());
+      await settle();
+      final first = bloc.state.failure;
+
+      bloc.add(const AiChatMessageSubmitted('two'));
+      await settle();
+      source.emit(failure());
+      await settle();
+      final second = bloc.state.failure;
+
+      expect(first, isNotNull);
+      expect(second, isNotNull);
+      expect(first!.message, second!.message);
+      expect(first.id, isNot(second.id));
+      expect(first, isNot(second));
+    });
+
+    test('each failed turn is marked, not just the newest', () async {
+      await settle();
+      bloc.add(const AiChatMessageSubmitted('one'));
+      await settle();
+      source.emit(failure());
+      await settle();
+      bloc.add(const AiChatMessageSubmitted('two'));
+      await settle();
+      source.emit(failure());
+      await settle();
+
+      expect(
+        bloc.state.messages.map((m) => m.status),
+        everyElement(AiChatMessageStatus.failed),
+      );
+      expect(bloc.state.messages, hasLength(2));
+    });
+
+    test('retry re-sends the same bubble and returns it to sending', () async {
+      await settle();
+      bloc.add(const AiChatMessageSubmitted('hello'));
+      await settle();
+      source.emit(failure());
+      await settle();
+
+      final id = bloc.state.messages.single.id;
+      bloc.add(AiChatMessageRetryRequested(id));
+      await settle();
+
+      // Same message, not a second copy of it.
+      expect(bloc.state.messages, hasLength(1));
+      expect(bloc.state.messages.single.id, id);
+      expect(bloc.state.messages.single.status, AiChatMessageStatus.sending);
+      expect(source.sent, ['hello', 'hello']);
+    });
+
+    test('a successful retry marks the turn delivered', () async {
+      await settle();
+      bloc.add(const AiChatMessageSubmitted('hello'));
+      await settle();
+      source.emit(failure());
+      await settle();
+      bloc.add(AiChatMessageRetryRequested(bloc.state.messages.single.id));
+      await settle();
+      source.emit(start());
+      await settle();
+
+      expect(bloc.state.messages.first.status, AiChatMessageStatus.complete);
+    });
+
+    test('retrying a delivered turn does nothing', () async {
+      await settle();
+      bloc.add(const AiChatMessageSubmitted('hello'));
+      await settle();
+      source.emit(start());
+      await settle();
+
+      bloc.add(AiChatMessageRetryRequested(bloc.state.messages.first.id));
+      await settle();
+
+      expect(source.sent, ['hello']);
+    });
+
+    test('retrying an unknown id does nothing', () async {
+      await settle();
+      bloc.add(const AiChatMessageSubmitted('hello'));
+      await settle();
+      source.emit(failure());
+      await settle();
+
+      bloc.add(const AiChatMessageRetryRequested('does_not_exist'));
+      await settle();
+
+      expect(source.sent, ['hello']);
+    });
+
+    test('an error with no turn in flight leaves the list alone', () async {
+      await settle();
+      source.emit(failure());
+      await settle();
+
+      expect(bloc.state.messages, isEmpty);
+      expect(bloc.state.failure, isNotNull);
     });
   });
 }

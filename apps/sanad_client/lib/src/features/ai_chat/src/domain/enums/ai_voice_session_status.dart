@@ -10,11 +10,11 @@
 /// any -> ending -> ended        any -> error
 /// ```
 ///
-/// Deliberately *not* shared with `AiRecordingStatus`. A voice session is a
-/// continuous conversation that owns the microphone for its whole life and
-/// produces no message attachment; a recording produces exactly one file and
-/// then releases the microphone. Collapsing the two would force every state
-/// consumer to ask which mode it is in.
+/// Deliberately *not* shared with the composer's `AiSpeechStatus`. A voice
+/// session is a continuous conversation that owns the microphone for its
+/// whole life; dictation recognises one phrase into the composer and lets
+/// go. Collapsing the two would force every state consumer to ask which mode
+/// it is in.
 enum AiVoiceSessionStatus {
   /// Not started, or fully torn down and restartable.
   idle,

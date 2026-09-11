@@ -15,7 +15,9 @@
     <!-- Camera — required to attach a photo to an AI chat message -->
     <uses-permission android:name="android.permission.CAMERA" />
 
-    <!-- Microphone — required to record a voice note and to run live voice -->
+    <!-- Microphone — required by speech-to-text dictation and by live voice.
+         AI Chat records no audio; the recogniser and the live-voice session
+         are the only capture paths. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <!-- Gallery / Photo access — required to attach images to a chat message -->

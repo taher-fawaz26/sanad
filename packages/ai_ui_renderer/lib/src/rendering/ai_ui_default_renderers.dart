@@ -4,9 +4,12 @@ import 'package:ai_ui_renderer/src/rendering/renderers/control_renderers.dart';
 import 'package:ai_ui_renderer/src/rendering/renderers/fallback_renderer.dart';
 import 'package:ai_ui_renderer/src/rendering/renderers/layout_renderers.dart';
 import 'package:ai_ui_renderer/src/rendering/renderers/media_renderers.dart';
+import 'package:ai_ui_renderer/src/rendering/renderers/semantic/confirmation.dart';
 import 'package:ai_ui_renderer/src/rendering/renderers/semantic/entity_cards.dart';
 import 'package:ai_ui_renderer/src/rendering/renderers/semantic/interactive.dart';
+import 'package:ai_ui_renderer/src/rendering/renderers/semantic/notices.dart';
 import 'package:ai_ui_renderer/src/rendering/renderers/semantic/prompts.dart';
+import 'package:ai_ui_renderer/src/rendering/renderers/semantic/status.dart';
 import 'package:ai_ui_renderer/src/rendering/renderers/semantic/summaries.dart';
 import 'package:ai_ui_renderer/src/rendering/renderers/text_renderers.dart';
 
@@ -62,5 +65,15 @@ AiUiRendererRegistry defaultRendererRegistry({
     AiUiNodeType.mediaRequest: AiUiMediaRequestRenderer(),
     AiUiNodeType.permissionRequest: AiUiPermissionRequestRenderer(),
     AiUiNodeType.locationConfirm: AiUiLocationConfirmRenderer(),
+    AiUiNodeType.confirmPrompt: AiUiConfirmPromptRenderer(),
+
+    // Semantic — notices
+    AiUiNodeType.requestNotice: AiUiRequestNoticeRenderer(),
+    AiUiNodeType.serviceAreaNotice: AiUiServiceAreaNoticeRenderer(),
+
+    // Semantic — status
+    AiUiNodeType.providerSearch: AiUiProviderSearchRenderer(),
+    AiUiNodeType.serviceTimeline: AiUiServiceTimelineRenderer(),
+    AiUiNodeType.verificationCode: AiUiVerificationCodeRenderer(),
   },
 );

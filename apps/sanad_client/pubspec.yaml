@@ -30,11 +30,15 @@ dependencies:
     path: ../../packages/core
   bloc_concurrency: ^0.3.0
   cupertino_icons: ^1.0.8
-  # ── Audio (AI chat: recorded voice notes + live-voice mock) ───────────────
+  # ── Audio (AI chat live-voice session only) ───────────────────────────────
+  # All three exist for live voice: `record` streams PCM in `RecordVoiceCapture`,
+  # `just_audio` plays the assistant's reply, `audio_session` owns audio focus.
+  # The chat composer holds no audio at all — its microphone capability is
+  # speech-to-text, which returns words rather than a file.
+  #
   # `record` is pinned to the 6.x line on purpose: 7.x requires Dart ^3.12 /
   # Flutter >=3.44 and this workspace is on Dart 3.11.5 / Flutter 3.41.9.
-  # 6.2.1 still exposes `startStream()` and `onAmplitudeChanged()`, which are
-  # the two APIs the live-voice capture path needs.
+  # 6.2.1 still exposes `startStream()`, which is what the capture path needs.
   record: ^6.2.1
   just_audio: ^0.10.6
   audio_session: ^0.2.4

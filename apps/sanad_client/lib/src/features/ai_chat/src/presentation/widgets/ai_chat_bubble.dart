@@ -1,13 +1,14 @@
 import 'package:ai_ui_renderer/ai_ui_renderer.dart';
 import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/ai_chat_message.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/entities/ai_chat_attachment.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/bloc/active_stream_controller.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/composer/ai_attachment_tile.dart';
-import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/composer/ai_audio_attachment_row.dart';
+import 'package:sanad_client/src/ui/text/auto_text_direction.dart';
 
 /// One message.
 ///
@@ -19,6 +20,7 @@ class AiChatBubble extends StatelessWidget {
     required this.message,
     required this.activeStream,
     super.key,
+    this.onRetry,
   });
 
   /// The message to draw.
@@ -26,6 +28,10 @@ class AiChatBubble extends StatelessWidget {
 
   /// Source of streaming text while [message] is still being written.
   final ActiveStreamController activeStream;
+
+  /// Sends this turn again. Only offered on a user turn that failed or is
+  /// still queued offline (A-03).
+  final VoidCallback? onRetry;
 
   bool get _isUser => message.role == AiChatRole.user;
 
@@ -41,6 +47,8 @@ class AiChatBubble extends StatelessWidget {
           gap: _rowGap,
           maxWidth: _userMaxWidth,
           avatarSize: _avatarSize,
+          status: message.status,
+          onRetry: onRetry,
           child: _Content(
             message: message,
             activeStream: activeStream,
@@ -70,13 +78,35 @@ class _UserRow extends StatelessWidget {
     required this.gap,
     required this.maxWidth,
     required this.avatarSize,
+    required this.status,
     required this.child,
+    this.onRetry,
   });
 
   final double gap;
   final double maxWidth;
   final double avatarSize;
+  final AiChatMessageStatus status;
+  final VoidCallback? onRetry;
   final Widget child;
+
+  /// Figma `#127A60`. A literal for the same reason the page wash is: the
+  /// palette's nearest neighbours (`shade700` `#1A7E6B`, `shade800` `#126153`)
+  /// are both visibly off it, and this is the user's own voice on the screen.
+  static const _delivered = Color(0xFF127A60);
+
+  /// The fill says which of the three things happened to this turn.
+  ///
+  /// Colour rather than only a footer, because the reference design changes
+  /// the bubble itself: a turn held offline is visibly *set aside* (the
+  /// neutral sky tone) and one that failed is visibly *wrong* (error), where a
+  /// green bubble with small grey text under it reads as delivered at a
+  /// glance. Both come from the palette; neither is a one-off.
+  Color _fill(BuildContext context) => switch (status) {
+    AiChatMessageStatus.failed => context.appColors.error,
+    AiChatMessageStatus.queued => context.appColors.palettes.sky.shade500,
+    _ => _delivered,
+  };
 
   @override
   Widget build(BuildContext context) => Row(
@@ -85,33 +115,153 @@ class _UserRow extends StatelessWidget {
     spacing: gap,
     children: [
       Flexible(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: maxWidth),
-          child: Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: AppSpacing.xl,
-              vertical: AppSpacing.lg,
-            ),
-            decoration: const BoxDecoration(
-              // Figma `#127A60`. A literal for the same reason the page wash
-              // is: the palette's nearest neighbours (`shade700` `#1A7E6B`,
-              // `shade800` `#126153`) are both visibly off it, and this is
-              // the user's own voice on the screen.
-              color: Color(0xFF127A60),
-              borderRadius: BorderRadiusDirectional.only(
-                topStart: Radius.circular(24),
-                topEnd: Radius.circular(24),
-                bottomStart: Radius.circular(24),
-                bottomEnd: Radius.circular(4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xl,
+                  vertical: AppSpacing.lg,
+                ),
+                decoration: BoxDecoration(
+                  color: _fill(context),
+                  borderRadius: const BorderRadiusDirectional.only(
+                    topStart: Radius.circular(24),
+                    topEnd: Radius.circular(24),
+                    bottomStart: Radius.circular(24),
+                    bottomEnd: Radius.circular(4),
+                  ),
+                ),
+                child: Opacity(
+                  // A turn still on its way reads as slightly held back. Subtle
+                  // on purpose: it is a hint, not an error. A queued turn keeps
+                  // full opacity — its own fill already says it is waiting, and
+                  // fading it as well would make it hard to read.
+                  opacity: status.isSending ? 0.72 : 1,
+                  child: child,
+                ),
               ),
             ),
-            child: child,
-          ),
+            if (status.isFailed) ...[
+              SizedBox(height: AppSpacing.xs),
+              _UndeliveredFooter(onRetry: onRetry),
+            ] else if (status.isQueued) ...[
+              SizedBox(height: AppSpacing.xs),
+              const _QueuedFooter(),
+            ],
+          ],
         ),
       ),
       _UserAvatar(size: avatarSize),
     ],
   );
+}
+
+/// Says a turn did not arrive, and offers to send it again (A-03).
+///
+/// Sits under the bubble rather than inside it so the message itself still
+/// reads as the user wrote it — what failed is the delivery, not the text.
+/// Before this, an undelivered turn was pixel-identical to a delivered one.
+class _UndeliveredFooter extends StatelessWidget {
+  const _UndeliveredFooter({this.onRetry});
+
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final typography = context.appTypography;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      spacing: AppSpacing.sm,
+      children: [
+        // Flexible so a longer translation shortens rather than overflowing —
+        // the Arabic copy is half again the length of the English.
+        Flexible(
+          child: Text(
+            'ai_chat.message_not_sent'.tr(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: typography
+                .semiBold(typography.tinyNone)
+                .copyWith(color: colors.error),
+          ),
+        ),
+        if (onRetry != null)
+          Flexible(
+            child: GestureDetector(
+              onTap: onRetry,
+              behavior: HitTestBehavior.opaque,
+              child: Semantics(
+                button: true,
+                child: Container(
+                  // Figma draws Retry as a bordered pill in the error colour,
+                  // not as a link: it is the one control on the row, and it
+                  // has to clear the 44dp tap target a bare word does not.
+                  constraints: const BoxConstraints(minHeight: 44),
+                  alignment: Alignment.center,
+                  padding: EdgeInsetsDirectional.symmetric(
+                    horizontal: AppSpacing.md,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colors.surface,
+                    borderRadius: AppRadius.circularMd,
+                    border: Border.all(color: colors.error),
+                  ),
+                  child: Text(
+                    'ai_chat.message_retry'.tr(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: typography
+                        .semiBold(typography.tinyNone)
+                        .copyWith(color: colors.error),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Says a turn is waiting for a connection rather than that it went wrong.
+///
+/// The visual difference from [_UndeliveredFooter] is the whole point of the
+/// pair: this one is muted and offers no Retry text, because there is nothing
+/// to retry *yet* — the turn goes out on its own the moment there is signal.
+class _QueuedFooter extends StatelessWidget {
+  const _QueuedFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final typography = context.appTypography;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      spacing: AppSpacing.xs,
+      children: [
+        Icon(
+          Icons.schedule_rounded,
+          size: AppDimension.iconCompact,
+          color: colors.textMuted,
+        ),
+        Flexible(
+          child: Text(
+            'ai_chat.message_pending_offline'.tr(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: typography.smallNormal.copyWith(color: colors.textMuted),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 /// The account portrait beside the user's turn — Figma `avatar`
@@ -221,7 +371,11 @@ class _Content extends StatelessWidget {
         if (message.hasAttachments)
           _Attachments(
             attachments: message.attachments,
-            foreground: foreground,
+            // The transport uploads the files after the turn is handed over,
+            // so a `sending` turn's tiles are genuinely still in flight
+            // (A-21). Reuses the tile's own busy overlay rather than adding a
+            // second progress affordance.
+            isUploading: message.status.isSending,
           ),
         _Text(
           message: message,
@@ -286,55 +440,53 @@ class _Text extends StatelessWidget {
   /// [AiUiMarkdown.build] returns null when there is no markup — the common
   /// case, decided by one regex — so plain prose stays on the plain [Text]
   /// path and this stays cheap enough to run per delta.
+  ///
+  /// The result is laid out in the direction the *content* reads in, not the
+  /// app's. An English answer under the Arabic locale used to inherit RTL, so
+  /// its periods, `1.` list markers and bullets all landed on the wrong end
+  /// and the reply was genuinely hard to read (A-02). A user's own turn gets
+  /// the same treatment, for the same reason: they may type in either
+  /// language whatever the UI is set to.
   Widget _prose(BuildContext context, String text, TextStyle style) {
-    if (message.role == AiChatRole.user) return Text(text, style: style);
-    return AiUiMarkdown.build(context, text, baseStyle: style) ??
-        Text(text, style: style);
+    final child = message.role == AiChatRole.user
+        ? Text(text, style: style)
+        : AiUiMarkdown.build(context, text, baseStyle: style) ??
+              Text(text, style: style);
+    return AutoDirection(text: text, child: child);
   }
 }
 
 /// The attachments carried by one message.
 ///
-/// A voice note gets a playable row; images and documents get read-only tiles.
-/// The tiles reuse the composer's, with removal wired to nothing — a sent
-/// message is not editable, and a second near-identical widget would be a
-/// second thing to keep in step.
+/// Images and documents, as read-only tiles. There is no audio row: AI Chat
+/// sends no recorded audio, so no message can carry any — speech reaches the
+/// conversation as the ordinary text the recogniser produced.
+///
+/// The tiles reuse the composer's, with the remove affordance switched off —
+/// a sent message is not editable, and a second near-identical widget would be
+/// a second thing to keep in step.
 class _Attachments extends StatelessWidget {
-  const _Attachments({required this.attachments, required this.foreground});
+  const _Attachments({required this.attachments, this.isUploading = false});
 
   final List<AiChatAttachment> attachments;
-  final Color foreground;
+
+  /// Whether the turn carrying these files is still on its way.
+  final bool isUploading;
 
   @override
-  Widget build(BuildContext context) {
-    final audio = attachments.whereType<AiAudioAttachment>().toList();
-    final visual = attachments.where((a) => a is! AiAudioAttachment).toList();
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: AppSpacing.sm,
-      children: [
-        for (final take in audio)
-          AiAudioAttachmentRow(
-            key: ValueKey(take.id),
-            attachment: take,
-            foreground: foreground,
-          ),
-        if (visual.isNotEmpty)
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: [
-              for (final attachment in visual)
-                AiAttachmentTile(
-                  key: ValueKey(attachment.id),
-                  attachment: attachment,
-                  onRemove: () {},
-                ),
-            ],
-          ),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => Wrap(
+    spacing: AppSpacing.sm,
+    runSpacing: AppSpacing.sm,
+    children: [
+      for (final attachment in attachments)
+        AiAttachmentTile(
+          key: ValueKey(attachment.id),
+          attachment: attachment,
+          showBusy: isUploading,
+          // A sent turn is not editable, so there is nothing to remove.
+          showRemove: false,
+          onRemove: () {},
+        ),
+    ],
+  );
 }

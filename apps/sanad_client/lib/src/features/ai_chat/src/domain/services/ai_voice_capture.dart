@@ -19,14 +19,14 @@ abstract final class AiVoiceAudioFormat {
 
 /// Opens the microphone as a raw PCM stream.
 ///
-/// Deliberately *streaming* rather than file-based, unlike `AiAudioRecorder`:
-/// a realtime session needs frames as they are captured, not a file when the
-/// user stops. That is also what makes this the seam a real transport would
-/// plug into — the frames it yields are exactly what would go on the wire.
+/// Deliberately *streaming* rather than file-based: a realtime session needs
+/// frames as they are captured, not a file when the user stops. That is also
+/// what makes this the seam a real transport would plug into — the frames it
+/// yields are exactly what would go on the wire.
 ///
-/// A separate interface from the recorder because the two have genuinely
-/// different jobs; see `AiVoiceSession` for why the whole subsystem is kept
-/// apart from recorded audio.
+/// This is live-voice infrastructure and nothing else. The chat composer has
+/// no capture path at all: its microphone capability is speech recognition,
+/// which returns words rather than audio.
 abstract interface class AiVoiceCapture {
   /// Whether the device has a microphone this capture can use.
   Future<bool> get isAvailable;

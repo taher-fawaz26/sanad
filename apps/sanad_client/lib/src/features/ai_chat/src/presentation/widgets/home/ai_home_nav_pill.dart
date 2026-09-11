@@ -60,11 +60,30 @@ class AiHomeNavPill extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         for (final destination in AiHomeDestination.values)
-          _Segment(
-            destination: destination,
-            selected: destination == selected,
-            onTap: () => onSelected(destination),
-          ),
+          if (destination == selected)
+            // Only the selected segment flexes. A `Row` hands its
+            // non-flexible children *unbounded* width, so without this the
+            // selected segment sizes to its full label and the pill overflows
+            // its slot in the header — which is what happened once the
+            // notifications bell joined the trailing controls and the widest
+            // label ("Requests") was selected. Loose, so it keeps its
+            // intrinsic width whenever there is room.
+            //
+            // The other two are icons only: they have nothing to give up, and
+            // flexing them just squeezes a 20dp glyph into less than 20dp.
+            Flexible(
+              child: _Segment(
+                destination: destination,
+                selected: true,
+                onTap: () => onSelected(destination),
+              ),
+            )
+          else
+            _Segment(
+              destination: destination,
+              selected: false,
+              onTap: () => onSelected(destination),
+            ),
       ],
     ),
   );
@@ -153,32 +172,43 @@ class _Segment extends StatelessWidget {
                 // The collapsed icon-only segments carry the label only in
                 // semantics (above); visually it appears only once selected,
                 // which is the interaction Figma specifies for this control.
-                AnimatedSize(
-                  duration: AppMotionDuration.quick,
-                  curve: AppMotionCurve.standard,
-                  child: selected
-                      ? ExcludeSemantics(
-                          child: ConstrainedBox(
-                            // A raw i18n key (this repo's widget-test
-                            // convention) or a large accessibility text
-                            // scale can both demand far more width than any
-                            // real translated label needs — capped and
-                            // ellipsized so either shrinks the pill's own
-                            // label instead of overflowing the whole header.
-                            constraints: const BoxConstraints(maxWidth: 90),
-                            child: Text(
-                              label,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: context.appTypography.regularNormal
-                                  .copyWith(
-                                    color: colors.primary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                // Flexible so the label can shrink *below* its cap when the
+                // header is tight, rather than pushing the pill past the
+                // width its `Flexible` slot allows. The cap alone was not
+                // enough: it bounds the label but cannot compress it, so a
+                // longer selected label ("Requests" is wider than "Sanad")
+                // overflowed the header once the notifications bell joined
+                // the trailing controls. Must wrap `AnimatedSize` rather than
+                // sit inside it — `Flexible` has to be a direct child of the
+                // `Row`.
+                Flexible(
+                  child: AnimatedSize(
+                    duration: AppMotionDuration.quick,
+                    curve: AppMotionCurve.standard,
+                    child: selected
+                        ? ExcludeSemantics(
+                            child: ConstrainedBox(
+                              // A raw i18n key (this repo's widget-test
+                              // convention) or a large accessibility text
+                              // scale can both demand far more width than
+                              // any real translated label needs — capped and
+                              // ellipsized so either shrinks the pill's own
+                              // label instead of overflowing the header.
+                              constraints: const BoxConstraints(maxWidth: 90),
+                              child: Text(
+                                label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: context.appTypography.regularNormal
+                                    .copyWith(
+                                      color: colors.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
                             ),
-                          ),
-                        )
-                      : const SizedBox.shrink(),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
                 ),
               ],
             ),

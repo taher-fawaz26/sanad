@@ -2,13 +2,11 @@ import 'package:audio_session/audio_session.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:record/record.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/platform/audio/audio_session_manager.dart';
-import 'package:sanad_client/src/features/ai_chat/src/data/platform/audio/record_audio_recorder.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/platform/voice/record_voice_capture.dart';
-import 'package:sanad_client/src/features/ai_chat/src/domain/services/ai_audio_recorder.dart';
 
 /// The self-interruption regression.
 ///
-/// A take used to die roughly 100 ms after it started, with the platform
+/// Capture used to die roughly 100 ms after it started, with the platform
 /// logging `onAudioFocusChange(-1)` in between. Nothing external was
 /// interrupting it: `AudioSessionManager` took `AUDIOFOCUS_GAIN`, then
 /// `record` — which manages focus itself by default — took `AUDIOFOCUS_GAIN`
@@ -22,35 +20,17 @@ import 'package:sanad_client/src/features/ai_chat/src/domain/services/ai_audio_r
 /// functions, so the fix is verifiable with no microphone and no device.
 void main() {
   group('single audio-focus owner', () {
-    test('the recording config leaves focus entirely to the session', () {
-      // The one line that separates a working recorder from a self-cancelling
-      // one. `record` defaults to `AudioInterruptionMode.pause`, which makes
-      // its Android recorder request focus of its own.
-      expect(
-        RecordAudioRecorder.recordingConfig.audioInterruption,
-        AudioInterruptionMode.none,
-      );
-    });
-
-    test('the live-voice capture config does too', () {
+    test('the live-voice capture config leaves focus to the session', () {
+      // The one line that separates working capture from self-cancelling
+      // capture. `record` defaults to `AudioInterruptionMode.pause`, which
+      // makes its Android recorder request focus of its own.
+      //
+      // This is now the *only* capture config in the app: AI Chat records no
+      // audio, so the live-voice session is the sole `record` client.
       expect(
         RecordVoiceCapture.captureConfig.audioInterruption,
         AudioInterruptionMode.none,
       );
-    });
-
-    test('the recording config still fits inside the size ceiling', () {
-      // Guarded alongside the focus setting because both live in the same
-      // constant now: a future edit that reaches for one must not disturb the
-      // other. 32 kbps mono is ~4 KB/s, so five minutes is ~1.2 MB.
-      const config = RecordAudioRecorder.recordingConfig;
-      expect(config.encoder, AudioEncoder.aacLc);
-      expect(config.bitRate, 32000);
-      expect(config.numChannels, 1);
-
-      const maxDuration = Duration(minutes: 5);
-      final bytes = config.bitRate / 8 * maxDuration.inSeconds;
-      expect(bytes, lessThan(5 * 1024 * 1024));
     });
   });
 
@@ -92,42 +72,6 @@ void main() {
           ),
           AudioSessionEvent.resumed,
           reason: 'ending a $type interruption should resume',
-        );
-      }
-    });
-  });
-
-  group('RecordAudioRecorder.abortFor', () {
-    test('only a real interruption ends a take', () {
-      expect(
-        RecordAudioRecorder.abortFor(AudioSessionEvent.interrupted),
-        AiRecordingAbort.interrupted,
-      );
-    });
-
-    test('ducking does not end a take', () {
-      expect(RecordAudioRecorder.abortFor(AudioSessionEvent.ducked), isNull);
-    });
-
-    test('unplugging headphones does not end a take', () {
-      // `ACTION_AUDIO_BECOMING_NOISY` is an output-route event. Throwing away
-      // a voice note because the user pulled their earbuds out is a defect.
-      expect(
-        RecordAudioRecorder.abortFor(AudioSessionEvent.becameNoisy),
-        isNull,
-      );
-    });
-
-    test('a resumed session does not reopen the microphone', () {
-      expect(RecordAudioRecorder.abortFor(AudioSessionEvent.resumed), isNull);
-    });
-
-    test('every session event is classified', () {
-      for (final event in AudioSessionEvent.values) {
-        expect(
-          () => RecordAudioRecorder.abortFor(event),
-          returnsNormally,
-          reason: '$event must have a classification',
         );
       }
     });

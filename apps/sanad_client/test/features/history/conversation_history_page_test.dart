@@ -428,6 +428,63 @@ void main() {
       expect(find.byType(ConversationHistoryStartButton), findsOneWidget);
     });
   });
+
+  // Regression: the nav row's `Stack` is sized by its unpositioned child (the
+  // title), so without an explicit full-width constraint it shrink-wrapped to
+  // the title and the back/clock controls anchored to the *title's* edges —
+  // all three rendered as one cluster in the middle of the screen instead of
+  // a standalone leading action, a centred title and a standalone trailing
+  // action.
+  group('the nav row is three independent parts', () {
+    Future<Rect> rectOf(WidgetTester tester, Finder finder) async =>
+        tester.getRect(finder);
+
+    testWidgets('back sits at the leading edge, clock at the trailing edge', (
+      tester,
+    ) async {
+      await pumpHistory(tester);
+
+      final back = await rectOf(tester, find.bySemanticsLabel('history.back'));
+      final title = await rectOf(tester, find.text('history.title'));
+      final screen = tester.getRect(find.byType(MaterialApp));
+
+      // Each control is nearer its own edge of the screen than it is to the
+      // title — which is exactly what failed before.
+      expect(back.left - screen.left, lessThan(title.left - back.right));
+      expect(screen.width, greaterThan(0));
+      // And the row spans the screen rather than hugging the title.
+      expect(back.left - screen.left, lessThan(screen.width / 4));
+    });
+
+    testWidgets('the title is centred in the row, not between the controls', (
+      tester,
+    ) async {
+      await pumpHistory(tester);
+
+      final title = await rectOf(tester, find.text('history.title'));
+      final screen = tester.getRect(find.byType(MaterialApp));
+
+      expect(
+        title.center.dx,
+        moreOrLessEquals(screen.center.dx, epsilon: 1),
+      );
+    });
+
+    testWidgets('it mirrors under RTL', (tester) async {
+      await pumpHistory(tester, direction: TextDirection.rtl);
+
+      final back = await rectOf(tester, find.bySemanticsLabel('history.back'));
+      final title = await rectOf(tester, find.text('history.title'));
+      final screen = tester.getRect(find.byType(MaterialApp));
+
+      // Leading is the right edge in RTL.
+      expect(screen.right - back.right, lessThan(back.left - title.right));
+      expect(
+        title.center.dx,
+        moreOrLessEquals(screen.center.dx, epsilon: 1),
+      );
+    });
+  });
 }
 
 /// Stands in for whichever AI Home branch pushed History.

@@ -331,4 +331,180 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  group('permission_request is one component per capability', () {
+    Map<String, dynamic> permission(String capability, {Object? image}) => {
+      'type': 'permission_request',
+      'id': 'perm_$capability',
+      'permission': capability,
+      'title': 'Allow $capability access?',
+      'body': 'Sanad needs your $capability for this request.',
+      if (image != null) 'image': image,
+      'allowLabel': 'Allow $capability',
+      'denyLabel': 'Not now',
+    };
+
+    testWidgets('the camera variant draws the camera glyph', (tester) async {
+      // The capability picks the glyph, which is why the two Figma frames are
+      // one node type with different data.
+      await pumpNodes(tester, [permission('camera')]);
+
+      expect(find.byType(AiPermissionPanel), findsOneWidget);
+      expect(find.byIcon(Icons.photo_camera_outlined), findsOneWidget);
+    });
+
+    testWidgets('the location variant draws the location glyph', (
+      tester,
+    ) async {
+      await pumpNodes(tester, [permission('location')]);
+
+      expect(find.byIcon(Icons.location_on_outlined), findsOneWidget);
+    });
+
+    testWidgets('an illustration replaces the glyph', (tester) async {
+      await pumpNodes(tester, [
+        permission('location', image: {'assetId': 'ai_map_preview'}),
+      ]);
+
+      expect(find.byType(AiMapPreview), findsOneWidget);
+      expect(find.byIcon(Icons.location_on_outlined), findsNothing);
+    });
+
+    testWidgets('allowing still names the capability to the app', (
+      tester,
+    ) async {
+      final harness = await pumpNodes(tester, [permission('camera')]);
+
+      await tapText(tester, 'Allow camera');
+
+      expect(
+        harness
+            .callsTo(AiUiActionType.requestPermission)
+            .single
+            .params['permission'],
+        'camera',
+      );
+    });
+
+    testWidgets('it renders in both directions', (tester) async {
+      await pumpNodes(
+        tester,
+        [permission('camera')],
+        textDirection: TextDirection.rtl,
+      );
+
+      expect(find.text('Allow camera access?'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('location_confirm cancel', () {
+    Map<String, dynamic> selected({bool withCancel = true}) => {
+      'type': 'location_confirm',
+      'id': 'lc_sel',
+      'title': 'Selected Delivery Location',
+      'addressText': 'Tahrir St, Downtown, Cairo',
+      'confirmLabel': 'Confirm location',
+      if (withCancel) 'cancelLabel': 'Cancel',
+    };
+
+    testWidgets('renders the place as one pin-led fact', (tester) async {
+      await pumpNodes(tester, [selected()]);
+
+      expect(find.text('Selected Delivery Location'), findsOneWidget);
+      expect(find.text('Tahrir St, Downtown, Cairo'), findsOneWidget);
+      expect(find.byIcon(Icons.location_on_rounded), findsOneWidget);
+    });
+
+    testWidgets('confirming still answers with the structured place', (
+      tester,
+    ) async {
+      final harness = await pumpNodes(
+        tester,
+        [selected()],
+        harness: RendererHarness(recordInteractions: true),
+      );
+
+      await tapText(tester, 'Confirm location');
+
+      final result = harness.submissions.single;
+      expect(result.kind, AiUiInteractionKind.locationConfirmed);
+      expect(
+        (result.value as AiUiLocationValue).name,
+        'Tahrir St, Downtown, Cairo',
+      );
+    });
+
+    testWidgets('cancelling tells the agent "not this one"', (tester) async {
+      // Without this the agent hears nothing and waits for an address that is
+      // not coming.
+      final harness = await pumpNodes(
+        tester,
+        [selected()],
+        harness: RendererHarness(recordInteractions: true),
+      );
+
+      await tapText(tester, 'Cancel');
+
+      final result = harness.submissions.single;
+      expect(result.kind, AiUiInteractionKind.confirmationResolved);
+      expect(result.nodeType, AiUiNodeType.locationConfirm);
+      expect(result.value, const AiUiConfirmationValue(confirmed: false));
+    });
+
+    testWidgets('a card with no cancel label offers no way to refuse here', (
+      tester,
+    ) async {
+      await pumpNodes(tester, [selected(withCancel: false)]);
+
+      expect(find.text('Cancel'), findsNothing);
+      expect(find.text('Confirm location'), findsOneWidget);
+    });
+
+    testWidgets('the pair renders in both directions', (tester) async {
+      await pumpNodes(
+        tester,
+        [selected()],
+        textDirection: TextDirection.rtl,
+      );
+
+      expect(find.text('Confirm location'), findsOneWidget);
+      expect(find.text('Cancel'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a cancel shares the row; a change takes its own', (
+      tester,
+    ) async {
+      // Caught on device: "Change location" beside "Confirm location" in two
+      // half-width pills truncated both. The rule is semantic rather than a
+      // guess at label length — a dismissal is the other half of a choice, a
+      // re-run of the picker is an action in its own right.
+      Rect boundsOf(String label) => tester.getRect(find.text(label));
+
+      await pumpNodes(tester, [selected()]);
+      expect(
+        boundsOf('Confirm location').top,
+        boundsOf('Cancel').top,
+        reason: 'cancel shares the confirm row',
+      );
+
+      await pumpNodes(tester, [
+        {
+          'type': 'location_confirm',
+          'id': 'lc_change',
+          'title': 'Confirm your location',
+          'addressText': 'Dubai Marina',
+          'confirmLabel': 'Confirm location',
+          'changeLabel': 'Change location',
+        },
+      ]);
+      expect(
+        boundsOf('Change location').top,
+        greaterThan(boundsOf('Confirm location').top),
+        reason: 'change takes its own full-width row',
+      );
+      expect(tester.takeException(), isNull);
+    });
+  });
 }

@@ -3,13 +3,16 @@ import 'dart:async';
 import 'package:sanad_client/src/features/ai_chat/src/domain/entities/ai_chat_attachment.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/services/ai_attachment_source.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/services/ai_audio_player.dart';
-import 'package:sanad_client/src/features/ai_chat/src/domain/services/ai_audio_recorder.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/services/ai_permission_gateway.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/services/ai_speech_recognizer.dart';
 
-/// Hand-rolled rather than mocktail: these four fakes need to *drive* streams
-/// and record call order, which a stub-and-verify mock expresses worse than a
-/// few fields.
+/// Hand-rolled rather than mocktail: these fakes need to *drive* streams and
+/// record call order, which a stub-and-verify mock expresses worse than a few
+/// fields.
+///
+/// [FakeAudioPlayer] lives here for history rather than for the composer,
+/// which owns no player: its one consumer is `mock_ai_voice_session_test.dart`,
+/// where it stands in for the live-voice session's player.
 
 class FakeAttachmentSource implements AiAttachmentSource {
   FakeAttachmentSource({this.result = const AiAttachmentPickCancelled()});
@@ -54,9 +57,9 @@ class FakePermissionGateway implements AiPermissionGateway {
 
   int settingsOpened = 0;
 
-  /// Held to keep the microphone decision pending, so a test can act while a
-  /// take is still being brought up — the window the first-ever permission
-  /// dialog occupies on a real device.
+  /// Held to keep the microphone decision pending, so a test can act while
+  /// dictation is still being brought up — the window the first-ever
+  /// permission dialog occupies on a real device.
   Completer<void>? microphoneGate;
 
   @override
@@ -98,85 +101,6 @@ class FakePermissionGateway implements AiPermissionGateway {
 
   @override
   Future<void> openSettings() async => settingsOpened++;
-}
-
-class FakeAudioRecorder implements AiAudioRecorder {
-  final StreamController<AiRecordingSample> sampleController =
-      StreamController<AiRecordingSample>.broadcast();
-  final StreamController<AiRecordingAbort> abortController =
-      StreamController<AiRecordingAbort>.broadcast();
-
-  /// What [stop] returns. `null` models a take that produced nothing.
-  String? stopPath = '/tmp/rec_1.m4a';
-
-  bool available = true;
-  bool throwOnStart = false;
-  bool throwOnStop = false;
-
-  int startCount = 0;
-  int stopCount = 0;
-  int cancelCount = 0;
-  int disposeCount = 0;
-  Duration? lastMaxDuration;
-  final List<String> discarded = <String>[];
-
-  @override
-  Stream<AiRecordingSample> get samples => sampleController.stream;
-
-  @override
-  Stream<AiRecordingAbort> get aborts => abortController.stream;
-
-  @override
-  Future<bool> get isAvailable async => available;
-
-  @override
-  Future<void> start({required Duration maxDuration}) async {
-    startCount++;
-    lastMaxDuration = maxDuration;
-    if (throwOnStart) throw StateError('recorder unavailable');
-  }
-
-  @override
-  Future<String?> stop() async {
-    stopCount++;
-    if (throwOnStop) throw StateError('encode failed');
-    return stopPath;
-  }
-
-  @override
-  Future<void> cancel() async => cancelCount++;
-
-  @override
-  Future<void> discard(String path) async => discarded.add(path);
-
-  @override
-  Future<void> dispose() async {
-    disposeCount++;
-    await sampleController.close();
-    await abortController.close();
-  }
-
-  /// Pushes a live reading without waiting for delivery.
-  ///
-  /// For `testWidgets`, where awaiting a zero delay inside the FakeAsync body
-  /// never resolves — the caller pumps instead.
-  void pushSample(double level, Duration elapsed) => sampleController.add(
-    AiRecordingSample(level: level, elapsed: elapsed),
-  );
-
-  /// Pushes a live reading and lets it be delivered.
-  Future<void> emitSample(double level, Duration elapsed) async {
-    sampleController.add(
-      AiRecordingSample(level: level, elapsed: elapsed),
-    );
-    await Future<void>.delayed(Duration.zero);
-  }
-
-  /// Pushes an abort and lets it be delivered.
-  Future<void> emitAbort(AiRecordingAbort reason) async {
-    abortController.add(reason);
-    await Future<void>.delayed(Duration.zero);
-  }
 }
 
 class FakeAudioPlayer implements AiAudioPlayer {

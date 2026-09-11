@@ -40,6 +40,11 @@ final class AiUiLimits extends Equatable {
     this.maxStats = 4,
     this.maxCommentLength = 500,
     this.maxInteractionTextLength = 2000,
+    this.maxTimelineItems = 8,
+    this.maxPhotos = 6,
+    this.maxServiceTags = 8,
+    this.maxRating = 10,
+    this.maxVerificationCodeLength = 12,
   });
 
   static const AiUiLimits defaults = AiUiLimits();
@@ -100,6 +105,27 @@ final class AiUiLimits extends Equatable {
   /// field, which is why the encoder applies this to every path.
   final int maxInteractionTextLength;
 
+  /// Steps in a `service_timeline`. Eight covers the longest lifecycle the
+  /// product has; a ninth turns the card into a scroll region inside a bubble.
+  final int maxTimelineItems;
+
+  /// Pictures in a `provider_card`'s work strip or a `request_summary`'s
+  /// attachment row. Each still counts against [maxImages], which is the
+  /// harder cap — this one only stops one node eating the whole budget.
+  final int maxPhotos;
+
+  /// Service chips on a `provider_card`.
+  final int maxServiceTags;
+
+  /// Ceiling on `review_request.maxRating`. The agent may ask for a smaller
+  /// scale, never a larger one — a forty-star row would not fit and would not
+  /// mean anything.
+  final int maxRating;
+
+  /// Characters in a `verification_code`. Each one draws its own box, so this
+  /// is what keeps the row from overflowing the card rather than a byte limit.
+  final int maxVerificationCodeLength;
+
   /// Child cap for a given container type.
   int childLimitFor(AiUiNodeType type) => switch (type) {
     AiUiNodeType.row => maxRowChildren,
@@ -137,5 +163,10 @@ final class AiUiLimits extends Equatable {
     maxStats,
     maxCommentLength,
     maxInteractionTextLength,
+    maxTimelineItems,
+    maxPhotos,
+    maxServiceTags,
+    maxRating,
+    maxVerificationCodeLength,
   ];
 }

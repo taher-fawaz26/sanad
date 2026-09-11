@@ -123,6 +123,16 @@ List<ShowcaseGroup> showcaseGroups() => [
         title: 'provider_card',
         blocks: _blocksOf(_scenario('assigned_provider')),
       ),
+      ShowcaseFixture(
+        title: 'provider_card — offer, compact',
+        note: 'Same payload as below — only `presentation` differs',
+        blocks: _blocksOf(_scenario('provider_offer')),
+      ),
+      ShowcaseFixture(
+        title: 'provider_card — offer, expanded',
+        note: 'Distance, description, services and work photos',
+        blocks: _blocksOf(_scenario('provider_offer_expanded')),
+      ),
     ],
   ),
   ShowcaseGroup(
@@ -133,9 +143,19 @@ List<ShowcaseGroup> showcaseGroups() => [
         blocks: _blocksOf(_scenario('booking_summary')),
       ),
       ShowcaseFixture(
+        title: 'booking_summary — confirmed',
+        note: 'A status headline turns the rows into the stacked reading',
+        blocks: _blocksOf(_scenario('booking_confirmed')),
+      ),
+      ShowcaseFixture(
         title: 'request_summary',
         note: 'Value tiles, the agent’s recap, and a maps row',
         blocks: _blocksOf(_scenario('request_summary')),
+      ),
+      ShowcaseFixture(
+        title: 'request_summary — photos and a structured confirm',
+        note: 'Confirm and Cancel answer through the interaction sink',
+        blocks: _blocksOf(_scenario('service_summary')),
       ),
       ShowcaseFixture(
         title: 'payment_receipt',
@@ -182,6 +202,11 @@ List<ShowcaseGroup> showcaseGroups() => [
         title: 'review_request',
         note: 'Typing then submitting posts the comment as a user turn',
         blocks: _blocksOf(_scenario('review_request')),
+      ),
+      ShowcaseFixture(
+        title: 'review_request — with a rating',
+        note: 'Stars plus a comment; submitting is gated on the rating',
+        blocks: _blocksOf(_scenario('rated_review')),
       ),
       ShowcaseFixture(
         title: 'location_picker',
@@ -234,6 +259,112 @@ List<ShowcaseGroup> showcaseGroups() => [
       ShowcaseFixture(
         title: 'location_confirm',
         blocks: _blocksOf(_scenario('location_confirm')),
+      ),
+      ShowcaseFixture(
+        title: 'location_confirm — selected place',
+        note: 'No map preview; Cancel answers rather than staying silent',
+        blocks: _blocksOf(_scenario('selected_location')),
+      ),
+      ShowcaseFixture(
+        title: 'confirm_prompt',
+        note: 'The destructive confirm leads; the safe option trails',
+        blocks: _blocksOf(_scenario('cancel_confirm')),
+      ),
+    ],
+  ),
+  ShowcaseGroup(
+    title: 'Notices',
+    fixtures: [
+      ShowcaseFixture(
+        title: 'request_notice — already-active request',
+        note: 'Context chip, saved draft, and a two-way decision',
+        blocks: _blocksOf(_scenario('active_request_detected')),
+      ),
+      ShowcaseFixture(
+        title: 'request_notice — provider cancelled',
+        note: 'A decision and a separate destination on one card',
+        blocks: _blocksOf(_scenario('booking_cancelled')),
+      ),
+      ShowcaseFixture(
+        title: 'request_notice — provider late',
+        note: 'One control; the ledger is what stops two replacements',
+        blocks: _blocksOf(_scenario('provider_late')),
+      ),
+      ShowcaseFixture(
+        title: 'service_area_notice',
+        note: 'Change Location runs the app’s own flow, not a second model',
+        blocks: _blocksOf(_scenario('location_outside_service_area')),
+      ),
+    ],
+  ),
+  ShowcaseGroup(
+    title: 'Status',
+    fixtures: [
+      ShowcaseFixture(
+        title: 'provider_search',
+        note: 'Indeterminate — the shared loading glyph, not a bespoke one',
+        blocks: _blocksOf(_scenario('provider_search')),
+      ),
+      ShowcaseFixture(
+        title: 'provider_search — searching, with an acknowledgement',
+        note: 'Continue in Background answers through the interaction sink',
+        blocks: _blocksOf(_scenario('provider_searching')),
+      ),
+      ShowcaseFixture(
+        title: 'provider_search — exhausted',
+        note: 'The same node, no indicator: there is nothing left in flight',
+        blocks: _blocksOf(_scenario('no_specialists_available')),
+      ),
+      const ShowcaseFixture(
+        title: 'provider_search — determinate',
+        note: 'A backend that can say how far along draws the progress bar',
+        blocks: [
+          {
+            'type': 'provider_search',
+            'id': 'sc_ps_determinate',
+            'statusLabel': 'Finding providers...',
+            'title': 'Searching nearby providers',
+            'progress': 0.6,
+            'fallbackText': 'Searching for providers near you',
+          },
+        ],
+      ),
+      ShowcaseFixture(
+        title: 'service_timeline',
+        note: 'Completed, active and pending steps in the agent’s own order',
+        blocks: _blocksOf(_scenario('service_timeline')),
+      ),
+      const ShowcaseFixture(
+        title: 'service_timeline — cancelled',
+        note: 'The rail glyph follows the state, so there is no tick',
+        blocks: [
+          {
+            'type': 'service_timeline',
+            'id': 'sc_tl_cancelled',
+            'title': 'Timeline',
+            'status': 'Cancelled',
+            'statusTone': 'error',
+            'items': [
+              {
+                'state': 'completed',
+                'title': 'Booking Confirmed',
+                'at': '2026-11-17T09:45:00Z',
+              },
+              {
+                'state': 'cancelled',
+                'title': 'Service Cancelled',
+                'description': 'Cancelled at your request',
+                'at': '2026-11-17T10:10:00Z',
+              },
+            ],
+            'fallbackText': 'Your service was cancelled',
+          },
+        ],
+      ),
+      ShowcaseFixture(
+        title: 'verification_code',
+        note: 'Display-only: the user reads it out, never types it',
+        blocks: _blocksOf(_scenario('verification_code')),
       ),
     ],
   ),

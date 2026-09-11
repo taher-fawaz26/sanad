@@ -161,11 +161,44 @@ surfaces that and stops treating the request as editable rather than retrying.
 
 ---
 
+## The list screen: three tabs, two sections
+
+Figma `Requests - Active` (`8135:29516`) splits the list into **Active**,
+**Scheduled** and **Cancelled**, and each tab into a flagged run under
+"Needs your attention" followed by the tab's own heading.
+
+A tab is not a status. Scheduled and Cancelled each map onto exactly one
+server status and are filtered **server-side** (`GET /requests?status=`) —
+the only way a paginated list can filter correctly, since filtering a loaded
+page would show an arbitrary subset of the matches and an incorrect "no more"
+state.
+
+Active cannot: it spans five statuses and the endpoint takes one. It reads
+unfiltered and drops only the two statuses the other tabs own. The cost is
+bounded and visible — a page of mostly scheduled or cancelled rows renders
+short and the user pulls for more — and it is preferred to sending a repeated
+`status` parameter the backend has not been observed to accept. A completed,
+disputed or expired request still appears, under Active's "Other requests":
+nothing becomes unreachable in a three-tab design.
+
+Which rows are flagged comes from `ClientRequest.needsAttention`, which is the
+existing action-availability getters read as one question — an unfinished
+draft, a finished job awaiting confirmation, or an offer whose turn is the
+client's. The card's trailing pill (Figma's `missing address`) names which,
+from `missingForSubmit`.
+
+The screen has **no create, add or edit affordance**, by product rule: a
+request is created by asking the agent in AI Chat. Cancel, Open Chat, Rebook
+and opening the detail screen are the only actions the card offers, and all of
+them already existed.
+
+---
+
 ## Routes
 
 | Path | Screen |
 |---|---|
-| `/requests` | `ClientRequestsPage` — list, server-side status filter |
+| `/requests` | `ClientRequestsPage` — the three-tab list (see below) |
 | `/requests/new` | `RequestComposerPage` — create |
 | `/requests/:id` | `ClientRequestDetailPage` — detail and negotiation |
 | `/requests/:id/edit` | `RequestComposerPage` — edit |

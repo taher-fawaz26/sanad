@@ -27,7 +27,7 @@ import 'package:sanad_client/src/ui/glass/client_glass_tokens.dart';
 ///   blurred chrome from repainting every time the content scrolling behind it
 ///   moves.
 ///
-/// It sits *on top of* the existing backgrounds — `AiChatBackground`,
+/// It sits *on top of* the existing backgrounds — `ClientAmbientBackground`,
 /// `AppAmbientGradient`, the live-voice backdrop — and deliberately replaces
 /// none of them.
 class ClientGlassSurface extends StatelessWidget {

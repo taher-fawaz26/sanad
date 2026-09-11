@@ -84,6 +84,22 @@ Future<void> configureDependencies({
   // ── Deep linking (OS-level incoming URI → GoRouter location) ─────────────
   DeepLinkingDI.init(config: AppConfig.deepLinkConfig);
 
+  // ── Platform services `MapsDI` resolves but does not own ─────────────────
+  // `MapsDI.init` wires repositories on top of these two, so the app that
+  // registers `MapsModule` must supply them — exactly as `sanad_provider`
+  // does. `MapsDI.init` resolves both lazily, so a missing registration only
+  // surfaces as `GetIt: GeocodingService is not registered` at the moment a
+  // map is first opened — never at startup.
+  // `LocationServiceImpl` resolves `PermissionService` lazily, so it is safe
+  // to register here, ahead of `PermissionsModule`.
+  sl
+    ..registerLazySingleton<LocationService>(
+      () => LocationServiceImpl(sl<PermissionService>()),
+    )
+    ..registerLazySingleton<GeocodingService>(
+      () => const GeocodingServiceImpl(),
+    );
+
   // ── Feature modules ────────────────────────────────────────────────────────
   moduleRegistry = ModuleRegistry([
     // Device capability gateway (biometrics, connectivity, clipboard, share,
@@ -118,8 +134,12 @@ Future<void> configureDependencies({
     ),
     ContactVerificationModule(),
     AccountSettingsModule(),
-    // Map + places, for the request composer's location step. The API key is
-    // supplied at build time, the same way the provider app does it.
+    // Map + places. No client screen resolves a location today — the request
+    // composer that did has been removed, because a request is created by
+    // asking the agent rather than by filling in a form. Kept registered
+    // because a chat-driven request still needs `lat`/`lng`, and because
+    // tearing the wiring out only to restore it would be churn. The API key
+    // is supplied at build time, the same way the provider app does it.
     MapsModule(
       config: MapsConfig(
         placesApiKey: const String.fromEnvironment('MAPS_API_KEY'),

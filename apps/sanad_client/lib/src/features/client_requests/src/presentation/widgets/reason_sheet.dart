@@ -37,6 +37,10 @@ class ReasonSheet extends StatefulWidget {
       confirmLabel: confirmLabel,
       isDestructive: isDestructive,
     ),
+    // The title (and the one drag handle) belong to the route's own
+    // `SheetScaffold`. Building a second one inside the content drew a second
+    // handle right under the first (A-12).
+    settings: SheetRouteSettings(title: title),
   );
 
   /// Sheet heading.
@@ -79,46 +83,43 @@ class _ReasonSheetState extends State<ReasonSheet> {
     final typography = context.appTypography;
     final colors = context.appColors;
 
-    return SheetScaffold(
-      title: widget.title,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            widget.description,
-            style: typography.bodySmall.copyWith(color: colors.slate600),
-          ),
-          SizedBox(height: AppSpacing.lg),
-          AppTextField(
-            controller: _controller,
-            label: 'client_requests.reason_label'.tr(),
-            hint: 'client_requests.reason_placeholder'.tr(),
-            errorText: _error,
-            maxLines: 4,
-            // Hard-stops at the server's own bound so the user cannot type
-            // past it and only learn from a 400.
-            inputFormatters: [
-              LengthLimitingTextInputFormatter(
-                RequestFieldLimits.reasonMaxLength,
-              ),
-            ],
-            // Clear the error as soon as the user starts fixing it, rather
-            // than leaving it under the field until the next submit.
-            onChanged: (_) {
-              if (_error != null) setState(() => _error = null);
-            },
-          ),
-          SizedBox(height: AppSpacing.lg),
-          AppButton(
-            label: widget.confirmLabel,
-            onPressed: _submit,
-            intent: widget.isDestructive
-                ? AppButtonIntent.destructive
-                : AppButtonIntent.standard,
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          widget.description,
+          style: typography.bodySmall.copyWith(color: colors.slate600),
+        ),
+        SizedBox(height: AppSpacing.lg),
+        AppTextField(
+          controller: _controller,
+          label: 'client_requests.reason_label'.tr(),
+          hint: 'client_requests.reason_placeholder'.tr(),
+          errorText: _error,
+          maxLines: 4,
+          // Hard-stops at the server's own bound so the user cannot type
+          // past it and only learn from a 400.
+          inputFormatters: [
+            LengthLimitingTextInputFormatter(
+              RequestFieldLimits.reasonMaxLength,
+            ),
+          ],
+          // Clear the error as soon as the user starts fixing it, rather
+          // than leaving it under the field until the next submit.
+          onChanged: (_) {
+            if (_error != null) setState(() => _error = null);
+          },
+        ),
+        SizedBox(height: AppSpacing.lg),
+        AppButton(
+          label: widget.confirmLabel,
+          onPressed: _submit,
+          intent: widget.isDestructive
+              ? AppButtonIntent.destructive
+              : AppButtonIntent.standard,
+        ),
+      ],
     );
   }
 }

@@ -71,8 +71,12 @@ class AiChatModule extends FeatureModule {
                 // The real feature, not the old placeholder. The shell branch
                 // and the top-level `/requests` route render the same page;
                 // only this one carries the shell's header chrome.
-                builder: (context, state) =>
-                    ClientRequestsPage(buildBloc: _buildRequestsListBloc),
+                // The shell's nav pill already says "Requests", so the page
+                // does not repeat it here (C-08).
+                builder: (context, state) => const ClientRequestsPage(
+                  buildBloc: _buildRequestsListBloc,
+                  showNavBar: false,
+                ),
               ),
             ],
           ),

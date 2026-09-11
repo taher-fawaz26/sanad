@@ -238,4 +238,66 @@ void main() {
       }
     });
   });
+
+  // Regression for A-08: once a card was confirmed it vanished and the
+  // assistant acknowledged in audio only, so a user who missed the audio had
+  // no record at all of what they had just booked.
+  group('the answered line', () {
+    late FakeVoiceSession session;
+    late AiVoiceSessionBloc bloc;
+
+    setUp(() {
+      session = FakeVoiceSession();
+      bloc = AiVoiceSessionBloc(
+        session: session,
+        permissions: AllowingGateway(),
+        validator: AiChatConfig.validator(keepUnsupportedNodes: false),
+      );
+    });
+
+    tearDown(() async => bloc.close());
+
+    test('keeps the submitted answer on screen', () async {
+      bloc.add(const AiVoiceSessionInteractionSubmitted(answer));
+      await settle();
+
+      expect(bloc.state.lastAnswer, 'Book me the 9:00 AM slot');
+    });
+
+    test('a cancelled answer leaves no line', () async {
+      // Nothing was chosen, and "you chose nothing" is noise.
+      bloc.add(const AiVoiceSessionInteractionSubmitted(answer));
+      await settle();
+
+      bloc.add(
+        const AiVoiceSessionInteractionSubmitted(
+          AiUiInteraction(
+            interactionId: 'int_2',
+            nodeId: 'voice_slots',
+            nodeType: AiUiNodeType.timeSlots,
+            kind: AiUiInteractionKind.slotSelected,
+            status: AiUiInteractionStatus.cancelled,
+            value: AiUiSelectionValue(id: 's_0900', label: '9:00 AM'),
+            text: 'Never mind',
+          ),
+        ),
+      );
+      await settle();
+
+      expect(bloc.state.lastAnswer, isNull);
+    });
+
+    test('a new question clears the previous answer', () async {
+      bloc.add(const AiVoiceSessionInteractionSubmitted(answer));
+      await settle();
+      expect(bloc.state.lastAnswer, isNotNull);
+
+      await session.emitEvent(
+        const AiVoiceUiRequested(MockVoiceScenarios.timeSlots),
+      );
+      await settle();
+
+      expect(bloc.state.lastAnswer, isNull);
+    });
+  });
 }

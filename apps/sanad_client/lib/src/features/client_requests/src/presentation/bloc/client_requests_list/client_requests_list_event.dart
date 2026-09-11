@@ -28,14 +28,39 @@ final class ClientRequestsRefreshed extends ClientRequestsListEvent {
   const ClientRequestsRefreshed();
 }
 
-/// Changes the server-side status filter. `null` means "all statuses".
-final class ClientRequestsFilterChanged extends ClientRequestsListEvent {
-  /// Creates a filter change. `null` clears the filter.
-  const ClientRequestsFilterChanged(this.status);
+/// Switches the visible segment — Figma `StatusPills` (`8385:4377`).
+final class ClientRequestsTabChanged extends ClientRequestsListEvent {
+  /// Creates a tab change.
+  const ClientRequestsTabChanged(this.tab);
 
-  /// The status to filter by, or `null` for all statuses.
-  final ClientRequestStatus? status;
+  /// The segment to show.
+  final ClientRequestsTab tab;
 
   @override
-  List<Object?> get props => [status];
+  List<Object?> get props => [tab];
+}
+
+/// Cancels one request from the list, with the reason the backend requires.
+///
+/// The list can do this because the card offers it (Figma `CancelButton`,
+/// `8433:38470`); the detail screen keeps its own copy of the action because
+/// it is reachable without ever passing through the list.
+final class ClientRequestCancelRequested extends ClientRequestsListEvent {
+  /// Creates the cancellation.
+  const ClientRequestCancelRequested({required this.id, required this.reason});
+
+  /// The request to call off.
+  final String id;
+
+  /// Free text, 3–1000 characters. Shown to the provider verbatim.
+  final String reason;
+
+  @override
+  List<Object?> get props => [id, reason];
+}
+
+/// Clears a settled mutation once the UI has shown it.
+final class ClientRequestsMutationAcknowledged extends ClientRequestsListEvent {
+  /// Creates the acknowledgement.
+  const ClientRequestsMutationAcknowledged();
 }

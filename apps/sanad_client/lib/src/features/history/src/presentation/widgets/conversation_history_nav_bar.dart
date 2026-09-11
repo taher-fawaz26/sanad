@@ -50,10 +50,22 @@ class ConversationHistoryNavBar extends StatelessWidget {
     final colors = context.appColors;
 
     return ConstrainedBox(
-      // A minimum, not a fixed height: the title is the only child that grows
-      // with the user's text scale, and at a large scale the row has to give
-      // it the room rather than clip it.
-      constraints: const BoxConstraints(minHeight: _rowHeight),
+      // A minimum height, not a fixed one: the title is the only child that
+      // grows with the user's text scale, and at a large scale the row has to
+      // give it the room rather than clip it.
+      //
+      // `minWidth: double.infinity` makes the row span its parent, and is
+      // load-bearing. The `Stack` below is sized by its *unpositioned* child —
+      // the title — so without this it shrink-wrapped to the title's width and
+      // the two `PositionedDirectional` controls anchored to the title's edges
+      // instead of the row's: back, title and clock rendered as one cluster in
+      // the middle of the screen. The parent is a plain `Column` (cross-axis
+      // `center`), so it hands this widget loose width and cannot supply the
+      // constraint on its own.
+      constraints: const BoxConstraints(
+        minHeight: _rowHeight,
+        minWidth: double.infinity,
+      ),
       child: Stack(
         alignment: Alignment.center,
         children: [

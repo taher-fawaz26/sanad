@@ -123,6 +123,7 @@ class AiCardActionRow extends StatelessWidget {
   const AiCardActionRow({
     required this.actions,
     required this.scope,
+    this.stacked = false,
     super.key,
   });
 
@@ -131,9 +132,39 @@ class AiCardActionRow extends StatelessWidget {
   final List<AiUiCardAction> actions;
   final AiUiRenderScope scope;
 
+  /// Draws the entries as full-width pills, one per line, instead of sharing
+  /// one row.
+  ///
+  /// Which reading applies is the *card's* decision, not the payload's: the
+  /// notice cards stack, because their labels are sentences ("Continue
+  /// Plumbing Conversation", "Auto-Match New Provider") that a half-width pill
+  /// ellipsizes to nothing on a 360dp device, and because the design gives
+  /// each recovery path its own line. The entity cards keep the shared row.
+  final bool stacked;
+
   @override
   Widget build(BuildContext context) {
     if (actions.isEmpty) return const SizedBox.shrink();
+
+    if (stacked) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        spacing: AppSpacing.sm,
+        children: [
+          for (final entry in actions)
+            AiPromptButton(
+              label: entry.label,
+              // The four protocol variants collapse onto the two full-width
+              // readings Figma draws: one accented pill and one bordered one.
+              filled: entry.variant == AiUiButtonVariant.primary,
+              intent: entry.intent,
+              compact: true,
+              onTap: scope.onTapFor(context, entry.action),
+            ),
+        ],
+      );
+    }
 
     return Row(
       spacing: AppSpacing.md,
@@ -185,6 +216,14 @@ class AiCardButton extends StatelessWidget {
         : AiUiTokens.accent(context);
     final radius = BorderRadius.circular(AiCardTokens.cardButtonRadius);
 
+    // A disabled card button must *look* disabled (A-07). `onTap: null`
+    // already made it inert and marked it `enabled: false` for semantics, but
+    // every variant still painted its full accent — so a `time_slots` Confirm
+    // with nothing selected was pixel-identical to a live one, and tapping it
+    // did nothing with no explanation. The Requests composer's own primary CTA
+    // is the pattern this follows: visibly recessive until it can be used.
+    final enabled = onTap != null;
+
     final (background, foreground, borderColor) = switch (variant) {
       AiUiButtonVariant.primary => (accent, colors.palettes.dark.shade50, null),
       // Figma's `sky/100` on `sky/900`, which is what `neutral` means on this
@@ -198,11 +237,21 @@ class AiCardButton extends StatelessWidget {
       AiUiButtonVariant.transparent => (Colors.transparent, accent, null),
     };
 
+    final (resolvedBackground, resolvedForeground, resolvedBorder) = enabled
+        ? (background, foreground, borderColor)
+        : (
+            // Keep a transparent variant transparent — greying its fill would
+            // invent a surface the design never draws.
+            background == Colors.transparent ? background : colors.disabled,
+            colors.textMuted,
+            borderColor == null ? null : colors.disabled,
+          );
+
     return Semantics(
       button: true,
       enabled: onTap != null,
       child: Material(
-        color: background,
+        color: resolvedBackground,
         borderRadius: radius,
         child: InkWell(
           onTap: onTap,
@@ -217,10 +266,10 @@ class AiCardButton extends StatelessWidget {
             ),
             decoration: BoxDecoration(
               borderRadius: radius,
-              border: borderColor == null
+              border: resolvedBorder == null
                   ? null
                   : Border.all(
-                      color: borderColor,
+                      color: resolvedBorder,
                       width: AiCardTokens.emphasisBorderWidth,
                     ),
             ),
@@ -233,7 +282,7 @@ class AiCardButton extends StatelessWidget {
                   .semiBold(
                     context.appTypography.smallNone,
                   )
-                  .copyWith(color: foreground),
+                  .copyWith(color: resolvedForeground),
             ),
           ),
         ),
@@ -254,6 +303,8 @@ class AiPromptButton extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.filled = true,
+    this.intent = AiUiButtonIntent.standard,
+    this.compact = false,
     super.key,
   });
 
@@ -264,17 +315,37 @@ class AiPromptButton extends StatelessWidget {
   /// text.
   final bool filled;
 
+  /// Tints a destructive control with the error role instead of the accent.
+  ///
+  /// Here so a stacked `actions` row can honour the same `intent` the shared
+  /// row already does — an outline destructive control drawn in brand green
+  /// would read as the safe choice.
+  final AiUiButtonIntent intent;
+
+  /// The in-card reading: Figma's 14dp label on 16dp side padding, rather
+  /// than the bottom sheets' 16dp label on 24dp.
+  ///
+  /// Not cosmetic. The notice cards' labels are sentences — "Continue Plumbing
+  /// Conversation" is thirty characters — and at the sheet's type and padding
+  /// the second one ellipsized to "Continue Plumbing Convers…" on a 393dp
+  /// device. The sheets keep their own reading because a sheet CTA sits on its
+  /// own and says one word.
+  final bool compact;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final radius = BorderRadius.circular(AppDimension.radiusPill);
     final typography = context.appTypography;
+    final accent = intent == AiUiButtonIntent.destructive
+        ? colors.error
+        : AiUiTokens.accent(context);
 
     return Semantics(
       button: true,
       enabled: onTap != null,
       child: Material(
-        color: filled ? AiUiTokens.accent(context) : Colors.transparent,
+        color: filled ? accent : Colors.transparent,
         borderRadius: radius,
         child: InkWell(
           onTap: onTap,
@@ -284,24 +355,48 @@ class AiPromptButton extends StatelessWidget {
             height: AiCardTokens.promptButtonHeight,
             alignment: Alignment.center,
             padding: EdgeInsetsDirectional.symmetric(
-              horizontal: AppSpacing.xxl,
+              horizontal: compact ? AppSpacing.lg : AppSpacing.xxl,
             ),
             decoration: BoxDecoration(
               borderRadius: radius,
-              border: filled ? null : Border.all(color: colors.border),
+              border: filled
+                  ? null
+                  : Border.all(
+                      color: intent == AiUiButtonIntent.destructive
+                          ? accent
+                          : colors.border,
+                    ),
             ),
             child: Text(
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: filled
-                  ? typography.labelLarge.copyWith(
-                      color: colors.palettes.dark.shade50,
-                    )
-                  : typography
-                        .semiBold(typography.regularNone)
-                        .copyWith(color: colors.textSecondary),
+              style: switch ((compact, filled)) {
+                (true, true) =>
+                  typography
+                      .semiBold(typography.smallNone)
+                      .copyWith(color: colors.palettes.dark.shade50),
+                (true, false) =>
+                  typography
+                      .semiBold(typography.smallNone)
+                      .copyWith(
+                        color: intent == AiUiButtonIntent.destructive
+                            ? accent
+                            : colors.textSecondary,
+                      ),
+                (false, true) => typography.labelLarge.copyWith(
+                  color: colors.palettes.dark.shade50,
+                ),
+                (false, false) =>
+                  typography
+                      .semiBold(typography.regularNone)
+                      .copyWith(
+                        color: intent == AiUiButtonIntent.destructive
+                            ? accent
+                            : colors.textSecondary,
+                      ),
+              },
             ),
           ),
         ),

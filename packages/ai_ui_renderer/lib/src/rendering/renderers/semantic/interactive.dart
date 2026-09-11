@@ -6,6 +6,7 @@ import 'package:ai_ui_renderer/src/rendering/ai_ui_render_scope.dart';
 import 'package:ai_ui_renderer/src/rendering/primitives/ai_card_content.dart';
 import 'package:ai_ui_renderer/src/rendering/primitives/ai_card_surface.dart';
 import 'package:ai_ui_renderer/src/rendering/primitives/ai_prompt_parts.dart';
+import 'package:ai_ui_renderer/src/rendering/primitives/ai_status_parts.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
@@ -286,6 +287,11 @@ class _ReviewRequest extends StatefulWidget {
 class _ReviewRequestState extends State<_ReviewRequest> {
   late final TextEditingController _controller;
 
+  /// The chosen star count. Widget-local because it is *being composed* — it
+  /// becomes part of the answer on submit, and nothing before that point is
+  /// worth telling the agent about.
+  int? _rating;
+
   @override
   void initState() {
     super.initState();
@@ -296,6 +302,16 @@ class _ReviewRequestState extends State<_ReviewRequest> {
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  /// Whether the submit control can be taken yet.
+  ///
+  /// Only a card that *asked* for a required rating can block: adding stars to
+  /// an existing comment card must not make its button unreachable.
+  bool get _canSubmit {
+    final node = widget.node;
+    if (node.maxRating == null || !node.ratingRequired) return true;
+    return _rating != null;
   }
 
   void _submit() {
@@ -309,8 +325,18 @@ class _ReviewRequestState extends State<_ReviewRequest> {
       kind: AiUiInteractionKind.reviewSubmitted,
       // An empty comment is a legitimate answer, and the agent is told so
       // rather than left waiting for words that are not coming.
-      value: AiUiTextValue(comment),
-      text: applyTemplate(node.submitTemplate, 'comment', comment),
+      //
+      // A card with no rating control still answers as plain text — the shape
+      // the protocol has always sent — so a backend reading `value.text` is
+      // unaffected by stars existing.
+      value: node.maxRating == null
+          ? AiUiTextValue(comment)
+          : AiUiReviewValue(rating: _rating, comment: comment),
+      text: applyTemplate(
+        applyTemplate(node.submitTemplate, 'comment', comment),
+        'rating',
+        _rating?.toString() ?? '',
+      ),
     );
   }
 
@@ -330,6 +356,17 @@ class _ReviewRequestState extends State<_ReviewRequest> {
           spacing: AppSpacing.lg,
           children: [
             AiCardHeader(title: node.serviceName, subtitle: node.providerText),
+            if (node.maxRating != null)
+              AiStarRating(
+                value: _rating,
+                max: node.maxRating!,
+                starsLabel: widget.scope.strings.ratingStarsLabel,
+                // Once the review has gone the stars are a record of what was
+                // given, not a control — the same rule the slot grid follows.
+                onChanged: state.isInteractive
+                    ? (value) => setState(() => _rating = value)
+                    : null,
+              ),
             // A fixed-height box rather than `AppTextField`: that component
             // brings its own 48dp height, label slot and trailing affordances,
             // and Figma's comment area is a 150dp region with nothing but a
@@ -373,8 +410,10 @@ class _ReviewRequestState extends State<_ReviewRequest> {
             AiCardButton(
               label: node.submitLabel,
               // One submission per card: the review has been posted as a user
-              // turn, and a second tap would post it again.
-              onTap: state.isInteractive ? _submit : null,
+              // turn, and a second tap would post it again. Disabled too while
+              // a required rating is missing, so submitting cannot produce a
+              // review the card itself said was incomplete.
+              onTap: state.isInteractive && _canSubmit ? _submit : null,
             ),
           ],
         ),

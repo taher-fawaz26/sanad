@@ -276,6 +276,88 @@ enum AiUiMediaSource {
       _lookup(values, value, (e) => e.wire);
 }
 
+/// How much of a card the agent wants shown.
+///
+/// A *semantic* property, not a styling one: the agent knows whether the
+/// conversation is browsing offers (compact) or has narrowed to one and needs
+/// the detail (expanded). What "expanded" looks like — which fields appear,
+/// in what order — stays the renderer's decision, and the user can still
+/// toggle it locally.
+enum AiUiPresentation {
+  /// The summary form: identity, one headline fact, the controls.
+  compact('compact'),
+
+  /// Everything the node carries.
+  expanded('expanded')
+  ;
+
+  const AiUiPresentation(this.wire);
+
+  final String wire;
+
+  static AiUiPresentation? tryFromWire(String value) =>
+      _lookup(values, value, (e) => e.wire);
+}
+
+/// Where a `provider_search` has got to.
+///
+/// Two closed states rather than a second node type: Figma draws both as the
+/// same `LoadingCard`, and the agent's fact is *the state of this search* —
+/// which is one concept the conversation follows, not two components to pick
+/// between. [exhausted] is what a search that finished with nothing looks
+/// like, and it is the only state in which the card offers a way out.
+enum AiUiProviderSearchState {
+  /// Still running. The card draws its indeterminate glyph (or the progress
+  /// bar, when `progress` is set) and asks nothing.
+  searching('searching'),
+
+  /// Finished with no match. No indicator, and the recovery controls lead.
+  exhausted('exhausted')
+  ;
+
+  const AiUiProviderSearchState(this.wire);
+
+  final String wire;
+
+  /// Whether a search is still in flight.
+  bool get isSearching => this == AiUiProviderSearchState.searching;
+
+  static AiUiProviderSearchState? tryFromWire(String value) =>
+      _lookup(values, value, (e) => e.wire);
+}
+
+/// Where one step of a `service_timeline` has got to.
+///
+/// Deliberately four closed states rather than free prose: the agent already
+/// sends the step's own title and description, and the *state* is what the
+/// renderer needs to decide the rail glyph, the connector and the emphasis.
+/// A payload that could only say "In Progress" as a string would leave the
+/// client matching on display text.
+enum AiUiTimelineState {
+  /// Not reached yet. Drawn hollow, with muted text.
+  pending('pending'),
+
+  /// Happening now — the one step the card is *about*.
+  active('active'),
+
+  /// Done. Drawn filled, with a tick.
+  completed('completed'),
+
+  /// Reached and abandoned. A completed timeline may still contain one.
+  cancelled('cancelled')
+  ;
+
+  const AiUiTimelineState(this.wire);
+
+  final String wire;
+
+  /// Whether this is the step the user is waiting on.
+  bool get isActive => this == AiUiTimelineState.active;
+
+  static AiUiTimelineState? tryFromWire(String value) =>
+      _lookup(values, value, (e) => e.wire);
+}
+
 T? _lookup<T>(List<T> values, String value, String Function(T) wireOf) {
   for (final candidate in values) {
     if (wireOf(candidate) == value) return candidate;

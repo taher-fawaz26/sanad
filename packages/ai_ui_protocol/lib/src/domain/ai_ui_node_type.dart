@@ -1,6 +1,6 @@
 /// The closed catalog of node types in SANAD Chat UI Protocol v1.
 ///
-/// **15 primitives + 17 semantic.** The semantic half tracks the Figma
+/// **15 primitives + 23 semantic.** The semantic half tracks the Figma
 /// component library for the client AI surface: every component the design
 /// publishes has exactly one type here, so the agent names a business concept
 /// and the app owns how it looks.
@@ -26,7 +26,7 @@ enum AiUiNodeType {
   progress('progress'),
   loading('loading'),
 
-  // ── Semantic, client domain (17) ──────────────────────────────────────────
+  // ── Semantic, client domain (23) ──────────────────────────────────────────
   //
   // Entity cards — each carries a business id the app can open.
   serviceCard('service_card'),
@@ -52,7 +52,31 @@ enum AiUiNodeType {
   reminderCard('reminder_card'),
   mediaRequest('media_request'),
   permissionRequest('permission_request'),
-  locationConfirm('location_confirm')
+  locationConfirm('location_confirm'),
+
+  /// A destructive decision read back before it is taken — "are you sure you
+  /// want to cancel?". Answers through the shared confirmation interaction.
+  confirmPrompt('confirm_prompt'),
+
+  /// Something about an *existing* request changed what happens next — it
+  /// already owns this conversation, the provider cancelled, the provider is
+  /// late — together with the ways forward. See `AiUiRequestNoticeNode` for
+  /// why one type covers all three.
+  requestNotice('request_notice'),
+
+  /// The place the conversation is about is outside SANAD's coverage. See
+  /// `AiUiServiceAreaNoticeNode` for why this is not a `location_confirm`.
+  serviceAreaNotice('service_area_notice'),
+
+  // Status — the assistant reports where a long-running thing has got to.
+  //
+  // Neither of these asks the user for anything, but both carry domain data
+  // the agent reasons about, which is what keeps them out of `primitives`: a
+  // hand-assembled `card` of `text` nodes says the same words and means
+  // nothing.
+  providerSearch('provider_search'),
+  serviceTimeline('service_timeline'),
+  verificationCode('verification_code')
   ;
 
   const AiUiNodeType(this.wire);
@@ -98,7 +122,13 @@ enum AiUiNodeType {
     AiUiNodeType.reminderCard ||
     AiUiNodeType.mediaRequest ||
     AiUiNodeType.permissionRequest ||
-    AiUiNodeType.locationConfirm => true,
+    AiUiNodeType.locationConfirm ||
+    AiUiNodeType.confirmPrompt ||
+    AiUiNodeType.requestNotice ||
+    AiUiNodeType.serviceAreaNotice ||
+    AiUiNodeType.providerSearch ||
+    AiUiNodeType.serviceTimeline ||
+    AiUiNodeType.verificationCode => true,
     _ => false,
   };
 
@@ -122,7 +152,12 @@ enum AiUiNodeType {
     AiUiNodeType.reminderCard ||
     AiUiNodeType.mediaRequest ||
     AiUiNodeType.permissionRequest ||
-    AiUiNodeType.locationConfirm => true,
+    AiUiNodeType.locationConfirm ||
+    AiUiNodeType.requestNotice ||
+    AiUiNodeType.serviceAreaNotice ||
+    AiUiNodeType.providerSearch ||
+    AiUiNodeType.serviceTimeline ||
+    AiUiNodeType.verificationCode => true,
     _ => false,
   };
 }

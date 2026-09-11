@@ -111,10 +111,9 @@ void main() {
     });
 
     test('nothing local ever leaves the device', () {
-      // A path, file name, MIME type, size, duration or waveform on the wire
-      // would describe a file the agent already has a URL for — and
-      // `localPath` in particular is a device detail the backend must never
-      // learn.
+      // A path, file name, MIME type or size on the wire would describe a
+      // file the agent already has a URL for — and `localPath` in particular
+      // is a device detail the backend must never learn.
       final body = AiChatTurnPayload.encode(
         conversationId: conversationId,
         message: 'look',
@@ -126,113 +125,82 @@ void main() {
             ),
           ),
           uploadedFixture(
-            source: audioFixture(
-              localPath: '/data/user/0/private/voice.m4a',
-              waveform: const [0.7],
-              transcript: 'hello there',
+            source: documentFixture(
+              localPath: '/data/user/0/private/report.pdf',
+              sizeBytes: 9191,
             ),
-            mediaId: 'upl_audio',
+            mediaId: 'upl_doc',
           ),
         ],
       );
 
       expect(body, isNot(contains('/data/user/0/private')));
       expect(body, isNot(contains('photo.jpg')));
-      expect(body, isNot(contains('voice.m4a')));
+      expect(body, isNot(contains('report.pdf')));
       expect(body, isNot(contains('image/jpeg')));
       expect(body, isNot(contains('4242')));
-      expect(body, isNot(contains('waveform')));
-      expect(body, isNot(contains('duration')));
+      expect(body, isNot(contains('9191')));
     });
   });
 
-  group('a voice note is one message carrying audio and its words', () {
-    test('the transcript rides on the audio attachment', () {
-      final body = decode(
-        AiChatTurnPayload.encode(
-          conversationId: conversationId,
-          message: 'and here it is',
-          attachments: [
-            uploadedFixture(
-              source: audioFixture(transcript: 'book me a plumber'),
-              mediaId: 'upl_audio_123',
-              url: 'https://cdn.invalid/upl_audio_123.m4a',
-            ),
-          ],
-        ),
+  group('no audio attachment can be serialized', () {
+    // AI Chat retired recorded audio: its one voice input is Speech-to-Text,
+    // which reaches the agent as ordinary text in `message`. These assert the
+    // wire contract that decision produced, so reintroducing an audio
+    // discriminator fails here rather than silently reaching the backend.
+    test('an attachment object is exactly id and url, always', () {
+      final body = AiChatTurnPayload.encode(
+        conversationId: conversationId,
+        message: 'what does this say?',
+        attachments: [
+          uploadedFixture(source: imageFixture(), mediaId: 'a'),
+          uploadedFixture(source: documentFixture(), mediaId: 'b'),
+        ],
       );
 
-      expect(attachmentsOf(body).single, <String, dynamic>{
-        'id': 'upl_audio_123',
-        'url': 'https://cdn.invalid/upl_audio_123.m4a',
-        'type': 'audio',
-        'transcript': 'book me a plumber',
-      });
+      for (final attachment in attachmentsOf(decode(body))) {
+        expect(attachment.keys, unorderedEquals(['id', 'url']));
+      }
     });
 
-    test('a typed caption is not displaced by the transcript', () {
-      // The decisive reason the transcript is not the top-level `message`: a
-      // turn can carry both, and the caption is what the user actually wrote.
-      final body = decode(
-        AiChatTurnPayload.encode(
-          conversationId: conversationId,
-          message: 'and here it is',
-          attachments: [
-            uploadedFixture(source: audioFixture(transcript: 'book a plumber')),
-          ],
-        ),
+    test('the encoded body carries no audio vocabulary at all', () {
+      final body = AiChatTurnPayload.encode(
+        conversationId: conversationId,
+        message: 'book me for tomorrow at nine',
+        attachments: [
+          uploadedFixture(source: imageFixture(), mediaId: 'a'),
+        ],
       );
 
-      expect(body['message'], 'and here it is');
-      expect(attachmentsOf(body).single['transcript'], 'book a plumber');
+      expect(body, isNot(contains('audio')));
+      expect(body, isNot(contains('transcript')));
+      expect(body, isNot(contains('"type"')));
+      expect(body, isNot(contains('waveform')));
+      expect(body, isNot(contains('duration')));
     });
 
-    test('an untyped voice note mirrors its transcript into message', () {
-      // The live agent answers an empty `message` with 200 and zero frames, so
-      // a voice-only turn would otherwise be met with silence. It is also what
-      // makes the note understood before the backend reads `attachments`.
-      final body = decode(
+    test('a dictated turn is byte-identical to a typed one', () {
+      // The product invariant: once the recogniser lets go, its words are
+      // ordinary composer text and the request cannot tell the two apart.
+      const spoken = 'book me for tomorrow at nine';
+
+      expect(
         AiChatTurnPayload.encode(
           conversationId: conversationId,
-          message: '',
-          attachments: [
-            uploadedFixture(source: audioFixture(transcript: 'book a plumber')),
-          ],
+          message: spoken,
         ),
-      );
-
-      expect(body['message'], 'book a plumber');
-      expect(attachmentsOf(body).single['transcript'], 'book a plumber');
-    });
-
-    test('an audio attachment is typed even with no transcript', () {
-      // So the agent knows this is speech it has chosen not to be given words
-      // for, rather than an opaque blob it should try to read as text.
-      final body = decode(
         AiChatTurnPayload.encode(
           conversationId: conversationId,
-          message: 'listen to this',
-          attachments: [uploadedFixture(source: audioFixture())],
+          message: spoken,
         ),
       );
-
-      final attachment = attachmentsOf(body).single;
-      expect(attachment['type'], 'audio');
-      expect(attachment.containsKey('transcript'), isFalse);
-    });
-
-    test('an image-only turn leaves message empty', () {
-      // There are no words to mirror, and inventing some would put a sentence
-      // the user never said into the model's context.
-      final body = decode(
+      expect(
         AiChatTurnPayload.encode(
           conversationId: conversationId,
-          message: '',
-          attachments: [uploadedFixture(source: imageFixture())],
+          message: spoken,
         ),
+        '{"conversation_id":"$conversationId","message":"$spoken"}',
       );
-
-      expect(body['message'], '');
     });
   });
 }

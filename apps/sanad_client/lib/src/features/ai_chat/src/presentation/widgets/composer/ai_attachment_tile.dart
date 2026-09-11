@@ -18,6 +18,8 @@ class AiAttachmentTile extends StatelessWidget {
     required this.onRemove,
     super.key,
     this.size = 64,
+    this.showBusy = false,
+    this.showRemove = true,
   });
 
   /// What to draw.
@@ -28,6 +30,20 @@ class AiAttachmentTile extends StatelessWidget {
 
   /// Tile edge length.
   final double size;
+
+  /// Forces the busy overlay on regardless of the attachment's own status.
+  ///
+  /// A sent turn's files are `ready` — they were prepared before the turn
+  /// left — but they are still being uploaded by the transport, and a tile
+  /// that simply sat there gave the user nothing to distinguish "uploading"
+  /// from "done" (A-21).
+  final bool showBusy;
+
+  /// Whether to draw the remove affordance.
+  ///
+  /// Off for a sent message: a turn already on its way is not editable, and a
+  /// remove control that does nothing is worse than none.
+  final bool showRemove;
 
   @override
   Widget build(BuildContext context) {
@@ -51,36 +67,37 @@ class AiAttachmentTile extends StatelessWidget {
               ),
             ),
           ),
-          if (attachment.status.isBusy)
+          if (attachment.status.isBusy || showBusy)
             Positioned.fill(
               child: ColoredBox(
                 color: colors.background.withValues(alpha: 0.6),
                 child: const Center(child: AppLoadingIndicator(size: 16)),
               ),
             ),
-          PositionedDirectional(
-            top: 0,
-            end: 0,
-            child: GestureDetector(
-              onTap: onRemove,
-              child: Semantics(
-                button: true,
-                label: 'ai_chat.remove_attachment'.tr(),
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: colors.textPrimary.withValues(alpha: 0.7),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.close_rounded,
-                    size: 14,
-                    color: colors.background,
+          if (showRemove)
+            PositionedDirectional(
+              top: 0,
+              end: 0,
+              child: GestureDetector(
+                onTap: onRemove,
+                child: Semantics(
+                  button: true,
+                  label: 'ai_chat.remove_attachment'.tr(),
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: colors.textPrimary.withValues(alpha: 0.7),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.close_rounded,
+                      size: 14,
+                      color: colors.background,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -114,7 +131,6 @@ class _Preview extends StatelessWidget {
       AiDocumentAttachment(:final extension) => _DocumentPreview(
         extension: extension,
       ),
-      AiAudioAttachment(:final duration) => _AudioPreview(duration: duration),
     };
   }
 }
@@ -131,21 +147,6 @@ class _DocumentPreview extends StatelessWidget {
       icon: Icons.description_outlined,
       iconColor: colors.textSecondary,
       label: extension.toUpperCase(),
-    );
-  }
-}
-
-class _AudioPreview extends StatelessWidget {
-  const _AudioPreview({required this.duration});
-
-  final Duration duration;
-
-  @override
-  Widget build(BuildContext context) {
-    return _TileLabel(
-      icon: Icons.graphic_eq_rounded,
-      iconColor: context.appColors.primary,
-      label: formatClock(duration),
     );
   }
 }
@@ -189,14 +190,4 @@ class _TileLabel extends StatelessWidget {
       ],
     ),
   );
-}
-
-/// `m:ss`, the way a voice note reads everywhere else in the app.
-///
-/// Digits are forced LTR: under an Arabic layout a bidi-neutral colon between
-/// two numbers otherwise lets the clock render back to front.
-String formatClock(Duration duration) {
-  final minutes = duration.inMinutes;
-  final seconds = duration.inSeconds % 60;
-  return '$minutes:${seconds.toString().padLeft(2, '0')}'.ltrIsolated;
 }

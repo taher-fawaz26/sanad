@@ -19,8 +19,7 @@ class RecordVoiceCapture implements AiVoiceCapture {
 
   /// How the live session captures.
   ///
-  /// `audioInterruption: none` for the same reason as
-  /// `RecordAudioRecorder.recordingConfig`: `AudioSessionManager` is this
+  /// `audioInterruption: none` because `AudioSessionManager` is this
   /// feature's single audio-focus client, and letting `record` request focus
   /// of its own evicts the session that was activated moments earlier — which
   /// arrives back as an interruption and ends the call the instant it starts.

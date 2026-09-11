@@ -1,3 +1,4 @@
+import 'package:app_animations/app_animations.dart';
 import 'package:design_system/src/components/app_button.dart';
 import 'package:design_system/src/components/app_feature_icon.dart';
 import 'package:design_system/src/components/app_text_field.dart';
@@ -354,6 +355,55 @@ class _SecondaryAction extends StatelessWidget {
   }
 }
 
+/// Shows [builder] as a dialog with the app's shared dialog motion: a fade
+/// paired with a subtle scale-up (`AppMotionDuration.quick`,
+/// `AppMotionCurve.emphasizedDecelerate`), distinct from both the page
+/// (shared-axis slide) and sheet (vertical slide) transitions so a dialog
+/// reads as its own kind of surface.
+///
+/// The single entry point for every dialog in the app — [showAppPopover] and
+/// `AppProgress` (`shared_ui`) both route through this instead of the plain
+/// `showDialog`, which only ships Flutter's unstyled default transition.
+Future<T?> showAppAnimatedDialog<T>({
+  required BuildContext context,
+  required WidgetBuilder builder,
+  bool barrierDismissible = true,
+  Color? barrierColor,
+  bool useRootNavigator = true,
+}) {
+  final label = MaterialLocalizations.of(context).modalBarrierDismissLabel;
+  return showGeneralDialog<T>(
+    context: context,
+    barrierDismissible: barrierDismissible,
+    barrierLabel: label,
+    barrierColor: barrierColor ?? Colors.black54,
+    useRootNavigator: useRootNavigator,
+    // `AppMotionDuration.quick` (200ms) happens to equal Flutter's own
+    // default here — kept explicit so the value is sourced from the shared
+    // motion token, not an incidental match.
+    // ignore: avoid_redundant_argument_values
+    transitionDuration: AppMotionDuration.quick,
+    pageBuilder: (dialogContext, animation, secondaryAnimation) =>
+        builder(dialogContext),
+    transitionBuilder: (dialogContext, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: AppMotionCurve.emphasizedDecelerate,
+      );
+      return FadeTransition(
+        opacity: curved,
+        child: ScaleTransition(
+          scale: Tween<double>(
+            begin: 0.94,
+            end: 1,
+          ).animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
 /// Shows a Figma-aligned popover dialog.
 Future<T?> showAppPopover<T>({
   required BuildContext context,
@@ -381,7 +431,7 @@ Future<T?> showAppPopover<T>({
 }) {
   final spec = context.appDialogTheme.spec;
 
-  return showDialog<T>(
+  return showAppAnimatedDialog<T>(
     context: context,
     barrierDismissible: barrierDismissible,
     barrierColor: spec.barrierColor,

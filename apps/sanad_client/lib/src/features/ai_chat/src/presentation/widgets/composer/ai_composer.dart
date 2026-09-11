@@ -1,36 +1,34 @@
 import 'package:app_animations/app_animations.dart';
 import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
-import 'package:easy_localization/easy_localization.dart';
+// `hide TextDirection`: easy_localization re-exports intl's, which would
+// shadow Flutter's and break the RTL check on the send arrow below.
+import 'package:easy_localization/easy_localization.dart' hide TextDirection;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/entities/ai_chat_attachment.dart';
-import 'package:sanad_client/src/features/ai_chat/src/domain/enums/ai_recording_status.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/services/ai_attachment_source.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/bloc/ai_composer_bloc.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/bloc/speech_transcript_controller.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/ai_circle_icon_button.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/composer/ai_attachment_tile.dart';
-import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/composer/ai_audio_preview_row.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/composer/ai_composer_tokens.dart';
-import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/composer/ai_hold_to_record_button.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/composer/ai_live_voice_glyph.dart';
-import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/composer/ai_recording_bar.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/composer/ai_speech_bar.dart';
 import 'package:sanad_client/src/ui/glass/client_glass_surface.dart';
 import 'package:sheet_navigation/sheet_navigation.dart';
 
 /// The multimodal composer — Figma `Sanad AI Input` (`5153:42646` /
-/// `7827:30542`, states `Default`/`Focused`/`Typing`/`Voice Recording`).
+/// `7827:30542`, states `Default`/`Focused`/`Typing`).
 ///
 /// ## What it does and does not know
 ///
-/// It emits **intents** — "the user asked for the camera", "the user pressed
-/// record" — and nothing else. It cannot open a camera, request a permission,
-/// encode audio, compress an image or read a file, and it holds no business
-/// state: the attachment list, the recording status and every failure live in
-/// [AiComposerBloc].
+/// It emits **intents** — "the user asked for the camera", "the user tapped
+/// the microphone" — and nothing else. It cannot open a camera, request a
+/// permission, run a recogniser, compress an image or read a file, and it
+/// holds no business state: the attachment list, the dictation status and
+/// every failure live in [AiComposerBloc].
 ///
 /// The state it does own — draft text, focus, whether the send affordance is
 /// showing — is a text field's own editing/UI state, not business state, the
@@ -67,14 +65,6 @@ class _AiComposerState extends State<AiComposer> {
 
   SpeechTranscriptController? _transcript;
 
-  /// How far the live record gesture has travelled.
-  ///
-  /// A `ValueNotifier` and not `setState`: this moves with every pointer frame,
-  /// and rebuilding the card would rebuild the `TextField` inside it at pointer
-  /// rate. Same rule the amplitude, the playback position and the partial
-  /// transcript already follow.
-  final ValueNotifier<Offset> _recordDrag = ValueNotifier(Offset.zero);
-
   @override
   void initState() {
     super.initState();
@@ -101,7 +91,6 @@ class _AiComposerState extends State<AiComposer> {
       ..removeListener(_onFocusChanged)
       ..dispose();
     _controller.dispose();
-    _recordDrag.dispose();
     super.dispose();
   }
 
@@ -139,40 +128,23 @@ class _AiComposerState extends State<AiComposer> {
     widget.onSend(text);
   }
 
+  /// Opens the attach sheet and forwards whatever it returns.
+  ///
+  /// Every entry in the sheet is a picker intent now — dictation is the
+  /// composer's microphone, not a row in a list — so the sheet pops an
+  /// [AiAttachmentIntent] directly and there is nothing left to translate.
   Future<void> _showAttachMenu(AiComposerBloc bloc) async {
-    final choice = await showSheet<AiComposerCapture>(
+    final intent = await showSheet<AiAttachmentIntent>(
       context,
       child: const _AttachMenu(),
     );
-    if (choice == null) return;
-
-    // Switched on the choice itself rather than on `intent == null`. Dictation
-    // is not a picker intent and never will be, and inferring "the one with no
-    // intent" would silently reroute the next capability added here.
-    bloc.add(
-      switch (choice) {
-        AiComposerCapture.speechToText => const AiComposerSpeechStarted(),
-        AiComposerCapture.camera ||
-        AiComposerCapture.gallery ||
-        AiComposerCapture.document => AiComposerAttachmentRequested(
-          choice.intent!,
-        ),
-      },
-    );
+    if (intent == null) return;
+    bloc.add(AiComposerAttachmentRequested(intent));
   }
 
   /// The card's first slot.
   Widget _contentRow(_AiComposerSurface surface, AiComposerState state) =>
       switch (surface) {
-        _AiComposerSurface.recording => const AiRecordingContentRow(),
-        _AiComposerSurface.locked => const AiRecordingContentRow(
-          isLocked: true,
-        ),
-        // `previewTake` is non-null exactly when the surface is `preview` —
-        // both derive from the same pair of facts, so the `!` cannot fire.
-        _AiComposerSurface.preview => AiAudioPreviewRow(
-          attachment: state.previewTake!,
-        ),
         _AiComposerSurface.dictation => AiSpeechContentRow(
           status: state.speech,
         ),
@@ -194,14 +166,6 @@ class _AiComposerState extends State<AiComposer> {
     AiComposerBloc bloc, {
     required bool canSend,
   }) => switch (surface) {
-    // A held take offers no buttons at all: the finger that would press one is
-    // the finger holding the take open.
-    _AiComposerSurface.recording => AiRecordingHintRow(drag: _recordDrag),
-    _AiComposerSurface.locked => const AiRecordingActionsRow(),
-    _AiComposerSurface.preview => _PreviewActionsRow(
-      onDelete: () => bloc.add(const AiComposerRecordingCancelled()),
-      onSubmit: () => _submit(state),
-    ),
     _AiComposerSurface.dictation => AiSpeechActionsRow(
       status: state.speech,
       onAttach: () => _showAttachMenu(bloc),
@@ -209,10 +173,9 @@ class _AiComposerState extends State<AiComposer> {
     _AiComposerSurface.idle => _IdleActionsRow(
       canSend: canSend,
       isPicking: state.isPicking,
-      isCapturing: state.isCapturing,
       onAttach: () => _showAttachMenu(bloc),
       onVoice: widget.onVoice,
-      onRecordDrag: (offset) => _recordDrag.value = offset,
+      onDictate: () => bloc.add(const AiComposerSpeechStarted()),
       onSubmit: () => _submit(state),
     ),
   };
@@ -254,7 +217,7 @@ class _AiComposerState extends State<AiComposer> {
             final canSend = state.canSend(_controller.text);
             final focused = _hasFocus && surface == _AiComposerSurface.idle;
             final accent = AiComposerTokens.accent(context);
-            final strip = state.stripAttachments;
+            final strip = state.attachments;
 
             // Glass, and tinted hardest of the three levels: this is the one
             // surface in the client a user reads a sentence off, so the wash
@@ -358,31 +321,13 @@ enum _AiComposerSurface {
   /// control swaps between the microphone pair and the send pill.
   idle,
 
-  /// A take is running under a held finger.
-  recording,
-
-  /// A take is running hands-free.
-  locked,
-
-  /// A finished take is waiting to be played, discarded or sent.
-  preview,
-
   /// The recogniser is producing editable text.
   dictation
   ;
 
   /// Reads the surface out of [state].
-  ///
-  /// Order matters: recording is checked before dictation because the two are
-  /// mutually exclusive in the bloc and the recording answer is the one that
-  /// owns the microphone.
-  static _AiComposerSurface of(AiComposerState state) {
-    if (state.recording == AiRecordingStatus.lockedRecording) return locked;
-    if (state.recording.showsRecordingRow) return recording;
-    if (state.previewTake != null) return preview;
-    if (state.speech.occupiesComposer) return dictation;
-    return idle;
-  }
+  static _AiComposerSurface of(AiComposerState state) =>
+      state.speech.occupiesComposer ? dictation : idle;
 }
 
 /// Row 1 in the card's idle/typing states — the leading sparkle mark and the
@@ -471,19 +416,17 @@ class _IdleActionsRow extends StatelessWidget {
   const _IdleActionsRow({
     required this.canSend,
     required this.isPicking,
-    required this.isCapturing,
     required this.onAttach,
     required this.onVoice,
-    required this.onRecordDrag,
+    required this.onDictate,
     required this.onSubmit,
   });
 
   final bool canSend;
   final bool isPicking;
-  final bool isCapturing;
   final VoidCallback onAttach;
   final VoidCallback onVoice;
-  final ValueChanged<Offset> onRecordDrag;
+  final VoidCallback onDictate;
   final VoidCallback onSubmit;
 
   @override
@@ -507,55 +450,32 @@ class _IdleActionsRow extends StatelessWidget {
         Row(
           spacing: AppSpacing.sm,
           children: [
-            // The microphone means exactly one thing now: hold it and you
-            // are recording a voice message. Dictation moved into the attach
-            // sheet, which is what makes this button unambiguous — it used
-            // to sit here meaning "dictate" while a third entry point buried
-            // in that same sheet meant "record", and no arrangement of icons
-            // could have made that legible.
+            // The microphone means exactly one thing: tap it and the device
+            // starts recognising speech into this field as editable text. It
+            // records nothing and attaches nothing, so there is no hold
+            // threshold to protect against a mis-tap and no coaching hint to
+            // show — a tap is the whole gesture.
             //
             // Unfilled, as Figma has it (`7825:28942`): only the live-voice
             // control beside it carries a fill, which is what ranks the two
             // against each other.
-            AiHoldToRecordButton(onDragUpdate: onRecordDrag),
+            AiCircleIconButton(
+              svgAsset: AppSvgs.aiChatComposerMic,
+              semanticLabel: 'ai_chat.speech_start'.tr(),
+              iconColor: context.appColors.textPrimary,
+              onTap: onDictate,
+            ),
             // The other capability, and visibly its own thing — a live
             // session is a conversation, not a message, so it gets its own
             // affordance rather than a mode on this one.
             AiCircleIconButton(
               semanticLabel: 'ai_chat.voice_mode'.tr(),
               background: AiComposerTokens.controlFill(context),
-              onTap: isCapturing ? null : onVoice,
+              onTap: onVoice,
               child: const AiLiveVoiceGlyph(),
             ),
           ],
         ),
-    ],
-  );
-}
-
-/// The second slot while a finished take is being previewed.
-///
-/// Discard is a plain icon and send is the same pill the text composer uses:
-/// the take is now just an attachment waiting on the send it shares with every
-/// other kind of turn, and giving it a bespoke send control would suggest
-/// otherwise.
-class _PreviewActionsRow extends StatelessWidget {
-  const _PreviewActionsRow({required this.onDelete, required this.onSubmit});
-
-  final VoidCallback onDelete;
-  final VoidCallback onSubmit;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      AiCircleIconButton(
-        icon: Icons.delete_outline_rounded,
-        semanticLabel: 'ai_chat.record_delete'.tr(),
-        iconColor: context.appColors.error,
-        onTap: onDelete,
-      ),
-      _SendPillButton(onTap: onSubmit),
     ],
   );
 }
@@ -600,14 +520,23 @@ class _SendPillButton extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  SvgPicture.asset(
-                    AppSvgs.aiChatComposerSend,
-                    package: AppAssets.package,
-                    width: 14,
-                    height: 14,
-                    colorFilter: ColorFilter.mode(
-                      colors.onPrimary,
-                      BlendMode.srcIn,
+                  // The send glyph is a direction-bearing arrow, so it has
+                  // to point *forward* — left in Arabic (R-03). Unlike a
+                  // Material `Icon` with `matchTextDirection: true`,
+                  // `SvgPicture` is never mirrored by the framework, so this
+                  // single flip is the only one applied and cannot produce
+                  // the SAN-768 double-mirror.
+                  Transform.flip(
+                    flipX: Directionality.of(context) == TextDirection.rtl,
+                    child: SvgPicture.asset(
+                      AppSvgs.aiChatComposerSend,
+                      package: AppAssets.package,
+                      width: 14,
+                      height: 14,
+                      colorFilter: ColorFilter.mode(
+                        colors.onPrimary,
+                        BlendMode.srcIn,
+                      ),
                     ),
                   ),
                 ],
@@ -650,60 +579,26 @@ class _AttachmentStrip extends StatelessWidget {
   }
 }
 
-/// What the attach sheet can return.
-///
-/// Presentation-level on purpose: three of these map onto an
-/// [AiAttachmentIntent] that the picker understands, and one does not.
-/// Widening [AiAttachmentIntent] to hold `speechToText` would put a value in
-/// the domain picker contract that no picker can ever satisfy.
-///
-/// Recording a voice note is deliberately **not** here any more. The composer's
-/// microphone is the voice-note path now, and a second entry point in this
-/// sheet would put the same capability on screen twice — the confusion this
-/// redesign exists to remove.
-enum AiComposerCapture {
-  /// Dictate — speech recognised into editable composer text.
-  ///
-  /// It leads this list because it is the capability that moved here, and
-  /// because it is the one a user reaching for the old microphone is looking
-  /// for.
-  speechToText(null),
-
-  /// Take a photo.
-  camera(AiAttachmentIntent.camera),
-
-  /// Choose an existing photo.
-  gallery(AiAttachmentIntent.gallery),
-
-  /// Choose a file.
-  document(AiAttachmentIntent.document)
-  ;
-
-  const AiComposerCapture(this.intent);
-
-  /// The picker intent, or `null` when this is not something a picker returns.
-  final AiAttachmentIntent? intent;
-}
-
 /// The attach menu's contents. Pops the chosen intent, `null` on dismissal —
 /// the convention `sheet_navigation` sheets already follow.
+///
+/// Attachments only. Dictation is deliberately **not** a row here: the
+/// composer's microphone is the one and only way into speech recognition, and
+/// a second entry point would put the same capability on screen twice — the
+/// confusion this arrangement exists to avoid.
 class _AttachMenu extends StatelessWidget {
   const _AttachMenu();
 
-  static const _entries = <AiComposerCapture, (IconData, String)>{
-    AiComposerCapture.speechToText: (
-      Icons.keyboard_voice_outlined,
-      'ai_chat.speech_to_text',
-    ),
-    AiComposerCapture.camera: (
+  static const _entries = <AiAttachmentIntent, (IconData, String)>{
+    AiAttachmentIntent.camera: (
       Icons.photo_camera_outlined,
       'ai_chat.attach_camera',
     ),
-    AiComposerCapture.gallery: (
+    AiAttachmentIntent.gallery: (
       Icons.photo_library_outlined,
       'ai_chat.attach_gallery',
     ),
-    AiComposerCapture.document: (
+    AiAttachmentIntent.document: (
       Icons.attach_file_rounded,
       'ai_chat.attach_document',
     ),
@@ -713,27 +608,28 @@ class _AttachMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
 
-    return SheetScaffold(
-      // Scrollable rather than a bare Column: the sheet decides the height it
-      // offers, and four rows at a large accessibility text size can exceed
-      // it. A widget test caught exactly that.
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final entry in _entries.entries)
-              ListTile(
-                leading: Icon(entry.value.$1, color: colors.textPrimary),
-                title: Text(
-                  entry.value.$2.tr(),
-                  style: context.appTypography.regularNormal,
-                ),
-                // A local, imperative pop returning a value: the pattern
-                // `routing.md` sanctions for a sheet result.
-                onTap: () => Navigator.of(context).pop(entry.key),
+    // No `SheetScaffold` here: the route already wraps this content in one,
+    // and a second drew a second drag handle directly under the first (A-12).
+    //
+    // Scrollable rather than a bare Column: the sheet decides the height it
+    // offers, and these rows at a large accessibility text size can exceed
+    // it. A widget test caught exactly that.
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final entry in _entries.entries)
+            ListTile(
+              leading: Icon(entry.value.$1, color: colors.textPrimary),
+              title: Text(
+                entry.value.$2.tr(),
+                style: context.appTypography.regularNormal,
               ),
-          ],
-        ),
+              // A local, imperative pop returning a value: the pattern
+              // `routing.md` sanctions for a sheet result.
+              onTap: () => Navigator.of(context).pop(entry.key),
+            ),
+        ],
       ),
     );
   }

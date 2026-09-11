@@ -1,6 +1,6 @@
 part of 'package:ai_ui_protocol/src/domain/ai_ui_node.dart';
 
-/// The seventeen business components — one per component the Figma library
+/// The twenty-three business components — one per component the Figma library
 /// publishes for the client AI surface.
 ///
 /// Each names a concept the assistant is communicating and carries the data
@@ -354,7 +354,19 @@ final class AiUiOrderCardNode extends AiUiNode {
   ];
 }
 
-/// The person or company assigned to a request — Figma `provider-card`.
+/// The person or company assigned to a request, or offering to take one —
+/// Figma `provider-card` and `provider-offer-card`.
+///
+/// **One type, two presentations.** The compact form is identity plus the one
+/// fact the decision turns on (the proposed time) plus the controls; the
+/// expanded form adds distance, the provider's own description, the services
+/// they offer and their work photos. They are the same provider answering the
+/// same question, so splitting them would mean the agent choosing a *component*
+/// when what it actually knows is how much detail the conversation needs.
+///
+/// [presentation] is the agent's opening position, not a lock: the renderer
+/// offers a disclosure control whenever there is extra detail to show, because
+/// which one the user wants is theirs to decide.
 final class AiUiProviderCardNode extends AiUiNode {
   const AiUiProviderCardNode({
     required super.id,
@@ -366,6 +378,16 @@ final class AiUiProviderCardNode extends AiUiNode {
     this.stats = const [],
     this.action,
     this.actions = const [],
+    this.verified = false,
+    this.presentation = AiUiPresentation.compact,
+    this.distanceMeters,
+    this.description,
+    this.services = const [],
+    this.servicesLabel,
+    this.photos = const [],
+    this.proposedTimeLabel,
+    this.proposedTime,
+    this.offer,
     super.a11yLabel,
     super.fallbackText,
   });
@@ -388,6 +410,42 @@ final class AiUiProviderCardNode extends AiUiNode {
   /// Buttons drawn inside this card. See [AiUiCardAction].
   final List<AiUiCardAction> actions;
 
+  /// Whether SANAD has verified the account. The tick beside the name.
+  final bool verified;
+
+  /// How much of the card the agent wants shown to begin with.
+  final AiUiPresentation presentation;
+
+  /// Structured, in metres — how far the provider is from the job. The
+  /// renderer formats it locale-aware, exactly as `branch_card` does.
+  final num? distanceMeters;
+
+  /// The provider's own description of what they do. Prose, already localized.
+  final String? description;
+
+  /// The services they offer, as short labels — "Interior clean", "Polishing".
+  /// Drawn as chips; the protocol has no way to make one tappable, because
+  /// choosing a service belongs to the conversation.
+  final List<String> services;
+
+  /// Heading above [services] — "Services".
+  final String? servicesLabel;
+
+  /// Examples of their work. Backend-owned media, so normally `url`s, through
+  /// the same `{url?, assetId?}` contract as every other image.
+  final List<AiUiImageSource> photos;
+
+  /// Label for the [proposedTime] row — "Proposed Time".
+  final String? proposedTimeLabel;
+
+  /// When the provider is offering to come. Always UTC; the renderer converts
+  /// and formats, so the agent never writes "Thursday · 5:00 PM" itself.
+  final DateTime? proposedTime;
+
+  /// Present when this card *is an offer* — the accept/decline pair, answered
+  /// through an `offer_resolved` interaction. See [AiUiProviderOffer].
+  final AiUiProviderOffer? offer;
+
   @override
   AiUiNodeType get type => AiUiNodeType.providerCard;
 
@@ -403,6 +461,18 @@ final class AiUiProviderCardNode extends AiUiNode {
     if (action != null) 'action': action!.toJson(),
     if (actions.isNotEmpty)
       'actions': [for (final entry in actions) entry.toJson()],
+    if (verified) 'verified': true,
+    'presentation': presentation.wire,
+    if (distanceMeters != null) 'distanceMeters': distanceMeters,
+    if (description != null) 'description': description,
+    if (services.isNotEmpty) 'services': services,
+    if (servicesLabel != null) 'servicesLabel': servicesLabel,
+    if (photos.isNotEmpty)
+      'photos': [for (final photo in photos) photo.toJson()],
+    if (proposedTimeLabel != null) 'proposedTimeLabel': proposedTimeLabel,
+    if (proposedTime != null)
+      'proposedTime': proposedTime!.toUtc().toIso8601String(),
+    if (offer != null) 'offer': offer!.toJson(),
   };
 
   @override
@@ -416,6 +486,16 @@ final class AiUiProviderCardNode extends AiUiNode {
     stats,
     action,
     actions,
+    verified,
+    presentation,
+    distanceMeters,
+    description,
+    services,
+    servicesLabel,
+    photos,
+    proposedTimeLabel,
+    proposedTime,
+    offer,
   ];
 }
 
@@ -433,6 +513,9 @@ final class AiUiBookingSummaryNode extends AiUiNode {
     required this.items,
     this.title,
     this.actions = const [],
+    this.statusText,
+    this.statusTone = AiUiTone.success,
+    this.provider,
     super.a11yLabel,
     super.fallbackText,
   });
@@ -442,6 +525,23 @@ final class AiUiBookingSummaryNode extends AiUiNode {
 
   /// Buttons drawn inside this card. See [AiUiCardAction].
   final List<AiUiCardAction> actions;
+
+  /// The outcome as a headline — "Booking Confirmed!".
+  ///
+  /// Its presence is what turns this card from *a set of values to check*
+  /// into *a booking that happened*, which is the difference between Figma's
+  /// `action-card` and its `booking-confirmed` frame. Deliberately **not** a
+  /// separate node type: the fields are the same booking either way, and two
+  /// types would mean the agent picking a component rather than stating
+  /// whether the thing is done.
+  final String? statusText;
+
+  /// Tints the status disc. `success` for a confirmed booking, `warning` for
+  /// one still pending, `error` for one that failed.
+  final AiUiTone statusTone;
+
+  /// Who is coming. See [AiUiProviderRef].
+  final AiUiProviderRef? provider;
 
   @override
   AiUiNodeType get type => AiUiNodeType.bookingSummary;
@@ -453,10 +553,21 @@ final class AiUiBookingSummaryNode extends AiUiNode {
     'items': [for (final item in items) item.toJson()],
     if (actions.isNotEmpty)
       'actions': [for (final entry in actions) entry.toJson()],
+    if (statusText != null) 'statusText': statusText,
+    'statusTone': statusTone.wire,
+    if (provider != null) 'provider': provider!.toJson(),
   };
 
   @override
-  List<Object?> get props => [...baseProps, title, items, actions];
+  List<Object?> get props => [
+    ...baseProps,
+    title,
+    items,
+    actions,
+    statusText,
+    statusTone,
+    provider,
+  ];
 }
 
 /// The full service request read back before it is submitted — Figma
@@ -474,6 +585,9 @@ final class AiUiRequestSummaryNode extends AiUiNode {
     this.summaryText,
     this.location,
     this.actions = const [],
+    this.photos = const [],
+    this.photosLabel,
+    this.confirm,
     super.a11yLabel,
     super.fallbackText,
   });
@@ -488,7 +602,25 @@ final class AiUiRequestSummaryNode extends AiUiNode {
   final AiUiLocationRef? location;
 
   /// Buttons drawn inside this card. See [AiUiCardAction].
+  ///
+  /// For the submit/cancel pair prefer [confirm], which answers structurally.
+  /// This row stays for the *other* things a summary might offer — "Edit", a
+  /// maps link — which are navigation, not an answer.
   final List<AiUiCardAction> actions;
+
+  /// Photos the user attached while describing the request, read back so they
+  /// can see what is about to be sent. The usual `{url?, assetId?}` contract.
+  final List<AiUiImageSource> photos;
+
+  /// Heading above [photos] — "photos".
+  final String? photosLabel;
+
+  /// The submit-or-cancel pair. See [AiUiConfirmChoice].
+  ///
+  /// When present the card's decision travels as a `confirmation_resolved`
+  /// interaction — correlated with this node, recorded in the ledger, and
+  /// un-repeatable — rather than as a sentence the agent has to re-read.
+  final AiUiConfirmChoice? confirm;
 
   @override
   AiUiNodeType get type => AiUiNodeType.requestSummary;
@@ -502,6 +634,10 @@ final class AiUiRequestSummaryNode extends AiUiNode {
     if (location != null) 'location': location!.toJson(),
     if (actions.isNotEmpty)
       'actions': [for (final entry in actions) entry.toJson()],
+    if (photos.isNotEmpty)
+      'photos': [for (final photo in photos) photo.toJson()],
+    if (photosLabel != null) 'photosLabel': photosLabel,
+    if (confirm != null) 'confirm': confirm!.toJson(),
   };
 
   @override
@@ -512,6 +648,9 @@ final class AiUiRequestSummaryNode extends AiUiNode {
     summaryText,
     location,
     actions,
+    photos,
+    photosLabel,
+    confirm,
   ];
 }
 
@@ -643,6 +782,8 @@ final class AiUiReviewRequestNode extends AiUiNode {
     this.providerText,
     this.commentPlaceholder,
     this.maxCommentLength,
+    this.maxRating,
+    this.ratingRequired = false,
     super.a11yLabel,
     super.fallbackText,
   });
@@ -659,8 +800,23 @@ final class AiUiReviewRequestNode extends AiUiNode {
   final String submitLabel;
 
   /// Posted as a user turn on submit, with `{comment}` replaced by the typed
-  /// text.
+  /// text and `{rating}` by the chosen number of stars.
   final String submitTemplate;
+
+  /// How many stars the card offers. `null` means **no rating control at
+  /// all** — the comment-only card the protocol has always had.
+  ///
+  /// A count rather than a boolean because the scale is a product decision
+  /// the backend owns, and a card that draws five stars while the backend
+  /// stores ten would silently discard half the range.
+  final int? maxRating;
+
+  /// Whether submitting requires a rating. Only meaningful with [maxRating].
+  ///
+  /// Defaults to `false`: an agent that adds stars to an existing card should
+  /// not thereby make the submit button unreachable for a user who only wants
+  /// to leave words.
+  final bool ratingRequired;
 
   @override
   AiUiNodeType get type => AiUiNodeType.reviewRequest;
@@ -672,6 +828,8 @@ final class AiUiReviewRequestNode extends AiUiNode {
     if (providerText != null) 'providerText': providerText,
     if (commentPlaceholder != null) 'commentPlaceholder': commentPlaceholder,
     if (maxCommentLength != null) 'maxCommentLength': maxCommentLength,
+    if (maxRating != null) 'maxRating': maxRating,
+    if (ratingRequired) 'ratingRequired': true,
     'submitLabel': submitLabel,
     'submitTemplate': submitTemplate,
   };
@@ -683,6 +841,8 @@ final class AiUiReviewRequestNode extends AiUiNode {
     providerText,
     commentPlaceholder,
     maxCommentLength,
+    maxRating,
+    ratingRequired,
     submitLabel,
     submitTemplate,
   ];
@@ -941,6 +1101,7 @@ final class AiUiLocationConfirmNode extends AiUiNode {
     required this.confirmLabel,
     this.image,
     this.changeLabel,
+    this.cancelLabel,
     this.actions = const [],
     super.a11yLabel,
     super.fallbackText,
@@ -950,7 +1111,15 @@ final class AiUiLocationConfirmNode extends AiUiNode {
   final AiUiImageSource? image;
   final String addressText;
   final String confirmLabel;
+
+  /// Offers to *re-run the location flow* — the app's own picker. Distinct
+  /// from [cancelLabel], which abandons the question entirely.
   final String? changeLabel;
+
+  /// Declines the address without proposing another. Answers as a
+  /// `confirmation_resolved` interaction with `confirmed: false`, so the
+  /// agent hears "not this one" rather than nothing.
+  final String? cancelLabel;
 
   /// Buttons drawn inside this card. See [AiUiCardAction].
   final List<AiUiCardAction> actions;
@@ -966,6 +1135,7 @@ final class AiUiLocationConfirmNode extends AiUiNode {
     'addressText': addressText,
     'confirmLabel': confirmLabel,
     if (changeLabel != null) 'changeLabel': changeLabel,
+    if (cancelLabel != null) 'cancelLabel': cancelLabel,
     if (actions.isNotEmpty)
       'actions': [for (final entry in actions) entry.toJson()],
   };
@@ -978,6 +1148,506 @@ final class AiUiLocationConfirmNode extends AiUiNode {
     addressText,
     confirmLabel,
     changeLabel,
+    cancelLabel,
     actions,
   ];
+}
+
+/// A destructive decision read back before it is taken — Figma
+/// `cancel-confirmation-card`.
+///
+/// "Are you sure you want to cancel?" over the thing being cancelled, and two
+/// controls where the *affirmative* one is the dangerous one.
+///
+/// Not a `booking_summary` with two buttons, and not a generic dialog node:
+/// what makes this a type of its own is that the answer is a **decision about
+/// an existing commitment**, carried back as a `confirmation_resolved`
+/// interaction with the agent's own [AiUiConfirmChoice.reference]. A summary
+/// says "here is what I am about to do"; this says "here is what I am about
+/// to undo". The client also has to stop a second tap, which needs the node
+/// in the ledger — something a pair of `send_message` buttons cannot give it.
+final class AiUiConfirmPromptNode extends AiUiNode {
+  const AiUiConfirmPromptNode({
+    required super.id,
+    required this.title,
+    required this.confirm,
+    this.body,
+    this.subjectTitle,
+    this.subjectSubtitle,
+    this.tone = AiUiTone.warning,
+    super.a11yLabel,
+    super.fallbackText,
+  });
+
+  /// The question — "Are you sure you want to cancel?".
+  final String title;
+
+  /// Any consequence worth stating before the user answers — "Cancelling
+  /// within 2 hours incurs a fee."
+  final String? body;
+
+  /// What is being decided about — "AC Maintenance". Drawn in its own tile so
+  /// the user can see they are cancelling the right thing.
+  final String? subjectTitle;
+
+  /// The identifying detail under it — "Lina M • Tomorrow 10:00 AM". Prose
+  /// the agent has already localized, because it is a *sentence about* the
+  /// booking rather than a machine-typed instant.
+  final String? subjectSubtitle;
+
+  /// Tints the card. `warning` by default; `error` for something irreversible.
+  final AiUiTone tone;
+
+  /// The two controls and what each one answers.
+  final AiUiConfirmChoice confirm;
+
+  @override
+  AiUiNodeType get type => AiUiNodeType.confirmPrompt;
+
+  @override
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    ...baseJson(AiUiNodeType.confirmPrompt.wire),
+    'title': title,
+    if (body != null) 'body': body,
+    if (subjectTitle != null) 'subjectTitle': subjectTitle,
+    if (subjectSubtitle != null) 'subjectSubtitle': subjectSubtitle,
+    'tone': tone.wire,
+    'confirm': confirm.toJson(),
+  };
+
+  @override
+  List<Object?> get props => [
+    ...baseProps,
+    title,
+    body,
+    subjectTitle,
+    subjectSubtitle,
+    tone,
+    confirm,
+  ];
+}
+
+/// Something about an **existing request** changed what happens next — Figma
+/// `system-context-router-card`.
+///
+/// One type for the three readings Figma draws from that one component, and
+/// the reason is that they are one business fact with three shapes:
+///
+/// * the user asked for something new while an active request already owns
+///   this conversation (the `contextLabel` chip and the saved `draftText`);
+/// * the provider cancelled (`status` + `reference`);
+/// * the provider has not arrived (`status` + `reference`).
+///
+/// In each case the agent is saying *this request's state changed, and here
+/// are the ways forward*. Splitting it into three node types would make the
+/// agent choose a component; a single node lets it state the facts it has and
+/// omit the ones it does not.
+///
+/// **Not a [AiUiReminderCardNode]**, which is a time-sensitive heads-up drawn
+/// as a tinted-edge alert and carries no request identity, no reference and no
+/// draft. **Not a [AiUiBookingSummaryNode]** either: nothing here is a
+/// label-and-value read-back, and forcing "Ahmed K. had to cancel" into a
+/// `statusText` would leave the apology with nowhere to go.
+///
+/// The decision, where there is one, travels through [confirm] — the same
+/// `confirmation_resolved` interaction every other yes-or-no in the protocol
+/// uses, correlated by [AiUiConfirmChoice.reference] and un-repeatable through
+/// the ledger. That is what stops a second tap on "Create replacement request"
+/// opening a second request. [actions] stays for the controls that are *not*
+/// an answer — "Contact Sanad Support" is a different destination, not a "no".
+final class AiUiRequestNoticeNode extends AiUiNode {
+  const AiUiRequestNoticeNode({
+    required super.id,
+    required this.title,
+    this.body,
+    this.requestId,
+    this.reference,
+    this.status,
+    this.contextLabel,
+    this.draftLabel,
+    this.draftText,
+    this.actions = const [],
+    this.confirm,
+    super.a11yLabel,
+    super.fallbackText,
+  });
+
+  /// The headline — "New request detected", "Ahmed K. had to cancel",
+  /// "Scheduled arrival: 10:00 AM".
+  final String title;
+
+  /// What it means and what follows from it, as prose the agent has already
+  /// localized.
+  final String? body;
+
+  /// The request this notice is about, as the agent resolves it. Identity
+  /// rather than only the printed [reference], so a continuation can name the
+  /// same request without matching on display text.
+  final String? requestId;
+
+  /// The reference as the user recognises it. Rendered with Unicode bidi
+  /// isolates, because a leading hash otherwise reorders to the far end under
+  /// Arabic (the SAN-770 bug class).
+  final String? reference;
+
+  /// The state as a dot pill — "Booking Cancelled" (`error`), "Provider is
+  /// late" (`warning`). Absent for a notice that is not about a status change.
+  final AiUiBadge? status;
+
+  /// The "this conversation already belongs to something" chip — "Tied to
+  /// Active Request: Plumbing Repair (#SND-4821)".
+  ///
+  /// Prose the agent composes, because it names the *other* request and only
+  /// the agent knows what to call it. [requestId] carries the identity beside
+  /// it.
+  final String? contextLabel;
+
+  /// Heading on the saved-draft tile — "Draft Saved".
+  final String? draftLabel;
+
+  /// What the agent held onto, quoted back — "I also need to book an AC deep
+  /// cleaning...".
+  ///
+  /// Reading the draft back is the whole point of the card in the
+  /// already-active-request case: it is what tells the user they will not have
+  /// to type it again.
+  final String? draftText;
+
+  /// Buttons drawn inside this card, for the controls that are not an answer.
+  /// See [AiUiCardAction].
+  final List<AiUiCardAction> actions;
+
+  /// The decision the notice is asking for. See [AiUiConfirmChoice].
+  final AiUiConfirmChoice? confirm;
+
+  @override
+  AiUiNodeType get type => AiUiNodeType.requestNotice;
+
+  @override
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    ...baseJson(AiUiNodeType.requestNotice.wire),
+    'title': title,
+    if (body != null) 'body': body,
+    if (requestId != null) 'requestId': requestId,
+    if (reference != null) 'reference': reference,
+    if (status != null) 'status': status!.toJson(),
+    if (contextLabel != null) 'contextLabel': contextLabel,
+    if (draftLabel != null) 'draftLabel': draftLabel,
+    if (draftText != null) 'draftText': draftText,
+    if (actions.isNotEmpty)
+      'actions': [for (final entry in actions) entry.toJson()],
+    if (confirm != null) 'confirm': confirm!.toJson(),
+  };
+
+  @override
+  List<Object?> get props => [
+    ...baseProps,
+    title,
+    body,
+    requestId,
+    reference,
+    status,
+    contextLabel,
+    draftLabel,
+    draftText,
+    actions,
+    confirm,
+  ];
+}
+
+/// The place the conversation is about is outside SANAD's coverage — Figma
+/// `location-outside-service-area`.
+///
+/// **Not a [AiUiLocationConfirmNode].** That node asks "is this the right
+/// place?" and its `confirmLabel` is required, because accepting is the whole
+/// point of it. Here accepting is *impossible*: the agent is refusing an
+/// address, and the only way forward is a different one. Expressing that as a
+/// confirmation card with no way to confirm would make an invalid state
+/// representable and leave every reader of the payload guessing which fields
+/// still applied.
+///
+/// It reuses the rest of the location architecture rather than introducing a
+/// second model: [addressText] is the same already-localized prose every other
+/// location-bearing node carries, and [changeLabel] runs the app's own
+/// location flow through the existing `request_location_share` action — so the
+/// app owns the permission prompt, the picker and the lookup exactly as it
+/// does for `location_confirm`'s own "Change location".
+final class AiUiServiceAreaNoticeNode extends AiUiNode {
+  const AiUiServiceAreaNoticeNode({
+    required super.id,
+    required this.title,
+    required this.addressText,
+    this.body,
+    this.tone = AiUiTone.warning,
+    this.changeLabel,
+    this.actions = const [],
+    super.a11yLabel,
+    super.fallbackText,
+  });
+
+  /// The banner headline — "Location outside service area".
+  final String title;
+
+  /// The address that was refused, as the agent localized it. Shown verbatim
+  /// in its own tile so the user can see *which* address is the problem.
+  final String addressText;
+
+  /// Why, in the agent's own words — "This address is currently outside our
+  /// service area:".
+  final String? body;
+
+  /// Tints the banner. `warning` by default; `error` where coverage is not
+  /// merely absent but the request cannot proceed at all.
+  final AiUiTone tone;
+
+  /// Label for the control that re-runs the app's location flow — "Change
+  /// Location". Omitted means the card states the problem and the
+  /// conversation is the way out.
+  final String? changeLabel;
+
+  /// Buttons drawn inside this card. See [AiUiCardAction].
+  final List<AiUiCardAction> actions;
+
+  @override
+  AiUiNodeType get type => AiUiNodeType.serviceAreaNotice;
+
+  @override
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    ...baseJson(AiUiNodeType.serviceAreaNotice.wire),
+    'title': title,
+    'addressText': addressText,
+    if (body != null) 'body': body,
+    'tone': tone.wire,
+    if (changeLabel != null) 'changeLabel': changeLabel,
+    if (actions.isNotEmpty)
+      'actions': [for (final entry in actions) entry.toJson()],
+  };
+
+  @override
+  List<Object?> get props => [
+    ...baseProps,
+    title,
+    addressText,
+    body,
+    tone,
+    changeLabel,
+    actions,
+  ];
+}
+
+// ─── Status ─────────────────────────────────────────────────────────────────
+
+/// The assistant is looking for providers — Figma `searching-providers-card`.
+///
+/// A semantic node rather than a `loading` primitive with a label, because the
+/// agent uses it to say something specific: *a provider search is running for
+/// this request*, and the conversation should expect offers next. A bare
+/// `loading` says only "something is happening", which the client cannot
+/// reason about and the user cannot distinguish from the reply still
+/// streaming.
+///
+/// It is still built from the loading/progress primitives' own vocabulary —
+/// [progress] is `null` for indeterminate exactly as `progress.value` is — so
+/// there is one idea of "how far along" rather than two.
+final class AiUiProviderSearchNode extends AiUiNode {
+  const AiUiProviderSearchNode({
+    required super.id,
+    required this.title,
+    this.state = AiUiProviderSearchState.searching,
+    this.statusLabel,
+    this.body,
+    this.progress,
+    this.actions = const [],
+    this.confirm,
+    super.a11yLabel,
+    super.fallbackText,
+  });
+
+  /// Whether the search is still running or finished with nothing.
+  ///
+  /// The state a search is *in*, not a second component: Figma draws
+  /// "Searching nearby providers" and "No Specialists Available" as the same
+  /// `LoadingCard`, and an agent choosing between two node types for one
+  /// search would have to decide which component the client should draw
+  /// rather than simply stating what happened. See [AiUiProviderSearchState].
+  final AiUiProviderSearchState state;
+
+  /// The pill above the headline — "Finding providers...".
+  final String? statusLabel;
+
+  /// The headline — "Searching nearby providers".
+  final String title;
+
+  /// What is actually happening — "We're matching your request with available
+  /// providers in your area."
+  final String? body;
+
+  /// `0.0..1.0` when the backend can say how far along the search is; `null`
+  /// for indeterminate, which is the normal case and what Figma's three-dot
+  /// indicator draws.
+  final double? progress;
+
+  /// Buttons drawn inside this card — a "Cancel search", where the backend
+  /// supports one. See [AiUiCardAction].
+  final List<AiUiCardAction> actions;
+
+  /// The decision this card is asking for, when it is asking for one — the
+  /// "Continue in Background" acknowledgement while a search runs, the
+  /// "Change Time Slot or Cancel" either/or once it is [
+  /// AiUiProviderSearchState.exhausted]. See [AiUiConfirmChoice].
+  ///
+  /// Here rather than as two more [actions] entries because both answers are
+  /// decisions about *this* search: they travel as a `confirmation_resolved`
+  /// interaction carrying the agent's own `reference`, and the ledger stops a
+  /// second tap — which matters most for the one control that would otherwise
+  /// start a second search.
+  final AiUiConfirmChoice? confirm;
+
+  @override
+  AiUiNodeType get type => AiUiNodeType.providerSearch;
+
+  @override
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    ...baseJson(AiUiNodeType.providerSearch.wire),
+    if (statusLabel != null) 'statusLabel': statusLabel,
+    'title': title,
+    'state': state.wire,
+    if (body != null) 'body': body,
+    if (progress != null) 'progress': progress,
+    if (actions.isNotEmpty)
+      'actions': [for (final entry in actions) entry.toJson()],
+    if (confirm != null) 'confirm': confirm!.toJson(),
+  };
+
+  @override
+  List<Object?> get props => [
+    ...baseProps,
+    statusLabel,
+    title,
+    state,
+    body,
+    progress,
+    actions,
+    confirm,
+  ];
+}
+
+/// Where a job has got to, as an ordered progression — Figma `timeline-card`.
+///
+/// The lifecycle is [items], each carrying a closed [AiUiTimelineState]
+/// alongside its display strings. That is the whole point of the type: an
+/// agent that could only send "En Route — 17 Nov, 13:45" as five text nodes
+/// would leave the client matching on prose to decide which step is current,
+/// and would leave the agent unable to answer "where is my provider?" from
+/// its own payload.
+///
+/// Order is the array's order — the agent knows the sequence, and inferring it
+/// from timestamps would break for two steps logged in the same minute.
+final class AiUiServiceTimelineNode extends AiUiNode {
+  const AiUiServiceTimelineNode({
+    required super.id,
+    required this.items,
+    this.title,
+    this.status,
+    this.statusTone = AiUiTone.info,
+    this.actions = const [],
+    super.a11yLabel,
+    super.fallbackText,
+  });
+
+  /// The card's heading — "Timeline".
+  final String? title;
+
+  /// The badge opposite it — "In Progress". Summarises the whole job, where
+  /// each item's [AiUiTimelineState] describes one step.
+  final String? status;
+  final AiUiTone statusTone;
+
+  /// The steps, in order.
+  final List<AiUiTimelineItem> items;
+
+  /// Buttons drawn inside this card — "Mark as Complete". See
+  /// [AiUiCardAction].
+  final List<AiUiCardAction> actions;
+
+  @override
+  AiUiNodeType get type => AiUiNodeType.serviceTimeline;
+
+  @override
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    ...baseJson(AiUiNodeType.serviceTimeline.wire),
+    if (title != null) 'title': title,
+    if (status != null) 'status': status,
+    'statusTone': statusTone.wire,
+    'items': [for (final item in items) item.toJson()],
+    if (actions.isNotEmpty)
+      'actions': [for (final entry in actions) entry.toJson()],
+  };
+
+  @override
+  List<Object?> get props => [
+    ...baseProps,
+    title,
+    status,
+    statusTone,
+    items,
+    actions,
+  ];
+}
+
+/// A code the user reads out or shows to someone — Figma
+/// `verification-code-card`.
+///
+/// **Display-only, deliberately.** The Figma frame is a completion code the
+/// customer gives the provider once the job is done, so the user is the
+/// *source* of the value, not its typist. Modelling it as an input would add a
+/// keyboard, a validation state and a submit result for a flow where nothing
+/// is submitted — and would make the far more dangerous mistake of letting an
+/// agent put a code field in front of someone, which is what a phishing
+/// payload looks like.
+///
+/// If a flow ever genuinely needs the user to *enter* a code, that is a
+/// different node with a different interaction kind; it is not a flag on this
+/// one.
+final class AiUiVerificationCodeNode extends AiUiNode {
+  const AiUiVerificationCodeNode({
+    required super.id,
+    required this.code,
+    this.label,
+    this.body,
+    this.actions = const [],
+    super.a11yLabel,
+    super.fallbackText,
+  });
+
+  /// The pill above the code — "verification code".
+  final String? label;
+
+  /// The instruction — "Share this code with the service provider after
+  /// completing the service for confirmation".
+  final String? body;
+
+  /// The code itself. Rendered one character per box, in a left-to-right
+  /// isolate, so the digits keep their order under Arabic.
+  final String code;
+
+  /// Buttons drawn inside this card — a "Copy" through `copy_text`. See
+  /// [AiUiCardAction].
+  final List<AiUiCardAction> actions;
+
+  @override
+  AiUiNodeType get type => AiUiNodeType.verificationCode;
+
+  @override
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    ...baseJson(AiUiNodeType.verificationCode.wire),
+    if (label != null) 'label': label,
+    if (body != null) 'body': body,
+    'code': code,
+    if (actions.isNotEmpty)
+      'actions': [for (final entry in actions) entry.toJson()],
+  };
+
+  @override
+  List<Object?> get props => [...baseProps, label, body, code, actions];
 }

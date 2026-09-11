@@ -3,20 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/enums/ai_attachment_status.dart';
-import 'package:sanad_client/src/features/ai_chat/src/domain/enums/ai_recording_status.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/enums/ai_speech_status.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/services/ai_attachment_source.dart';
-import 'package:sanad_client/src/features/ai_chat/src/domain/services/ai_audio_recorder.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/services/ai_speech_recognizer.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/bloc/ai_composer_bloc.dart';
-import 'package:sanad_client/src/features/ai_chat/src/presentation/bloc/audio_playback_controller.dart';
-import 'package:sanad_client/src/features/ai_chat/src/presentation/bloc/recording_level_controller.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/bloc/speech_transcript_controller.dart';
-import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/composer/ai_attachment_tile.dart';
-import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/composer/ai_audio_preview_row.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/composer/ai_composer.dart';
-import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/composer/ai_level_meter.dart';
-import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/composer/ai_recording_bar.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/composer/ai_speech_bar.dart';
 import 'package:testing/testing.dart';
 
@@ -44,8 +36,6 @@ class MockAiComposerBloc extends MockBloc<AiComposerEvent, AiComposerState>
 
 void main() {
   late MockAiComposerBloc bloc;
-  late RecordingLevelController level;
-  late AudioPlaybackController playback;
   late List<String> sent;
   late SpeechTranscriptController transcript;
   late int voiceTaps;
@@ -58,23 +48,17 @@ void main() {
 
   setUp(() {
     bloc = MockAiComposerBloc();
-    level = RecordingLevelController();
-    playback = AudioPlaybackController();
     sent = [];
     transcript = SpeechTranscriptController();
     voiceTaps = 0;
 
-    // The hot-path controllers are real. They are plain `ValueNotifier`s with
-    // no async of their own, and several tests below exist precisely to show
-    // the widget reads them directly rather than through bloc state.
-    when(() => bloc.recordingLevel).thenReturn(level);
-    when(() => bloc.playback).thenReturn(playback);
+    // The transcript controller is real. It is a plain `ValueNotifier` with no
+    // async of its own, and a test below exists precisely to show the widget
+    // reads it directly rather than through bloc state.
     when(() => bloc.transcript).thenReturn(transcript);
   });
 
   tearDown(() {
-    level.dispose();
-    playback.dispose();
     transcript.dispose();
   });
 
@@ -103,10 +87,12 @@ void main() {
   }
 
   group('the send affordance', () {
-    testWidgets('starts as a microphone, with nothing to send', (tester) async {
+    testWidgets('starts as a dictation microphone, nothing to send', (
+      tester,
+    ) async {
       await pumpComposer(tester);
 
-      expect(find.bySemanticsLabel('ai_chat.record_start'), findsOneWidget);
+      expect(find.bySemanticsLabel('ai_chat.speech_start'), findsOneWidget);
       expect(find.bySemanticsLabel('ai_chat.send'), findsNothing);
     });
 
@@ -117,7 +103,7 @@ void main() {
       await tester.pump();
 
       expect(find.bySemanticsLabel('ai_chat.send'), findsOneWidget);
-      expect(find.bySemanticsLabel('ai_chat.record_start'), findsNothing);
+      expect(find.bySemanticsLabel('ai_chat.speech_start'), findsNothing);
     });
 
     testWidgets('is send when an attachment is staged, with no text', (
@@ -250,6 +236,11 @@ void main() {
       expect(find.text('ai_chat.attach_camera'), findsOneWidget);
       expect(find.text('ai_chat.attach_gallery'), findsOneWidget);
       expect(find.text('ai_chat.attach_document'), findsOneWidget);
+      // Attachments only. Dictation is the composer microphone and lives
+      // nowhere else, and recorded audio no longer exists at all.
+      expect(find.text('ai_chat.speech_to_text'), findsNothing);
+      expect(find.text('ai_chat.attach_record_audio'), findsNothing);
+      expect(find.text('ai_chat.record_start'), findsNothing);
       // Nothing requested yet: the widget cannot open a camera itself.
       verifyNever(() => bloc.add(any()));
     });
@@ -279,169 +270,6 @@ void main() {
 
       verifyNever(() => bloc.add(any()));
     });
-  });
-
-  group('recording', () {
-    testWidgets('the microphone records, it does not dictate', (
-      tester,
-    ) async {
-      // The inversion this redesign exists for. The primary microphone used to
-      // start dictation while recording hid in the attach sheet; now it means
-      // a voice message and nothing else.
-      await pumpComposer(tester);
-
-      await tester.longPress(find.bySemanticsLabel('ai_chat.record_start'));
-      await tester.pump();
-
-      verify(() => bloc.add(const AiComposerRecordingStarted())).called(1);
-      verifyNever(() => bloc.add(const AiComposerSpeechStarted()));
-    });
-
-    testWidgets('a tap is a hint, never a recording', (tester) async {
-      // The whole point of the hold threshold: brushing the button must not be
-      // able to put a voice message into the conversation.
-      await pumpComposer(tester);
-
-      await tester.tap(find.bySemanticsLabel('ai_chat.record_start'));
-      await tester.pump();
-
-      verify(
-        () => bloc.add(const AiComposerRecordingHintRequested()),
-      ).called(1);
-      verifyNever(() => bloc.add(const AiComposerRecordingStarted()));
-    });
-
-    testWidgets('recording swaps the input row for the bar', (tester) async {
-      await pumpComposer(
-        tester,
-        const AiComposerState(recording: AiRecordingStatus.recording),
-      );
-
-      expect(find.byType(AiRecordingContentRow), findsOneWidget);
-      expect(find.byType(TextField), findsNothing);
-      // The take is under a finger, so its controls are drags rather than
-      // buttons — see 'a held take offers drag hints, not buttons'.
-      expect(find.byType(AiRecordingHintRow), findsOneWidget);
-    });
-
-    testWidgets('the bar follows the level controller, not bloc state', (
-      tester,
-    ) async {
-      await pumpComposer(
-        tester,
-        const AiComposerState(recording: AiRecordingStatus.recording),
-      );
-
-      // No state is emitted here at all — the controller alone drives the row.
-      // That is the whole reason a microphone tick cannot rebuild the composer.
-      level.value = const AiRecordingSample(
-        level: 0.7,
-        elapsed: Duration(seconds: 12),
-      );
-      await tester.pump();
-
-      expect(find.textContaining('0:12'), findsOneWidget);
-      expect(find.byType(AiLevelMeter), findsOneWidget);
-
-      level.value = const AiRecordingSample(
-        level: 0.2,
-        elapsed: Duration(seconds: 65),
-      );
-      await tester.pump();
-
-      expect(find.textContaining('1:05'), findsOneWidget);
-    });
-
-    testWidgets('a held take offers drag hints, not buttons', (tester) async {
-      // The finger that would press a button is the finger holding the take
-      // open, so a control it cannot reach is a control that is not there.
-      await pumpComposer(
-        tester,
-        const AiComposerState(recording: AiRecordingStatus.recording),
-      );
-
-      expect(find.byType(AiRecordingHintRow), findsOneWidget);
-      expect(find.byType(AiRecordingActionsRow), findsNothing);
-      expect(find.text('ai_chat.record_slide_to_cancel'), findsOneWidget);
-      expect(find.text('ai_chat.record_slide_to_lock'), findsOneWidget);
-    });
-
-    testWidgets('a locked take swaps the hints for real controls', (
-      tester,
-    ) async {
-      await pumpComposer(
-        tester,
-        const AiComposerState(
-          recording: AiRecordingStatus.lockedRecording,
-        ),
-      );
-
-      expect(find.byType(AiRecordingActionsRow), findsOneWidget);
-      expect(find.byType(AiRecordingHintRow), findsNothing);
-      // Still the same live surface: locking is "keep going", not "start over".
-      expect(find.byType(AiRecordingContentRow), findsOneWidget);
-
-      await tester.tap(find.bySemanticsLabel('ai_chat.record_finish'));
-      await tester.pump();
-      verify(() => bloc.add(const AiComposerRecordingStopped())).called(1);
-
-      await tester.tap(find.bySemanticsLabel('ai_chat.record_delete'));
-      await tester.pump();
-      verify(() => bloc.add(const AiComposerRecordingCancelled())).called(1);
-    });
-
-    testWidgets('a finished take becomes a playable preview', (tester) async {
-      await pumpComposer(
-        tester,
-        AiComposerState(
-          recording: AiRecordingStatus.preview,
-          attachments: [audioFixture(status: AiAttachmentStatus.ready)],
-        ),
-      );
-
-      expect(find.byType(AiRecordingContentRow), findsNothing);
-      expect(find.byType(AiAudioPreviewRow), findsOneWidget);
-      expect(find.bySemanticsLabel('ai_chat.play'), findsOneWidget);
-      expect(find.bySemanticsLabel('ai_chat.record_delete'), findsOneWidget);
-      expect(find.bySemanticsLabel('ai_chat.send'), findsOneWidget);
-    });
-
-    testWidgets('the previewed take is drawn once, not twice', (tester) async {
-      // It lives in `attachments` so `canSend` and submission can see it, and
-      // the preview row already draws it — the strip must not draw it again as
-      // a mute tile beside its own playable copy.
-      await pumpComposer(
-        tester,
-        AiComposerState(
-          recording: AiRecordingStatus.preview,
-          attachments: [audioFixture(status: AiAttachmentStatus.ready)],
-        ),
-      );
-
-      expect(find.byType(AiAudioPreviewRow), findsOneWidget);
-      expect(find.byType(AiAttachmentTile), findsNothing);
-    });
-
-    testWidgets('other attachments still show beside a preview', (
-      tester,
-    ) async {
-      // Filtered by id, not by type: an image staged before the take is not
-      // the take, and hiding it would be a regression the type-filter would
-      // not have caught.
-      await pumpComposer(
-        tester,
-        AiComposerState(
-          recording: AiRecordingStatus.preview,
-          attachments: [
-            documentFixture(status: AiAttachmentStatus.ready),
-            audioFixture(status: AiAttachmentStatus.ready),
-          ],
-        ),
-      );
-
-      expect(find.byType(AiAudioPreviewRow), findsOneWidget);
-      expect(find.byType(AiAttachmentTile), findsOneWidget);
-    });
 
     testWidgets('the remove control carries an accessible label', (
       tester,
@@ -470,18 +298,6 @@ void main() {
         isTrue,
       );
     });
-
-    testWidgets('a refused microphone leaves the composer usable', (
-      tester,
-    ) async {
-      await pumpComposer(
-        tester,
-        const AiComposerState(recording: AiRecordingStatus.permissionDenied),
-      );
-
-      expect(find.byType(AiRecordingContentRow), findsNothing);
-      expect(find.byType(TextField), findsOneWidget);
-    });
   });
 
   group('the widget owns no capability', () {
@@ -492,26 +308,37 @@ void main() {
 
       // If this stops being true the composer stops being replaceable, which
       // is the entire premise of shipping temporary UI.
-      await tester.longPress(find.bySemanticsLabel('ai_chat.record_start'));
+      await tester.tap(find.bySemanticsLabel('ai_chat.speech_start'));
       await tester.pump();
 
-      verify(() => bloc.add(const AiComposerRecordingStarted())).called(1);
+      verify(() => bloc.add(const AiComposerSpeechStarted())).called(1);
     });
   });
 
-  group('the three microphone capabilities are distinct', () {
+  group('two voice capabilities, each with one affordance', () {
     testWidgets('each has its own affordance, none overloaded', (tester) async {
       await pumpComposer(tester);
 
-      // A voice note on the trailing edge, live voice beside it, and dictation
-      // inside the attach sheet. Three results, three controls — and the
-      // prominent one is the one that produces a message, not the one that
-      // produces text.
-      expect(find.bySemanticsLabel('ai_chat.record_start'), findsOneWidget);
+      // Dictation on the trailing edge, live voice beside it. Two results,
+      // two controls — and nothing anywhere that records audio.
+      expect(find.bySemanticsLabel('ai_chat.speech_start'), findsOneWidget);
       expect(find.bySemanticsLabel('ai_chat.voice_mode'), findsOneWidget);
       expect(find.bySemanticsLabel('ai_chat.attach'), findsOneWidget);
-      // The old meaning of this control is gone from the surface entirely.
-      expect(find.bySemanticsLabel('ai_chat.speech_start'), findsNothing);
+      // The retired capability has no affordance left on any surface.
+      expect(find.bySemanticsLabel('ai_chat.record_start'), findsNothing);
+      expect(find.bySemanticsLabel('ai_chat.record_stop'), findsNothing);
+      expect(find.bySemanticsLabel('ai_chat.record_delete'), findsNothing);
+    });
+
+    testWidgets('the microphone dictates on a plain tap', (tester) async {
+      await pumpComposer(tester);
+
+      await tester.tap(find.bySemanticsLabel('ai_chat.speech_start'));
+      await tester.pump();
+
+      // A tap, not a hold: there is no take to protect against a mis-tap and
+      // no coaching hint, because nothing is recorded.
+      verify(() => bloc.add(const AiComposerSpeechStarted())).called(1);
     });
 
     testWidgets('live voice is a callback, not a route the widget knows', (
@@ -532,38 +359,12 @@ void main() {
     ) async {
       await pumpComposer(
         tester,
-        const AiComposerState(recording: AiRecordingStatus.recording),
+        const AiComposerState(speech: AiSpeechStatus.listening),
       );
 
-      // The recording bar has replaced the input row, so there is no way to
+      // The dictation bar has replaced the input row, so there is no way to
       // start a competing session from here at all.
       expect(find.bySemanticsLabel('ai_chat.voice_mode'), findsNothing);
-    });
-
-    testWidgets('dictation is offered in the attach sheet', (tester) async {
-      await pumpComposer(tester);
-
-      await tester.tap(find.bySemanticsLabel('ai_chat.attach'));
-      await _openSheet(tester);
-
-      final entry = find.text('ai_chat.speech_to_text');
-      expect(entry, findsOneWidget);
-      // Recording is no longer offered here — the microphone is that path now,
-      // and a second entry point would put one capability on screen twice.
-      expect(find.text('ai_chat.attach_record_audio'), findsNothing);
-
-      // The sheet scrolls: a row can sit outside the viewport at a large text
-      // size, and tapping a clipped tile hits whatever is drawn over it.
-      await tester.ensureVisible(entry);
-      await tester.pump();
-      await tester.tap(entry);
-      await _openSheet(tester);
-
-      // Not a pick, so it dispatches the dictation event rather than an
-      // intent — the split that keeps `AiAttachmentIntent` meaning "what a
-      // picker can return".
-      verify(() => bloc.add(const AiComposerSpeechStarted())).called(1);
-      verifyNever(() => bloc.add(const AiComposerRecordingStarted()));
     });
   });
 
@@ -662,71 +463,10 @@ void main() {
 
       // The microphone gives way to send, which is the gesture every chat app
       // uses — and the reason dictation always begins from an empty composer
-      // and replaces rather than appends.
+      // and replaces rather than appends. A real assertion now that
+      // `speech_start` is the idle mic label: before, no control carried it.
       expect(find.bySemanticsLabel('ai_chat.speech_start'), findsNothing);
       expect(find.bySemanticsLabel('ai_chat.send'), findsOneWidget);
-    });
-  });
-
-  group('a voice note still looks and behaves like a voice note', () {
-    testWidgets('a staged take is an ordinary removable tile', (
-      tester,
-    ) async {
-      // The no-regression guard for the transcript work: the transcript is
-      // metadata that rides to the backend, and must change nothing here.
-      await pumpComposer(
-        tester,
-        AiComposerState(
-          recording: AiRecordingStatus.preview,
-          attachments: [
-            audioFixture(
-              status: AiAttachmentStatus.ready,
-              transcript: 'book me a plumber for tomorrow morning',
-            ),
-          ],
-        ),
-      );
-
-      // A finished take is previewed with its own waveform and playback, and
-      // the transcript riding along changes none of it.
-      expect(find.byType(AiAudioPreviewRow), findsOneWidget);
-      expect(find.bySemanticsLabel('ai_chat.play'), findsOneWidget);
-      expect(find.bySemanticsLabel('ai_chat.record_delete'), findsOneWidget);
-    });
-
-    testWidgets('the transcript is never rendered as text', (tester) async {
-      // A voice message shows a waveform, not a wall of recognised words. The
-      // transcript exists so the model can read the note, not the user.
-      await pumpComposer(
-        tester,
-        AiComposerState(
-          recording: AiRecordingStatus.preview,
-          attachments: [
-            audioFixture(
-              status: AiAttachmentStatus.ready,
-              transcript: 'book me a plumber for tomorrow morning',
-            ),
-          ],
-        ),
-      );
-
-      expect(find.text('book me a plumber for tomorrow morning'), findsNothing);
-    });
-
-    testWidgets('a take with no transcript renders identically', (
-      tester,
-    ) async {
-      await pumpComposer(
-        tester,
-        AiComposerState(
-          recording: AiRecordingStatus.preview,
-          attachments: [audioFixture(status: AiAttachmentStatus.ready)],
-        ),
-      );
-
-      expect(find.byType(AiAudioPreviewRow), findsOneWidget);
-      expect(find.bySemanticsLabel('ai_chat.play'), findsOneWidget);
-      expect(find.bySemanticsLabel('ai_chat.record_delete'), findsOneWidget);
     });
   });
 }

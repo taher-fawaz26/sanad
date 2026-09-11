@@ -230,7 +230,12 @@ class _Header extends StatelessWidget {
             Expanded(
               child: Text(
                 request.serviceName ??
-                    'client_requests.service_placeholder'.tr(),
+                    // Names itself rather than borrowing the service
+                    // picker's "Choose a service" placeholder — there is no
+                    // picker to choose with any more, so that read as an
+                    // instruction the user cannot follow. Same fallback the
+                    // list row uses.
+                    'client_requests.untitled_draft'.tr(),
                 style: typography.title3,
               ),
             ),
@@ -341,6 +346,18 @@ class _Threads extends StatelessWidget {
     final typography = context.appTypography;
 
     if (request.threads.isEmpty) {
+      // Branch on the request's own status, not on "there are no threads"
+      // (C-03). A draft has never been submitted, so telling its owner that
+      // "matching providers have been notified" is simply false — and
+      // alarming, because it says their unfinished request was broadcast to
+      // businesses. `threads.isEmpty` is true for both cases and can tell
+      // them apart only by accident.
+      if (request.status.isDraft) {
+        return AppGenericEmptyState(
+          title: 'client_requests.draft_not_submitted_title'.tr(),
+          description: 'client_requests.draft_not_submitted_description'.tr(),
+        );
+      }
       return AppGenericEmptyState(
         title: 'client_requests.no_offers_title'.tr(),
         description: 'client_requests.no_offers_description'.tr(),

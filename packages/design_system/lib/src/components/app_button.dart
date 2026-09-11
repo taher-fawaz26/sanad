@@ -1,3 +1,4 @@
+import 'package:app_animations/app_animations.dart';
 import 'package:design_system/design_system.dart';
 import 'package:design_system/src/spacing/responsive_spacing.dart';
 import 'package:design_system/src/theme/colors/app_colors.dart';
@@ -103,11 +104,24 @@ class _AppButtonState extends State<AppButton> {
       ),
     );
 
+    // Subtle tactile press feedback on top of the ripple, restrained enough
+    // not to make repeated taps feel slow. A transform, so it is gated by
+    // reduced motion (unlike the color change, which stays instant either
+    // way via `ButtonTokens.resolve`).
+    final canScale = _pressed && enabled && !AppMotion.reduceMotionOf(context);
+    final pressedScale = canScale ? 0.97 : 1.0;
+    final scaledButton = AnimatedScale(
+      scale: pressedScale,
+      duration: AppMotionDuration.fast,
+      curve: AppMotionCurve.standard,
+      child: button,
+    );
+
     final semanticButton = Semantics(
       button: true,
       enabled: enabled,
       liveRegion: widget.isLoading,
-      child: button,
+      child: scaledButton,
     );
 
     if (widget.size == AppButtonSize.block) {

@@ -236,6 +236,34 @@ void main() {
       ],
       fallbackText: 'Ahmed K. — 4.8 — AC and plumbing specialist',
     ),
+    'provider_card — expanded offer': AiUiProviderCardNode(
+      id: 'n23b',
+      providerId: 'prv_1',
+      name: 'Ahmed K.',
+      roleText: 'AC & Plumbing Specialist',
+      verified: true,
+      presentation: AiUiPresentation.expanded,
+      distanceMeters: 2500,
+      description:
+          'Premium eco-friendly yacht & vehicle cleaning specialist. '
+          'Utilizing high-gloss marine coatings and protective waxes.',
+      services: const ['Interior clean', 'Polishing'],
+      servicesLabel: 'Services',
+      photos: const [
+        AiUiImageSource.url('https://cdn.trysanad.us/work/1.jpg'),
+        AiUiImageSource.asset('service_placeholder'),
+      ],
+      proposedTimeLabel: 'Proposed Time',
+      proposedTime: DateTime.utc(2026, 11, 19, 13),
+      offer: const AiUiProviderOffer(
+        offerId: 'off_77',
+        acceptLabel: 'Accept Offer',
+        declineLabel: 'Decline',
+        acceptTemplate: "I'll take Ahmed K's offer",
+        declineTemplate: 'Not this one, thanks',
+      ),
+      fallbackText: 'Ahmed K. offers Thursday at 5:00 PM',
+    ),
     'booking_summary': const AiUiBookingSummaryNode(
       id: 'n24',
       title: 'Booking summary',
@@ -258,6 +286,28 @@ void main() {
         AiUiCardAction(label: 'Confirm', action: sendYes),
       ],
       fallbackText: 'Deep Cleaning with CleanCo Marina — 150 AED',
+    ),
+    'booking_summary — confirmed': const AiUiBookingSummaryNode(
+      id: 'n24b',
+      statusText: 'Booking Confirmed!',
+      provider: AiUiProviderRef(
+        providerId: 'prv_1',
+        name: 'Ahmed K',
+        roleText: 'AC & Plumbing Specialist',
+        image: AiUiImageSource.asset('service_placeholder'),
+        verified: true,
+      ),
+      items: [
+        AiUiDetailItem(label: 'Date', value: 'Thursday, Oct 24'),
+        AiUiDetailItem(label: 'Time', value: '5:00 PM'),
+        AiUiDetailItem(label: 'Location', value: '91 Orchard St, New York'),
+        AiUiDetailItem(
+          label: 'Booking Reference',
+          value: '#SND-8829-AQ',
+          isLtrValue: true,
+        ),
+      ],
+      fallbackText: 'Booking confirmed — #SND-8829-AQ',
     ),
     'request_summary': const AiUiRequestSummaryNode(
       id: 'n25',
@@ -283,6 +333,32 @@ void main() {
         AiUiCardAction(label: 'Confirm', action: sendYes),
       ],
       fallbackText: 'Home Cleaning tomorrow at 10:00 AM',
+    ),
+    'request_summary — photos and confirm': const AiUiRequestSummaryNode(
+      id: 'n25b',
+      items: [
+        AiUiDetailItem(label: 'Service', value: 'Home Cleaning'),
+        AiUiDetailItem(label: 'Location', value: 'Home - Dubai Marina'),
+      ],
+      summaryTitle: 'Summery',
+      summaryText: 'The customer requested a full home cleaning service.',
+      photos: [
+        AiUiImageSource.url('https://cdn.trysanad.us/requests/1.jpg'),
+        AiUiImageSource.url('https://cdn.trysanad.us/requests/2.jpg'),
+      ],
+      photosLabel: 'photos',
+      location: AiUiLocationRef(
+        addressText: 'Home - Dubai Marina',
+        action: openMarina,
+      ),
+      confirm: AiUiConfirmChoice(
+        confirmLabel: 'Confirm',
+        cancelLabel: 'Cancel',
+        confirmTemplate: 'Yes, submit my request',
+        cancelTemplate: 'Not yet',
+        reference: 'req_1042',
+      ),
+      fallbackText: 'Home Cleaning at Dubai Marina — confirm to submit',
     ),
     'payment_receipt': const AiUiPaymentReceiptNode(
       id: 'n26',
@@ -331,6 +407,16 @@ void main() {
       submitLabel: 'Submit review',
       submitTemplate: 'My review of Deep Cleaning: {comment}',
       fallbackText: 'How was your Deep Cleaning service?',
+    ),
+    'review_request — rated': const AiUiReviewRequestNode(
+      id: 'n28b',
+      serviceName: 'How was your experience?',
+      commentPlaceholder: 'Leave a comment (optional)...',
+      maxRating: 5,
+      ratingRequired: true,
+      submitLabel: 'Submit Review',
+      submitTemplate: '{rating} stars: {comment}',
+      fallbackText: 'How was your experience?',
     ),
     'location_picker': const AiUiLocationPickerNode(
       id: 'n29',
@@ -409,6 +495,113 @@ void main() {
         AiUiCardAction(label: 'Open in maps', action: openMarina),
       ],
       fallbackText: 'Is Dubai Marina the right address?',
+    ),
+    'location_confirm — selected place': const AiUiLocationConfirmNode(
+      id: 'n33b',
+      title: 'Selected Delivery Location',
+      addressText: 'Tahrir St, Downtown, Cairo',
+      confirmLabel: 'Confirm location',
+      cancelLabel: 'Cancel',
+      fallbackText: 'Deliver to Tahrir St, Downtown, Cairo?',
+    ),
+    'confirm_prompt': const AiUiConfirmPromptNode(
+      id: 'n34',
+      title: 'Are you sure you want to cancel?',
+      subjectTitle: 'AC Maintenance',
+      subjectSubtitle: 'Lina M • Tomorrow 10:00 AM',
+      tone: AiUiTone.error,
+      confirm: AiUiConfirmChoice(
+        confirmLabel: 'Yes, Cancel',
+        cancelLabel: 'Keep It',
+        confirmTemplate: 'Yes, cancel my AC Maintenance booking',
+        cancelTemplate: 'Keep it',
+        reference: 'req_1042',
+        destructive: true,
+      ),
+      fallbackText: 'Cancel your AC Maintenance booking?',
+    ),
+    'request_notice': const AiUiRequestNoticeNode(
+      id: 'n38',
+      title: 'New request detected',
+      body:
+          'To keep your bids, schedules, and specialists organized correctly, '
+          'each home service request needs its own separate conversation.',
+      requestId: 'req_4821',
+      reference: '#SND-4821',
+      status: AiUiBadge(label: 'Booking Cancelled', tone: AiUiTone.error),
+      contextLabel: 'Tied to Active Request: Plumbing Repair (#SND-4821)',
+      draftLabel: 'Draft Saved',
+      draftText: '"I also need to book an AC deep cleaning..."',
+      actions: [
+        AiUiCardAction(label: 'Contact Sanad Support', action: sendYes),
+      ],
+      confirm: AiUiConfirmChoice(
+        confirmLabel: 'Start New Conversation',
+        cancelLabel: 'Continue Plumbing Conversation',
+        confirmTemplate: 'Start a new conversation for the AC deep cleaning',
+        cancelTemplate: 'Carry on with the plumbing repair',
+        reference: 'req_4821',
+      ),
+      fallbackText: 'That needs its own conversation — shall I start one?',
+    ),
+    'service_area_notice': const AiUiServiceAreaNoticeNode(
+      id: 'n39',
+      title: 'Location outside service area',
+      addressText: 'Al Ruwais, Western Region, Abu Dhabi',
+      body: 'This address is currently outside our service area:',
+      changeLabel: 'Change Location',
+      fallbackText: 'Al Ruwais is outside our service area',
+    ),
+    'provider_search': const AiUiProviderSearchNode(
+      id: 'n35',
+      statusLabel: 'Finding providers...',
+      title: 'Searching nearby providers',
+      body:
+          "We're matching your request with available providers in your area.",
+      confirm: AiUiConfirmChoice(
+        confirmLabel: 'Continue in Background',
+        confirmTemplate: 'Keep looking and let me know',
+        reference: 'req_4821',
+      ),
+      fallbackText: 'Searching nearby providers',
+    ),
+    'service_timeline': AiUiServiceTimelineNode(
+      id: 'n36',
+      title: 'Timeline',
+      status: 'In Progress',
+      statusTone: AiUiTone.success,
+      items: [
+        AiUiTimelineItem(
+          state: AiUiTimelineState.completed,
+          title: 'Booking Confirmed',
+          description: 'Your booking has been confirmed',
+          at: DateTime.utc(2026, 11, 17, 9, 45),
+        ),
+        AiUiTimelineItem(
+          state: AiUiTimelineState.active,
+          title: 'En Route',
+          description: 'Provider is on the way',
+          at: DateTime.utc(2026, 11, 17, 10, 45),
+        ),
+        const AiUiTimelineItem(
+          state: AiUiTimelineState.pending,
+          title: 'Service Completed',
+          description: 'Awaiting service completion',
+        ),
+      ],
+      actions: const [
+        AiUiCardAction(label: 'Mark as Complete', action: sendYes),
+      ],
+      fallbackText: 'Your service is in progress — provider is on the way',
+    ),
+    'verification_code': const AiUiVerificationCodeNode(
+      id: 'n37',
+      label: 'verification code',
+      body:
+          'Share this code with the service provider after completing the '
+          'service for confirmation',
+      code: '65066',
+      fallbackText: 'Your completion code is 65066',
     ),
   };
 

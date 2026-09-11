@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/protocol_test_support.dart';
 
-/// Validation of the twelve semantic node types added for the current Figma
+/// Validation of the semantic node types added for the current Figma
 /// component set, plus the shared `actions` row every card now accepts.
 ///
 /// The round-trip suite already proves each node's *happy* path — a fully
@@ -963,9 +963,18 @@ void main() {
         'confirmLabel': 'Confirm',
         'confirmTemplate': 'I am at {location}',
       },
+      // Its `confirm` block *is* its controls, and the answer is a structured
+      // interaction — an extra `actions` row would offer a second, untracked
+      // way to resolve the same question.
+      AiUiNodeType.confirmPrompt: {
+        'type': 'confirm_prompt',
+        'id': 'cp1',
+        'title': 'Are you sure you want to cancel?',
+        'confirm': {'confirmLabel': 'Yes, Cancel', 'cancelLabel': 'Keep It'},
+      },
     };
 
-    test('is false for exactly the four that own their controls', () {
+    test('is false for exactly the types that own their controls', () {
       expect(
         AiUiNodeType.values
             .where((type) => type.isSemantic && !type.acceptsCardActions)
@@ -1004,6 +1013,575 @@ void main() {
         expect(result.hasCode(AiUiDiagnosticCode.invalidProperty), isTrue);
       });
     }
+  });
+
+  group('provider_card as an offer', () {
+    Map<String, dynamic> providerWith(Object? offer) => {
+      'type': 'provider_card',
+      'id': 'p1',
+      'providerId': 'prv_1',
+      'name': 'Ahmed K',
+      if (offer != null) 'offer': offer,
+    };
+
+    test('an offer missing a decline label drops the offer, not the card', () {
+      // An offer the user can only accept is not an offer. The provider is
+      // still worth showing, so only the controls go.
+      final node = single<AiUiProviderCardNode>(
+        providerWith({'acceptLabel': 'Accept Offer'}),
+      );
+
+      expect(node, isNotNull);
+      expect(node!.offer, isNull);
+      expect(
+        parse(providerWith({'acceptLabel': 'Accept Offer'})).hasCode(
+          AiUiDiagnosticCode.missingRequiredProperty,
+        ),
+        isTrue,
+      );
+    });
+
+    test('presentation defaults to compact and parses expanded', () {
+      expect(
+        single<AiUiProviderCardNode>(providerWith(null))!.presentation,
+        AiUiPresentation.compact,
+      );
+      expect(
+        single<AiUiProviderCardNode>({
+          ...providerWith(null),
+          'presentation': 'expanded',
+        })!.presentation,
+        AiUiPresentation.expanded,
+      );
+    });
+
+    test('an unknown presentation falls back rather than dropping', () {
+      final result = parse({
+        ...providerWith(null),
+        'presentation': 'gigantic',
+      });
+
+      expect(
+        (result.document!.blocks.single as AiUiProviderCardNode).presentation,
+        AiUiPresentation.compact,
+      );
+      expect(result.hasCode(AiUiDiagnosticCode.invalidProperty), isTrue);
+    });
+
+    test('a non-string service entry is dropped and the rest survive', () {
+      final node = single<AiUiProviderCardNode>({
+        ...providerWith(null),
+        'services': ['Interior clean', 7, 'Polishing'],
+      });
+
+      expect(node!.services, ['Interior clean', 'Polishing']);
+    });
+
+    test('a photo with no usable source is dropped and the strip lives', () {
+      final node = single<AiUiProviderCardNode>({
+        ...providerWith(null),
+        'photos': [
+          {'url': dynamicImageUrl},
+          {'url': insecureImageUrl},
+          {'assetId': ''},
+        ],
+      });
+
+      expect(node!.photos, [const AiUiImageSource.url(dynamicImageUrl)]);
+    });
+
+    test('an unparseable proposedTime drops the row, not the card', () {
+      final node = single<AiUiProviderCardNode>({
+        ...providerWith(null),
+        'proposedTime': 'thursday evening',
+      });
+
+      expect(node, isNotNull);
+      expect(node!.proposedTime, isNull);
+    });
+  });
+
+  group('confirm_prompt', () {
+    test('a prompt with no confirm block is dropped', () {
+      // The controls are the node: a question the user cannot answer would
+      // leave the agent waiting on an answer that can never arrive.
+      final result = parse({
+        'type': 'confirm_prompt',
+        'id': 'cp1',
+        'title': 'Are you sure?',
+      });
+
+      expect(result.document!.blocks, isEmpty);
+      expect(
+        result.hasCode(AiUiDiagnosticCode.missingRequiredProperty),
+        isTrue,
+      );
+    });
+
+    test('a cancel label is optional — the conversation is the way out', () {
+      final node = single<AiUiConfirmPromptNode>({
+        'type': 'confirm_prompt',
+        'id': 'cp1',
+        'title': 'Are you sure?',
+        'confirm': {'confirmLabel': 'Yes, Cancel'},
+      });
+
+      expect(node!.confirm.cancelLabel, isNull);
+      expect(node.confirm.destructive, isFalse);
+    });
+  });
+
+  group('request_summary confirm block', () {
+    Map<String, dynamic> summaryWith(Object? confirm) => {
+      'type': 'request_summary',
+      'id': 'rs1',
+      'items': [
+        {'label': 'Service', 'value': 'Home Cleaning'},
+      ],
+      if (confirm != null) 'confirm': confirm,
+    };
+
+    test('a malformed confirm drops the block, not the summary', () {
+      // The opposite of `confirm_prompt`: this card reads correctly without
+      // its controls, so losing them must not lose the request.
+      final node = single<AiUiRequestSummaryNode>(summaryWith('yes please'));
+
+      expect(node, isNotNull);
+      expect(node!.confirm, isNull);
+      expect(
+        parse(
+          summaryWith('yes please'),
+        ).hasCode(AiUiDiagnosticCode.invalidProperty),
+        isTrue,
+      );
+    });
+
+    test('an absent confirm is not reported as missing', () {
+      expect(parse(summaryWith(null)).diagnostics, isEmpty);
+    });
+  });
+
+  group('request_notice', () {
+    Map<String, dynamic> noticeWith(Map<String, dynamic> extra) => {
+      'type': 'request_notice',
+      'id': 'rn1',
+      'title': 'Ahmed K. had to cancel',
+      ...extra,
+    };
+
+    test('a notice with no title at all is dropped', () {
+      // The headline is the notice: a card that says a request changed
+      // without saying what changed is worse than no card.
+      final result = parse({'type': 'request_notice', 'id': 'rn1'});
+
+      expect(result.document!.blocks, isEmpty);
+      expect(
+        result.hasCode(AiUiDiagnosticCode.missingRequiredProperty),
+        isTrue,
+      );
+    });
+
+    test('the headline alone is a valid notice', () {
+      // The provider-late reading sends a title, a body and one control; the
+      // minimum is smaller than that, and a notice with neither a decision
+      // nor an actions row is still a statement worth drawing.
+      final result = parse(noticeWith(const {}));
+      final node = result.document!.blocks.single as AiUiRequestNoticeNode;
+
+      expect(result.diagnostics, isEmpty);
+      expect(node.title, 'Ahmed K. had to cancel');
+      expect(node.status, isNull);
+      expect(node.confirm, isNull);
+      expect(node.actions, isEmpty);
+    });
+
+    test('the status badge parses its tone', () {
+      final node = single<AiUiRequestNoticeNode>(
+        noticeWith(const {
+          'status': {'label': 'Booking Cancelled', 'tone': 'error'},
+          'reference': '#SND-4821',
+          'requestId': 'req_4821',
+        }),
+      );
+
+      expect(node!.status!.label, 'Booking Cancelled');
+      expect(node.status!.tone, AiUiTone.error);
+      expect(node.reference, '#SND-4821');
+      expect(node.requestId, 'req_4821');
+    });
+
+    test('an unknown status tone falls back to neutral', () {
+      final node = single<AiUiRequestNoticeNode>(
+        noticeWith(const {
+          'status': {'label': 'Booking Cancelled', 'tone': 'catastrophic'},
+        }),
+      );
+
+      expect(node!.status!.tone, AiUiTone.neutral);
+    });
+
+    test('a malformed status drops the badge, not the notice', () {
+      final result = parse(noticeWith(const {'status': 'cancelled'}));
+      final node = result.document!.blocks.single as AiUiRequestNoticeNode;
+
+      expect(node.status, isNull);
+      expect(node.title, 'Ahmed K. had to cancel');
+      expect(result.hasCode(AiUiDiagnosticCode.invalidProperty), isTrue);
+    });
+
+    test('the draft tile and the context chip survive independently', () {
+      final node = single<AiUiRequestNoticeNode>(
+        noticeWith(const {
+          'contextLabel': 'Tied to Active Request: Plumbing Repair',
+          'draftText': '"I also need an AC deep cleaning..."',
+        }),
+      );
+
+      expect(node!.contextLabel, 'Tied to Active Request: Plumbing Repair');
+      expect(node.draftText, '"I also need an AC deep cleaning..."');
+      // A quote with no heading above it is a complete tile.
+      expect(node.draftLabel, isNull);
+    });
+
+    test('a malformed confirm drops the decision, not the notice', () {
+      // The same rule `request_summary` follows and the opposite of
+      // `confirm_prompt`'s: the notice still reads without its controls, so
+      // losing them must not lose what the agent was reporting.
+      final result = parse(noticeWith(const {'confirm': 7}));
+      final node = result.document!.blocks.single as AiUiRequestNoticeNode;
+
+      expect(node.confirm, isNull);
+      expect(result.hasCode(AiUiDiagnosticCode.invalidProperty), isTrue);
+    });
+
+    test('an absent confirm is not reported as missing', () {
+      expect(parse(noticeWith(const {})).diagnostics, isEmpty);
+    });
+
+    test('it carries both a decision and an unrelated action row', () {
+      // The provider-cancelled reading: "Auto-Match New Provider" is an
+      // answer, "Contact Sanad Support" is a different destination. One card
+      // has to be able to offer both without the second being read as a "no".
+      final node = single<AiUiRequestNoticeNode>(
+        noticeWith({
+          'confirm': const {'confirmLabel': 'Auto-Match New Provider'},
+          'actions': [
+            {'label': 'Contact Sanad Support', 'action': sendAction('Support')},
+          ],
+        }),
+      );
+
+      expect(node!.confirm!.confirmLabel, 'Auto-Match New Provider');
+      expect(node.actions.single.label, 'Contact Sanad Support');
+    });
+  });
+
+  group('service_area_notice', () {
+    Map<String, dynamic> noticeWith(Map<String, dynamic> extra) => {
+      'type': 'service_area_notice',
+      'id': 'sa1',
+      'title': 'Location outside service area',
+      'addressText': 'Al Ruwais, Western Region, Abu Dhabi',
+      ...extra,
+    };
+
+    test('it is dropped without an address', () {
+      // Naming the refused place is the point: a coverage warning the user
+      // cannot trace to an address gives them nothing to change.
+      final result = parse({
+        'type': 'service_area_notice',
+        'id': 'sa1',
+        'title': 'Location outside service area',
+      });
+
+      expect(result.document!.blocks, isEmpty);
+      expect(
+        result.hasCode(AiUiDiagnosticCode.missingRequiredProperty),
+        isTrue,
+      );
+    });
+
+    test('it is dropped without a title', () {
+      final result = parse({
+        'type': 'service_area_notice',
+        'id': 'sa1',
+        'addressText': 'Al Ruwais',
+      });
+
+      expect(result.document!.blocks, isEmpty);
+    });
+
+    test('the tone defaults to warning', () {
+      final node = single<AiUiServiceAreaNoticeNode>(noticeWith(const {}));
+
+      expect(node!.tone, AiUiTone.warning);
+      expect(node.changeLabel, isNull);
+    });
+
+    test('an unknown tone falls back to warning rather than dropping', () {
+      final result = parse(noticeWith(const {'tone': 'apocalyptic'}));
+      final node = result.document!.blocks.single as AiUiServiceAreaNoticeNode;
+
+      expect(node.tone, AiUiTone.warning);
+      expect(result.hasCode(AiUiDiagnosticCode.invalidProperty), isTrue);
+    });
+
+    test('the change control is carried as a label, not as an action', () {
+      // The label is all the agent supplies: the control runs the *app's*
+      // location flow, exactly as `location_confirm.changeLabel` does, so
+      // there is no second location model and no agent-chosen destination.
+      final node = single<AiUiServiceAreaNoticeNode>(
+        noticeWith(const {'changeLabel': 'Change Location'}),
+      );
+
+      expect(node!.changeLabel, 'Change Location');
+    });
+  });
+
+  group('provider_search state', () {
+    Map<String, dynamic> searchWith(Map<String, dynamic> extra) => {
+      'type': 'provider_search',
+      'id': 'ps1',
+      'title': 'Searching nearby providers',
+      ...extra,
+    };
+
+    test('it defaults to searching', () {
+      final node = single<AiUiProviderSearchNode>(searchWith(const {}));
+
+      expect(node!.state, AiUiProviderSearchState.searching);
+      expect(node.state.isSearching, isTrue);
+    });
+
+    test('exhausted parses', () {
+      final result = parse(
+        searchWith(const {
+          'state': 'exhausted',
+          'title': 'No Specialists Available',
+          'body': 'No active providers could match your AC Cleaning request.',
+        }),
+      );
+      final node = result.document!.blocks.single as AiUiProviderSearchNode;
+
+      expect(result.diagnostics, isEmpty);
+      expect(node.state, AiUiProviderSearchState.exhausted);
+      expect(node.state.isSearching, isFalse);
+    });
+
+    test('an unknown state falls back to searching', () {
+      // A card that says a search is running is still true; dropping the node
+      // would leave the conversation silent about it.
+      final result = parse(searchWith(const {'state': 'quantum'}));
+      final node = result.document!.blocks.single as AiUiProviderSearchNode;
+
+      expect(node.state, AiUiProviderSearchState.searching);
+      expect(result.hasCode(AiUiDiagnosticCode.invalidProperty), isTrue);
+    });
+
+    test('it carries a confirm block for its own acknowledgement', () {
+      final node = single<AiUiProviderSearchNode>(
+        searchWith(const {
+          'confirm': {
+            'confirmLabel': 'Change Time Slot',
+            'cancelLabel': 'Cancel',
+            'reference': 'req_4821',
+          },
+          'state': 'exhausted',
+        }),
+      );
+
+      expect(node!.confirm!.confirmLabel, 'Change Time Slot');
+      expect(node.confirm!.cancelLabel, 'Cancel');
+      expect(node.confirm!.reference, 'req_4821');
+    });
+
+    test('a malformed confirm drops the controls, not the search', () {
+      final result = parse(searchWith(const {'confirm': <Object>[]}));
+      final node = result.document!.blocks.single as AiUiProviderSearchNode;
+
+      expect(node.confirm, isNull);
+      expect(node.title, 'Searching nearby providers');
+      expect(result.hasCode(AiUiDiagnosticCode.invalidProperty), isTrue);
+    });
+  });
+
+  group('service_timeline', () {
+    Map<String, dynamic> timelineWith(Object? items) => {
+      'type': 'service_timeline',
+      'id': 'tl1',
+      'title': 'Timeline',
+      if (items != null) 'items': items,
+    };
+
+    test('a timeline with no valid items is dropped', () {
+      expect(parse(timelineWith(<Object>[])).document!.blocks, isEmpty);
+    });
+
+    test('an unknown state falls back to pending rather than dropping', () {
+      // Dropping the step would silently renumber the user's progress, which
+      // is worse than drawing one step under-emphasised.
+      final result = parse(
+        timelineWith([
+          {'state': 'teleporting', 'title': 'En Route'},
+        ]),
+      );
+      final node = result.document!.blocks.single as AiUiServiceTimelineNode;
+
+      expect(node.items.single.state, AiUiTimelineState.pending);
+      expect(result.hasCode(AiUiDiagnosticCode.invalidProperty), isTrue);
+    });
+
+    test('a step with no timestamp is legal — it has not happened yet', () {
+      final node = single<AiUiServiceTimelineNode>(
+        timelineWith([
+          {'state': 'pending', 'title': 'Service Completed'},
+        ]),
+      );
+
+      expect(node!.items.single.at, isNull);
+      expect(node.items.single.isCurrent, isFalse);
+    });
+
+    test('the active step is the one reported as current', () {
+      final node = single<AiUiServiceTimelineNode>(
+        timelineWith([
+          {'state': 'completed', 'title': 'Booking Confirmed'},
+          {'state': 'active', 'title': 'En Route'},
+        ]),
+      );
+
+      expect(
+        node!.items.where((item) => item.isCurrent).single.title,
+        'En Route',
+      );
+    });
+
+    test('items beyond the limit are truncated, keeping the earliest', () {
+      final node = single<AiUiServiceTimelineNode>(
+        timelineWith([
+          for (var i = 0; i < 20; i++) {'state': 'pending', 'title': 'Step $i'},
+        ]),
+      );
+
+      expect(node!.items, hasLength(AiUiLimits.defaults.maxTimelineItems));
+      expect(node.items.first.title, 'Step 0');
+    });
+  });
+
+  group('verification_code', () {
+    test('whitespace inside a code is not part of the code', () {
+      // Every character draws its own box, so a space would draw an empty one.
+      final node = single<AiUiVerificationCodeNode>({
+        'type': 'verification_code',
+        'id': 'vc1',
+        'code': '65 066',
+      });
+
+      expect(node!.code, '65066');
+    });
+
+    test('a code longer than the limit is truncated, not rejected', () {
+      final result = parse({
+        'type': 'verification_code',
+        'id': 'vc1',
+        'code': '0123456789ABCDEFGH',
+      });
+      final node = result.document!.blocks.single as AiUiVerificationCodeNode;
+
+      expect(
+        node.code,
+        hasLength(AiUiLimits.defaults.maxVerificationCodeLength),
+      );
+      expect(result.hasCode(AiUiDiagnosticCode.limitExceeded), isTrue);
+    });
+
+    test('a card with no code is dropped', () {
+      expect(
+        parse({'type': 'verification_code', 'id': 'vc1'}).document!.blocks,
+        isEmpty,
+      );
+    });
+  });
+
+  group('review_request rating', () {
+    Map<String, dynamic> reviewWith(Map<String, dynamic> extra) => {
+      'type': 'review_request',
+      'id': 'rv1',
+      'serviceName': 'How was your experience?',
+      'submitLabel': 'Submit Review',
+      'submitTemplate': '{rating} stars: {comment}',
+      ...extra,
+    };
+
+    test('no maxRating means no rating control at all', () {
+      final node = single<AiUiReviewRequestNode>(reviewWith(const {}));
+
+      expect(node!.maxRating, isNull);
+      expect(node.ratingRequired, isFalse);
+    });
+
+    test('a scale above the protocol ceiling is clamped, not rejected', () {
+      final result = parse(reviewWith(const {'maxRating': 500}));
+      final node = result.document!.blocks.single as AiUiReviewRequestNode;
+
+      expect(node.maxRating, AiUiLimits.defaults.maxRating);
+      expect(result.hasCode(AiUiDiagnosticCode.limitExceeded), isTrue);
+    });
+
+    test('a one-star scale is clamped up — one star is not a scale', () {
+      expect(
+        single<AiUiReviewRequestNode>(
+          reviewWith(const {'maxRating': 1}),
+        )!.maxRating,
+        2,
+      );
+    });
+  });
+
+  group('booking_summary as a confirmation', () {
+    Map<String, dynamic> bookingWith(Map<String, dynamic> extra) => {
+      'type': 'booking_summary',
+      'id': 'bs1',
+      'items': [
+        {'label': 'Date', 'value': 'Thursday, Oct 24'},
+      ],
+      ...extra,
+    };
+
+    test('a provider whose id is missing drops the ref, not the card', () {
+      // A booking that cannot name its provider is still a booking the user
+      // needs to read.
+      final node = single<AiUiBookingSummaryNode>(
+        bookingWith(const {
+          'provider': {'name': 'Ahmed K'},
+        }),
+      );
+
+      expect(node, isNotNull);
+      expect(node!.provider, isNull);
+    });
+
+    test('statusTone defaults to success, because a status is an outcome', () {
+      final node = single<AiUiBookingSummaryNode>(
+        bookingWith(const {'statusText': 'Booking Confirmed!'}),
+      );
+
+      expect(node!.statusTone, AiUiTone.success);
+    });
+
+    test('verified is a flag the agent asserts, not a label it composes', () {
+      final node = single<AiUiBookingSummaryNode>(
+        bookingWith(const {
+          'provider': {
+            'providerId': 'prv_1',
+            'name': 'Ahmed K',
+            'verified': true,
+          },
+        }),
+      );
+
+      expect(node!.provider!.verified, isTrue);
+    });
   });
 
   test('a semantic node keeps its siblings when it is dropped', () {

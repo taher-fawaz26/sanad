@@ -47,8 +47,11 @@ abstract final class AppProgress {
 
     final barrierColor = context.appDialogTheme.spec.barrierColor;
 
-    showDialog<void>(
+    showAppAnimatedDialog<void>(
       context: context,
+      // Matches the helper's own default — kept explicit because the class
+      // doc above promises root-navigator targeting; not incidental.
+      // ignore: avoid_redundant_argument_values
       useRootNavigator: true,
       barrierDismissible: false,
       barrierColor: barrierColor,

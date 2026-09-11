@@ -403,15 +403,24 @@ intended assistant for the SANAD client app.
 
 ---
 
-## 11. Inbound attachments and recorded voice notes
+## 11. Inbound attachments
 
-New, and independent of §10: the client now sends attachments on the turn. It
-ships whether or not the backend reads them yet, because a voice note's words
-also reach `message` (see 11.3). Nothing below changes the outbound envelope.
+New, and independent of §10: the client sends attachments on the turn. It ships
+whether or not the backend reads them yet. Nothing below changes the outbound
+envelope.
+
+> **Changed since the first draft of this ticket — please re-read 11.2.**
+> An earlier version of this section asked you to accept **recorded voice
+> notes**: an audio attachment with `type: "audio"` and a device-produced
+> `transcript`, plus a `message` mirror so a voice-only turn was understood
+> before you read `attachments`. **That capability has been retired on the
+> client.** AI Chat no longer records or uploads audio, and no build of the app
+> will send you an audio attachment. Do not implement, and do not keep, a path
+> that expects one.
 
 ### 11.1 Accept `attachments` on the turn
 
-`POST /user-agent/chat/stream` (and the WS frame) now receives:
+`POST /user-agent/chat/stream` (and the WS frame) receives:
 
 ```json
 {
@@ -419,11 +428,13 @@ also reach `message` (see 11.3). Nothing below changes the outbound envelope.
   "message": "what does this say?",
   "attachments": [
     { "id": "68f1…", "url": "https://…" },
-    { "id": "9ab2…", "url": "https://…", "type": "audio",
-      "transcript": "book me a plumber for tomorrow morning" }
+    { "id": "9ab2…", "url": "https://…" }
   ]
 }
 ```
+
+An attachment object is **exactly `id` and `url`** — no type discriminator and
+no per-type extras.
 
 The key is **absent** when the turn carries no files, so a text-only turn is the
 same body you receive today and nothing needs to change for it.
@@ -441,43 +452,38 @@ response's own fields.
   latency for nothing. `id` is for correlation, logging, and any later operation
   that genuinely needs the record.
 - Reject nothing on the basis of the fields we *don't* send: file name, MIME
-  type, size and duration are deliberately absent, because you have the URL.
+  type and size are deliberately absent, because you have the URL.
 
-### 11.2 Do not re-transcribe a voice note
+### 11.2 There is no audio attachment, and no transcript field
 
-An audio attachment carries `type: "audio"` and, when the device produced one,
-a `transcript`.
+AI Chat supports **Speech-to-Text** as a voice input method. Speech is converted
+to text on the client and submitted as a normal text message. Recorded audio is
+not sent to the AI.
+
+So a spoken turn reaches you as:
+
+```json
+{ "conversation_id": "conv_1", "message": "book me for tomorrow at nine" }
+```
+
+— indistinguishable from a typed one, which is exactly the intent. The user sees
+the recognised words in the composer and can correct them before sending, so
+what you receive is what they meant to say.
 
 **Asks**
 
-- **When `transcript` is present, use it.** Server-side transcription must not
-  be a mandatory step of the normal recorded-audio flow — it is duplicated work
-  on a turn the client already paid for, and it is the single largest latency
-  item this change exists to remove.
-- Keep audio-specific processing for cases that explicitly need it: tone,
-  speaker, or a transcript you have concrete reason to distrust. Not routine
-  text reasoning.
-- Treat `transcript` as **best-effort and never authoritative**. It comes from
-  the device's own recogniser; it may be absent, partial or wrong. An audio
-  attachment with no `transcript` is speech you have not been given words for —
-  not an opaque blob to read as text.
-- It is **one message**. The audio and its transcript belong to the same turn
-  and must not become two conversation entries.
+- **No server-side transcription work is required for this feature.** There is
+  no audio arriving from AI Chat to transcribe.
+- **Do not implement `type: "audio"` or `attachments[].transcript`.** If either
+  is already built, it is dead code on this path; nothing will populate it.
+- **`message` is the only place words appear**, typed or dictated. Treat one
+  turn as one utterance.
+- **An attachment-only turn has `message: ""`** — an image or document with no
+  caption. §10.4 records that an empty `message` returns `200` with **zero
+  frames**, so this is the case worth handling when you start reading
+  `attachments`. It is the only remaining reason a turn can have no words.
 
-### 11.3 The `message` mirror, and why it is there
-
-When the user typed nothing and a transcript exists, `message` repeats the
-transcript. This is deliberate redundancy, for two reasons:
-
-1. §10.4 records that an empty `message` returns `200` with **zero frames**, so
-   a voice-only turn would otherwise be met with silence.
-2. It means a voice note is understood before this ticket lands.
-
-When the user typed a caption *and* recorded a note, `message` is the caption
-and the transcript stays on the attachment. They are different things; do not
-merge or discard either.
-
-### 11.4 Storage asks
+### 11.3 Storage asks
 
 - **Short-lived, signed URLs are preferred** over permanent public ones for
   private user files. `media/upload-single` currently returns a permanent URL.
@@ -489,17 +495,17 @@ merge or discard either.
   `DELETE /media/{id}` is provider-only. The client does not retry or
   compensate — it abandons the batch and tells the user.
 
-### 11.5 What the client already does
+### 11.4 What the client already does
 
 No mobile work is pending on any of the above.
 
 | | |
 |---|---|
 | Upload | `packages/media_upload` → `media/upload-single`, at send time, sequential, all-or-nothing |
-| Recording | unchanged — `record`, 5-minute cap, `FileSizePolicy` 5 MiB ceiling |
-| Transcript | `speech_to_text` on-device, captured *during* the take (it cannot transcribe a finished file), best-effort |
-| Failure | one `error` bubble; the user's text and audio stay in their own bubble and the audio stays playable |
-| Supported types | images, `pdf/doc/docx/xls/xlsx/txt`, and `audio/mp4` voice notes; max 5 per message |
+| Voice input | `speech_to_text` on-device, tapped from the composer microphone; produces editable text, never a file |
+| Recorded audio | **removed** — no recorder, no audio attachment, no audio serialization |
+| Failure | one `error` bubble; the user's text stays in their own bubble |
+| Supported types | images and `pdf/doc/docx/xls/xlsx/txt`; max 5 per message |
 
 ---
 
@@ -651,3 +657,77 @@ When a realtime transport is specified, its requirements are:
 - [ ] `interactionId` deduplicates a retried turn.
 - [ ] An empty `review_submitted.text` is accepted as an answer.
 - [ ] Turns with no `interaction` behave exactly as before.
+
+---
+
+## 13. The agent's memory record is being emitted on the text channel
+
+**Severity: P0 — this is a user-visible data leak, not a rendering nit.**
+
+### 13.1 What was observed
+
+Captured off the live socket on 2026-09-09 (client build `development`,
+`conv_1788967635676795`, `msg_15ae2f90aef0482abe7c88ec9bdfc8d4`). Whenever the
+agent recalls stored memory, the **first `text_delta` of the answer is not
+prose**. `payload.delta` at `seq: 1` is the raw memory-store result, as one
+self-contained JSON array:
+
+```json
+[{"namespace":["memories","4f455c1a-9e0b-47b4-a88b-eb5eef68b586"],
+  "key":"4036579c-d857-4a84-b844-ed78e315cdf5",
+  "value":{"kind":"Memory","content":{"content":"المستخدم مهتم بخدمات حكومة الإمارات … عند مساعدته: وجّهه إلى القنوات الرسمية …"}},
+  "created_at":"2026-09-09T12:58:20.531632+00:00",
+  "updated_at":"2026-09-09T13:00:54.261163+00:00",
+  "score":0.4937393955873758}]
+```
+
+The real answer then streams normally from `seq: 2` onward (`Based`, ` on`,
+` my`, ` memory`, …).
+
+**The same blob is also prefixed onto `message_end.payload.text`.** Because
+`message_end.text` is authoritative for the finished bubble, this is not a
+transient streaming artefact — it survives into the completed message.
+
+### 13.2 Why this is P0
+
+Rendered to the user, that single frame exposes:
+
+- internal `namespace` and `key` UUIDs of the memory store,
+- a relevance `score`,
+- a paraphrase of the user's **own earlier conversation**,
+- the agent's **private instructions to itself** ("عند مساعدته: وجّهه إلى …").
+
+None of it is an answer. To a user it reads as the app leaking their data. It
+also tore the answer's first word in half on screen ("He" … envelope …
+"re's a guide"), because the envelope landed between two prose deltas.
+
+### 13.3 What the backend must change
+
+1. **Never emit memory-store results on the `text_delta` channel.** Memory
+   recall is not assistant prose and must not share a channel with it.
+2. **Never prefix it onto `message_end.payload.text`.** That field is the
+   authoritative rendered message.
+3. If the memory record is genuinely useful to a client (today it is not),
+   send it as its own event `type` — the codec already ignores unknown types
+   forward-compatibly, so introducing one breaks no released client.
+
+### 13.4 The client does nothing about this
+
+**There is no client-side mitigation, by deliberate decision.** The chat client
+passes `text_delta` and `message_end.text` through exactly as received: it does
+not inspect, classify, strip, rewrite or suppress streamed text based on what it
+looks like.
+
+A narrow structural guard was briefly present in the codec and has been removed
+on purpose. Filtering here would be keyed to one observed payload shape, would
+silently drift the moment the memory record changed, and would hide a backend
+defect behind client code that nobody would then be motivated to remove.
+
+**So this leak is live and user-visible until 13.3 ships.** Anything on the text
+channel reaches the user's screen.
+
+### 13.5 Acceptance
+
+- [ ] No `text_delta` payload ever parses as a memory record.
+- [ ] `message_end.payload.text` contains only the assistant's answer.
+- [ ] A conversation with recalled memory renders identically to one without.

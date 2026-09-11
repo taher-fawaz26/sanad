@@ -1,8 +1,10 @@
 import 'package:ai_ui_renderer/ai_ui_renderer.dart';
+import 'package:core/core.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:localization/localization.dart';
 import 'package:sanad_client/src/features/ai_chat/src/ai_chat_config.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/platform/attachments/permissions_ai_permission_gateway.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/platform/audio/audio_session_manager.dart';
@@ -55,7 +57,11 @@ class _AiVoiceSessionScreenState extends State<AiVoiceSessionScreen> {
       // The scripted semantic beats. Opt-in: without it the session is the
       // echo-only mock it has always been, which is what the existing mock
       // tests exercise.
-      uiScript: MockVoiceScenarios.standard,
+      // Bilingual: the scripted card is agent *content*, so it has to arrive
+      // in the user's language the way a real agent's would (R-05).
+      uiScript: MockVoiceScenarios.standardFor(
+        sl<TranslateBloc>().state.languageCode,
+      ),
     ),
     permissions: const PermissionsAiPermissionGateway(),
     validator: AiChatConfig.validator(keepUnsupportedNodes: !kReleaseMode),
@@ -87,6 +93,13 @@ class _AiVoiceSessionScreenState extends State<AiVoiceSessionScreen> {
       openInMaps: 'ai_chat.open_in_maps'.tr(),
       ratingOutOfFive: 'ai_chat.rating_out_of_five'.tr(),
       distanceLabel: 'ai_chat.distance_label'.tr(),
+      // Client affordances, not agent copy: the verification mark's meaning,
+      // the disclosure control's label and the word after a star count are all
+      // decisions the renderer makes, so the words come from here.
+      verifiedLabel: 'ai_chat.verified_label'.tr(),
+      showMoreLabel: 'ai_chat.show_more'.tr(),
+      showLessLabel: 'ai_chat.show_less'.tr(),
+      ratingStarsLabel: 'ai_chat.rating_stars'.tr(),
     ),
   );
 
@@ -113,12 +126,40 @@ class _AiVoiceSessionScreenState extends State<AiVoiceSessionScreen> {
     super.dispose();
   }
 
+  /// Guards the pop, so a rebuild between the listener firing and the route
+  /// actually leaving cannot pop twice.
+  bool _popped = false;
+
+  /// Leaves the route once the session says the user asked to (A-05).
+  ///
+  /// This screen owns the route, so this is where the pop belongs — the bloc
+  /// reports that the user is leaving and a finished session; it does not know
+  /// what a route is. Before this, the close control only ended the session
+  /// and the user was stranded on a screen labelled "Session ended", with the
+  /// system back gesture as the sole way out.
+  ///
+  /// Deliberately keyed to `closeRequested` and not to `status == ended`:
+  /// backgrounding the app also ends the session, and popping for that would
+  /// take the screen away from a user who only took a call.
+  void _onCloseRequested(BuildContext context, AiVoiceSessionState state) {
+    if (_popped || !mounted) return;
+    final navigator = Navigator.of(context);
+    if (!navigator.canPop()) return;
+    _popped = true;
+    navigator.pop();
+  }
+
   @override
   Widget build(BuildContext context) => BlocProvider.value(
     value: _bloc,
     child: AiUiHost(
       environment: _environment,
-      child: const AiVoiceSessionPage(),
+      child: BlocListener<AiVoiceSessionBloc, AiVoiceSessionState>(
+        listenWhen: (previous, current) =>
+            !previous.closeRequested && current.closeRequested,
+        listener: _onCloseRequested,
+        child: const AiVoiceSessionPage(),
+      ),
     ),
   );
 }

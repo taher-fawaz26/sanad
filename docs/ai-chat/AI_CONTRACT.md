@@ -868,8 +868,7 @@ Everything above describes what you send the app. This is the other direction.
   "message": "what does this say?",
   "attachments": [
     { "id": "68f1…", "url": "https://…" },
-    { "id": "9ab2…", "url": "https://…", "type": "audio",
-      "transcript": "book me a plumber for tomorrow morning" }
+    { "id": "9ab2…", "url": "https://…" }
   ]
 }
 ```
@@ -881,8 +880,9 @@ Everything above describes what you send the app. This is the other direction.
 | `attachments` | only when the turn carries files | Never sent as `[]` |
 | `attachments[].id` | always | Opaque upload id |
 | `attachments[].url` | always | Already-resolved location |
-| `attachments[].type` | audio only | `"audio"` |
-| `attachments[].transcript` | audio, when there is one | Client-side device STT |
+
+That is the whole object. There is no `type` and no `transcript`: those
+existed for a recorded-voice-note capability the client has retired.
 
 ### Rules
 
@@ -890,24 +890,19 @@ Everything above describes what you send the app. This is the other direction.
   uploaded the file and already knows where it landed; a second lookup on your
   side is latency for nothing. `id` is there for correlation, logging and any
   later operation that genuinely needs the record.
-- **An attachment object carries nothing else.** No file name, MIME type, size,
-  local path, duration or waveform. Those describe a file you have a URL for.
-- **`transcript` is the words, produced on the device.** When it is present,
-  use it. Do not transcribe the audio again as part of the normal flow — that
-  is duplicated work on a turn the client already paid for. Re-reading the
-  audio is for cases that explicitly need it (tone, speaker, a transcript you
-  have concrete reason to distrust), not for routine text reasoning.
-- **`transcript` is best-effort and never authoritative.** It comes from the
-  device's own recogniser, which may be absent, may have lost the microphone to
-  the recorder, or may have misheard. Absent is normal, partial is possible.
-  An audio attachment with no `transcript` is speech you have not been given
-  words for — not an opaque blob to read as text.
-- **When the user typed nothing and there is a transcript, `message` repeats
-  it.** Deliberate redundancy: it means a voice note is understood by a reader
-  that only looks at `message`. Treat them as one utterance, not two.
-- **When the user typed a caption *and* recorded a note, they are different
-  things.** `message` is what they wrote; the transcript is what they said. Do
-  not merge or discard either.
+- **An attachment object carries nothing else.** No file name, MIME type, size
+  or local path. Those describe a file you have a URL for.
+- **You will never receive an audio attachment from this client.** AI Chat
+  sends only images and documents. It supports Speech-to-Text as a voice input
+  method: speech is converted to text on the device and submitted as a normal
+  text message, so spoken input reaches you in `message`, indistinguishable
+  from typing. **Do not build or keep a path that expects `type: "audio"` or a
+  `transcript` field** — nothing will populate it.
+- **`message` is what the user meant to say, however they said it.** Typed or
+  dictated, it is one utterance and the only place words appear.
+- **An attachment-only turn has `message: ""`.** An image or document with no
+  caption. Note that an empty `message` currently gets `200` and zero frames
+  from the agent, so this is a case worth handling once `attachments` is read.
 - **Ignore fields you do not recognise.** The client adds keys additively.
 
 ---
