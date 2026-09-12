@@ -5,9 +5,32 @@ import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sanad_client/src/config/app_config.dart';
 import 'package:sanad_client/src/features/account_setup/account_setup_routes.dart';
 import 'package:sanad_client/src/features/oauth/oauth_routes.dart';
 import 'package:sanad_client/src/routing/client_routes.dart';
+
+/// Decides where the splash hands off, from the settled session state.
+///
+/// Pure and synchronous so both branches are unit-testable without an ambient
+/// build flag: the widget supplies [useMockBackend] from `AppConfig`.
+///
+/// - [useMockBackend] → straight to the app shell ([ClientRoutes.home]): a
+///   build on the deterministic local journey has no live backend to
+///   authenticate against, so sign-in would only be a dead end.
+/// - signed out → the OAuth entry screen ([OAuthRoutes.screen]);
+/// - authenticated, profile set up → the app ([ClientRoutes.home]);
+/// - authenticated, name still null → resume profile setup
+///   ([AccountSetupRoutes.enterName]).
+String splashDestination({
+  required bool useMockBackend,
+  required bool isAuthenticated,
+  required bool hasName,
+}) {
+  if (useMockBackend) return ClientRoutes.home;
+  if (!isAuthenticated) return OAuthRoutes.screen;
+  return hasName ? ClientRoutes.home : AccountSetupRoutes.enterName;
+}
 
 /// Client OAuth-flow splash (Figma `6979:27187`).
 ///
@@ -56,19 +79,16 @@ class _OAuthSplashPageState extends State<OAuthSplashPage> {
 
   /// The post-splash destination, decided from the already-restored session.
   ///
-  /// Pure and synchronous: `SessionManager.restore()` ran during bootstrap, so
-  /// `AuthStatusNotifier` and `SessionManager` are authoritative by the time
-  /// this screen is on-screen. No API call is made here.
-  String _destination() {
-    final isAuthenticated =
-        sl<AuthStatusNotifier>().status == AuthStatus.authenticated;
-    if (!isAuthenticated) return OAuthRoutes.screen;
-
-    // ACTIVE session with no display name yet ⇒ profile setup never finished.
-    final hasName =
-        sl<SessionManager>().displayName?.trim().isNotEmpty ?? false;
-    return hasName ? ClientRoutes.home : AccountSetupRoutes.enterName;
-  }
+  /// Reads the authoritative session state — `SessionManager.restore()` ran
+  /// during bootstrap, so `AuthStatusNotifier` and `SessionManager` are settled
+  /// by the time this screen is on-screen — and hands it to the pure
+  /// [splashDestination] below. No API call is made here.
+  String _destination() => splashDestination(
+    useMockBackend: AppConfig.useMockBackend,
+    isAuthenticated:
+        sl<AuthStatusNotifier>().status == AuthStatus.authenticated,
+    hasName: sl<SessionManager>().displayName?.trim().isNotEmpty ?? false,
+  );
 
   @override
   Widget build(BuildContext context) {

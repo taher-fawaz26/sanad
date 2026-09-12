@@ -42,11 +42,11 @@ class AiHomeHeader extends StatelessWidget {
 
   /// Fired when the History button is tapped, or null to hide the button.
   ///
-  /// Nullable because History is a `/dev`-namespaced route registered only
-  /// under `!kReleaseMode`. Rendering the control unconditionally while its
-  /// route exists conditionally is a button that navigates nowhere in a
-  /// release build (A-10), so the caller that knows the build mode decides
-  /// whether it exists at all.
+  /// Nullable because the History route is registered only when
+  /// `AppConfig.enableAiChatShell` is set (see `AiChatModule.routes`). Rendering
+  /// the control unconditionally while its route exists conditionally is a
+  /// button that navigates nowhere (A-10), so the caller that knows the build
+  /// configuration decides whether it exists at all.
   final VoidCallback? onHistoryTap;
 
   @override

@@ -54,6 +54,28 @@ abstract final class AppImages {
   static const String aiChatProfileAvatarPlaceholder =
       '$_base/ai_chat/profile_avatar_placeholder.png';
 
+  /// Provider portrait used by the AI chat's contextual offers — Figma
+  /// `avatar` (`8433:38327`).
+  ///
+  /// Mockup artwork, exactly like [aiChatProfileAvatarPlaceholder]: it stands
+  /// in until offers carry a real provider photo from the backend.
+  static const String aiProviderAvatar =
+      '$_base/ai_chat/ai_provider_avatar.png';
+
+  /// The green bloom behind the AI hero mark — Figma `bg` (`8245:35005`),
+  /// the background instance inside `Frame 427319459` (`7118:29598`).
+  ///
+  /// A **PNG, not an SVG**: the design is two gradient shapes under a
+  /// `feGaussianBlur`, and `flutter_svg` does not implement SVG filters — a
+  /// vector export of this node renders as two hard-edged blobs. Figma's own
+  /// raster of the node is the design, blur included, on a fully transparent
+  /// ground.
+  ///
+  /// 267 square for a 200dp node: the extra 33.5 on each side is the blur's
+  /// bleed outside the frame, so the asset must be drawn at 267dp for the
+  /// glow to land where the design puts it.
+  static const String aiChatHeroBloom = '$_base/ai_chat/ai_hero_bloom.png';
+
   /// Map illustration behind the AI chat's location prompts — Figma
   /// `illustration-container` (`7960:31577` / `7960:31628`).
   ///

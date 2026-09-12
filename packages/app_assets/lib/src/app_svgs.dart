@@ -7,6 +7,11 @@ abstract final class AppSvgs {
 
   static const String _base = 'assets/svgs';
 
+  /// Upward-swiping hand — the AI chat contextual sheet's "Swipe up"
+  /// affordance (Figma `image 11 [Vectorized]`, `8428:37444`). Vertical
+  /// motion, so it is direction-neutral and must not be mirrored in RTL.
+  static const String aiSwipeUpHand = '$_base/ai_swipe_up_hand.svg';
+
   /// Image / photo placeholder — missing URL or load error (`#26A68C` tile).
   static const String imagePlaceholder = '$_base/image_placeholder.svg';
 

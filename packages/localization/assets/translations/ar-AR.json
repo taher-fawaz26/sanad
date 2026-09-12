@@ -1068,10 +1068,8 @@
     "profile": "الملف الشخصي",
     "rating_out_of_five": "من ٥",
     "remove_attachment": "إزالة المرفق",
-    "scenario_auto": "تلقائي",
     "send": "إرسال",
     "showcase_diagnostics": "التشخيصات",
-    "showcase_open": "المعرض",
     "showcase_sent": "أُرسلت كرسالة",
     "showcase_title": "معرض المكوّنات",
     "speech_cancel": "تجاهل الإملاء",
@@ -1119,7 +1117,9 @@
     "offline_banner": "لا يوجد اتصال بالإنترنت. ستُرسل الرسالة عند عودة الاتصال.",
     "send_failed_banner": "تعذر إرسال الرسالة. يرجى التحقق من اتصالك بالشبكة.",
     "offline_action_blocked": "أنت غير متصل. أعد الاتصال للرد على ذلك.",
-    "scenario_offline": "غير متصل"
+    "context_swipe_up": "اسحب لأعلى",
+    "interaction_location_selected": "استخدم {location}.",
+    "restart_conversation": "إعادة بدء المحادثة"
   },
   "enter_name": {
     "title": "ما اسمك؟",
@@ -1227,7 +1227,14 @@
     "empty_description": "تُحفظ جميع محادثاتك وطلباتك مع سند هنا بأمان وسهولة لتعود إليها في أي وقت.",
     "start_conversation": "ابدأ محادثة",
     "no_results_title": "لا توجد محادثات مطابقة",
-    "no_results_description": "لا توجد محادثة تطابق بحثك. جرّب كلمة أخرى، أو امسح البحث لعرض الكل مرة أخرى."
+    "no_results_description": "لا توجد محادثة تطابق بحثك. جرّب كلمة أخرى، أو امسح البحث لعرض الكل مرة أخرى.",
+    "rename": "إعادة تسمية",
+    "delete_conversation_title": "حذف المحادثة",
+    "delete_conversation_description": "سيؤدي هذا الإجراء إلى حذف هذه المحادثة من جانبك. لن تظهر لك بعد الآن في سجل محادثاتك.",
+    "rename_conversation_title": "إعادة تسمية المحادثة",
+    "rename_conversation_description": "حدّث اسم هذه الخدمة.",
+    "rename_conversation_field_label": "الاسم الجديد",
+    "rename_conversation_field_hint": "أدخل النص"
   },
   "profile": {
     "title": "الملف الشخصي",
@@ -1367,5 +1374,22 @@
     "empty_description": "ستظهر هنا تحديثات طلباتك.",
     "error_title": "تعذر تحميل الإشعارات",
     "error_description": "يرجى المحاولة مرة أخرى."
+  },
+  "location_picker": {
+    "title": "حدد موقع الخدمة",
+    "subtitle": "ابحث أو حرّك الخريطة أو استخدم موقعك الحالي.",
+    "search_hint": "ابحث عن مكان",
+    "specified_location": "الموقع المحدد",
+    "address_hint": "العنوان",
+    "permission_denied": "نحتاج إذن الموقع لتحديد مكانك.",
+    "permission_permanently_denied": "إذن الموقع متوقف. فعّله من الإعدادات لاستخدام موقعك الحالي.",
+    "service_disabled": "خدمات الموقع متوقفة على هذا الجهاز.",
+    "generic_error": "تعذّر تحديد موقعك. ابحث أو حرّك الخريطة بدلاً من ذلك.",
+    "location_unavailable": "تعذّر تحديد موقعك الآن. ابحث أو حرّك الخريطة.",
+    "location_timeout": "استغرق تحديد موقعك وقتاً طويلاً. حاول مرة أخرى.",
+    "address_not_found": "تعذّر العثور على عنوان لهذه النقطة.",
+    "no_results": "لا توجد أماكن مطابقة.",
+    "outside_uae": "هذا الموقع خارج نطاق الخدمة.",
+    "open_location_settings": "فتح إعدادات الموقع"
   }
 }

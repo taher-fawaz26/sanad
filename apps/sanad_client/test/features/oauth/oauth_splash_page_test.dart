@@ -60,51 +60,70 @@ void main() {
       ..unregister<SessionManager>();
   });
 
+  // The destination decision is a pure function so both the mock-build bypass
+  // and the live-build session logic are testable without an ambient compile
+  // flag — a `flutter test` run is itself a mock build (dev env, no
+  // MOCK_BACKEND override), so the widget path below can only exercise the
+  // bypass branch.
+  group('splashDestination', () {
+    test('mock build → Home, whatever the session says', () {
+      expect(
+        splashDestination(
+          useMockBackend: true,
+          isAuthenticated: false,
+          hasName: false,
+        ),
+        ClientRoutes.home,
+      );
+    });
+
+    test('live build, signed out → OAuth entry screen', () {
+      expect(
+        splashDestination(
+          useMockBackend: false,
+          isAuthenticated: false,
+          hasName: false,
+        ),
+        OAuthRoutes.screen,
+      );
+    });
+
+    test('live build, authenticated with a name → Home', () {
+      expect(
+        splashDestination(
+          useMockBackend: false,
+          isAuthenticated: true,
+          hasName: true,
+        ),
+        ClientRoutes.home,
+      );
+    });
+
+    test('live build, authenticated with no name yet → Enter Name', () {
+      // ACTIVE session whose profile setup never finished (name still null):
+      // resume it instead of dropping into an app with no name, and instead of
+      // sending an authenticated user back to the Get Started screen.
+      expect(
+        splashDestination(
+          useMockBackend: false,
+          isAuthenticated: true,
+          hasName: false,
+        ),
+        AccountSetupRoutes.enterName,
+      );
+    });
+  });
+
   testWidgets('builds and hands off without throwing', (tester) async {
     await pumpOAuthRouter(tester, _buildRouter());
     await tester.pumpAndSettle(const Duration(seconds: 1));
 
-    // The splash navigates as soon as the already-restored auth state is
-    // known, rather than lingering on an artificial timer (the entrance
-    // animation runs in parallel and never blocks the hand-off). With no
-    // session it hands off to the OAuth entry screen, without throwing.
+    // The splash navigates as soon as the settled auth state is known, rather
+    // than lingering on an artificial timer (the entrance animation runs in
+    // parallel and never blocks the hand-off). This is a mock build, so it
+    // hands off straight to the app shell, without throwing.
     expect(tester.takeException(), isNull);
-    expect(find.byType(OAuthScreen), findsOneWidget);
-    expect(find.byType(OAuthSplashPage), findsNothing);
-  });
-
-  testWidgets('signed out → OAuth entry screen', (tester) async {
-    authStatus.update(AuthStatus.unauthenticated);
-
-    await pumpOAuthRouter(tester, _buildRouter());
-    await tester.pumpAndSettle(const Duration(seconds: 1));
-
-    expect(find.byType(OAuthScreen), findsOneWidget);
-    expect(find.byType(OAuthSplashPage), findsNothing);
-  });
-
-  testWidgets('restored session with a name → Home', (tester) async {
-    authStatus.update(AuthStatus.authenticated, isProfileCompleted: true);
-    when(() => session.displayName).thenReturn('Sara');
-
-    await pumpOAuthRouter(tester, _buildRouter());
-    await tester.pumpAndSettle(const Duration(seconds: 1));
-
     expect(find.text('home'), findsOneWidget);
-    expect(find.byType(OAuthScreen), findsNothing);
-  });
-
-  testWidgets('restored session with no name yet → Enter Name', (tester) async {
-    // ACTIVE session whose profile setup never finished (name still null):
-    // resume it instead of dropping into an app with no name, and instead of
-    // sending an authenticated user back to the Get Started screen.
-    authStatus.update(AuthStatus.authenticated, isProfileCompleted: false);
-    when(() => session.displayName).thenReturn(null);
-
-    await pumpOAuthRouter(tester, _buildRouter());
-    await tester.pumpAndSettle(const Duration(seconds: 1));
-
-    expect(find.text('enter-name'), findsOneWidget);
-    expect(find.byType(OAuthScreen), findsNothing);
+    expect(find.byType(OAuthSplashPage), findsNothing);
   });
 }

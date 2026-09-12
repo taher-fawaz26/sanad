@@ -31,6 +31,22 @@ class ConversationHistoryEntry extends Equatable {
   /// When the conversation last changed; rendered as the card's timestamp.
   final DateTime updatedAt;
 
+  /// Returns a copy with the given fields replaced.
+  ///
+  /// [id] is deliberately not replaceable: it is the list's key and the
+  /// identity a rename must preserve — a renamed conversation is the same
+  /// conversation.
+  ConversationHistoryEntry copyWith({
+    String? title,
+    String? preview,
+    DateTime? updatedAt,
+  }) => ConversationHistoryEntry(
+    id: id,
+    title: title ?? this.title,
+    preview: preview ?? this.preview,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+
   @override
   List<Object?> get props => [id, title, preview, updatedAt];
 }

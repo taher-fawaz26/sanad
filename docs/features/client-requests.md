@@ -192,6 +192,35 @@ request is created by asking the agent in AI Chat. Cancel, Open Chat, Rebook
 and opening the detail screen are the only actions the card offers, and all of
 them already existed.
 
+### The mock dataset
+
+`MockClientRequestsRepository` (`src/data/mocks/mock_client_requests.dart`)
+implements the **existing** `ClientRequestsRepository` over five fixed rows, so
+a mock build renders the shipped screen — same use cases, same bloc, same card —
+with deterministic data. It is not a second feature and not a second data layer.
+
+It is selected in exactly one place: `ClientRequestsDI.init`, on
+`AppConfig.useMockBackend`. There is deliberately **no route, query parameter or
+UI control** that swaps it — the normal `/requests` and the shell branch both
+open the ordinary screen, which simply renders whatever the repository it was
+given returns. Making the choice at the DI seam is what keeps the demonstrated
+screen and the shipped screen the same screen.
+
+Two things it deliberately does not do. It does not fake the writes it cannot
+honour — `submit`, `confirm`, offer actions and draft saves answer a
+`ServerFailure`, because a stand-in that silently accepts a submission
+demonstrates something that does not exist. And it does not put the amber `missing address`
+pill on the In Progress card: that pill is derived from `missingForSubmit`,
+which is only non-empty for a draft, and teaching the card to show it regardless
+would be inventing widget-only state for a screenshot. The fixture set carries
+a second Active row — an unfinished draft — which shows the same pill *and*
+puts the screen's own "Needs your attention" section on screen, which one card
+cannot.
+
+Dates are fixed rather than relative to `DateTime.now()`: 28 Aug 2028 is a
+Monday, which is what Figma's date pill reads, and a demo that renders a
+different weekday next week is not a demo of a design.
+
 ---
 
 ## Routes
@@ -222,7 +251,15 @@ strings — `serviceName`, `areaName`, a dispute or cancel reason — are render
 
 ## Tests
 
-`apps/sanad_client/test/features/client_requests/` — 61 tests covering DTO
-round-trips (including an all-null draft), the endpoint/URL contract, the three
-409 codes and their recovery, offer accept/reject/counter, thread correlation,
-pagination and the `limit ≤ 100` cap.
+`apps/sanad_client/test/features/client_requests/` — DTO round-trips (including
+an all-null draft), the endpoint/URL contract, the three 409 codes and their
+recovery, offer accept/reject/counter, thread correlation, pagination and the
+`limit ≤ 100` cap.
+
+`data/demo_client_requests_test.dart` and
+`presentation/client_requests_demo_test.dart` cover the demo dataset: the
+content of each tab, tab switching through the real bloc, the Active tab
+rendering through the real card, RTL, and the isolation guarantees above. Tab
+switching is asserted on the bloc rather than the page because the scheduled and
+cancelled cards format a date through `context.locale`, which needs an
+`EasyLocalization` ancestor a widget test cannot bootstrap.

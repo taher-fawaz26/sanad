@@ -121,8 +121,7 @@ void main() {
         verifier = _RecordingVerifier(
           // Exactly what `resend-info` answers before `/request` has ever been
           // called: not a cooldown, an empty session.
-          onCooldown: () =>
-              _cool(canResend: false, resendsLeft: 0),
+          onCooldown: () => _cool(canResend: false, resendsLeft: 0),
         );
         return OtpBloc<String>(config: _config(verifier));
       },

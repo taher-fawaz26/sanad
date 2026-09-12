@@ -8,7 +8,7 @@ import 'package:network/network.dart';
 /// `--dart-define=ENV=<dev|qa|stage|prod>`. Defaults to `dev`.
 ///
 /// Example release build:
-/// ```
+/// ```sh
 /// flutter build apk --release --dart-define=ENV=prod
 /// ```
 abstract final class AppConfig {
@@ -21,6 +21,37 @@ abstract final class AppConfig {
 
   /// Whether this build targets the production environment.
   static bool get isProduction => _env == 'prod';
+
+  /// Whether the AI chat shell — the client's real application home (Chat /
+  /// Requests / My Life, with History reachable from its header) — is exposed
+  /// as the app's home.
+  ///
+  /// Present in every environment except production, where the live agent host
+  /// has not yet been confirmed end to end. This is independent of
+  /// [useMockBackend]: the shell is the real app either way, and
+  /// [useMockBackend] only decides whether the chat and requests behind it talk
+  /// to the backend or to the deterministic local journey. A compile-time
+  /// constant, so a production binary tree-shakes the whole shell out and
+  /// nothing can deep-link into it.
+  static const bool enableAiChatShell = _env != 'prod';
+
+  /// Whether this build talks to deterministic local stand-ins instead of the
+  /// backend.
+  ///
+  /// Environment-driven rather than navigation-driven, deliberately: there is
+  /// no demo route and no `?mock=1` to remember. A plain `flutter run` lands in
+  /// `dev` and therefore walks the mock AI journey and shows the mock requests,
+  /// which is what makes the normal app demonstrable with no special entry
+  /// point. Every other environment is always live.
+  ///
+  /// Override it to reach the real dev backend from a dev build:
+  /// ```sh
+  /// flutter run --dart-define=MOCK_BACKEND=false
+  /// ```
+  static const bool useMockBackend = bool.fromEnvironment(
+    'MOCK_BACKEND',
+    defaultValue: _env == 'dev',
+  );
 
   /// Build-time feature toggles.
   ///

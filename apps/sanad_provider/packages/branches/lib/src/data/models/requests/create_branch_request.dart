@@ -38,6 +38,7 @@ class CreateBranchRequest extends Equatable {
   final String? socialMediaLink;
   final BranchAvailabilityMode availabilityMode;
   final List<BranchAvailabilityEntity>? availability;
+
   /// Provider-service ids from `GET /provider-services`.
   ///
   /// **Required.** `POST /branches` rejects a missing or empty array — a

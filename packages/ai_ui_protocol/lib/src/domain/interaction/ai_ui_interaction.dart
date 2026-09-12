@@ -41,7 +41,8 @@ enum AiUiInteractionKind {
   confirmationResolved('confirmation_resolved'),
 
   /// A `provider_card` offer was accepted or declined.
-  offerResolved('offer_resolved');
+  offerResolved('offer_resolved')
+  ;
 
   const AiUiInteractionKind(this.wire);
 
@@ -71,7 +72,8 @@ enum AiUiInteractionStatus {
 
   /// The client could not complete the interaction. The card stays
   /// answerable — see the lifecycle in `AiUiInteractionLedger`.
-  failed('failed');
+  failed('failed')
+  ;
 
   const AiUiInteractionStatus(this.wire);
 

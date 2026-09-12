@@ -128,8 +128,7 @@ class _AiUiSurfaceState extends State<AiUiSurface> {
   AiUiInteractionLedger? _fallbackLedger;
 
   AiUiInteractionLedger _ledgerFor(AiUiEnvironment environment) =>
-      environment.ledger ??
-      (_fallbackLedger ??= AiUiInteractionLedger());
+      environment.ledger ?? (_fallbackLedger ??= AiUiInteractionLedger());
 
   @override
   void dispose() {

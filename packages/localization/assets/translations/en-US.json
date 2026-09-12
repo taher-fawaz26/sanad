@@ -1068,10 +1068,8 @@
     "profile": "Profile",
     "rating_out_of_five": "out of 5",
     "remove_attachment": "Remove attachment",
-    "scenario_auto": "Auto",
     "send": "Send",
     "showcase_diagnostics": "Diagnostics",
-    "showcase_open": "Showcase",
     "showcase_sent": "Sent as a message",
     "showcase_title": "Component showcase",
     "speech_cancel": "Discard dictation",
@@ -1119,7 +1117,9 @@
     "offline_banner": "No Internet Connection. Message will send once online.",
     "send_failed_banner": "Message failed to send. Please check your network connection.",
     "offline_action_blocked": "You're offline. Reconnect to answer this.",
-    "scenario_offline": "Offline"
+    "context_swipe_up": "Swipe up",
+    "interaction_location_selected": "Use {location}.",
+    "restart_conversation": "Restart conversation"
   },
   "enter_name": {
     "title": "What is your name?",
@@ -1227,7 +1227,14 @@
     "empty_description": "All your conversations and requests with Sanad are saved here securely and conveniently so you can return to them anytime.",
     "start_conversation": "Start a Conversation",
     "no_results_title": "No Matching Conversations",
-    "no_results_description": "No conversation matches your search. Try a different word, or clear the search to see everything again."
+    "no_results_description": "No conversation matches your search. Try a different word, or clear the search to see everything again.",
+    "rename": "Rename",
+    "delete_conversation_title": "Delete conversation",
+    "delete_conversation_description": "This action will delete this conversation from your side. You will no longer see it in your chat history.",
+    "rename_conversation_title": "Rename Conversation",
+    "rename_conversation_description": "Update the name of this service.",
+    "rename_conversation_field_label": "New name",
+    "rename_conversation_field_hint": "Input text"
   },
   "profile": {
     "title": "Profile",
@@ -1367,5 +1374,22 @@
     "empty_description": "Updates about your requests will appear here.",
     "error_title": "Could not load notifications",
     "error_description": "Please try again."
+  },
+  "location_picker": {
+    "title": "Set the service location",
+    "subtitle": "Search, move the map, or use your current location.",
+    "search_hint": "Search for a place",
+    "specified_location": "Selected location",
+    "address_hint": "Address",
+    "permission_denied": "Location access is needed to find where you are.",
+    "permission_permanently_denied": "Location access is turned off. Enable it in Settings to use your current location.",
+    "service_disabled": "Location services are off on this device.",
+    "generic_error": "Couldn't get your location. Search or move the map instead.",
+    "location_unavailable": "Couldn't get a position right now. Search or move the map instead.",
+    "location_timeout": "Getting your location took too long. Try again.",
+    "address_not_found": "Couldn't find an address for that point.",
+    "no_results": "No places found.",
+    "outside_uae": "That location is outside our service area.",
+    "open_location_settings": "Open location settings"
   }
 }

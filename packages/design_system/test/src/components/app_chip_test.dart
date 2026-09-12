@@ -36,7 +36,10 @@ void main() {
   group('AppChip', () {
     testWidgets('renders its label and calls onTap on tap', (tester) async {
       var tapped = false;
-      await _pump(tester, AppChip(label: 'Plumbing', onTap: () => tapped = true));
+      await _pump(
+        tester,
+        AppChip(label: 'Plumbing', onTap: () => tapped = true),
+      );
 
       expect(find.text('Plumbing'), findsOneWidget);
 

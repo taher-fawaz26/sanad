@@ -73,8 +73,9 @@ void main() {
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
 
-      final captured = verify(() => useCase(captureAny())).captured
-          .cast<WorkersQuery>();
+      final captured = verify(
+        () => useCase(captureAny()),
+      ).captured.cast<WorkersQuery>();
       expect(captured, isNotEmpty);
       expect(captured.last.type, WorkerType.worker);
       expect(captured.last.toQueryMap()['type'], 'worker');

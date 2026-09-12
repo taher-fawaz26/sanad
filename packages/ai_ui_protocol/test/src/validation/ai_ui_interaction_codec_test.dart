@@ -157,8 +157,10 @@ void main() {
         value: AiUiTextValue('far longer than eight'),
       );
 
-      final value =
-          AiUiInteractionCodec.encodeMap(interaction, limits: limits)['value'];
+      final value = AiUiInteractionCodec.encodeMap(
+        interaction,
+        limits: limits,
+      )['value'];
 
       expect(value, const {'text': 'far long'});
     });
@@ -174,8 +176,10 @@ void main() {
         ),
       );
 
-      final value =
-          AiUiInteractionCodec.encodeMap(interaction, limits: limits)['value'];
+      final value = AiUiInteractionCodec.encodeMap(
+        interaction,
+        limits: limits,
+      )['value'];
 
       expect(value, const {'name': 'far long', 'source': 'typed'});
     });

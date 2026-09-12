@@ -287,11 +287,10 @@ A replayable set the mobile team can point the client at, covering at minimum:
 20. a long streaming reply (60+ deltas) plus a `ui` event
 
 The mobile prototype already ships equivalents in
-`apps/sanad_client/lib/src/features/ai_chat/src/data/mock_scenarios.dart` and
-`data/scenarios/component_scenarios.dart` — match those shapes so both sides
-test the same things. The client's dev build renders every one of them at
-`/dev/ai-chat/showcase`, which is the fastest way to see what a payload
-becomes.
+`apps/sanad_client/lib/src/features/ai_chat/src/data/journey/ai_journey_blocks.dart` and
+its sibling builders — match those shapes so both sides test the same things.
+A dev build walks every one of them at `/dev/ai-chat`, which is the fastest way
+to see what a payload becomes.
 
 ---
 

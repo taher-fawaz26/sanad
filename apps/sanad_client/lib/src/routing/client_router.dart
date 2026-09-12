@@ -2,11 +2,11 @@ import 'package:account_settings/account_settings.dart';
 import 'package:auth/auth.dart';
 import 'package:core/core.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:network/network.dart';
+import 'package:sanad_client/src/config/app_config.dart';
 import 'package:sanad_client/src/di/app_di.dart';
 import 'package:sanad_client/src/features/account_setup/account_setup_cubit.dart';
 import 'package:sanad_client/src/features/account_setup/account_setup_routes.dart';
@@ -65,6 +65,12 @@ GoRouter buildClientRouter() {
     ),
     redirect: (context, state) {
       if (state.matchedLocation == AuthRoutes.splash) return null;
+
+      // A build on the deterministic local journey has no live session, so the
+      // auth gate would only bounce every protected route to a sign-in that
+      // cannot complete. Let navigation through untouched; `useMockBackend` is
+      // a compile-time constant, so this is tree-shaken out of a live build.
+      if (AppConfig.useMockBackend) return null;
 
       final isProtected = routeContext.protectedRoutes.contains(
         state.matchedLocation,
@@ -187,19 +193,22 @@ GoRouter buildClientRouter() {
       ),
       GoRoute(
         path: ClientRoutes.home,
-        // Prototype affordance: in a debug build Home *is* the AI chat
-        // shell, so the feature can be exercised on a device without
-        // navigating to the dev-only `/dev/ai-chat` path directly. A
-        // redirect rather than building `AiChatScreen` inline: the chat now
-        // lives inside `AiHomeShell`'s `StatefulShellRoute`, and building it
-        // bare here would skip that shell's header entirely. Release builds
-        // always get the real `ClientHomePage` — `kReleaseMode` is a
-        // compile-time constant, so this redirect and the shell it points to
-        // are both tree-shaken out of a release binary.
+        // When this build uses the deterministic local journey, Home *is* the
+        // AI chat shell: the client's real application shell (Chat / Requests /
+        // My Life, with History reachable from its header). A redirect rather
+        // than building `AiChatScreen` inline, because the chat lives inside
+        // `AiHomeShell`'s `StatefulShellRoute` and building it bare here would
+        // skip that shell's header entirely.
         //
-        // Remove this branch once Home has real content, or once the chat
-        // has a permanent entry point.
-        redirect: (context, state) => kReleaseMode ? null : AiChatRoutes.chat,
+        // A production build gets the placeholder `ClientHomePage` instead —
+        // `AppConfig.enableAiChatShell` is a compile-time constant, so this
+        // redirect and the shell it points to are both tree-shaken out of that
+        // binary. This is independent of `MOCK_BACKEND`: a non-production build
+        // lands on the shell whether the chat behind it talks to the agent or
+        // to the deterministic local journey. Remove this branch once the live
+        // agent contract is production-ready and the shell can front prod too.
+        redirect: (context, state) =>
+            AppConfig.enableAiChatShell ? AiChatRoutes.chat : null,
         builder: (context, state) => const ClientHomePage(),
       ),
       GoRoute(

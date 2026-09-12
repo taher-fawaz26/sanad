@@ -40,6 +40,7 @@ class ClientGlassSurface extends StatelessWidget {
     this.border,
     this.shadow,
     this.padding,
+    this.tint,
   });
 
   /// Painted over the blur.
@@ -63,6 +64,15 @@ class ClientGlassSurface extends StatelessWidget {
   /// Inside the glass, so the padding is blurred along with the rest.
   final EdgeInsetsGeometry? padding;
 
+  /// Overrides the token wash for [level].
+  ///
+  /// For a surface whose translucency is itself animated — the contextual
+  /// sheet interpolates from a pane you can see the conversation through to an
+  /// opaque one as it rises. A caller still does not choose a blur radius:
+  /// only the wash moves, so the surface stays recognisably the same material
+  /// at every point of the travel.
+  final Color? tint;
+
   @override
   Widget build(BuildContext context) {
     assert(
@@ -73,7 +83,7 @@ class ClientGlassSurface extends StatelessWidget {
       'DecoratedBox for the inner panel.',
     );
 
-    final tint = ClientGlassTokens.tintFor(context, level);
+    final tint = this.tint ?? ClientGlassTokens.tintFor(context, level);
 
     return _GlassScope(
       child: RepaintBoundary(

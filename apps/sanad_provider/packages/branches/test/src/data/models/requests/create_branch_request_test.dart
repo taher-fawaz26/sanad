@@ -151,23 +151,22 @@ extension on CreateBranchRequest {
   CreateBranchRequest copyWith({
     List<String>? servingAreaPlaceIds,
     List<String>? serviceIds,
-  }) =>
-      CreateBranchRequest(
-        branchName: branchName,
-        branchType: branchType,
-        branchAddress: branchAddress,
-        locationPlaceId: locationPlaceId,
-        branchPhone: branchPhone,
-        branchManagerId: branchManagerId,
-        lat: lat,
-        lng: lng,
-        radiusKm: radiusKm,
-        workerIds: workerIds,
-        googleMapsLink: googleMapsLink,
-        socialMediaLink: socialMediaLink,
-        availabilityMode: availabilityMode,
-        availability: availability,
-        serviceIds: serviceIds ?? this.serviceIds,
-        servingAreaPlaceIds: servingAreaPlaceIds ?? this.servingAreaPlaceIds,
-      );
+  }) => CreateBranchRequest(
+    branchName: branchName,
+    branchType: branchType,
+    branchAddress: branchAddress,
+    locationPlaceId: locationPlaceId,
+    branchPhone: branchPhone,
+    branchManagerId: branchManagerId,
+    lat: lat,
+    lng: lng,
+    radiusKm: radiusKm,
+    workerIds: workerIds,
+    googleMapsLink: googleMapsLink,
+    socialMediaLink: socialMediaLink,
+    availabilityMode: availabilityMode,
+    availability: availability,
+    serviceIds: serviceIds ?? this.serviceIds,
+    servingAreaPlaceIds: servingAreaPlaceIds ?? this.servingAreaPlaceIds,
+  );
 }

@@ -117,8 +117,7 @@ abstract final class AddBranchParamsMapper {
       socialMediaLink: branch.socialMediaLink,
       availabilityMode: branch.availabilityMode,
       availability: branch.availability,
-      servingAreaPlaceIds:
-          (branch.servingAreaPlaceIds?.isEmpty ?? true)
+      servingAreaPlaceIds: (branch.servingAreaPlaceIds?.isEmpty ?? true)
           ? null
           : branch.servingAreaPlaceIds,
       workerIds:

@@ -67,9 +67,7 @@ abstract final class BackendIconResolver {
 
       String? weight;
       for (final token in tokens) {
-        final longForm = token.startsWith('fa-')
-            ? token.substring(3)
-            : token;
+        final longForm = token.startsWith('fa-') ? token.substring(3) : token;
         if (_weightStyles.contains(longForm)) {
           weight = longForm;
           break;

@@ -119,10 +119,13 @@ void main() {
         tester,
         AppButton(label: 'Confirm', onPressed: () {}),
       );
-      expect(find.byType(SizedBox).evaluate().any((e) {
-        final sizedBox = e.widget as SizedBox;
-        return sizedBox.width == double.infinity;
-      }), isTrue);
+      expect(
+        find.byType(SizedBox).evaluate().any((e) {
+          final sizedBox = e.widget as SizedBox;
+          return sizedBox.width == double.infinity;
+        }),
+        isTrue,
+      );
     });
 
     testWidgets('AppButtonPresets.outline sets the outline variant', (
@@ -181,7 +184,9 @@ void main() {
             child: MaterialApp(
               theme: AppTheme.light(),
               home: Scaffold(
-                body: Center(child: AppButton(label: 'Confirm', onPressed: () {})),
+                body: Center(
+                  child: AppButton(label: 'Confirm', onPressed: () {}),
+                ),
               ),
             ),
           ),

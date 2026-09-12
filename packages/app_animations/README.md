@@ -62,7 +62,26 @@ AppPageEntrance(child: myPageBody)
 AppListEntrance(index: i, child: myRow)   // bounded, staggered, runs ONCE
 AppButtonFeedback(onTap: ..., child: myTappable)
 AppStateTransition(value: status, builder: (context, status) => ...)
+
+AppBreathe(child: myMark)                 // ambient loop: scale + opacity
+AppSwipeActionReveal(progress: ..., child: ...)   // swipe-pane contents
+AppSwipeActionPress(child: ...)                   // swipe-cell press scale
 ```
+
+`AppBreathe` is the ambient counterpart to `AppAmbientGradient`: a slow,
+seamless rest → peak → rest loop (4s, scale 1 → 1.02, opacity 85% → 100% by
+default), eased on each half independently so a three-keyframe design spec
+lands exactly. Decorative — frozen to its first frame under reduced motion,
+with no controller created at all in that case.
+
+`AppSwipeActionMotion` is the vocabulary a swipe-to-reveal row uses
+(`reveal`/`close` durations, curves, press scale, how far into the drag the
+contents appear). Features consume it through `design_system`'s
+`AppSwipeActions` rather than directly — the point is that no feature writes
+a duration next to a list row. `AppSwipeActionReveal` is driven by the pane's
+own `0 → 1` opening value rather than a ticker of its own, so the contents
+track the finger in both directions and there is nothing to cancel or leak
+when a row scrolls away.
 
 Apply effects to the smallest widget that needs to move — never wrap a
 whole page or a large subtree implicitly.

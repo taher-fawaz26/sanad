@@ -10,7 +10,20 @@ enum AiUiLocationSource {
   saved('saved'),
 
   /// Free text the user typed into the picker's search field.
-  typed('typed');
+  typed('typed'),
+
+  /// A place the user resolved on the app's own map — a search result, a
+  /// dropped pin, or the device position — carrying the map layer's own
+  /// identifier in `id` when one exists.
+  ///
+  /// Distinct from [typed] because the difference is what the agent may
+  /// assume: typed text is a query it still has to interpret, where this is
+  /// already resolved to a point and an address. Reporting a map selection as
+  /// [typed] would have the agent re-interpret a location it has been handed
+  /// precisely. An older consumer that does not know this member decodes it as
+  /// [typed] (see `AiUiInteractionCodec`), so adding it broke nothing.
+  map('map')
+  ;
 
   const AiUiLocationSource(this.wire);
 
@@ -47,7 +60,8 @@ enum AiUiPermissionOutcome {
   unavailable('unavailable'),
 
   /// The user backed out before the platform was asked.
-  cancelled('cancelled');
+  cancelled('cancelled')
+  ;
 
   const AiUiPermissionOutcome(this.wire);
 
@@ -220,7 +234,8 @@ enum AiUiOfferDecision {
 
   /// The user turned it down. Distinct from a *cancelled* interaction: the
   /// user answered the question, and the answer was no.
-  declined('declined');
+  declined('declined')
+  ;
 
   const AiUiOfferDecision(this.wire);
 

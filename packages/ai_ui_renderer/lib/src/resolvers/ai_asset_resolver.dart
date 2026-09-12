@@ -31,6 +31,17 @@ final class AiAssetResolver extends Equatable {
         'service_tools': AiUiAssetRef.image(AppImages.serviceTools),
         'no_branch_locations': AiUiAssetRef.image(AppImages.noBranchLocations),
         'ai_map_preview': AiUiAssetRef.image(AppImages.aiChatMapPreview),
+        'ai_provider_avatar': AiUiAssetRef.image(AppImages.aiProviderAvatar),
+        // Work-sample photographs an agent can attach to a provider card.
+        // Ordinary bundled assets like every other entry — naming an id buys
+        // no more reach than any other published name does.
+        'work_photo_ac': AiUiAssetRef.image(AppImages.serviceCoverAc),
+        'work_photo_plumbing': AiUiAssetRef.image(
+          AppImages.serviceCoverPlumbing,
+        ),
+        'work_photo_electrical': AiUiAssetRef.image(
+          AppImages.serviceCoverElectrical,
+        ),
       };
 
   final Map<String, AiUiAssetRef> assets;

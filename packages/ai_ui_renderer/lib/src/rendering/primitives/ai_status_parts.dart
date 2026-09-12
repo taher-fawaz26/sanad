@@ -695,30 +695,39 @@ class AiCodeRow extends StatelessWidget {
       excludeSemantics: true,
       child: Directionality(
         textDirection: TextDirection.ltr,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          spacing: AppSpacing.sm,
-          children: [
-            for (final character in characters)
-              Container(
-                width: AiCardTokens.codeBoxSize,
-                height: AiCardTokens.codeBoxSize,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: colors.surface,
-                  borderRadius: BorderRadius.circular(
-                    AiCardTokens.codeBoxRadius,
+        // Boxes are a fixed size, and the protocol allows a code of up to
+        // `maxVerificationCodeLength` characters — so past four or five they
+        // stop fitting the width a card has inside a chat bubble and the row
+        // overflows. `scaleDown` keeps the design at its intended size whenever
+        // there is room and shrinks only a code that genuinely cannot fit,
+        // which is the same trade `_HeroFitted` makes on the chat landing.
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            spacing: AppSpacing.sm,
+            children: [
+              for (final character in characters)
+                Container(
+                  width: AiCardTokens.codeBoxSize,
+                  height: AiCardTokens.codeBoxSize,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: colors.surface,
+                    borderRadius: BorderRadius.circular(
+                      AiCardTokens.codeBoxRadius,
+                    ),
+                    border: Border.all(color: colors.border),
                   ),
-                  border: Border.all(color: colors.border),
+                  child: Text(
+                    character,
+                    style: typography
+                        .bold(typography.title3)
+                        .copyWith(color: colors.textPrimary),
+                  ),
                 ),
-                child: Text(
-                  character,
-                  style: typography
-                      .bold(typography.title3)
-                      .copyWith(color: colors.textPrimary),
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );

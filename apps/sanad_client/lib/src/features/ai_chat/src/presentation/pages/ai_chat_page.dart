@@ -1,43 +1,47 @@
-import 'dart:math' as math;
-
 import 'package:ai_ui_renderer/ai_ui_renderer.dart';
 import 'package:app_animations/app_animations.dart';
-import 'package:app_assets/app_assets.dart';
 import 'package:design_system/design_system.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/default_ai_chat_suggestions.dart';
-import 'package:sanad_client/src/features/ai_chat/src/data/mock_ai_chat_event_source.dart';
 import 'package:sanad_client/src/features/ai_chat/src/data/mock_connectivity_service.dart';
-import 'package:sanad_client/src/features/ai_chat/src/data/mock_scenarios.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/ai_chat_message.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/actions/ai_chat_action_handlers.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/actions/ai_chat_interaction_sink.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/bloc/ai_chat_bloc.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/bloc/ai_composer_bloc.dart';
+import 'package:sanad_client/src/features/ai_chat/src/presentation/bloc/chat_context_cubit.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/ai_chat_bubble.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/ai_transport_banner.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/composer/ai_composer.dart';
+import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/context/ai_chat_context_controller.dart';
+import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/context/ai_chat_context_layer.dart';
+import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/context/ai_chat_layout.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/home/ai_chat_suggestions.dart';
+import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/home/ai_hero_visual.dart';
 import 'package:sanad_client/src/features/ai_chat/src/routes/ai_chat_routes.dart';
 import 'package:sanad_client/src/ui/background/client_ambient_background.dart';
 
-/// The chat surface: message list, scenario picker and composer.
+/// The chat surface: conversation, contextual layer and composer.
 class AiChatPage extends StatefulWidget {
   /// Creates the chat page.
-  const AiChatPage({super.key, this.mockSource, this.mockConnectivity});
+  const AiChatPage({super.key, this.mockConnectivity, this.onRestart});
 
-  /// Present only in the prototype: lets the dev scenario picker force a
-  /// specific scripted reply. A production source would not expose this.
-  final MockAiChatEventSource? mockSource;
+  /// Clears the conversation and the journey, back to the opening state.
+  ///
+  /// Non-null only against the local transport: there is nothing to restart on
+  /// a live one, and an affordance that appeared there would be a button that
+  /// silently drops a real conversation. Implemented by the screen rather than
+  /// here, because a full reset means rebuilding the bloc and the transport —
+  /// neither of which this page owns.
+  final VoidCallback? onRestart;
 
-  /// Present only in the prototype: lets the dev picker flip the device's
-  /// apparent connectivity, which is the only way to reach the offline
-  /// queueing path without a real radio. See [MockConnectivityService].
+  /// Present only against the local transport: lets a debug build flip the
+  /// device's apparent connectivity, which is the only way to reach the bloc's
+  /// offline queueing path without a real radio. See [MockConnectivityService].
   final MockConnectivityService? mockConnectivity;
 
   @override
@@ -46,7 +50,17 @@ class AiChatPage extends StatefulWidget {
 
 class _AiChatPageState extends State<AiChatPage> {
   AiUiEnvironment? _environment;
-  String? _selectedScenarioId;
+
+  /// Lets the page ask the contextual layer to move. The layer owns its own
+  /// extent; this is only a request channel, and nothing about *whether there
+  /// is content* travels through it.
+  final AiChatContextController _contextController = AiChatContextController();
+
+  @override
+  void dispose() {
+    _contextController.dispose();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -64,13 +78,21 @@ class _AiChatPageState extends State<AiChatPage> {
     ),
     actions: buildAiChatActionRegistry(
       onSendMessage: (text) => bloc.add(AiChatMessageSubmitted(text)),
-      // The agent's `request_image_upload` now reaches the composer's real
-      // picker instead of a "coming soon" snackbar.
+      // One capability set, always the app's own. The agent's
+      // `request_image_upload` reaches the composer's real picker, its
+      // `request_location_share` reaches the real map, and its
+      // `request_permission` reaches the real platform dialog — whether the
+      // reply that asked came from the backend or from the local journey.
+      // There is deliberately no mock-only capability class: a photo step that
+      // went through a fixture sheet would be the one step of the journey that
+      // proved nothing.
       capabilities: const ComposerAiChatCapabilities(),
       // A capability outcome — a granted camera, a refused location — becomes
       // an answer the agent hears, instead of ending in a snackbar it never
       // learns about.
       interactions: AiChatBlocInteractionSink(bloc),
+      // So a cancelled location sheet re-enables the card that opened it.
+      ledger: bloc.ledger,
     ),
     diagnostics: const LoggingAiUiDiagnosticsSink(),
     interactions: AiChatBlocInteractionSink(bloc),
@@ -96,11 +118,6 @@ class _AiChatPageState extends State<AiChatPage> {
       ratingStarsLabel: 'ai_chat.rating_stars'.tr(),
     ),
   );
-
-  void _selectScenario(String? id) {
-    setState(() => _selectedScenarioId = id);
-    widget.mockSource?.forcedScenarioId = id;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -167,38 +184,59 @@ class _AiChatPageState extends State<AiChatPage> {
                 listenWhen: (previous, current) =>
                     previous.notice != current.notice && current.notice != null,
                 listener: _onComposerNotice,
-                child: Column(
-                  children: [
-                    // Above the transcript, not inside it: the connection is a
-                    // property of the whole conversation rather than of one
-                    // turn, and a banner that scrolled away with the messages
-                    // would stop answering "why is nothing sending?".
-                    const _TransportBanner(),
-                    // One slot, two compositions. The hero and the transcript
-                    // are alternatives, never neighbours, so they share the
-                    // same flexible region rather than the hero floating over
-                    // the conversation in a `Stack`.
-                    //
-                    // That also fixes the hero and the suggestions colliding
-                    // when the keyboard opens: as a `Stack` overlay the hero
-                    // was positioned against the whole body and simply
-                    // overlapped whatever the shrinking `Column` pushed up
-                    // into it. Sharing the slot means the keyboard takes its
-                    // space out of the hero, which is the part that can
-                    // afford to give it.
-                    const Expanded(child: _ConversationOrHero()),
-                    if (widget.mockSource != null)
-                      _ScenarioPicker(
-                        selectedId: _selectedScenarioId,
-                        onSelected: _selectScenario,
-                        connectivity: widget.mockConnectivity,
+                // Three layers, one layout pass, and the z-order the
+                // contextual layer depends on: the conversation fills the
+                // space above the composer, the layer is painted *between* the
+                // two, and the composer is painted last so it stays above the
+                // layer — and stays interactive — at every extent. A `Column`
+                // could not paint anything between its own children; a `Stack`
+                // could not know how tall the composer is. See `AiChatLayout`.
+                child: AiChatLayout(
+                  conversation: Column(
+                    children: [
+                      // Above the transcript, not inside it: the connection is
+                      // a property of the whole conversation rather than of
+                      // one turn, and a banner that scrolled away with the
+                      // messages would stop answering "why is nothing
+                      // sending?".
+                      const _TransportBanner(),
+                      // One slot, two compositions. The hero and the
+                      // transcript are alternatives, never neighbours, so they
+                      // share the same flexible region rather than the hero
+                      // floating over the conversation in a `Stack`.
+                      //
+                      // That also fixes the hero and the suggestions colliding
+                      // when the keyboard opens: as a `Stack` overlay the hero
+                      // was positioned against the whole body and simply
+                      // overlapped whatever the shrinking `Column` pushed up
+                      // into it. Sharing the slot means the keyboard takes its
+                      // space out of the hero, which is the part that can
+                      // afford to give it.
+                      const Expanded(child: _ConversationOrHero()),
+                      // In the conversation slot rather than the composer's,
+                      // so the context layer covers it as it rises. Anything
+                      // in the composer slot is painted above the layer at
+                      // every extent — which is right for the composer and
+                      // wrong for a control that is not part of it.
+                      if (widget.onRestart != null)
+                        _RestartControl(onRestart: widget.onRestart!),
+                    ],
+                  ),
+                  // Reads `ChatContextCubit` and nothing else, and is absent
+                  // entirely when there is nothing to offer. Dragging it moves
+                  // an `AnimationController` inside the layer — no bloc state
+                  // changes, so the transcript above never rebuilds.
+                  context: _ContextLayer(controller: _contextController),
+                  composer: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _Suggestions(onSelected: (text) => _send(context, text)),
+                      AiComposer(
+                        onSend: (text) => _send(context, text),
+                        onVoice: () => _openVoice(context),
                       ),
-                    _Suggestions(onSelected: (text) => _send(context, text)),
-                    AiComposer(
-                      onSend: (text) => _send(context, text),
-                      onVoice: () => _openVoice(context),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -418,87 +456,7 @@ class _HeroFitted extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const FittedBox(
     fit: BoxFit.scaleDown,
-    child: _AiCenterVisual(),
-  );
-}
-
-/// The hero mark itself — Figma `Frame 427319459` (`7118:29598`): the green
-/// bloom with Sanad's sparkle riding on it, which together read as one
-/// visual.
-///
-/// ## Two halves, two sources
-///
-/// The **bloom is the Lottie** (`AppLottie.aiAssistant` →
-/// `AppAnimations.aiAssistantLoading`): a rotating aura ring behind an orb
-/// that fades up, looping every 5s. That file used to paint an empty box
-/// because its image layers had no images in this package — the supplied
-/// dotLottie carried them, and they are now recoloured and embedded in the
-/// composition itself, so it renders from that one file.
-///
-/// The **mark is not in the Lottie**. That animation is a bloom and nothing
-/// else: no sparkle, no check. So Figma's own exported mark still rides on
-/// top — [AppSvgs.aiChatHeroMark] is the node's exact asset, and the geometry
-/// below is transcribed from the node.
-///
-/// The hand-written breathe that used to wrap this is gone: the Lottie owns
-/// the hero's motion now, and a second rhythm on top of it would read as two
-/// animations rather than one visual. `AppLottie` keeps the reduced-motion
-/// contract (frozen to frame one, since this is identity rather than
-/// progress) and its own `RepaintBoundary`.
-class _AiCenterVisual extends StatelessWidget {
-  const _AiCenterVisual();
-
-  /// Figma's hero frame is 200dp square, with the mark at ~93.8 x 91.8
-  /// centred and nudged 6.95dp above centre (`7118:29600`).
-  static const _markWidth = 93.77;
-  static const _markHeight = 91.82;
-  static const _markOffsetY = -6.95;
-
-  /// The composition is drawn larger than the box it occupies, because most
-  /// of its 512-square canvas is empty: the widest painted element (the aura
-  /// ring) spans only ~59% of it, and the orb ~37%.
-  ///
-  /// Sized by measurement rather than by eye. Figma's bloom measures ~145dp
-  /// of green across the mark's centre line (`7118:29598`, thresholded the
-  /// same way); rendering the file at its own 340 gave 109dp on device, so
-  /// the canvas is drawn at [_compositionSize] to land on Figma's figure.
-  /// Everything painted still fits inside [_bloomSize] — 266dp of content in
-  /// a 280dp box — so nothing is clipped and only dead margin falls outside.
-  ///
-  /// Reserving the full 452 as layout would have been worse than useless:
-  /// `_HeroFitted` would scale it back down to the slot and give the 109dp
-  /// bloom straight back.
-  static const _bloomSize = 280.0;
-  static const _compositionSize = 452.0;
-
-  /// Figma applies a 179.66° rotation to the mark inside this node.
-  static const double _markTurns = 179.66 / 360;
-
-  @override
-  Widget build(BuildContext context) => SizedBox.square(
-    dimension: _bloomSize,
-    child: Stack(
-      alignment: Alignment.center,
-      children: [
-        OverflowBox(
-          maxWidth: _compositionSize,
-          maxHeight: _compositionSize,
-          child: AppLottie.aiAssistant(size: _compositionSize),
-        ),
-        Transform.translate(
-          offset: const Offset(0, _markOffsetY),
-          child: Transform.rotate(
-            angle: _markTurns * 2 * math.pi,
-            child: SvgPicture.asset(
-              AppSvgs.aiChatHeroMark,
-              package: AppAssets.package,
-              width: _markWidth,
-              height: _markHeight,
-            ),
-          ),
-        ),
-      ],
-    ),
+    child: AiHeroVisual(),
   );
 }
 
@@ -589,86 +547,74 @@ class _TransportBanner extends StatelessWidget {
       );
 }
 
-/// Prototype-only affordance for replaying a specific scripted reply,
-/// including the deliberately broken ones.
-class _ScenarioPicker extends StatefulWidget {
-  const _ScenarioPicker({
-    required this.selectedId,
-    required this.onSelected,
-    this.connectivity,
-  });
+/// Bridges `ChatContextCubit` to the presentation-only context layer.
+///
+/// The one place that knows both halves, and deliberately thin: the cubit says
+/// *whether there is content and what it is*, the layer says *how it moves*,
+/// and neither knows the other exists. When there is nothing on offer this
+/// returns null through [AiChatLayout.context], so the layer is not in the tree
+/// at all and the chat looks exactly as it does with no context.
+///
+/// The body is an `AiUiSurface` over the agent's own document — the same
+/// renderer the transcript uses, reading the same environment and the same
+/// interaction ledger from the `AiUiHost` above. That is what makes a provider
+/// card in here the *same* card, answerable once, rather than a copy of one.
+class _ContextLayer extends StatelessWidget {
+  const _ContextLayer({required this.controller});
 
-  final String? selectedId;
-  final void Function(String? id) onSelected;
-
-  /// The fake radio, when this visit has one.
-  final MockConnectivityService? connectivity;
+  final AiChatContextController controller;
 
   @override
-  State<_ScenarioPicker> createState() => _ScenarioPickerState();
+  Widget build(BuildContext context) =>
+      BlocBuilder<ChatContextCubit, ChatContextState>(
+        builder: (context, state) {
+          final content = state.content;
+          if (content == null) return const SizedBox.shrink();
+
+          return AiChatContextLayer(
+            // Keyed on the payload id so replacing the content swaps the
+            // subtree outright rather than diffing one document's widgets onto
+            // another's.
+            key: ValueKey(content.id),
+            controller: controller,
+            peekLabel: content.peekLabel,
+            // Figma's 12 dp between the two offer cards.
+            child: AiUiSurface(document: content.document, gap: AppSpacing.md),
+          );
+        },
+      );
 }
 
-class _ScenarioPickerState extends State<_ScenarioPicker> {
-  /// Extra leading chips before the scenarios: keyword-driven replay, a way
-  /// into the component showcase, and — when this visit owns a fake radio —
-  /// the offline toggle.
-  int get _leadingChips => widget.connectivity == null ? 2 : 3;
+/// Starts a fresh conversation.
+///
+/// Present only against the local transport, and only in a debug build: the
+/// route itself does not exist in release. One control, not a picker — there is
+/// one journey and nothing to choose between, and the thing most likely to be
+/// needed between two run-throughs is a clean start.
+///
+/// It is the page's only mock-aware affordance, and it shows nothing about the
+/// mock: a conversation you can restart is an ordinary thing for a chat to
+/// offer.
+class _RestartControl extends StatelessWidget {
+  const _RestartControl({required this.onRestart});
 
-  void _toggleOffline() {
-    final connectivity = widget.connectivity;
-    if (connectivity == null) return;
-    setState(() => connectivity.isOffline = !connectivity.isOffline);
-  }
+  final VoidCallback onRestart;
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    height: 48,
-    child: ListView.separated(
-      scrollDirection: Axis.horizontal,
-      padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      itemCount: mockScenarios.length + _leadingChips,
-      separatorBuilder: (_, _) => SizedBox(width: AppSpacing.sm),
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return AppChip(
-            label: 'ai_chat.scenario_auto'.tr(),
-            selected: widget.selectedId == null,
-            style: AppChipStyle.outline,
-            onTap: () => widget.onSelected(null),
-          );
-        }
-        if (index == 1) {
-          // The showcase is where a design change gets reviewed; reaching it
-          // from here means it needs no entry point of its own.
-          return AppChip(
-            label: 'ai_chat.showcase_open'.tr(),
-            style: AppChipStyle.outline,
-            icon: const Icon(Icons.grid_view_rounded),
-            onTap: () => context.push(AiChatRoutes.showcase),
-          );
-        }
-        if (index == 2 && widget.connectivity != null) {
-          // The offline edge case's fixture. It is a chip rather than a
-          // scenario because a scenario builds *assistant events*, and there
-          // are none: losing signal is a device fact. Everything after the
-          // flip is the real path — the bloc queues, the banner appears, and
-          // flipping back flushes.
-          return AppChip(
-            label: 'ai_chat.scenario_offline'.tr(),
-            selected: widget.connectivity!.isOffline,
-            style: AppChipStyle.outline,
-            icon: const Icon(Icons.wifi_off_rounded),
-            onTap: _toggleOffline,
-          );
-        }
-        final scenario = mockScenarios[index - _leadingChips];
-        return AppChip(
-          label: scenario.label,
-          selected: widget.selectedId == scenario.id,
-          style: AppChipStyle.outline,
-          onTap: () => widget.onSelected(scenario.id),
-        );
-      },
+  Widget build(BuildContext context) => Padding(
+    padding: EdgeInsetsDirectional.only(
+      start: AppSpacing.xl,
+      end: AppSpacing.xl,
+      bottom: AppSpacing.sm,
+    ),
+    child: Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: AppChip(
+        label: 'ai_chat.restart_conversation'.tr(),
+        style: AppChipStyle.outline,
+        icon: const Icon(Icons.restart_alt_rounded),
+        onTap: onRestart,
+      ),
     ),
   );
 }

@@ -148,6 +148,36 @@ the voice route ends its session.
 
 ---
 
+## The hero
+
+Figma `Frame 427319459` (`7118:29598`) — the green bloom with Sanad's sparkle
+riding on it, shown only while the screen is in its landing composition and
+**removed from the tree** once a conversation starts. `AiHeroVisual`
+(`presentation/widgets/home/ai_hero_visual.dart`).
+
+The **bloom is Figma's own `bg` node** (`8245:35005`), shipped as
+`AppImages.aiChatHeroBloom`. A PNG rather than an SVG on purpose: the design is
+two gradient shapes under an `feGaussianBlur`, and `flutter_svg` does not
+implement SVG filters, so a vector export of that node renders as two
+hard-edged blobs. The export is 267 square for a 200dp node — the extra 33.5
+per side is the blur's bleed — and is drawn at 267dp inside the 280dp box the
+composition has always occupied, so nothing around it moves.
+
+The **motion is `AppBreathe`**: a four-second loop, scale 1 → 1.02 → 1 and
+opacity 85% → 100% → 85%, eased `cubic-bezier(0.42, 0, 0.58, 1)` between each
+keyframe — which is CSS `ease-in-out`, and therefore `AppMotionCurve.standard`
+with no translation needed. It replaces the self-animating Lottie that used to
+sit here (a rotating aura ring looping every 5s): a still image under one
+animated widget reproduces the specified keyframes exactly, where a
+self-animating composition could only have had them layered on top of a second
+rhythm. `AppLottie` and its assets are untouched and still serve the loaders
+they were built for.
+
+The breathe is applied to the bloom and **not** to the mark. The specification's
+subject is the background; fading the logo to 85% would be a change to the logo.
+`AppSvgs.aiChatHeroMark` keeps the node's exact asset, size, offset and 179.66°
+rotation.
+
 ## Glass surfaces
 
 The client's chrome is translucent over the AI background rather than painted
@@ -214,27 +244,89 @@ where the primary variant resolves `main/600`. That is the AI surface's own
 green — the one `AiComposerTokens.accent` already documents — so the screen
 follows the surface it belongs to instead of repointing a shared token.
 
+### Swipe actions
+
+Figma `actions` (`8487:31503`). A swipe on a row reveals Delete then Rename as
+**one contiguous strip**: 64dp cells with no gap and no inset, full row height,
+clipped once to the card's own 20dp corner on the outer edge and a tighter 12
+where the card slides away from it. That composition is the design system's
+`AppSwipeActionsStyle.grouped`, added beside the `separated` pills the provider
+app's list rows already ship — the two are whole visual specs (cell width,
+corner treatment, neutral colours, glyph size), not one knob, and the provider
+screens are deliberately untouched.
+
+`ConversationHistorySwipeRow` names *which* actions a conversation has and
+nothing else. Delete leads, because the destructive action belongs nearest the
+swiping thumb, and it uses the design system's `destructive` variant — the
+error token, not Figma's raw `#EB4D3D`, so the affordance and its confirmation
+cannot disagree about how serious this is.
+
+Motion comes from `AppSwipeActionMotion` in `app_animations`; this feature
+declares no duration of its own, and a test enforces that. The reveal is driven
+by the pane's own `0 → 1` opening value rather than a ticker, so the contents
+track the finger in both directions and nothing is left to cancel when a row
+scrolls away.
+
+### Delete and Rename dialogs
+
+Figma `8516:32425` and `8516:32435`. Both go through `showAppDialog` — the
+app's single dialog entry point, so both get one surface, one barrier and one
+enter/exit animation, and cannot drift apart. Delete confirms with the
+destructive CTA; Rename pre-fills `AppPopoverActions.textInput`'s field with the
+current title and treats cancel, a blank name and an unchanged name identically.
+
+Two defaulted options were added to `AppPopover` for these: `alignment`
+(Figma's task modals read as a short form, so their copy sits on the leading
+edge rather than centred) and `secondaryOutlined` (Cancel is outlined here,
+filled on the alert-style popovers). Every existing caller keeps its current
+rendering.
+
+The rename field's `TextEditingController` is owned by `HistoryPage`, not by
+the dialog helper: a controller created with the dialog would have to be
+disposed when the future completes, which is the moment the exit transition
+*starts* — leaving the still-mounted field reading a disposed controller for
+the length of the animation.
+
+Delete and rename are applied to the in-memory list rather than pushed back
+through `ConversationHistorySource`. That seam is a *read*; giving it write
+methods would mean designing the mutation contract — optimistic or not, what a
+failure looks like, what a conflict looks like — for an endpoint that does not
+exist.
+
 ---
 
 ## Try it
 
-Run `sanad_client` in a debug build and navigate to `/dev/ai-chat`.
+Run `sanad_client` in a debug build and navigate to `/dev/ai-chat`. That is the
+whole setup: there is no demo route, no query parameter and no picker.
+
+A dev build defaults to `AppConfig.useMockBackend`, so the chat talks to
+`MockAiChatEventSource` — a stand-in that walks one deterministic Home Cleaning
+journey. Type *"I need a home cleaning tomorrow at 10 AM"* and it runs end to
+end: `location_picker` → `permission_request` → `media_request` →
+`provider_search` → `provider_card` → `booking_summary` + `confirm_prompt` →
+`appointment_card` + `payment_receipt` → `reminder_card` → `service_timeline` →
+`verification_code` → `review_request`.
+
+Every one of those is an existing AI UI Protocol node drawn by the existing
+renderer. **Only the backend is simulated** — the map, the permission dialog and
+the photo picker are the app's own, reached through the same capabilities a live
+agent's payload reaches. A restart chip above the composer starts a fresh run.
+
+To talk to the real agent from a dev build instead:
+
+```sh
+fvm flutter run --dart-define=MOCK_BACKEND=false
+```
+
+Requests renders the shipped screen against deterministic fixtures in the same
+mock build, at the ordinary `/dev/ai-chat/requests` — see
+[client-requests.md](client-requests.md).
 
 Conversation History is at `/dev/ai-chat/history`; append `?state=empty` for the
-empty state, following the `?mock=` / `?transport=` affordances on the chat
-route. Both states are reachable in a debug build without a rebuild and without
-any mock behaviour that could survive into release — the route itself does not
-exist there.
-
-The composer accepts free text; a scenario is picked by keyword (`services`,
-`appointment`, `branches`, `book`, `unsupported`, `malformed`, `oversized`, …).
-A chip row above the composer forces a specific scenario, including the
-deliberately broken ones and a chip that opens the component showcase.
-Twenty-six scenarios ship (twelve named here, fourteen from the component set) — `src/data/mock_scenarios.dart` assembles them and
-`src/data/scenarios/component_scenarios.dart` holds one per semantic
-component, with the state variants the design defines (an order delivered and
-active, a branch open and closed, a receipt paid and declined, a slot grid with
-one slot taken). Five are failure cases.
+empty state. Both states are reachable in a debug build without a rebuild and
+without any mock behaviour that could survive into release — the route itself
+does not exist there.
 
 ---
 
@@ -318,18 +410,20 @@ renderers are one implementation.
 | `presentation/widgets/composer/ai_speech_bar.dart` | What the composer card wears while the recogniser is listening |
 | `src/ui/glass/` | `ClientGlassSurface` / `ClientGlassTokens` — the client's translucent chrome |
 | `data/sse_frame_parser.dart` | `text/event-stream` framing — incremental, total, never throws |
-| `data/websocket_ai_chat_event_source.dart` | Reference transport (`?transport=ws`): `wss`, `Sanad-Access-Token`, reconnect |
-| `data/mock_ai_chat_event_source.dart` | Scripted replay with realistic pacing |
-| `data/mock_scenarios.dart` | The scenario list, assembled |
-| `data/scenarios/component_scenarios.dart` | One scenario per semantic component, with its state variants |
-| `data/scenarios/scenario_support.dart` | The `MockScenario` shape and the event helpers |
-| `data/showcase_fixtures.dart` | The same payloads, grouped for the showcase |
-| `presentation/pages/ai_ui_showcase_page.dart` | Dev-only catalogue: every semantic type through the real validator and surface |
+| `data/websocket_ai_chat_event_source.dart` | Reference transport: `wss`, `Sanad-Access-Token`, reconnect |
+| `data/mock_ai_chat_event_source.dart` | The local stand-in: wire envelopes, pacing, the contextual channel |
+| `data/journey/ai_journey_engine.dart` | The stand-in's memory — pure, synchronous, reads only structured answers |
+| `data/journey/ai_journey_blocks.dart` | Its payloads, in wire shape, held to the live validator's policy |
+| `data/journey/ai_journey_fixtures.dart` | The one data set every card in the journey is built from |
+| `domain/ai_contextual_event_source.dart` | Opt-in marker: a transport that also publishes contextual content |
 | `presentation/bloc/ai_chat_bloc.dart` | Conversation state; parses `ui` once at ingestion |
 | `presentation/bloc/active_stream_controller.dart` | Streaming text, bypassing bloc state |
 | `presentation/actions/ai_chat_action_handlers.dart` | The eleven handlers, the capability seam, registry builder |
 | `presentation/pages/ai_chat_screen.dart` | Owns the source for one visit |
-| `presentation/pages/ai_chat_page.dart` | Nav bar, message list, scenario picker, composer |
+| `presentation/pages/ai_chat_page.dart` | Conversation, contextual layer and composer |
+| `presentation/widgets/context/ai_chat_layout.dart` | The three-slot z-order: conversation, context layer, composer on top |
+| `presentation/widgets/context/ai_chat_context_layer.dart` | Chat-owned sliding surface — glass at rest, opaque when open |
+| `presentation/widgets/context/ai_chat_context_controller.dart` | Its collapsed/peek/expanded request channel |
 | `presentation/widgets/ai_chat_bubble.dart` | Bubble; hosts `AiUiSurface` for structured UI |
 | `module/ai_chat_module.dart` | Dev-gated route contribution, including History's `?state=` fixture switch |
 
@@ -385,11 +479,12 @@ never fire; a test asserts the two stay in step.
 2. Write an `AiNodeRenderer` in `packages/ai_ui_renderer` under
    `rendering/renderers/semantic/` and register it in
    `defaultRendererRegistry`. A test fails if you forget.
-3. Add a scenario to `data/scenarios/component_scenarios.dart` and a fixture to
-   `data/showcase_fixtures.dart` — the showcase test fails until every semantic
-   type has one.
-4. Check it on a device through `/dev/ai-chat/showcase`, in both directions and
-   at 2× text scale. Tests do not tell you whether it matches the design.
+3. If the mock journey should show it, add a builder to
+   `data/journey/ai_journey_blocks.dart`. `ai_journey_blocks_test` then holds it
+   to the live validator's policy and asserts it names a catalog type with a
+   renderer — the same bar a backend payload clears.
+4. Check it on a device through `/dev/ai-chat`, in both directions and at 2×
+   text scale. Tests do not tell you whether it matches the design.
 5. Document it in [`PROTOCOL_V1.md`](../ai-chat/PROTOCOL_V1.md) and
    [`AI_CONTRACT.md`](../ai-chat/AI_CONTRACT.md), then in the Confluence page
    the AI team builds against.
@@ -419,9 +514,13 @@ fvm flutter test apps/sanad_client/test/features/ai_chat apps/sanad_client/test/
 - `ai_ui_renderer` — 125 tests: one per node type, the interactive cards'
   input and template substitution, degradation, action dispatch, RTL
   mirroring, accessibility.
-- `ai_chat` — 593 tests across transports, the two blocs, the composer widgets
-  and the module's route tree, plus the showcase net that validates and renders
-  every fixture in both directions. The ones most worth knowing about:
+- `ai_chat` — tests across transports, the two blocs, the composer widgets and
+  the module's route tree, plus `test/features/ai_chat/journey/`, which holds
+  the mock journey to the live contract: `ai_journey_engine_test` walks the
+  state machine, `ai_journey_blocks_test` proves every payload names a catalog
+  node with a renderer and survives the release validator, and
+  `ai_journey_render_test` draws each stage through the real registry. The ones
+  most worth knowing about:
   `ai_composer_bloc_test.dart` (the dictation state machine, plus *speech is
   text, and only text* — the group that pins the product decision that a
   dictated turn stages no attachment), `ai_chat_turn_payload_test.dart`
@@ -491,7 +590,7 @@ fvm flutter test apps/sanad_client/test/features/ai_chat apps/sanad_client/test/
 - `open_url` and `open_route` are unimplemented by design.
 - Images are `assetId`-only; there are no remote images in v1.
 - Diagnostics reach `appLogger` only, which filters below `warning` in release.
-- The page chrome (composer, scenario picker, empty state) has no widget test —
+- The page chrome (composer, empty state) has no widget test —
   it needs a localization-aware pump helper that `packages/testing` does not yet
   provide. Bubble, renderer and bloc are all covered.
 - No golden tests; the repo has no golden infrastructure yet.

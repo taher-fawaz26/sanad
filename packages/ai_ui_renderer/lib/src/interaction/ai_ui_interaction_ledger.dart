@@ -31,7 +31,8 @@ enum AiUiNodeInteractionState {
 
   /// The submission did not reach the agent. Controls come back, because a
   /// network blip must not leave the user staring at a card they cannot use.
-  failed;
+  failed
+  ;
 
   /// Whether a fresh submission is allowed right now.
   bool get acceptsSubmission =>

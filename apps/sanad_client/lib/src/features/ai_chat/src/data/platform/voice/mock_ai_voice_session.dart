@@ -403,8 +403,7 @@ class MockAiVoiceSession implements AiVoiceSession {
   /// ignored rather than treated as an error.
   @override
   Future<void> submitInteraction(AiUiInteraction interaction) async {
-    if (_disposed ||
-        _current != AiVoiceSessionStatus.awaitingInteraction) {
+    if (_disposed || _current != AiVoiceSessionStatus.awaitingInteraction) {
       return;
     }
 

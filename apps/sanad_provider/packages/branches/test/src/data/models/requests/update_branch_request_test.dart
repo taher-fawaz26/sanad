@@ -18,7 +18,7 @@ void main() {
 
     test('sends both arrays when populated', () {
       final map = const UpdateBranchRequest(
-            branchName: 'Downtown Branch',
+        branchName: 'Downtown Branch',
         branchAddress: 'Building 5, Sheikh Zayed Road',
         branchPhone: '+971501234567',
         serviceIds: ['svc-1', 'svc-2'],
@@ -37,7 +37,7 @@ void main() {
         // to load would previously send `[]`. That used to be a harmless no-op
         // and is now a `400`, so an empty list has to read as "no change".
         final map = const UpdateBranchRequest(
-                branchName: 'Downtown Branch',
+          branchName: 'Downtown Branch',
           branchAddress: 'Building 5, Sheikh Zayed Road',
           branchPhone: '+971501234567',
           serviceIds: [],
@@ -61,7 +61,7 @@ void main() {
       // Unlike the two arrays above, `workerIds` has no minItems rule on
       // PATCH, so an empty list stays meaningful and is passed through.
       final map = const UpdateBranchRequest(
-            branchName: 'Downtown Branch',
+        branchName: 'Downtown Branch',
         branchAddress: 'Building 5, Sheikh Zayed Road',
         branchPhone: '+971501234567',
         workerIds: [],

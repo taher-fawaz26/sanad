@@ -3,7 +3,9 @@ import 'package:ai_ui_renderer/ai_ui_renderer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:maps/maps.dart';
 import 'package:sanad_client/src/features/ai_chat/src/ai_chat_config.dart';
+import 'package:sanad_client/src/features/ai_chat/src/domain/entities/ai_chat_attachment.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/services/ai_attachment_source.dart';
 import 'package:sanad_client/src/features/ai_chat/src/domain/services/ai_permission_gateway.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/actions/ai_chat_action_handlers.dart';
@@ -29,30 +31,36 @@ class MockAiComposerBloc extends MockBloc<AiComposerEvent, AiComposerState>
 /// Records what the handler asked for instead of touching a device.
 class RecordingCapabilities extends AiChatCapabilities {
   RecordingCapabilities({
-    this.locationOutcome = AiUiPermissionOutcome.unavailable,
+    this.locationResult,
     this.permissionOutcome = AiUiPermissionOutcome.granted,
   });
 
   final List<String> calls = [];
 
-  /// What the app's location flow reports back. `unavailable` is what this
-  /// client actually returns today — it reads no device position.
-  final AiUiPermissionOutcome locationOutcome;
+  /// What the app's location flow resolved, or `null` for a user who backed
+  /// out of the map without confirming.
+  final LocationPickerResult? locationResult;
 
   /// What the platform prompt is pretended to have returned.
   final AiUiPermissionOutcome permissionOutcome;
 
   @override
-  Future<AiUiPermissionOutcome> shareLocation(BuildContext context) async {
+  Future<LocationPickerResult?> shareLocation(BuildContext context) async {
     calls.add('shareLocation');
-    return locationOutcome;
+    return locationResult;
   }
 
   @override
-  Future<void> uploadImages(
+  Future<int?> uploadImages(
     BuildContext context, {
     AiUiMediaSource? source,
-  }) async => calls.add('uploadImages:${source?.wire}');
+  }) async {
+    calls.add('uploadImages:${source?.wire}');
+    return uploadedCount;
+  }
+
+  /// What the fake picker reports back. `null` is "backed out".
+  int? uploadedCount;
 
   @override
   Future<AiUiPermissionOutcome> ensurePermission(
@@ -291,11 +299,23 @@ void main() {
       );
     });
 
+    /// One run of the composer's picker, as the bloc publishes it: the picker
+    /// opens, then settles with whatever was staged.
+    ///
+    /// The capability reads exactly this — no new state, no callback — which is
+    /// what lets `request_image_upload` be answered without a second pipeline.
+    Stream<AiComposerState> picking({int staged = 0}) => Stream.fromIterable([
+      const AiComposerState(isPicking: true),
+      AiComposerState(
+        attachments: List.generate(staged, _staged),
+      ),
+    ]);
+
     setUp(() {
       bloc = MockAiComposerBloc();
       whenListen(
         bloc,
-        const Stream<AiComposerState>.empty(),
+        picking(staged: 2),
         initialState: const AiComposerState(),
       );
     });
@@ -330,7 +350,7 @@ void main() {
           ),
         );
 
-        await const ComposerAiChatCapabilities().uploadImages(
+        final count = await const ComposerAiChatCapabilities().uploadImages(
           captured,
           source: entry.key,
         );
@@ -338,7 +358,80 @@ void main() {
         verify(
           () => bloc.add(AiComposerAttachmentRequested(entry.value)),
         ).called(1);
+        // The capability reports what the picker actually produced, so the
+        // agent that asked for photos learns that it got two.
+        expect(count, 2);
       });
     }
+
+    testWidgets('an empty picker run reads as backing out, not zero', (
+      tester,
+    ) async {
+      whenListen(bloc, picking(), initialState: const AiComposerState());
+
+      late BuildContext captured;
+      await pumpDsWidget(
+        tester,
+        BlocProvider<AiComposerBloc>.value(
+          value: bloc,
+          child: Builder(
+            builder: (context) {
+              captured = context;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      // Nothing staged means the sheet was dismissed or everything was
+      // rejected by validation. Both are "the user did not answer", and
+      // reporting zero instead would have the agent carry on as though the
+      // photos had been refused.
+      expect(
+        await const ComposerAiChatCapabilities().uploadImages(captured),
+        isNull,
+      );
+    });
+
+    testWidgets('a picker that never opens does not hang the handler', (
+      tester,
+    ) async {
+      // The bloc refuses outright when the staging area is full, and never
+      // raises `isPicking`. Waiting for a rise that will not come would strand
+      // the card that asked.
+      whenListen(
+        bloc,
+        const Stream<AiComposerState>.empty(),
+        initialState: const AiComposerState(),
+      );
+
+      late BuildContext captured;
+      await pumpDsWidget(
+        tester,
+        BlocProvider<AiComposerBloc>.value(
+          value: bloc,
+          child: Builder(
+            builder: (context) {
+              captured = context;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      final pending = const ComposerAiChatCapabilities().uploadImages(captured);
+      await tester.pump(const Duration(seconds: 2));
+      expect(await pending, isNull);
+    });
   });
 }
+
+/// One staged photo, in the only shape the capability actually reads: it counts
+/// them and never looks inside.
+AiChatAttachment _staged(int index) => AiImageAttachment(
+  id: 'att_$index',
+  fileName: 'photo_$index.jpg',
+  sizeBytes: 1024,
+  mimeType: 'image/jpeg',
+  localPath: '/tmp/photo_$index.jpg',
+);

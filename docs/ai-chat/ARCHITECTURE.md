@@ -23,7 +23,7 @@ Related: [`PROTOCOL_V1.md`](PROTOCOL_V1.md) (the wire contract),
      domain/        AiChatMessage · AiChatEventSource
      data/          SseAiChatEventSource · SseFrameParser
                     WebSocketAiChatEventSource
-                    MockAiChatEventSource · mock_scenarios
+                    MockAiChatEventSource · journey/AiJourneyEngine
      presentation/  AiChatBloc + ActiveStreamController
                     AiChatScreen → AiChatPage → AiChatBubble/Composer
                     ai_chat_action_handlers

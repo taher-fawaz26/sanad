@@ -81,7 +81,11 @@ class _AiVoiceSessionScreenState extends State<AiVoiceSessionScreen> {
     // because a permission prompt is as meaningful here as it is in chat.
     actions: buildAiChatActionRegistry(
       onSendMessage: (_) {},
+      // The real capability set, not the stub: a voice session that offers a
+      // location prompt has to be able to open the same map chat does.
+      capabilities: const ComposerAiChatCapabilities(),
       interactions: AiVoiceInteractionSink(_bloc),
+      ledger: _bloc.ledger,
     ),
     diagnostics: const LoggingAiUiDiagnosticsSink(),
     interactions: AiVoiceInteractionSink(_bloc),

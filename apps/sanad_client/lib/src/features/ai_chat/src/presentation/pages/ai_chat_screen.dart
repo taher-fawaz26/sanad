@@ -21,6 +21,7 @@ import 'package:sanad_client/src/features/ai_chat/src/domain/services/ai_attachm
 import 'package:sanad_client/src/features/ai_chat/src/domain/services/ai_permission_gateway.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/bloc/ai_chat_bloc.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/bloc/ai_composer_bloc.dart';
+import 'package:sanad_client/src/features/ai_chat/src/presentation/bloc/chat_context_cubit.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/pages/ai_chat_page.dart';
 
 /// Which wire a visit to the chat talks to the agent over.
@@ -37,20 +38,24 @@ enum AiChatTransport {
   /// One WebSocket per visit. Retained as the reference transport.
   webSocket,
 
-  /// The scripted local source, which is also the only transport that
-  /// understands attachments today.
+  /// The local source that walks one deterministic service journey end to end.
+  ///
+  /// Not a second product: it answers on the same interfaces the live sources
+  /// do, emits the same wire envelopes, and produces the same protocol nodes.
+  /// Only the backend is simulated.
   mock
   ;
 
-  /// Reads the route's query parameters.
+  /// Which transport this build uses.
   ///
-  /// `?mock=1` wins over `?transport=`, and anything unrecognised — including
-  /// absent — is [sse], so a typo degrades to the default rather than to no
-  /// chat at all.
-  static AiChatTransport fromQuery({String? mock, String? transport}) {
-    if (mock == '1') return AiChatTransport.mock;
-    return transport == 'ws' ? AiChatTransport.webSocket : AiChatTransport.sse;
-  }
+  /// Read from configuration, never from the route. A journey that needed a URL
+  /// to reach it was a separate product with a separate entry point; this is
+  /// the normal chat, behaving deterministically because the build said so.
+  static AiChatTransport resolve() =>
+      AppConfig.useMockBackend ? AiChatTransport.mock : AiChatTransport.sse;
+
+  /// Whether this transport is a local stand-in for the agent.
+  bool get isLocal => this == AiChatTransport.mock;
 }
 
 /// Owns everything scoped to one visit to the chat.
@@ -64,48 +69,68 @@ enum AiChatTransport {
 /// released when the screen goes away.
 class AiChatScreen extends StatefulWidget {
   /// Creates the chat screen.
-  const AiChatScreen({super.key, this.transport = AiChatTransport.sse});
+  const AiChatScreen({super.key, this.transport});
 
-  /// Which transport this visit uses.
-  final AiChatTransport transport;
+  /// Which transport this visit uses, or null to let the build decide.
+  ///
+  /// Overridable for tests and for the reference WebSocket transport, which has
+  /// no UI entry point. A route never passes it: which wire a visit uses is
+  /// [AiChatTransport.resolve]'s answer, read from configuration.
+  final AiChatTransport? transport;
 
   @override
   State<AiChatScreen> createState() => _AiChatScreenState();
 }
 
 class _AiChatScreenState extends State<AiChatScreen> {
-  /// Non-null only in mock mode; the page uses it to drive the dev picker.
-  late final MockAiChatEventSource? _mock =
-      widget.transport == AiChatTransport.mock ? MockAiChatEventSource() : null;
+  /// Which run of the conversation this is.
+  ///
+  /// The reason the per-visit objects below are rebuildable rather than
+  /// `late final`. Restart bumps this, the key beneath it changes, and
+  /// Flutter disposes the old `AiChatBloc` — which closes the transport, and
+  /// with it the scenario engine, its timers and the interaction ledger. One
+  /// integer clears the transcript, the stage, the answered cards, the staged
+  /// attachments and the contextual sheet, because every one of those lives in
+  /// an object this rebuild replaces. A bloc event could only ever have cleared
+  /// the ones the bloc happens to own.
+  ///
+  /// For every other transport it never changes, and this behaves exactly as it
+  /// always did.
+  int _epoch = 0;
 
-  /// Non-null only in mock mode, for the same reason [_mock] is: it is how the
-  /// dev picker's Offline chip reaches the bloc's queueing path without any
-  /// mock behaviour existing on a live transport.
-  late final MockConnectivityService? _mockConnectivity =
-      widget.transport == AiChatTransport.mock
-      ? MockConnectivityService()
-      : null;
+  /// Resolved once per visit rather than per build, so a rebuild cannot land
+  /// the screen on a different wire than the one its bloc is talking over.
+  late final AiChatTransport _transport =
+      widget.transport ?? AiChatTransport.resolve();
 
   /// Stable for this visit, so the server keeps conversation memory across
   /// turns — including across the separate HTTP request each SSE turn makes.
+  ///
+  /// Deliberately not reset by [_restart]: the mock transport keeps no
+  /// server-side memory, and a live transport is never restarted.
   final String _conversationId =
       'conv_${DateTime.now().microsecondsSinceEpoch}';
 
   late final AiPermissionGateway _permissions =
       const PermissionsAiPermissionGateway();
 
+  /// Non-null only in mock mode.
+  ///
+  /// The page needs it for two things a live transport neither has nor should:
+  /// the restart affordance, and the contextual content channel the journey
+  /// publishes on.
+  MockAiChatEventSource? _mock;
+
+  /// The fake radio. Both local transports get one, because it is the only way
+  /// to reach the bloc's offline queueing path without a real one.
+  MockConnectivityService? _mockConnectivity;
+
+  late AiChatEventSource _source;
+
   /// The composer, held so the lifecycle boundary below can reach it. Built
-  /// here rather than in `BlocProvider.create` for that reason alone; the
-  /// provider still owns closing it.
-  late final AiComposerBloc _composer = AiComposerBloc(
-    attachmentSource: AssetPickerAttachmentSource(permissions: _permissions),
-    permissions: _permissions,
-    recognizer: SpeechToTextRecognizer(),
-    // The same indirection `app_di.dart` already uses for the network layer's
-    // `x-lang` header, and for the same reason: reading the service locator
-    // from inside the bloc would make it untestable.
-    resolveLanguageCode: () => sl<TranslateBloc>().state.languageCode,
-  );
+  /// here rather than in `BlocProvider.create` for that reason alone; this
+  /// state owns closing it.
+  late AiComposerBloc _composer;
 
   /// The AI chat feature's one app-lifecycle boundary.
   ///
@@ -121,7 +146,45 @@ class _AiChatScreenState extends State<AiChatScreen> {
   /// capability it owns. The widget starts no work and holds no state.
   AppLifecycleListener? _lifecycle;
 
-  late final AiChatEventSource _source = _mock ?? _buildLiveSource();
+  @override
+  void initState() {
+    super.initState();
+    _buildRun();
+    _lifecycle = AppLifecycleListener(
+      onPause: () => _composer.add(const AiComposerBackgrounded()),
+    );
+  }
+
+  /// Builds the objects scoped to one run of the conversation.
+  void _buildRun() {
+    _mock = _transport == AiChatTransport.mock ? MockAiChatEventSource() : null;
+    _mockConnectivity = _transport.isLocal ? MockConnectivityService() : null;
+    _source = _mock ?? _buildLiveSource();
+    _composer = AiComposerBloc(
+      attachmentSource: AssetPickerAttachmentSource(permissions: _permissions),
+      permissions: _permissions,
+      recognizer: SpeechToTextRecognizer(),
+      // The same indirection `app_di.dart` already uses for the network layer's
+      // `x-lang` header, and for the same reason: reading the service locator
+      // from inside the bloc would make it untestable.
+      resolveLanguageCode: () => sl<TranslateBloc>().state.languageCode,
+    );
+  }
+
+  /// Tears the current run down and starts a fresh one.
+  ///
+  /// The event source is deliberately **not** disposed here: the `BlocProvider`
+  /// owns the bloc, the bloc owns the source, and disposing it from both ends
+  /// would close an already-closed controller. Dropping the reference and
+  /// rebuilding under a new key is what triggers the ordered teardown.
+  void _restart() {
+    _mockConnectivity?.dispose().ignore();
+    _composer.close().ignore();
+    setState(() {
+      _epoch += 1;
+      _buildRun();
+    });
+  }
 
   /// Turns staged attachments into the `{id, url}` pairs a turn carries.
   ///
@@ -134,7 +197,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
     repository: sl<MediaUploadRepository>(),
   );
 
-  AiChatEventSource _buildLiveSource() => switch (widget.transport) {
+  AiChatEventSource _buildLiveSource() => switch (_transport) {
     AiChatTransport.sse => SseAiChatEventSource(
       url: Uri.parse(AppConfig.aiAgentStreamUrl),
       // The app's one token owner. Reading `TokenStorage` here instead would
@@ -151,18 +214,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
       diagnostics: const LoggingAiUiDiagnosticsSink(),
       uploader: _buildUploader(),
     ),
-    // Unreachable: `_mock` short-circuits this. Kept exhaustive so adding a
-    // transport is a compile error here rather than a silent fallthrough.
+    // Unreachable: the local source short-circuits this. Kept exhaustive so
+    // adding a transport is a compile error here rather than a silent
+    // fallthrough.
     AiChatTransport.mock => MockAiChatEventSource(),
   };
-
-  @override
-  void initState() {
-    super.initState();
-    _lifecycle = AppLifecycleListener(
-      onPause: () => _composer.add(const AiComposerBackgrounded()),
-    );
-  }
 
   @override
   void dispose() {
@@ -176,6 +232,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   @override
   Widget build(BuildContext context) => MultiBlocProvider(
+    // Keyed by the run, so Restart disposes this whole subtree rather than
+    // mutating it.
+    key: ValueKey(_epoch),
     providers: [
       BlocProvider(
         create: (_) => AiChatBloc(
@@ -187,16 +246,24 @@ class _AiChatScreenState extends State<AiChatScreen> {
           ),
           diagnostics: const LoggingAiUiDiagnosticsSink(),
           // Whether a turn can leave the device at all. The live transports
-          // read the app's own service; the prototype reads the one the dev
+          // read the app's own service; the prototypes read the one the dev
           // picker can flip.
           connectivity: _mockConnectivity ?? sl<ConnectivityService>(),
         )..add(const AiChatStarted()),
       ),
       BlocProvider.value(value: _composer),
+      // Scoped to the visit, like the conversation itself: contextual content
+      // is about *this* conversation, and carrying it across visits would
+      // offer a user offers for a request they have already left.
+      //
+      // A separate cubit rather than more `AiChatState` on purpose — see
+      // `ChatContextCubit`'s own doc: it keeps the sheet and the transcript on
+      // different rebuild boundaries.
+      BlocProvider(create: (_) => ChatContextCubit(source: _mock)),
     ],
     child: AiChatPage(
-      mockSource: _mock,
       mockConnectivity: _mockConnectivity,
+      onRestart: _mock == null ? null : _restart,
     ),
   );
 }

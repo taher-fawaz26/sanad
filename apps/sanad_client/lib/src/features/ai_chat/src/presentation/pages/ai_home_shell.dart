@@ -1,6 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sanad_client/src/config/app_config.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/home/ai_home_header.dart';
 import 'package:sanad_client/src/features/ai_chat/src/presentation/widgets/home/ai_home_nav_pill.dart';
 import 'package:sanad_client/src/features/ai_chat/src/routes/ai_chat_routes.dart';
@@ -69,11 +69,12 @@ class AiHomeShell extends StatelessWidget {
               onSelected: _goBranch,
               onProfileTap: () => context.push(ClientRoutes.profile),
               // Gated with the same constant that gates the route itself, in
-              // `AiChatModule.routes` — otherwise a release build renders a
-              // button whose destination does not exist (A-10).
-              onHistoryTap: kReleaseMode
-                  ? null
-                  : () => context.push(AiChatRoutes.history),
+              // `AiChatModule.routes` — otherwise a build without the History
+              // route would render a button whose destination does not exist
+              // (A-10).
+              onHistoryTap: AppConfig.enableAiChatShell
+                  ? () => context.push(AiChatRoutes.history)
+                  : null,
             ),
             Expanded(child: navigationShell),
           ],

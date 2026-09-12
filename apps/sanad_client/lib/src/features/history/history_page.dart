@@ -8,11 +8,12 @@ import 'package:sanad_client/src/features/history/src/domain/conversation_histor
 import 'package:sanad_client/src/features/history/src/domain/conversation_history_source.dart';
 import 'package:sanad_client/src/features/history/src/domain/filter_conversation_history.dart';
 import 'package:sanad_client/src/features/history/src/presentation/conversation_history_tokens.dart';
-import 'package:sanad_client/src/features/history/src/presentation/widgets/conversation_history_card.dart';
+import 'package:sanad_client/src/features/history/src/presentation/widgets/conversation_history_dialogs.dart';
 import 'package:sanad_client/src/features/history/src/presentation/widgets/conversation_history_nav_bar.dart';
 import 'package:sanad_client/src/features/history/src/presentation/widgets/conversation_history_placeholder.dart';
 import 'package:sanad_client/src/features/history/src/presentation/widgets/conversation_history_search_field.dart';
 import 'package:sanad_client/src/features/history/src/presentation/widgets/conversation_history_start_button.dart';
+import 'package:sanad_client/src/features/history/src/presentation/widgets/conversation_history_swipe_row.dart';
 import 'package:sanad_client/src/ui/background/client_ambient_background.dart';
 
 /// Conversation History — Figma `8120:2918` (with conversations) and
@@ -66,9 +67,27 @@ class HistoryPage extends StatefulWidget {
 class _HistoryPageState extends State<HistoryPage> {
   /// Loaded once, in `initState`: the source is a local list today, and
   /// re-reading it per build would be work for nothing.
-  late final List<ConversationHistoryEntry> _entries;
+  ///
+  /// Mutable, because the swipe actions edit it. Delete and rename are
+  /// applied here rather than pushed back through
+  /// [ConversationHistorySource]: that seam is a *read*, and giving it write
+  /// methods would mean designing the mutation contract — optimistic or not,
+  /// what a failure looks like, what a conflict looks like — for an endpoint
+  /// that does not exist. When it does, this list becomes whatever the
+  /// repository returns and these two handlers become the calls that ask for
+  /// it.
+  late List<ConversationHistoryEntry> _entries;
 
   late final TextEditingController _searchController;
+
+  /// The rename dialog's field, owned here rather than by the dialog.
+  ///
+  /// One controller for the screen, not one per rename: a controller created
+  /// with the dialog would have to be disposed the moment the dialog's future
+  /// completes, which is when its exit transition *starts* — leaving the
+  /// still-mounted field reading a disposed controller for the length of the
+  /// animation. See `ConversationHistoryDialogs.requestRename`.
+  late final TextEditingController _renameController;
 
   /// The live query, as a notifier rather than `setState` state.
   ///
@@ -84,11 +103,13 @@ class _HistoryPageState extends State<HistoryPage> {
     super.initState();
     _entries = widget.source.load();
     _searchController = TextEditingController();
+    _renameController = TextEditingController();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _renameController.dispose();
     _query.dispose();
     super.dispose();
   }
@@ -159,30 +180,74 @@ class _HistoryPageState extends State<HistoryPage> {
       );
     }
 
-    return ListView.separated(
-      // Figma `8102:35063`: `px-[20px] py-[12px]`, plus the bottom inset the
-      // `SafeArea` above deliberately left to the scrollable.
-      padding: EdgeInsetsDirectional.fromSTEB(
-        AppSpacing.xl,
-        AppSpacing.md,
-        AppSpacing.xl,
-        AppSpacing.md + MediaQuery.viewPaddingOf(context).bottom,
+    // One open pane at a time, closed by a scroll — the behaviour every
+    // swipeable list in the app shares, via the design system's own wrapper.
+    return AppSwipeActionsGroup(
+      child: ListView.separated(
+        // Figma `8102:35063`: `px-[20px] py-[12px]`, plus the bottom inset the
+        // `SafeArea` above deliberately left to the scrollable.
+        padding: EdgeInsetsDirectional.fromSTEB(
+          AppSpacing.xl,
+          AppSpacing.md,
+          AppSpacing.xl,
+          AppSpacing.md + MediaQuery.viewPaddingOf(context).bottom,
+        ),
+        itemCount: matches.length,
+        // Figma `gap-[12px]` between cards.
+        separatorBuilder: (context, index) => SizedBox(height: AppSpacing.md),
+        itemBuilder: (context, index) {
+          final entry = matches[index];
+          return ConversationHistorySwipeRow(
+            // Keyed by conversation, not by index, so filtering the list
+            // re-parents the surviving cards instead of rebuilding every row
+            // into a different entry's slot — and, now that rows carry an
+            // open/closed pane, so a deletion never leaves the *next* row
+            // inheriting the removed one's open state.
+            key: ValueKey(entry.id),
+            entry: entry,
+            onTap: () => widget.onConversationSelected?.call(entry),
+            onDelete: () => _deleteConversation(entry),
+            onRename: () => _renameConversation(entry),
+          );
+        },
       ),
-      itemCount: matches.length,
-      // Figma `gap-[12px]` between cards.
-      separatorBuilder: (context, index) => SizedBox(height: AppSpacing.md),
-      itemBuilder: (context, index) {
-        final entry = matches[index];
-        return ConversationHistoryCard(
-          // Keyed by conversation, not by index, so filtering the list
-          // re-parents the surviving cards instead of rebuilding every row
-          // into a different entry's slot.
-          key: ValueKey(entry.id),
-          entry: entry,
-          onTap: () => widget.onConversationSelected?.call(entry),
-        );
-      },
     );
+  }
+
+  /// Confirms, then drops the conversation from the list.
+  Future<void> _deleteConversation(ConversationHistoryEntry entry) async {
+    final confirmed = await ConversationHistoryDialogs.confirmDelete(context);
+    if (!confirmed || !mounted) return;
+
+    setState(() {
+      _entries = [
+        for (final candidate in _entries)
+          if (candidate.id != entry.id) candidate,
+      ];
+    });
+  }
+
+  /// Asks for a new title, then applies it in place.
+  ///
+  /// The dialog answers `null` for cancel, an unchanged name and a blank one
+  /// alike, so there is exactly one thing to check here.
+  Future<void> _renameConversation(ConversationHistoryEntry entry) async {
+    final name = await ConversationHistoryDialogs.requestRename(
+      context,
+      controller: _renameController,
+      currentName: entry.title,
+    );
+    if (name == null || !mounted) return;
+
+    setState(() {
+      _entries = [
+        for (final candidate in _entries)
+          if (candidate.id == entry.id)
+            candidate.copyWith(title: name)
+          else
+            candidate,
+      ];
+    });
   }
 
   /// Figma's CTA target: the AI chat conversation entry point.

@@ -73,6 +73,16 @@ String? _proseFor(AiUiInteraction interaction) {
     return key.tr(namedArgs: {'capability': capability});
   }
 
+  // A place resolved on the app's own map has no template either: the card's
+  // `confirmTemplate` belongs to its own confirm button, and this answer came
+  // back from the map sheet instead. Without this the bubble is empty, which
+  // reads as a message that failed to send.
+  if (value is AiUiLocationValue && value.source == AiUiLocationSource.map) {
+    return 'ai_chat.interaction_location_selected'.tr(
+      namedArgs: {'location': value.name},
+    );
+  }
+
   if (interaction.status == AiUiInteractionStatus.cancelled) {
     return 'ai_chat.interaction_cancelled'.tr();
   }
@@ -94,7 +104,6 @@ String _capabilityName(String wire) {
     AiUiPermissionKind.photos => 'ai_chat.capability_photos'.tr(),
     AiUiPermissionKind.microphone => 'ai_chat.capability_microphone'.tr(),
     AiUiPermissionKind.location => 'ai_chat.capability_location_name'.tr(),
-    AiUiPermissionKind.notifications =>
-      'ai_chat.capability_notifications'.tr(),
+    AiUiPermissionKind.notifications => 'ai_chat.capability_notifications'.tr(),
   };
 }
